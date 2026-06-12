@@ -78,9 +78,9 @@ final class McpServerRuntime {
 			'result' => [
 				'protocolVersion' => self::MCP_VERSION,
 				'capabilities'    => [
-					'tools'     => [],
-					'resources' => [],
-					'prompts'   => [],
+					'tools'     => new \stdClass(),
+					'resources' => new \stdClass(),
+					'prompts'   => new \stdClass(),
 				],
 				'serverInfo'      => [
 					'name'    => 'WP Command Center',
