@@ -78,13 +78,15 @@ final class McpServerRuntime {
 			'result' => [
 				'protocolVersion' => self::MCP_VERSION,
 				'capabilities'    => [
-					'tools'     => [ 'listChanged' => false ],
-					'resources' => [ 'subscribe' => false, 'listChanged' => false ],
+					'tools'     => [],
+					'resources' => [],
+					'prompts'   => [],
 				],
 				'serverInfo'      => [
-					'name'    => 'WP Command Center MCP',
+					'name'    => 'WP Command Center',
 					'version' => WPCC_VERSION,
 				],
+				'instructions'    => 'WP Command Center provides WordPress site management tools for AI agents. Use tools/list to discover available operations (plugin management, content creation, database inspection, etc.) and resources/list to browse site intelligence data. All operations respect WordPress capability enforcement and approval gates.',
 			],
 		];
 	}
@@ -114,9 +116,11 @@ final class McpServerRuntime {
 
 		return [
 			'result' => [
-				'resources'          => $resources,
-				'defaultContextMode' => $mode,
-				'contextModes'       => ContextModeOptimizer::MODES,
+				'resources' => $resources,
+				'_meta'     => [
+					'defaultContextMode' => $mode,
+					'contextModes'       => ContextModeOptimizer::MODES,
+				],
 			],
 		];
 	}
@@ -168,9 +172,6 @@ final class McpServerRuntime {
 				];
 				if ( ContextModeOptimizer::COMPACT !== $mode ) {
 					$props[ $p['name'] ]['description'] = $p['description'] ?? $p['name'];
-				}
-				if ( isset( $p['required'] ) && $p['required'] ) {
-					$props[ $p['name'] ]['required'] = true;
 				}
 			}
 			$props['context_mode'] = [
