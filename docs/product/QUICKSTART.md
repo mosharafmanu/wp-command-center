@@ -77,16 +77,16 @@ If the file doesn't exist, create it with this structure:
 {
   "mcpServers": {
     "wp-command-center": {
-      "command": "npx",
+      "command": "bash",
       "args": [
-        "-y",
-        "@anthropic-ai/mcp-client",
-        "https://yoursite.com/wp-json/wp-command-center/v1/mcp"
+        "-c",
+        "RELAY=/tmp/wpcc-mcp-relay.mjs; [ -f \"$RELAY\" ] || curl -fsSL -o \"$RELAY\" https://yoursite.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs; node \"$RELAY\""
       ],
       "env": {
         "WPCC_MCP_URL": "https://yoursite.com/wp-json/wp-command-center/v1/mcp",
         "WPCC_SITE_URL": "https://yoursite.com",
-        "WPCC_TOKEN": "wpcc_YOUR_ACTUAL_TOKEN"
+        "WPCC_TOKEN": "wpcc_YOUR_ACTUAL_TOKEN",
+        "WPCC_CONTEXT_MODE": "compact"
       }
     }
   }
@@ -95,6 +95,8 @@ If the file doesn't exist, create it with this structure:
 
 Replace `https://yoursite.com` with your actual site URL and
 `wpcc_YOUR_ACTUAL_TOKEN` with the token from step 2.
+
+Requires `bash`, `curl`, and `node` (preinstalled on macOS/Linux).
 
 ### 4d. Restart Claude Desktop
 Fully quit Claude Desktop and reopen it. The WP Command Center MCP tools

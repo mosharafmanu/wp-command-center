@@ -67,24 +67,29 @@ JSON object. If there are already `mcpServers` entries, merge the
 {
   "mcpServers": {
     "wp-command-center": {
-      "command": "npx",
+      "command": "bash",
       "args": [
-        "-y",
-        "@anthropic-ai/mcp-client",
-        "https://yoursite.com/wp-json/wp-command-center/v1/mcp"
+        "-c",
+        "RELAY=/tmp/wpcc-mcp-relay.mjs; [ -f \"$RELAY\" ] || curl -fsSL -o \"$RELAY\" https://yoursite.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs; node \"$RELAY\""
       ],
       "env": {
         "WPCC_MCP_URL": "https://yoursite.com/wp-json/wp-command-center/v1/mcp",
         "WPCC_SITE_URL": "https://yoursite.com",
-        "WPCC_TOKEN": "wpcc_your_64_char_token_here"
+        "WPCC_TOKEN": "wpcc_your_64_char_token_here",
+        "WPCC_CONTEXT_MODE": "compact"
       }
     }
   }
 }
 ```
 
-Adjust the URLs to match your WordPress site. The MCP endpoint is always
-`<site>/wp-json/wp-command-center/v1/mcp`.
+**How it works:** The config uses a built-in MCP relay script (`wpcc-mcp-relay.mjs`)
+that bridges Claude Desktop's stdio transport to the WPCC HTTP MCP endpoint.
+On first launch, the script is downloaded once and cached in `/tmp`. Subsequent
+launches use the cached copy.
+
+**Prerequisites:** `bash`, `curl`, and `node` — all preinstalled on macOS and
+most Linux distributions. Windows users should use WSL2.
 
 #### 5. Restart Claude Desktop
 Fully quit Claude Desktop and reopen it. The WP Command Center MCP server

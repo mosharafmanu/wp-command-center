@@ -1,8 +1,11 @@
 <?php
 /**
  * Base MCP client integration — shared config generation for all AI clients.
- * Each client extends this and provides its own name, config paths, and
- * MCP client package. No per-client execution logic.
+ * Each client extends this and provides its own name and config paths.
+ * No per-client execution logic.
+ *
+ * Generates a working config that bridges the client's stdio MCP transport
+ * to WPCC's HTTP MCP endpoint via the built-in wpcc-mcp-relay.mjs script.
  */
 
 namespace WPCommandCenter\Integration;
@@ -13,26 +16,37 @@ defined( 'ABSPATH' ) || exit;
 
 abstract class BaseClientIntegration {
 
-	protected static string $client_name    = '';
-	protected static string $mcp_package    = '@anthropic-ai/mcp-client';
-	protected static array  $config_paths   = [];
-	protected static string $client_command = 'npx';
+	protected static string $client_name  = '';
+	protected static array  $config_paths = [];
 
+	/**
+	 * Generate an MCP configuration block that works with any stdio-based
+	 * MCP client (Claude Desktop, Cursor, Continue, etc.).
+	 *
+	 * Uses bash to download (once, cached) and run the WPCC MCP relay script.
+	 * The relay bridges stdio ↔ HTTP so clients can reach the WPCC MCP endpoint.
+	 */
 	public static function generate_mcp_config(): array {
-		$mcp_url  = rest_url( McpServerRuntime::NAMESPACE . '/mcp' );
-		$site_url = get_site_url();
+		$mcp_url    = rest_url( McpServerRuntime::NAMESPACE . '/mcp' );
+		$site_url   = get_site_url();
+		$relay_url  = WPCC_PLUGIN_URL . 'sdk/javascript/wpcc-mcp-relay.mjs';
+		$relay_path = '/tmp/wpcc-mcp-relay.mjs';
 
-		$args = [ '-y', static::$mcp_package, $mcp_url ];
+		$bootstrap = sprintf(
+			'RELAY=%s; [ -f "$RELAY" ] || curl -fsSL -o "$RELAY" %s; node "$RELAY"',
+			escapeshellarg( $relay_path ),
+			escapeshellarg( $relay_url )
+		);
 
 		return [
 			'mcpServers' => [
 				'wp-command-center' => [
-					'command' => static::$client_command,
-					'args'    => $args,
+					'command' => 'bash',
+					'args'    => [ '-c', $bootstrap ],
 					'env'     => [
-						'WPCC_MCP_URL'   => $mcp_url,
-						'WPCC_SITE_URL'  => $site_url,
-						'WPCC_TOKEN'     => '${WPCC_TOKEN}',
+						'WPCC_MCP_URL'     => $mcp_url,
+						'WPCC_SITE_URL'    => $site_url,
+						'WPCC_TOKEN'       => '${WPCC_TOKEN}',
 						'WPCC_CONTEXT_MODE' => 'compact',
 					],
 				],
