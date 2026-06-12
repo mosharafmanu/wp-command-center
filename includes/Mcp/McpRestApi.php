@@ -66,6 +66,12 @@ final class McpRestApi {
 		try {
 			$server = new McpServerRuntime();
 			$result = $server->handle( $body, $context );
+
+			// Notifications (JSON-RPC 2.0 §4.1): no response body expected.
+			if ( isset( $result['_skip'] ) && $result['_skip'] ) {
+				return new \WP_REST_Response( null, 204 );
+			}
+
 			$code   = isset( $result['error'] ) ? 202 : 200;
 			return new \WP_REST_Response( $result, $code );
 		} catch ( \Throwable $e ) {

@@ -2,16 +2,16 @@
 /**
  * WP Command Center — MCP stdio↔HTTP Relay
  *
- * Bridges Claude Desktop (stdio MCP transport) to WPCC (HTTP MCP endpoint).
- * Reads JSON-RPC messages from stdin, forwards to the WPCC MCP HTTP endpoint,
- * writes responses to stdout.
+ * Bridges Claude Desktop and other stdio-based MCP clients to the WPCC
+ * HTTP MCP endpoint.
  *
- * Environment variables (set by Claude Desktop config):
+ * Environment variables (set by client config):
  *   WPCC_MCP_URL  — Full URL of the WPCC MCP endpoint
  *   WPCC_TOKEN    — Bearer token for authentication
  *
- * Usage (in claude_desktop_config.json):
- *   { "command": "node", "args": ["/path/to/wpcc-mcp-relay.mjs"], "env": { ... } }
+ * JSON-RPC 2.0 §4.1: Notifications (messages without an "id") MUST NOT
+ * receive a response. This relay silently drops notifications and only
+ * writes responses for requests that carry a valid "id".
  */
 
 import { createInterface } from 'node:readline';
@@ -26,40 +26,67 @@ if (!MCP_URL || !TOKEN) {
 
 const rl = createInterface({ input: process.stdin, terminal: false });
 
+/**
+ * Forward a single JSON-RPC message to the WPCC HTTP endpoint.
+ * Returns the parsed response, or null for notifications / empty replies.
+ */
 async function forward(request) {
-	const response = await fetch(MCP_URL, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Authorization': `Bearer ${TOKEN}`,
-		},
-		body: JSON.stringify(request),
-	});
+	let response;
+	try {
+		response = await fetch(MCP_URL, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${TOKEN}`,
+			},
+			body: JSON.stringify(request),
+		});
+	} catch (err) {
+		process.stderr.write(`WPCC relay: fetch failed: ${err.message}\n`);
+		// Synthesise a JSON-RPC error so the client gets a response
+		// for requests (not notifications).
+		if (request.id != null) {
+			return { jsonrpc: '2.0', id: request.id, error: { code: -32603, message: `Connection failed: ${err.message}` } };
+		}
+		return null;
+	}
+
+	// HTTP 204 = notification was processed, no body expected.
+	if (response.status === 204) {
+		return null;
+	}
 
 	if (!response.ok) {
 		process.stderr.write(`WPCC relay: HTTP ${response.status} for ${request.method || 'unknown'}\n`);
-		if (request.id !== undefined && request.id !== null) {
-			return {
-				jsonrpc: '2.0',
-				id: request.id,
-				error: { code: -32603, message: `Upstream HTTP ${response.status}` },
-			};
+		if (request.id != null) {
+			return { jsonrpc: '2.0', id: request.id, error: { code: -32603, message: `Upstream HTTP ${response.status}` } };
 		}
 		return null;
 	}
 
 	const text = await response.text();
-	if (!text) return null;
+	if (!text || text === 'null') {
+		return null;
+	}
 
+	let parsed;
 	try {
-		return JSON.parse(text);
+		parsed = JSON.parse(text);
 	} catch {
 		process.stderr.write(`WPCC relay: invalid JSON response for ${request.method || 'unknown'}\n`);
-		if (request.id !== undefined && request.id !== null) {
+		if (request.id != null) {
 			return { jsonrpc: '2.0', id: request.id, error: { code: -32603, message: 'Invalid upstream response' } };
 		}
 		return null;
 	}
+
+	// Guard: only JSON-RPC response objects with an "id" are written to stdout.
+	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || parsed.id == null) {
+		process.stderr.write(`WPCC relay: non-RPC response for ${request.method || 'unknown'}, dropped\n`);
+		return null;
+	}
+
+	return parsed;
 }
 
 rl.on('line', async (line) => {

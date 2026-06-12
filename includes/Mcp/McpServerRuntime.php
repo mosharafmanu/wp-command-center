@@ -35,6 +35,8 @@ final class McpServerRuntime {
 
 	/**
 	 * Handle an MCP JSON-RPC request.
+	 *
+	 * JSON-RPC 2.0 §4.1: Notifications (no "id") MUST NOT be responded to.
 	 */
 	public function handle( array $request, array $context = [] ): array {
 		$method = $request['method'] ?? '';
@@ -42,6 +44,15 @@ final class McpServerRuntime {
 		$id     = $request['id'] ?? null;
 
 		$this->audit( 'mcp.request', [ 'method' => $method, 'client' => $context['client'] ?? 'unknown' ], $context );
+
+		// Notifications — no response expected (JSON-RPC 2.0 §4.1)
+		if ( null === $id ) {
+			if ( 'notifications/initialized' === $method ) {
+				$this->audit( 'mcp.initialized', [], $context );
+			}
+			// Return sentinel so the REST layer knows not to send a body.
+			return [ '_skip' => true, '_notification' => $method ];
+		}
 
 		$result = match ( $method ) {
 			'initialize'          => $this->initialize( $params ),
