@@ -363,7 +363,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<div class="wpcc-ai-panel">
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Connection Test', 'wp-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Verify the MCP endpoint is reachable and returning valid responses.', 'wp-command-center' ); ?></p>
+				<p><?php esc_html_e( 'Verify the MCP endpoint is reachable and returning valid responses using an API token.', 'wp-command-center' ); ?></p>
+				<div style="margin-bottom: 12px;">
+					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'API Token', 'wp-command-center' ); ?></label>
+					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="wpcc_..." style="width: 100%; max-width: 500px; font-family: monospace;"
+						value="<?php echo esc_attr( $wpcc_new_token ); ?>">
+					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php esc_html_e( 'Paste a token from the Configuration tab, or generate a new one above.', 'wp-command-center' ); ?></p>
+				</div>
 				<button type="button" class="button button-primary" id="wpcc-test-connection"><?php esc_html_e( 'Test Connection', 'wp-command-center' ); ?></button>
 				<div class="wpcc-ai-verify-result" id="wpcc-verify-result"></div>
 			</div>
@@ -480,45 +486,73 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	if (testBtn) {
 		testBtn.addEventListener('click', function() {
 			var resultEl = document.getElementById('wpcc-verify-result');
+			var token = document.getElementById('wpcc-test-token').value.trim();
+
+			if (!token) {
+				resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--fail';
+				resultEl.innerHTML = '<p><strong>&#10007; No token:</strong> <?php esc_html_e( 'Paste an API token above or generate one in the Configuration tab.', 'wp-command-center' ); ?></p>';
+				return;
+			}
+
 			resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--loading';
 			resultEl.innerHTML = '<p><span class="spinner is-active" style="float:none;margin:0 10px 0 0;"></span><?php esc_html_e( 'Testing connection...', 'wp-command-center' ); ?></p>';
+			var authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+			var authHeaderGet = { 'Authorization': 'Bearer ' + token };
 			var baseUrl = <?php echo wp_json_encode( rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE ) ); ?>;
 			var checks = [];
-			fetch(baseUrl + '/health')
-				.then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+
+			function record(name, pass, detail) {
+				checks.push({ name: name, pass: pass, detail: detail || '' });
+			}
+
+			fetch(baseUrl + '/health', { headers: authHeaderGet })
+				.then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
 				.then(function(r) {
-					checks.push({ name: 'Health endpoint', pass: r.ok && r.data.status === 'ok' });
-					return fetch(baseUrl + '/agent/manifest').then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); });
+					var pass = r.ok && r.data.status === 'ok';
+					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + (r.data.message || r.data.code || JSON.stringify(r.data).substring(0, 200)));
+					record('Health endpoint', pass, detail);
+					return fetch(baseUrl + '/agent/manifest', { headers: authHeaderGet }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
-					checks.push({ name: 'Agent manifest', pass: r.ok && r.data.plugin });
-					return fetch(baseUrl + '/claude/discovery').then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); });
+					var pass = r.ok && r.data.plugin;
+					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + (r.data.message || r.data.code || JSON.stringify(r.data).substring(0, 200)));
+					record('Agent manifest', pass, detail);
+					return fetch(baseUrl + '/mcp', { method: 'POST', headers: authHeader, body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', params: { protocolVersion: '2024-11-05' }, id: 1 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
-					checks.push({ name: 'Discovery metadata', pass: r.ok && r.data.server && r.data.tools });
-					return fetch(baseUrl + '/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', params: { protocolVersion: '2024-11-05' }, id: 1 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); });
+					var pass = r.ok && r.data.result && r.data.result.serverInfo;
+					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + ((r.data.error && r.data.error.message) || (r.data.message) || JSON.stringify(r.data).substring(0, 200)));
+					record('MCP initialize', pass, detail);
+					return fetch(baseUrl + '/mcp', { method: 'POST', headers: authHeader, body: JSON.stringify({ jsonrpc: '2.0', method: 'resources/list', id: 2 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
-					checks.push({ name: 'MCP initialize', pass: r.ok && r.data.result && r.data.result.serverInfo });
-					return fetch(baseUrl + '/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'resources/list', id: 2 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); });
+					var res = r.data.result;
+					var pass = r.ok && res && res.resources && res.resources.length >= 7;
+					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + ((r.data.error && r.data.error.message) || 'got ' + (res && res.resources ? res.resources.length : 0) + ' resources'));
+					record('MCP resources', pass, detail);
+					return fetch(baseUrl + '/mcp', { method: 'POST', headers: authHeader, body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', id: 3 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
-					checks.push({ name: 'MCP resources', pass: r.ok && r.data.result && r.data.result.resources && r.data.result.resources.length >= 7 });
-					return fetch(baseUrl + '/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', id: 3 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); });
-				})
-				.then(function(r) {
-					checks.push({ name: 'MCP tools', pass: r.ok && r.data.result && r.data.result.tools && r.data.result.tools.length > 0 });
+					var res = r.data.result;
+					var pass = r.ok && res && res.tools && res.tools.length > 0;
+					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + ((r.data.error && r.data.error.message) || 'got ' + (res && res.tools ? res.tools.length : 0) + ' tools'));
+					record('MCP tools', pass, detail);
+
 					var allPass = checks.every(function(c) { return c.pass; });
 					resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--' + (allPass ? 'success' : 'fail');
-					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; All checks passed!</h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; Some checks failed.</h3>';
-					html += '<ul style="list-style:none;padding:0;margin:0;">';
-					checks.forEach(function(c) { html += '<li>' + (c.pass ? '&#10003;' : '&#10007;') + ' ' + c.name + '</li>'; });
-					html += '</ul>';
+					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; <?php esc_html_e( 'All checks passed!', 'wp-command-center' ); ?></h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; <?php esc_html_e( 'Some checks failed.', 'wp-command-center' ); ?></h3>';
+					html += '<table style="border-collapse:collapse;width:100%;">';
+					checks.forEach(function(c) {
+						html += '<tr><td style="padding:4px 8px;">' + (c.pass ? '&#10003;' : '&#10007;') + '</td><td style="padding:4px 8px;font-weight:600;">' + c.name + '</td>';
+						if (!c.pass) { html += '<td style="padding:4px 8px;color:#d63638;font-size:12px;">' + c.detail + '</td>'; }
+						html += '</tr>';
+					});
+					html += '</table>';
 					resultEl.innerHTML = html;
 				})
 				.catch(function(err) {
 					resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--fail';
-					resultEl.innerHTML = '<p><strong>&#10007; Connection test failed:</strong> ' + err.message + '</p>';
+					resultEl.innerHTML = '<p><strong>&#10007; <?php esc_html_e( 'Connection test failed:', 'wp-command-center' ); ?></strong> ' + err.message + '</p><p style="color:#646970;font-size:12px;"><?php esc_html_e( 'Check that your site is reachable and the token is valid.', 'wp-command-center' ); ?></p>';
 				});
 		});
 	}
