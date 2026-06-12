@@ -1,0 +1,179 @@
+.wpcc-wrap {
+	max-width: 960px;
+}
+
+.wpcc-scan-meta {
+	font-style: italic;
+	color: #646970;
+}
+
+.wpcc-table {
+	margin-bottom: 2em;
+}
+
+.wpcc-table th {
+	width: 260px;
+}
+
+.wpcc-badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.6;
+}
+
+.wpcc-badge--yes,
+.wpcc-badge--good {
+	background: #edfaef;
+	color: #1a7f37;
+}
+
+.wpcc-badge--no,
+.wpcc-badge--critical {
+	background: #fcf0f1;
+	color: #b32d2e;
+}
+
+.wpcc-badge--recommended {
+	background: #fcf9e8;
+	color: #996800;
+}
+
+.wpcc-badge--info {
+	background: #f0f6fc;
+	color: #2271b1;
+}
+
+.wpcc-badge--neutral {
+	background: #f0f0f1;
+	color: #50575e;
+}
+
+.wpcc-debug-log-controls {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 1em 0;
+}
+
+.wpcc-debug-log {
+	max-height: 480px;
+	overflow: auto;
+	background: #1d2327;
+	color: #c3c4c7;
+	padding: 12px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+	line-height: 1.6;
+}
+
+.wpcc-log-line {
+	display: block;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.wpcc-log-line--fatal {
+	color: #ff6b6b;
+}
+
+.wpcc-log-line--warning {
+	color: #ffb454;
+}
+
+.wpcc-log-line--deprecated,
+.wpcc-log-line--notice {
+	color: #8fc7ff;
+}
+
+.wpcc-breadcrumbs {
+	font-family: Consolas, Monaco, monospace;
+}
+
+.wpcc-search-form {
+	margin: 1em 0;
+}
+
+.wpcc-file-viewer {
+	max-height: 600px;
+	overflow: auto;
+	background: #1d2327;
+	color: #c3c4c7;
+	padding: 12px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	white-space: pre;
+}
+
+.wpcc-search-matches {
+	max-height: 300px;
+	overflow: auto;
+	background: #f6f7f7;
+	border: 1px solid #dcdcde;
+	padding: 12px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	margin-bottom: 1.5em;
+}
+
+.wpcc-search-match {
+	display: block;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.wpcc-search-match__line {
+	color: #2271b1;
+	font-weight: 600;
+}
+
+.wpcc-inline-form {
+	display: inline-block;
+	margin: 0 4px 0 0;
+}
+
+.wpcc-actions .button {
+	vertical-align: baseline;
+}
+
+.wpcc-diff {
+	max-height: 480px;
+	overflow: auto;
+	background: #1d2327;
+	color: #c3c4c7;
+	padding: 12px;
+	font-family: Consolas, Monaco, monospace;
+	font-size: 12px;
+	line-height: 1.6;
+	white-space: pre;
+	margin-bottom: 1.5em;
+}
+
+.wpcc-diff-line {
+	display: block;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.wpcc-diff-line--header {
+	color: #8fc7ff;
+	font-weight: 600;
+}
+
+.wpcc-diff-line--hunk {
+	color: #c3a6ff;
+}
+
+.wpcc-diff-line--add {
+	background: rgba(46, 160, 67, 0.25);
+	color: #7ee787;
+}
+
+.wpcc-diff-line--del {
+	background: rgba(248, 81, 73, 0.2);
+	color: #ff6b6b;
+}

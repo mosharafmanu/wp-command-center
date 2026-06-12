@@ -1,0 +1,1667 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "WP Command Center REST API",
+    "description": "REST API for managing WordPress sites — Site Intelligence, Diagnostics, File Access, Patch Engine, Operations, MCP, and Agent orchestration.",
+    "version": "0.1.0",
+    "contact": {
+      "name": "WP Command Center",
+      "url": "https://github.com/anomalyco/wp-command-center"
+    },
+    "license": {
+      "name": "GPL v2 or later",
+      "url": "https://www.gnu.org/licenses/gpl-2.0.html"
+    }
+  },
+  "servers": [
+    {
+      "url": "/wp-json/wp-command-center/v1",
+      "description": "Default REST API base"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "WPCC API Token",
+        "description": "WP Command Center API token created from Settings → API Tokens. Read-only tokens access GET routes; full-access tokens are required for POST/PATCH/DELETE write actions."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "example": "wpcc_missing_token" },
+          "message": { "type": "string", "example": "Missing API token." },
+          "data": { "type": "object", "properties": { "status": { "type": "integer", "example": 401 } } }
+        }
+      },
+      "PatchFile": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Path relative to wp-content/ (themes/, plugins/, or mu-plugins/)" },
+          "modified": { "type": "string", "description": "Full new file contents" }
+        },
+        "required": ["path", "modified"]
+      },
+      "OperationRequest": {
+        "type": "object",
+        "properties": {
+          "operation_id": { "type": "string", "description": "Operation identifier e.g. content_seed" },
+          "payload": { "type": "object", "description": "Operation-specific parameters" },
+          "session_id": { "type": "string", "format": "uuid" },
+          "task_id": { "type": "string", "format": "uuid" },
+          "action_id": { "type": "string", "format": "uuid" },
+          "plan_id": { "type": "string", "format": "uuid" }
+        },
+        "required": ["operation_id", "payload"]
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health check for the API gateway",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "API is reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "plugin_version": { "type": "string", "example": "0.1.0" },
+                    "api_version": { "type": "string", "example": "v1" },
+                    "timestamp": { "type": "integer", "example": 1718000000 }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/health/verify": {
+      "post": {
+        "tags": ["Health"],
+        "summary": "Run read-only frontend, admin, REST, WPCC, WooCommerce, plugin, and theme health checks",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "201": { "description": "Health verification completed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/health/results": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "List persisted health verification results",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" }, "description": "Filter by status" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" }, "description": "Max records to return" },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" }, "description": "Pagination offset" }
+        ],
+        "responses": {
+          "200": { "description": "List of health verification results" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/system/environment": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Get the current WP Command Center environment mode",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Current environment mode",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mode": { "type": "string", "enum": ["development", "staging", "production"] },
+                    "supported_modes": { "type": "array", "items": { "type": "string" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["System"],
+        "summary": "Set environment mode",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mode": { "type": "string", "enum": ["development", "staging", "production"] }
+                },
+                "required": ["mode"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Environment mode updated" },
+          "400": { "description": "Invalid environment mode" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/system/cleanup": {
+      "post": {
+        "tags": ["System"],
+        "summary": "Dry-run or delete age-qualified terminal runtime records with environment-aware safeguards",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resources": { "type": "array", "items": { "type": "string" } },
+                  "dry_run": { "type": "boolean", "default": true },
+                  "confirm": { "type": "string", "description": "Confirmation phrase required for live cleanup" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cleanup results" },
+          "400": { "description": "Cleanup validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/manifest": {
+      "get": {
+        "tags": ["Manifest"],
+        "summary": "Machine-readable description of this API for agent discovery",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Endpoint manifest with paths, methods, scopes, and descriptions" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/manifest": {
+      "get": {
+        "tags": ["Manifest"],
+        "summary": "Agent discovery manifest: capabilities, security posture, workflow, endpoint catalog, error catalog, capability negotiation, and version info",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Full agent manifest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/context": {
+      "get": {
+        "tags": ["Context"],
+        "summary": "Composite context bundle: site info, diagnostics, server capabilities, and file access map",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Context bundle with secrets redacted" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/context": {
+      "get": {
+        "tags": ["Context"],
+        "summary": "Metadata-only agent runtime context",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "session_id", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "Limit context to a specific session" },
+          { "name": "include_files", "in": "query", "schema": { "type": "boolean", "default": false }, "description": "Include file access map" },
+          { "name": "include_diagnostics", "in": "query", "schema": { "type": "boolean", "default": true }, "description": "Include diagnostics data" }
+        ],
+        "responses": {
+          "200": { "description": "Agent runtime context" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/timeline": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Unified traceable timeline of the agent lifecycle",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "session_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "task_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "action_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "plan_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "patch_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Timeline of agent events" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/tree": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Hierarchical agent runtime tree (Session -> Task -> Action -> Plan -> Patch)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "session_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "task_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "plan_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Hierarchical tree of agent objects" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/sessions": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "List agent sessions, newest first",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of agent sessions" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Create an agent session",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "source": { "type": "string", "enum": ["claude", "codex", "gpt", "api", "manual"] },
+                  "label": { "type": "string", "description": "Human-readable session label" },
+                  "expires_at": { "type": "integer", "description": "Unix timestamp. Defaults to 24 hours from creation." }
+                },
+                "required": ["source", "label"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Session created" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/sessions/{id}": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Get an agent session by UUID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Session details" },
+          "404": { "description": "Session not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/sessions/{id}/close": {
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Close an active agent session",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Session closed" },
+          "400": { "description": "Session already closed" },
+          "404": { "description": "Session not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/tasks": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "List agent tasks, newest first",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of agent tasks" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Create an agent task under an existing session",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": { "type": "string", "format": "uuid" },
+                  "source": { "type": "string", "enum": ["claude", "codex", "gpt", "api", "manual"] },
+                  "user_prompt": { "type": "string" }
+                },
+                "required": ["session_id", "source", "user_prompt"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Task created" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/tasks/{id}": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "Get an agent task by UUID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Task details" },
+          "404": { "description": "Task not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/tasks/{id}/status": {
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Update an agent task status",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["draft", "analyzing", "patch_proposed", "completed", "failed", "cancelled"] }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Task status updated" },
+          "400": { "description": "Invalid status" },
+          "404": { "description": "Task not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/actions": {
+      "get": {
+        "tags": ["Actions"],
+        "summary": "List agent actions, newest first",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of agent actions" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Actions"],
+        "summary": "Record an agent action (metadata only, does not execute)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": { "type": "string", "format": "uuid" },
+                  "task_id": { "type": "string", "format": "uuid" },
+                  "type": { "type": "string", "enum": ["investigate", "recommendation", "diagnosis", "code_change", "configuration_change", "maintenance"] },
+                  "title": { "type": "string" },
+                  "description": { "type": "string" }
+                },
+                "required": ["session_id", "task_id", "type", "title"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Action recorded with status=proposed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/actions/{id}": {
+      "get": {
+        "tags": ["Actions"],
+        "summary": "Get an agent action by UUID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Action details" },
+          "404": { "description": "Action not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/actions/{id}/accept": {
+      "post": {
+        "tags": ["Actions"],
+        "summary": "Accept a proposed action",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Action accepted" },
+          "400": { "description": "Status does not allow accept" },
+          "404": { "description": "Action not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/actions/{id}/reject": {
+      "post": {
+        "tags": ["Actions"],
+        "summary": "Reject a proposed action",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Action rejected" },
+          "400": { "description": "Status does not allow reject" },
+          "404": { "description": "Action not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/actions/{id}/cancel": {
+      "post": {
+        "tags": ["Actions"],
+        "summary": "Cancel a proposed or accepted action",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Action cancelled" },
+          "400": { "description": "Status does not allow cancel" },
+          "404": { "description": "Action not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/actions/{id}/complete": {
+      "post": {
+        "tags": ["Actions"],
+        "summary": "Mark an accepted action as completed",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Action completed" },
+          "400": { "description": "Status does not allow complete" },
+          "404": { "description": "Action not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/plans": {
+      "get": {
+        "tags": ["Plans"],
+        "summary": "List agent plans with ordered steps, newest first",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of agent plans" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Plans"],
+        "summary": "Create a plan under an existing session and task",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": { "type": "string", "format": "uuid" },
+                  "task_id": { "type": "string", "format": "uuid" },
+                  "title": { "type": "string" },
+                  "objective": { "type": "string" },
+                  "status": { "type": "string", "enum": ["draft", "pending_review"] },
+                  "steps": { "type": "array", "items": { "type": "object", "properties": { "title": { "type": "string" }, "status": { "type": "string", "enum": ["pending", "completed", "skipped"] } } } },
+                  "action_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["session_id", "task_id", "title", "objective", "steps"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Plan created" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/plans/{id}": {
+      "get": {
+        "tags": ["Plans"],
+        "summary": "Get an agent plan and its ordered steps by UUID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Plan details with ordered steps" },
+          "404": { "description": "Plan not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/agent/plans/{id}/approve": {
+      "post": {
+        "tags": ["Plans"],
+        "summary": "Approve a pending_review or draft plan",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Plan approved" },
+          "400": { "description": "Status does not allow approval" },
+          "404": { "description": "Plan not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/patches": {
+      "get": {
+        "tags": ["Patches"],
+        "summary": "List all patches (summary records)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of patches" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Patches"],
+        "summary": "Create a patch proposal",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": { "type": "array", "items": { "$ref": "#/components/schemas/PatchFile" } },
+                  "explanation": { "type": "string" },
+                  "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+                  "source": { "type": "string", "enum": ["claude", "codex", "gpt", "api", "manual"] },
+                  "session_id": { "type": "string", "format": "uuid" },
+                  "task_id": { "type": "string", "format": "uuid" },
+                  "plan_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["files", "explanation", "risk_level"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Patch created with status=pending_approval and diff" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/patches/{id}": {
+      "get": {
+        "tags": ["Patches"],
+        "summary": "Get a single patch record including diff and status history",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Patch details with diff" },
+          "404": { "description": "Patch not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/patches/{id}/approve": {
+      "post": {
+        "tags": ["Patches"],
+        "summary": "Approve a pending patch",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Patch approved" },
+          "400": { "description": "Status does not allow approval" },
+          "404": { "description": "Patch not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/patches/{id}/apply": {
+      "post": {
+        "tags": ["Patches"],
+        "summary": "Apply an approved patch — auto-snapshots, writes, verifies, auto-reverts on failure",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Patch applied successfully" },
+          "400": { "description": "Status does not allow apply / file changed on disk" },
+          "500": { "description": "Apply failed, auto-reverted" },
+          "404": { "description": "Patch not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/patches/{id}/rollback": {
+      "post": {
+        "tags": ["Patches"],
+        "summary": "Roll back an applied patch using its snapshot(s) with hash verification",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Patch rolled back" },
+          "400": { "description": "Status does not allow rollback" },
+          "500": { "description": "Rollback verification failed" },
+          "404": { "description": "No snapshots / patch not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/patches/{id}/reject": {
+      "post": {
+        "tags": ["Patches"],
+        "summary": "Reject a pending or approved patch",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Patch rejected" },
+          "400": { "description": "Status does not allow rejection" },
+          "404": { "description": "Patch not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "List all supported WordPress operations (metadata only)",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of operations with parameters, risk levels, and availability" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/{id}": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "Get detailed metadata for a specific operation",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Operation identifier e.g. content_seed" }
+        ],
+        "responses": {
+          "200": { "description": "Operation metadata" },
+          "404": { "description": "Operation not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/content_seed/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Execute the content seeding operation",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": { "type": "string", "enum": ["post", "page"] },
+                  "count": { "type": "integer", "default": 5, "minimum": 1, "maximum": 100 },
+                  "status": { "type": "string", "enum": ["draft", "publish"], "default": "draft" },
+                  "title_pattern": { "type": "string", "default": "Demo {n}" },
+                  "content_template": { "type": "string", "default": "Sample content" }
+                },
+                "required": ["type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Content seeded" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/acf_seed/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Populate ACF fields on a post",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "ACF fields populated" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/cf7_seed/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Generate a Contact Form 7 form",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "CF7 form created" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/woo_product_seed/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Create a simple WooCommerce product",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Product created" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/safe_search_replace/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Perform a safe database search and replace",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Search/replace completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/media_import/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Import a remote image to the Media Library",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Media imported" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/safe_updates/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Safely update a plugin or theme with health verification",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Update completed" },
+          "400": { "description": "Validation error / health check failed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/wp_cli_bridge/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Run a structured WP-CLI command",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "WP-CLI command executed" },
+          "400": { "description": "Validation error / command blocked" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/option_manage/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Safely inspect or update a registered WordPress option",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Option action completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/plugin_manage/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Safely inspect and manage WordPress plugins",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Plugin action completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/theme_manage/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Safely inspect and manage WordPress themes",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Theme action completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/snapshot_manage/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Create, list, inspect, verify, and restore file snapshots",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Snapshot action completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/content_manage/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Safely inspect and manage WordPress content",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Content action completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/database_inspect/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Read-only database health and structure inspection",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Database inspection completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/capability_manage/run": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Manage platform capabilities",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Capability action completed" },
+          "400": { "description": "Validation error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/requests": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "List operation requests",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" }, "description": "Filter by status (pending_review, approved, rejected, executed)" },
+          { "name": "operation_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "session_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "task_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "plan_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "List of operation requests" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Create an operation request for human review",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/OperationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Operation request created" },
+          "400": { "description": "Validation error / operation not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/requests/{id}": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "Get detailed metadata for a specific operation request",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Request details" },
+          "404": { "description": "Request not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/requests/{id}/approve": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Approve a pending operation request",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Request approved" },
+          "400": { "description": "Status does not allow approval" },
+          "404": { "description": "Request not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/requests/{id}/execute": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Execute an approved operation request",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Request executed with results" },
+          "400": { "description": "Status does not allow execution" },
+          "500": { "description": "Execution failed" },
+          "404": { "description": "Request not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/requests/{id}/queue": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Queue an approved operation request for later execution",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "priority", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "201": { "description": "Request queued" },
+          "400": { "description": "Status does not allow queueing" },
+          "404": { "description": "Request not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/queue": {
+      "get": {
+        "tags": ["Queue"],
+        "summary": "List queued operations",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string" }, "description": "Filter by status (queued, running, completed, failed, cancelled)" },
+          { "name": "operation_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "request_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "List of queue items" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/queue/process": {
+      "post": {
+        "tags": ["Queue"],
+        "summary": "Manually trigger the background worker to process pending queue items",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "limit": { "type": "integer", "description": "Max items to process" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Queue processed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/queue/{id}": {
+      "get": {
+        "tags": ["Queue"],
+        "summary": "Get detailed metadata for a specific queue item",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Queue item details" },
+          "404": { "description": "Queue item not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/queue/{id}/run": {
+      "post": {
+        "tags": ["Queue"],
+        "summary": "Manually execute a queued operation",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Queue item executed" },
+          "400": { "description": "Status does not allow execution" },
+          "404": { "description": "Queue item not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/queue/{id}/cancel": {
+      "post": {
+        "tags": ["Queue"],
+        "summary": "Cancel a queued operation",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Queue item cancelled" },
+          "400": { "description": "Status does not allow cancel" },
+          "404": { "description": "Queue item not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/queue/{id}/retry": {
+      "post": {
+        "tags": ["Queue"],
+        "summary": "Retry a failed queued operation",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Queue item requeued for retry" },
+          "400": { "description": "Status does not allow retry / max attempts exceeded" },
+          "404": { "description": "Queue item not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/results": {
+      "get": {
+        "tags": ["Results"],
+        "summary": "List operation execution results",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "operation_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "queue_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "request_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "List of operation results" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/operations/results/{id}": {
+      "get": {
+        "tags": ["Results"],
+        "summary": "Get detailed execution history for a specific operation result",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Result details" },
+          "404": { "description": "Result not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/recommendations": {
+      "get": {
+        "tags": ["Recommendations"],
+        "summary": "List deterministic recommendations",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "type", "in": "query", "schema": { "type": "string" }, "description": "Recommendation type" },
+          { "name": "severity", "in": "query", "schema": { "type": "string" }, "description": "critical, high, medium, low" },
+          { "name": "status", "in": "query", "schema": { "type": "string" }, "description": "open, dismissed, resolved, converted_to_action, plan_created" },
+          { "name": "source", "in": "query", "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer" } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "List of recommendations" },
+          "400": { "description": "Invalid filter value" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/recommendations/scan": {
+      "post": {
+        "tags": ["Recommendations"],
+        "summary": "Run a deterministic recommendation scan",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Scan completed" },
+          "500": { "description": "Scan failed" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/recommendations/{id}": {
+      "get": {
+        "tags": ["Recommendations"],
+        "summary": "Get a recommendation by UUID",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Recommendation details" },
+          "404": { "description": "Recommendation not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/recommendations/{id}/dismiss": {
+      "post": {
+        "tags": ["Recommendations"],
+        "summary": "Dismiss an open recommendation",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Recommendation dismissed" },
+          "400": { "description": "Invalid status" },
+          "404": { "description": "Recommendation not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/recommendations/{id}/resolve": {
+      "post": {
+        "tags": ["Recommendations"],
+        "summary": "Resolve an open recommendation",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Recommendation resolved" },
+          "400": { "description": "Invalid status" },
+          "404": { "description": "Recommendation not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/recommendations/{id}/convert-to-action": {
+      "post": {
+        "tags": ["Recommendations"],
+        "summary": "Convert an open recommendation to a proposed action",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "session_id": { "type": "string", "format": "uuid" },
+                  "task_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["session_id", "task_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Recommendation converted to action" },
+          "400": { "description": "Invalid status" },
+          "404": { "description": "Recommendation not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/recommendations/{id}/create-plan": {
+      "post": {
+        "tags": ["Recommendations"],
+        "summary": "Create a pending-review plan for a recommendation that has been converted to an action",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Plan created for recommendation" },
+          "400": { "description": "Invalid status" },
+          "404": { "description": "Recommendation not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/files": {
+      "get": {
+        "tags": ["Files"],
+        "summary": "List files and directories under themes, plugins, or mu-plugins",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "path", "in": "query", "schema": { "type": "string" }, "description": "Path relative to wp-content/ under themes, plugins, or mu-plugins" }
+        ],
+        "responses": {
+          "200": { "description": "Directory listing" },
+          "400": { "description": "Missing or invalid path" },
+          "403": { "description": "Path blocked for security" },
+          "404": { "description": "Path not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/files/content": {
+      "get": {
+        "tags": ["Files"],
+        "summary": "Read a file's contents (capped at 1 MB) with secret redaction",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "path", "in": "query", "schema": { "type": "string" }, "description": "Path relative to wp-content/ under themes, plugins, or mu-plugins" }
+        ],
+        "responses": {
+          "200": { "description": "File contents (secrets redacted)" },
+          "400": { "description": "Missing path / file too large" },
+          "403": { "description": "Path blocked" },
+          "404": { "description": "File not found or not readable" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/files/meta": {
+      "get": {
+        "tags": ["Files"],
+        "summary": "Metadata (size, modified, hash, writable) for a single file",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "path", "in": "query", "schema": { "type": "string" }, "description": "Path to a file relative to wp-content/" }
+        ],
+        "responses": {
+          "200": { "description": "File metadata" },
+          "400": { "description": "Missing path" },
+          "403": { "description": "Path blocked" },
+          "404": { "description": "File not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "Search code by text, function, class, or hook name",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Search term" },
+          { "name": "path", "in": "query", "schema": { "type": "string" }, "description": "Limit search to a subdirectory under wp-content/" },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["text", "function", "class", "hook"] }, "description": "Match type" }
+        ],
+        "responses": {
+          "200": { "description": "Search results with redacted matches" },
+          "400": { "description": "Empty query" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/site-intelligence": {
+      "get": {
+        "tags": ["Site Intelligence"],
+        "summary": "WordPress, PHP, theme, plugin, cache, and server information",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Full site scan data" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/diagnostics": {
+      "get": {
+        "tags": ["Diagnostics"],
+        "summary": "Performance, security, or WooCommerce diagnostics",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["performance", "security", "woocommerce"] }, "description": "Diagnostics type" }
+        ],
+        "responses": {
+          "200": { "description": "Diagnostics results" },
+          "400": { "description": "Invalid type" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/diagnostics/debug-log": {
+      "get": {
+        "tags": ["Diagnostics"],
+        "summary": "Tail of wp-content/debug.log with secret redaction",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "lines", "in": "query", "schema": { "type": "integer" }, "description": "Number of lines to return" }
+        ],
+        "responses": {
+          "200": { "description": "Debug log lines (secrets redacted)" },
+          "404": { "description": "No debug.log found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/ai-clients": {
+      "get": {
+        "tags": ["AI Clients"],
+        "summary": "List all registered AI clients with compatibility, status, and configuration support",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of AI clients" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/ai-clients/{client}/config": {
+      "get": {
+        "tags": ["AI Clients"],
+        "summary": "Generate MCP configuration for a specific AI client",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "client", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Client identifier: claude, codex, gemini, etc." }
+        ],
+        "responses": {
+          "200": { "description": "Client-specific MCP configuration" },
+          "404": { "description": "Client not found" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/claude/config": {
+      "get": {
+        "tags": ["Claude"],
+        "summary": "Generate a dynamic Claude Desktop MCP configuration block",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Claude Desktop configuration JSON" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/claude/discovery": {
+      "get": {
+        "tags": ["Claude"],
+        "summary": "Claude discovery metadata: server info, tools, resources, capabilities, approval awareness, and WP-CLI status",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Claude discovery metadata" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/claude/tools": {
+      "get": {
+        "tags": ["Claude"],
+        "summary": "Claude-friendly tool grouping with approval and capability metadata per tool",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Claude tool definitions" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/claude/prompts": {
+      "get": {
+        "tags": ["Claude"],
+        "summary": "Claude-specific helper prompt templates",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Prompt templates" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "tags": ["Capabilities"],
+        "summary": "Capabilities of this API and the current token",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "File/patch/rollback access, server execution features" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/mcp": {
+      "post": {
+        "tags": ["MCP"],
+        "summary": "MCP JSON-RPC 2.0 endpoint (initialize, resources/list, resources/read, tools/list, tools/call, prompts/list)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jsonrpc": { "type": "string", "const": "2.0" },
+                  "method": { "type": "string" },
+                  "params": { "type": "object" },
+                  "id": {}
+                },
+                "required": ["jsonrpc", "method"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "MCP response" },
+          "202": { "description": "MCP response with error" },
+          "400": { "description": "Parse error" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "500": { "description": "Internal error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid API token",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Insufficient token scope (read_only token used for write endpoint)",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    }
+  }
+}

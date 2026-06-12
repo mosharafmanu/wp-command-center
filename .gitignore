@@ -1,0 +1,8 @@
+/vendor/
+/node_modules/
+.DS_Store
+*.log
+wpcc-env.sh
+wpcc-env-*.sh
+.env
+.env.local

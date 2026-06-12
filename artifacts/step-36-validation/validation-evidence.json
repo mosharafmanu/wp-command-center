@@ -1,0 +1,546 @@
+{
+  "generated_at": "2026-06-12T17:43:22Z",
+  "ids": {
+    "session_id": "ed1fc001-130c-4dc2-a5ad-6408ae3b9eae",
+    "task_id": "09be70dc-6324-448d-97c4-d916fac111d1",
+    "action_id": "9907ba55-a14b-4a56-a868-5e180985dc16",
+    "plan_id": "d0698156-fa13-4f09-97d2-dc074569544d",
+    "request_id": "d46ae207-f228-45fc-b770-981cd86842fb",
+    "queue_id": "269fb06a-1400-41a3-b563-fb2d89dfa9dd",
+    "result_id": "62ea1edd-e9d4-4f24-9b43-c97fbabf234a",
+    "patch_id": "7d371546-5858-41c5-a678-fb2ff0dbcb43",
+    "verification_id": "7824dc8d-e5d4-4d0a-ae7b-28113ce5f793"
+  },
+  "diagnostics": {
+    "performance": {
+      "type": "performance",
+      "checks": [
+        {
+          "id": "memory_limit",
+          "label": "PHP Memory Limit",
+          "status": "good",
+          "description": "PHP memory limit is sufficient. (4G)"
+        },
+        {
+          "id": "memory_usage",
+          "label": "Current Request Memory Usage",
+          "status": "info",
+          "description": "Current: 97 MB, Peak: 97 MB"
+        },
+        {
+          "id": "object_cache",
+          "label": "External Object Cache",
+          "status": "recommended",
+          "description": "No persistent object cache detected. Database-heavy sites benefit from one."
+        },
+        {
+          "id": "opcache",
+          "label": "OPcache",
+          "status": "recommended",
+          "description": "PHP OPcache is not enabled. Enabling it significantly speeds up PHP execution."
+        },
+        {
+          "id": "page_cache",
+          "label": "Page Caching",
+          "status": "recommended",
+          "description": "No page caching plugin or drop-in detected."
+        },
+        {
+          "id": "autoloaded_options",
+          "label": "Autoloaded Options Size",
+          "status": "good",
+          "description": "Total size of autoloaded options: 0 B. Large autoloaded data is loaded on every page request."
+        },
+        {
+          "id": "active_plugins_count",
+          "label": "Active Plugins",
+          "status": "info",
+          "description": "11 plugins are active."
+        },
+        {
+          "id": "wp_cron",
+          "label": "WP-Cron",
+          "status": "info",
+          "description": "WP-Cron runs on page loads (default behavior)."
+        }
+      ]
+    },
+    "security": {
+      "type": "security",
+      "checks": [
+        {
+          "id": "wp_debug_display",
+          "label": "Debug Display",
+          "status": "good",
+          "description": "PHP errors are not displayed to visitors."
+        },
+        {
+          "id": "file_edit",
+          "label": "Theme/Plugin File Editor",
+          "status": "recommended",
+          "description": "The built-in theme/plugin file editor is enabled. Consider setting DISALLOW_FILE_EDIT to true."
+        },
+        {
+          "id": "wp_config_permissions",
+          "label": "wp-config.php Permissions",
+          "status": "good",
+          "description": "wp-config.php permissions look reasonable (0644)."
+        },
+        {
+          "id": "ssl",
+          "label": "SSL (HTTPS)",
+          "status": "recommended",
+          "description": "The site is not using HTTPS. An SSL certificate is strongly recommended."
+        },
+        {
+          "id": "default_admin_account",
+          "label": "Default \"admin\" Account",
+          "status": "recommended",
+          "description": "A user with the username \"admin\" has the Administrator role — a common brute-force target. Consider renaming or removing it."
+        },
+        {
+          "id": "directory_listing",
+          "label": "Uploads Directory Listing",
+          "status": "recommended",
+          "description": "The uploads directory has no index.php/index.html — directory listing may be possible if the server allows it."
+        },
+        {
+          "id": "core_update",
+          "label": "WordPress Core Updates",
+          "status": "good",
+          "description": "WordPress is up to date."
+        }
+      ]
+    },
+    "woocommerce": {
+      "type": "woocommerce",
+      "checks": [
+        {
+          "id": "woocommerce_db_version",
+          "label": "WooCommerce Database Version",
+          "status": "good",
+          "description": "WooCommerce database schema is up to date (10.8.1)."
+        },
+        {
+          "id": "woocommerce_payment_gateways",
+          "label": "Payment Gateways",
+          "status": "critical",
+          "description": "No payment gateways are enabled. Customers will not be able to complete checkout."
+        },
+        {
+          "id": "woocommerce_scheduled_actions",
+          "label": "Scheduled Actions",
+          "status": "recommended",
+          "description": "4 scheduled action(s) have failed, 16 are pending. Failed actions may indicate a recurring error."
+        },
+        {
+          "id": "woocommerce_template_overrides",
+          "label": "Template Overrides",
+          "status": "info",
+          "description": "5 theme template overrides found, all up to date."
+        }
+      ]
+    }
+  },
+  "recommendation_scan": {
+    "generated": 14,
+    "created": 0,
+    "updated": 1,
+    "unchanged": 13,
+    "recommendations": [
+      {
+        "recommendation_id": "0b6e776b-01bc-4c46-b175-0820af0f3e18",
+        "action_id": null,
+        "plan_id": null,
+        "type": "security",
+        "severity": "critical",
+        "title": "wp-config.php is writable",
+        "description": "The WordPress configuration file is writable by the PHP process or has unsafe permissions.",
+        "impact": "An attacker who gains code execution could alter database credentials, authentication salts, or site behavior.",
+        "suggested_action": "Restrict wp-config.php permissions and ownership; use 600 or 640 where hosting permits.",
+        "source": "security_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "security.wp_config_writable",
+          "permissions": "0644",
+          "writable": true
+        },
+        "created_at": 1781285896,
+        "updated_at": 1781285896,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "c7ed3553-1a02-4fa6-872c-eab285a59691",
+        "action_id": null,
+        "plan_id": null,
+        "type": "security",
+        "severity": "medium",
+        "title": "SSL is not enabled",
+        "description": "The site is not currently being served over HTTPS.",
+        "impact": "Credentials and visitor traffic may be exposed or modified in transit.",
+        "suggested_action": "Install a valid TLS certificate and redirect HTTP traffic to HTTPS.",
+        "source": "security_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "security_diagnostics.ssl",
+          "diagnostic_id": "ssl",
+          "diagnostic_status": "recommended"
+        },
+        "created_at": 1781285896,
+        "updated_at": 1781285896,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "acffe5df-3040-49d4-bd2c-c90fd97c8633",
+        "action_id": "68cdd8a6-6f57-4a4d-8231-fc42482d26e9",
+        "plan_id": null,
+        "type": "security",
+        "severity": "medium",
+        "title": "Theme and plugin file editor is enabled",
+        "description": "WordPress administrators can edit runtime PHP files from wp-admin.",
+        "impact": "A compromised administrator account can modify executable code directly.",
+        "suggested_action": "Set DISALLOW_FILE_EDIT to true.",
+        "source": "security_diagnostics",
+        "status": "converted_to_action",
+        "context": {
+          "rule_key": "security_diagnostics.file_edit",
+          "diagnostic_id": "file_edit",
+          "diagnostic_status": "recommended",
+          "action_id": "68cdd8a6-6f57-4a4d-8231-fc42482d26e9",
+          "session_id": "3ca29da7-203d-4c53-87ad-b1452590e758",
+          "task_id": "99092785-83da-4d3f-89ae-057e310bf07a"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284425,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "99d96a99-5f8d-4044-8f1d-8b543d96608a",
+        "action_id": null,
+        "plan_id": null,
+        "type": "security",
+        "severity": "medium",
+        "title": "Default administrator username exists",
+        "description": "An administrator account uses the predictable username \"admin\".",
+        "impact": "Predictable usernames make credential attacks easier.",
+        "suggested_action": "Create a replacement administrator account and remove or demote the default admin account.",
+        "source": "security_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "security_diagnostics.default_admin_account",
+          "diagnostic_id": "default_admin_account",
+          "diagnostic_status": "recommended"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "6a86d92a-0482-46e9-8e08-20962d817b79",
+        "action_id": null,
+        "plan_id": null,
+        "type": "performance",
+        "severity": "medium",
+        "title": "No page cache detected",
+        "description": "No page caching plugin or advanced-cache.php drop-in was detected.",
+        "impact": "Uncached page generation increases response time and server load.",
+        "suggested_action": "Configure a page cache appropriate for the hosting environment.",
+        "source": "performance_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "performance_diagnostics.page_cache",
+          "diagnostic_id": "page_cache",
+          "diagnostic_status": "recommended"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "6ad34ba5-f0a6-43c6-92bb-ede49f522fb3",
+        "action_id": null,
+        "plan_id": null,
+        "type": "performance",
+        "severity": "low",
+        "title": "No persistent object cache detected",
+        "description": "WordPress is not using a persistent external object cache.",
+        "impact": "Database-heavy workloads may perform more repeated queries.",
+        "suggested_action": "Consider Redis or Memcached for sites with sustained dynamic traffic.",
+        "source": "performance_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "performance_diagnostics.object_cache",
+          "diagnostic_id": "object_cache",
+          "diagnostic_status": "recommended"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "f4531eb0-5d7b-4527-862d-a3a5d94a3524",
+        "action_id": null,
+        "plan_id": null,
+        "type": "performance",
+        "severity": "medium",
+        "title": "PHP OPcache is disabled",
+        "description": "PHP bytecode caching is not enabled.",
+        "impact": "PHP files must be compiled repeatedly, increasing CPU use and response time.",
+        "suggested_action": "Enable and size PHP OPcache for the site workload.",
+        "source": "performance_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "performance_diagnostics.opcache",
+          "diagnostic_id": "opcache",
+          "diagnostic_status": "recommended"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "22c30208-3a0c-4444-bcbe-3cdc075b20e9",
+        "action_id": null,
+        "plan_id": null,
+        "type": "woocommerce",
+        "severity": "critical",
+        "title": "No WooCommerce payment gateways are enabled",
+        "description": "Customers cannot complete checkout because no payment gateway is available.",
+        "impact": "The store cannot accept payments.",
+        "suggested_action": "Enable and configure at least one production payment gateway.",
+        "source": "woocommerce_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "woocommerce_diagnostics.woocommerce_payment_gateways",
+          "diagnostic_id": "woocommerce_payment_gateways",
+          "diagnostic_status": "critical"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "610de0e7-72a7-42d9-8302-71eae2b6e574",
+        "action_id": null,
+        "plan_id": null,
+        "type": "woocommerce",
+        "severity": "high",
+        "title": "WooCommerce scheduled actions are failing",
+        "description": "4 scheduled action(s) have failed, 16 are pending. Failed actions may indicate a recurring error.",
+        "impact": "Failed background jobs can interrupt orders, subscriptions, webhooks, or stock processing.",
+        "suggested_action": "Review failed scheduled actions and fix the recurring error before retrying them.",
+        "source": "woocommerce_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "woocommerce_diagnostics.woocommerce_scheduled_actions",
+          "diagnostic_id": "woocommerce_scheduled_actions",
+          "diagnostic_status": "recommended"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "0a79c42c-c90f-48f5-a4a0-0a87be9c09d1",
+        "action_id": null,
+        "plan_id": null,
+        "type": "woocommerce",
+        "severity": "info",
+        "title": "WooCommerce template overrides detected",
+        "description": "5 theme template overrides found, all up to date.",
+        "impact": "Theme overrides may diverge from current WooCommerce templates and require maintenance after upgrades.",
+        "suggested_action": "Review override versions after WooCommerce updates and test checkout-related templates.",
+        "source": "woocommerce_diagnostics",
+        "status": "open",
+        "context": {
+          "rule_key": "woocommerce.template_overrides"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "730288ba-8308-42fe-b572-b47fcc1446fe",
+        "action_id": null,
+        "plan_id": null,
+        "type": "operations",
+        "severity": "high",
+        "title": "Operation queue contains failed items",
+        "description": "49 operation queue item(s) are in failed status.",
+        "impact": "Requested maintenance or content operations may be incomplete.",
+        "suggested_action": "Review failure details, correct the cause, and retry eligible items.",
+        "source": "operation_queue",
+        "status": "open",
+        "context": {
+          "rule_key": "operations.failed_queue",
+          "count": 49
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781286190,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "3ea14367-6467-4fc2-ac45-fb7ba4f9c78e",
+        "action_id": null,
+        "plan_id": null,
+        "type": "operations",
+        "severity": "medium",
+        "title": "Failed operations can be retried",
+        "description": "7 failed queue item(s) remain within their retry limit.",
+        "impact": "Recoverable work remains incomplete.",
+        "suggested_action": "Inspect each failure and retry only after correcting the underlying cause.",
+        "source": "operation_queue",
+        "status": "open",
+        "context": {
+          "rule_key": "operations.retryable_queue",
+          "count": 7
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "5a452e77-d0a6-4ab6-99ad-28f77ec83954",
+        "action_id": null,
+        "plan_id": null,
+        "type": "operations",
+        "severity": "high",
+        "title": "Operation history contains failures",
+        "description": "100 failed operation result(s) were found.",
+        "impact": "Repeated failures may indicate invalid inputs, unavailable dependencies, or a persistent runtime fault.",
+        "suggested_action": "Review recent operation results and address recurring error codes.",
+        "source": "operation_results",
+        "status": "open",
+        "context": {
+          "rule_key": "operations.failed_results",
+          "count": 100
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      },
+      {
+        "recommendation_id": "0803f39e-ae06-48bb-a6f7-a7b498f29395",
+        "action_id": null,
+        "plan_id": null,
+        "type": "developer_experience",
+        "severity": "info",
+        "title": "WP-CLI is unavailable",
+        "description": "The WP-CLI bridge cannot find a usable wp binary.",
+        "impact": "Command-line maintenance and selected automation capabilities are unavailable.",
+        "suggested_action": "Install WP-CLI or keep using the REST and wp-admin workflows.",
+        "source": "server_capabilities",
+        "status": "open",
+        "context": {
+          "rule_key": "developer.wp_cli"
+        },
+        "created_at": 1781284419,
+        "updated_at": 1781284419,
+        "dismissed_at": null,
+        "resolved_at": null
+      }
+    ]
+  },
+  "health": {
+    "verification_id": "7824dc8d-e5d4-4d0a-ae7b-28113ce5f793",
+    "status": "passed",
+    "checks": [
+      {
+        "id": "frontend_health",
+        "label": "Frontend health",
+        "status": "passed",
+        "message": "HTTP 200 returned in 379 ms.",
+        "context": {
+          "url": "http://localhost/ClientProjects/WordPress/2026/plugins-dev/",
+          "http_status": 200,
+          "duration_ms": 379
+        }
+      },
+      {
+        "id": "admin_health",
+        "label": "wp-admin health",
+        "status": "passed",
+        "message": "HTTP 200 returned in 685 ms.",
+        "context": {
+          "url": "http://localhost/ClientProjects/WordPress/2026/plugins-dev/wp-admin/",
+          "http_status": 200,
+          "duration_ms": 685
+        }
+      },
+      {
+        "id": "rest_api_health",
+        "label": "REST API health",
+        "status": "passed",
+        "message": "HTTP 200 returned in 419 ms.",
+        "context": {
+          "url": "http://localhost/ClientProjects/WordPress/2026/plugins-dev/wp-json/",
+          "http_status": 200,
+          "duration_ms": 419
+        }
+      },
+      {
+        "id": "wpcc_api_health",
+        "label": "WPCC API health",
+        "status": "passed",
+        "message": "HTTP 401 returned in 390 ms.",
+        "context": {
+          "url": "http://localhost/ClientProjects/WordPress/2026/plugins-dev/wp-json/wp-command-center/v1/health",
+          "http_status": 401,
+          "duration_ms": 390
+        }
+      },
+      {
+        "id": "woocommerce_health",
+        "label": "WooCommerce health",
+        "status": "passed",
+        "message": "WooCommerce is active and its database schema is current.",
+        "context": {
+          "version": "10.8.1",
+          "db_version": "10.8.1"
+        }
+      },
+      {
+        "id": "plugin_integrity",
+        "label": "Plugin integrity",
+        "status": "passed",
+        "message": "11 active plugin entry file(s) are readable.",
+        "context": {
+          "checked": 11,
+          "invalid": []
+        }
+      },
+      {
+        "id": "theme_integrity",
+        "label": "Theme integrity",
+        "status": "passed",
+        "message": "Active theme stylesheet files are readable.",
+        "context": {
+          "theme": "mosharaf-core",
+          "invalid": []
+        }
+      }
+    ],
+    "summary": {
+      "total": 7,
+      "passed": 7,
+      "warnings": 0,
+      "failed": 0
+    },
+    "started_at": 1781286200,
+    "completed_at": 1781286202,
+    "created_at": 1781286202
+  }
+}

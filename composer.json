@@ -1,0 +1,30 @@
+{
+	"name": "mosharafmanu/wp-command-center",
+	"description": "Connect Claude, Codex, GPT, and other AI agents to WordPress using only WordPress Admin access.",
+	"type": "wordpress-plugin",
+	"authors": [
+		{
+			"name": "Mosharaf Hossain",
+			"homepage": "https://mosharafmanu.com"
+		}
+	],
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.0"
+	},
+	"require-dev": {
+		"squizlabs/php_codesniffer": "^3.9",
+		"wp-coding-standards/wpcs": "^3.1",
+		"phpcompatibility/phpcompatibility-wp": "^2.1"
+	},
+	"autoload": {
+		"psr-4": {
+			"WPCommandCenter\\": "includes/"
+		}
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true
+		}
+	}
+}

@@ -1,0 +1,74 @@
+<?php
+namespace WPCommandCenter\Admin;
+
+defined( 'ABSPATH' ) || exit;
+
+final class AdminMenu {
+
+	private const CAPABILITY = 'manage_options';
+
+	public function init(): void {
+		add_action( 'admin_menu', [ $this, 'register_menu' ] );
+	}
+
+	public function register_menu(): void {
+		add_menu_page(
+			__( 'WP Command Center', 'wp-command-center' ),
+			__( 'Command Center', 'wp-command-center' ),
+			self::CAPABILITY,
+			'wp-command-center',
+			[ $this, 'render_dashboard' ],
+			'dashicons-admin-generic',
+			65
+		);
+
+		add_submenu_page( 'wp-command-center', __( 'Dashboard', 'wp-command-center' ), __( 'Dashboard', 'wp-command-center' ), self::CAPABILITY, 'wp-command-center', [ $this, 'render_dashboard' ] );
+		add_submenu_page( 'wp-command-center', __( 'Site Intelligence', 'wp-command-center' ), __( 'Site Intelligence', 'wp-command-center' ), self::CAPABILITY, 'wpcc-site-intelligence', [ $this, 'render_site_intelligence' ] );
+		add_submenu_page( 'wp-command-center', __( 'Diagnostics', 'wp-command-center' ), __( 'Diagnostics', 'wp-command-center' ), self::CAPABILITY, 'wpcc-diagnostics', [ $this, 'render_diagnostics' ] );
+		add_submenu_page( 'wp-command-center', __( 'File Access', 'wp-command-center' ), __( 'File Access', 'wp-command-center' ), self::CAPABILITY, 'wpcc-file-access', [ $this, 'render_file_access' ] );
+		add_submenu_page( 'wp-command-center', __( 'Patches', 'wp-command-center' ), __( 'Patches', 'wp-command-center' ), self::CAPABILITY, 'wpcc-patches', [ $this, 'render_patches' ] );
+		add_submenu_page( 'wp-command-center', __( 'Rollback', 'wp-command-center' ), __( 'Rollback', 'wp-command-center' ), self::CAPABILITY, 'wpcc-rollback', [ $this, 'render_rollback' ] );
+		add_submenu_page( 'wp-command-center', __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, 'wpcc-settings', [ $this, 'render_settings' ] );
+		add_submenu_page( 'wp-command-center', __( 'AI Integrations', 'wp-command-center' ), __( 'AI Integrations', 'wp-command-center' ), self::CAPABILITY, 'wpcc-ai-integrations', [ $this, 'render_ai_integrations' ] );
+	}
+
+	public function render_dashboard(): void {
+		$this->render_view( 'dashboard' );
+	}
+
+	public function render_site_intelligence(): void {
+		$this->render_view( 'site-intelligence' );
+	}
+
+	public function render_diagnostics(): void {
+		$this->render_view( 'diagnostics' );
+	}
+
+	public function render_file_access(): void {
+		$this->render_view( 'file-access' );
+	}
+
+	public function render_patches(): void {
+		$this->render_view( 'patches' );
+	}
+
+	public function render_rollback(): void {
+		$this->render_view( 'rollback' );
+	}
+
+	public function render_settings(): void {
+		$this->render_view( 'settings' );
+	}
+
+	public function render_ai_integrations(): void {
+		$this->render_view( 'ai-integrations' );
+	}
+
+	private function render_view( string $view ): void {
+		$path = WPCC_PLUGIN_DIR . "includes/Admin/views/{$view}.php";
+
+		if ( is_readable( $path ) ) {
+			require $path;
+		}
+	}
+}
