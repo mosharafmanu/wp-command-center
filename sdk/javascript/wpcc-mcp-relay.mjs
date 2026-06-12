@@ -6,8 +6,9 @@
  * HTTP MCP endpoint.
  *
  * Environment variables (set by client config):
- *   WPCC_MCP_URL  — Full URL of the WPCC MCP endpoint
- *   WPCC_TOKEN    — Bearer token for authentication
+ *   WPCC_MCP_URL     — Full URL of the WPCC MCP endpoint
+ *   WPCC_TOKEN       — Bearer token for authentication
+ *   WPCC_RELAY_VERSION — Relay version (for startup logging)
  *
  * JSON-RPC 2.0 §4.1: Notifications (messages without an "id") MUST NOT
  * receive a response. This relay silently drops notifications and only
@@ -16,13 +17,17 @@
 
 import { createInterface } from 'node:readline';
 
-const MCP_URL = process.env.WPCC_MCP_URL;
-const TOKEN   = process.env.WPCC_TOKEN;
+const RELAY_VERSION = '2.0.0';
+const MCP_URL       = process.env.WPCC_MCP_URL;
+const TOKEN         = process.env.WPCC_TOKEN;
 
 if (!MCP_URL || !TOKEN) {
 	process.stderr.write('WPCC MCP Relay: WPCC_MCP_URL and WPCC_TOKEN must be set\n');
 	process.exit(1);
 }
+
+process.stderr.write(`WPCC MCP Relay v${RELAY_VERSION} starting\n`);
+process.stderr.write(`WPCC MCP Relay: endpoint ${MCP_URL}\n`);
 
 const rl = createInterface({ input: process.stdin, terminal: false });
 

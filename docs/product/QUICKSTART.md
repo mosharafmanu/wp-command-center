@@ -80,7 +80,7 @@ If the file doesn't exist, create it with this structure:
       "command": "bash",
       "args": [
         "-c",
-        "RELAY=/tmp/wpcc-mcp-relay.mjs; [ -f \"$RELAY\" ] || curl -fsSL -o \"$RELAY\" https://yoursite.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs; node \"$RELAY\""
+        "RELAY=/tmp/wpcc-mcp-relay.mjs; curl -fsSL -o \"$RELAY\" https://yoursite.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs; node \"$RELAY\""
       ],
       "env": {
         "WPCC_MCP_URL": "https://yoursite.com/wp-json/wp-command-center/v1/mcp",

@@ -70,7 +70,7 @@ JSON object. If there are already `mcpServers` entries, merge the
       "command": "bash",
       "args": [
         "-c",
-        "RELAY=/tmp/wpcc-mcp-relay.mjs; [ -f \"$RELAY\" ] || curl -fsSL -o \"$RELAY\" https://yoursite.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs; node \"$RELAY\""
+        "RELAY=/tmp/wpcc-mcp-relay.mjs; curl -fsSL -o \"$RELAY\" https://yoursite.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs; node \"$RELAY\""
       ],
       "env": {
         "WPCC_MCP_URL": "https://yoursite.com/wp-json/wp-command-center/v1/mcp",
@@ -85,8 +85,8 @@ JSON object. If there are already `mcpServers` entries, merge the
 
 **How it works:** The config uses a built-in MCP relay script (`wpcc-mcp-relay.mjs`)
 that bridges Claude Desktop's stdio transport to the WPCC HTTP MCP endpoint.
-On first launch, the script is downloaded once and cached in `/tmp`. Subsequent
-launches use the cached copy.
+The relay is downloaded fresh on every Claude Desktop startup, ensuring you
+always run the latest version after plugin updates.
 
 **Prerequisites:** `bash`, `curl`, and `node` — all preinstalled on macOS and
 most Linux distributions. Windows users should use WSL2.

@@ -23,7 +23,7 @@ abstract class BaseClientIntegration {
 	 * Generate an MCP configuration block that works with any stdio-based
 	 * MCP client (Claude Desktop, Cursor, Continue, etc.).
 	 *
-	 * Uses bash to download (once, cached) and run the WPCC MCP relay script.
+	 * Downloads the latest WPCC MCP relay script on every startup and runs it.
 	 * The relay bridges stdio ↔ HTTP so clients can reach the WPCC MCP endpoint.
 	 */
 	public static function generate_mcp_config(): array {
@@ -33,9 +33,9 @@ abstract class BaseClientIntegration {
 		$relay_path = '/tmp/wpcc-mcp-relay.mjs';
 
 		$bootstrap = sprintf(
-			'RELAY=%s; [ -f "$RELAY" ] || curl -fsSL -o "$RELAY" %s; node "$RELAY"',
+			'RELAY=%s; curl -fsSL -o "$RELAY" %s; node "$RELAY"',
 			escapeshellarg( $relay_path ),
-			escapeshellarg( $relay_url )
+			escapeshellarg( $relay_url . '?v=' . WPCC_VERSION )
 		);
 
 		return [
@@ -44,9 +44,9 @@ abstract class BaseClientIntegration {
 					'command' => 'bash',
 					'args'    => [ '-c', $bootstrap ],
 					'env'     => [
-						'WPCC_MCP_URL'     => $mcp_url,
-						'WPCC_SITE_URL'    => $site_url,
-						'WPCC_TOKEN'       => '${WPCC_TOKEN}',
+						'WPCC_MCP_URL'      => $mcp_url,
+						'WPCC_SITE_URL'     => $site_url,
+						'WPCC_TOKEN'        => '${WPCC_TOKEN}',
 						'WPCC_CONTEXT_MODE' => 'compact',
 					],
 				],

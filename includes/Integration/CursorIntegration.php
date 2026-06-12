@@ -19,8 +19,8 @@ final class CursorIntegration {
 	/**
 	 * Generate a Cursor MCP configuration block dynamically.
 	 *
-	 * Uses bash to download (once, cached) and run the WPCC MCP relay script
-	 * that bridges Cursor's stdio transport to the WPCC HTTP MCP endpoint.
+	 * Downloads the latest WPCC MCP relay script on every startup and runs it.
+	 * The relay bridges Cursor's stdio transport to the WPCC HTTP MCP endpoint.
 	 */
 	public static function generate_mcp_config(): array {
 		$mcp_url    = rest_url( McpServerRuntime::NAMESPACE . '/mcp' );
@@ -29,9 +29,9 @@ final class CursorIntegration {
 		$relay_path = '/tmp/wpcc-mcp-relay.mjs';
 
 		$bootstrap = sprintf(
-			'RELAY=%s; [ -f "$RELAY" ] || curl -fsSL -o "$RELAY" %s; node "$RELAY"',
+			'RELAY=%s; curl -fsSL -o "$RELAY" %s; node "$RELAY"',
 			escapeshellarg( $relay_path ),
-			escapeshellarg( $relay_url )
+			escapeshellarg( $relay_url . '?v=' . WPCC_VERSION )
 		);
 
 		return [
@@ -40,9 +40,9 @@ final class CursorIntegration {
 					'command' => 'bash',
 					'args'    => [ '-c', $bootstrap ],
 					'env'     => [
-						'WPCC_MCP_URL'     => $mcp_url,
-						'WPCC_SITE_URL'    => $site_url,
-						'WPCC_TOKEN'       => '${WPCC_TOKEN}',
+						'WPCC_MCP_URL'      => $mcp_url,
+						'WPCC_SITE_URL'     => $site_url,
+						'WPCC_TOKEN'        => '${WPCC_TOKEN}',
 						'WPCC_CONTEXT_MODE' => 'compact',
 					],
 				],
