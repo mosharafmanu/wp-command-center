@@ -24,11 +24,14 @@ final class MediaRuntimeManager {
 			MediaRegistry::ACTION_GET                 => $this->get_media( $payload ),
 			MediaRegistry::ACTION_SEARCH              => $this->search_media( $payload ),
 			MediaRegistry::ACTION_UPLOAD              => $this->upload_media( $payload, $context ),
+			MediaRegistry::ACTION_UPDATE              => $this->update_media( $payload, $context ),
 			MediaRegistry::ACTION_REPLACE             => $this->replace_media( $payload, $context ),
 			MediaRegistry::ACTION_DELETE              => $this->delete_media( $payload, $context ),
 			MediaRegistry::ACTION_RESTORE             => $this->restore_media( $payload, $context ),
-			MediaRegistry::ACTION_FEATURED_ASSIGN     => $this->featured_assign( $payload, $context ),
-			MediaRegistry::ACTION_FEATURED_REMOVE     => $this->featured_remove( $payload, $context ),
+			MediaRegistry::ACTION_FEATURED_ASSIGN,
+			MediaRegistry::ACTION_SET_FEATURED        => $this->featured_assign( $payload, $context ),
+			MediaRegistry::ACTION_FEATURED_REMOVE,
+			MediaRegistry::ACTION_REMOVE_FEATURED     => $this->featured_remove( $payload, $context ),
 			MediaRegistry::ACTION_REGENERATE_METADATA => $this->regenerate_metadata( $payload, $context ),
 			default => $this->error( 'wpcc_unknown_media_action', __( 'Unknown media action.', 'wp-command-center' ) ),
 		};
@@ -129,18 +132,85 @@ final class MediaRuntimeManager {
 			return $this->error( 'wpcc_upload_failed', $attach_id->get_error_message() );
 		}
 
+		$description = sanitize_textarea_field( (string) ( $payload['description'] ?? '' ) );
+
 		if ( '' !== $alt ) {
 			update_post_meta( $attach_id, '_wp_attachment_image_alt', $alt );
 		}
+		$post_update = [];
 		if ( '' !== $caption ) {
-			wp_update_post( [ 'ID' => $attach_id, 'post_excerpt' => $caption ] );
+			$post_update['post_excerpt'] = $caption;
+		}
+		if ( '' !== $description ) {
+			$post_update['post_content'] = $description;
+		}
+		if ( ! empty( $post_update ) ) {
+			$post_update['ID'] = $attach_id;
+			wp_update_post( $post_update );
 		}
 
-		$this->store_rollback( $attach_id, 'upload', [], $context );
+		$rollback_id = $this->store_rollback( $attach_id, 'upload', [], $context );
 
 		$this->audit->record( 'media.uploaded', [ 'media_id' => $attach_id, 'source' => $source_url ] );
 
-		return [ 'action' => 'media_upload', 'media_id' => $attach_id, 'url' => wp_get_attachment_url( $attach_id ) ];
+		return [ 'action' => 'media_upload', 'media_id' => $attach_id, 'url' => wp_get_attachment_url( $attach_id ), 'rollback_id' => $rollback_id ];
+	}
+
+	/**
+	 * STEP 90 — update metadata (title, alt, caption, description) on an existing
+	 * attachment. Rollback-capable: the full prior metadata is snapshotted first.
+	 */
+	private function update_media( array $payload, array $context ): array {
+		$media_id = (int) ( $payload['media_id'] ?? 0 );
+		$post     = get_post( $media_id );
+
+		if ( ! $post || 'attachment' !== $post->post_type ) {
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+		}
+
+		// At least one updatable field must be supplied.
+		$has_field = false;
+		foreach ( [ 'title', 'alt', 'caption', 'description' ] as $field ) {
+			if ( array_key_exists( $field, $payload ) ) {
+				$has_field = true;
+				break;
+			}
+		}
+		if ( ! $has_field ) {
+			return $this->error( 'wpcc_media_no_fields', __( 'Provide at least one of: title, alt, caption, description.', 'wp-command-center' ) );
+		}
+
+		$before      = $this->format_media( $post );
+		$rollback_id = $this->store_rollback( $media_id, 'update', $before, $context );
+
+		$post_update = [ 'ID' => $media_id ];
+		if ( array_key_exists( 'title', $payload ) ) {
+			$post_update['post_title'] = sanitize_text_field( (string) $payload['title'] );
+		}
+		if ( array_key_exists( 'caption', $payload ) ) {
+			$post_update['post_excerpt'] = sanitize_text_field( (string) $payload['caption'] );
+		}
+		if ( array_key_exists( 'description', $payload ) ) {
+			$post_update['post_content'] = sanitize_textarea_field( (string) $payload['description'] );
+		}
+		if ( count( $post_update ) > 1 ) {
+			$result = wp_update_post( $post_update, true );
+			if ( is_wp_error( $result ) ) {
+				return $this->error( 'wpcc_media_update_failed', $result->get_error_message() );
+			}
+		}
+		if ( array_key_exists( 'alt', $payload ) ) {
+			update_post_meta( $media_id, '_wp_attachment_image_alt', sanitize_text_field( (string) $payload['alt'] ) );
+		}
+
+		$updated = $this->format_media( get_post( $media_id ) );
+
+		$this->audit->record( 'media.updated', [
+			'media_id' => $media_id,
+			'fields'   => array_values( array_intersect( [ 'title', 'alt', 'caption', 'description' ], array_keys( $payload ) ) ),
+		] );
+
+		return [ 'action' => 'media_update', 'media_id' => $media_id, 'media' => $updated, 'rollback_id' => $rollback_id ];
 	}
 
 	private function replace_media( array $payload, array $context ): array {
@@ -152,8 +222,8 @@ final class MediaRuntimeManager {
 			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
 		}
 
-		$before = $this->format_media( $post );
-		$this->store_rollback( $media_id, 'replace', $before, $context );
+		$before      = $this->format_media( $post );
+		$rollback_id = $this->store_rollback( $media_id, 'replace', $before, $context );
 
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -173,7 +243,7 @@ final class MediaRuntimeManager {
 
 		$this->audit->record( 'media.replaced', [ 'media_id' => $media_id, 'source' => $source_url ] );
 
-		return [ 'action' => 'media_replace', 'media_id' => $media_id, 'url' => wp_get_attachment_url( $media_id ) ];
+		return [ 'action' => 'media_replace', 'media_id' => $media_id, 'url' => wp_get_attachment_url( $media_id ), 'rollback_id' => $rollback_id ];
 	}
 
 	private function delete_media( array $payload, array $context ): array {
@@ -185,17 +255,19 @@ final class MediaRuntimeManager {
 			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
 		}
 
-		$before = $this->format_media( $post );
-		$this->store_rollback( $media_id, 'delete', $before, $context );
+		$before      = $this->format_media( $post );
+		// A force delete bypasses the trash and cannot be restored from a rollback
+		// record, so only a soft (trash) delete is rollback-capable.
+		$rollback_id = $force ? '' : $this->store_rollback( $media_id, 'delete', $before, $context );
 
 		$result = wp_delete_attachment( $media_id, $force );
 		if ( ! $result ) {
 			return $this->error( 'wpcc_media_delete_failed', __( 'Failed to delete media.', 'wp-command-center' ) );
 		}
 
-		$this->audit->record( 'media.deleted', [ 'media_id' => $media_id, 'title' => $before['title'] ?? '' ] );
+		$this->audit->record( 'media.deleted', [ 'media_id' => $media_id, 'title' => $before['title'] ?? '', 'force' => $force ] );
 
-		return [ 'action' => 'media_delete', 'media_id' => $media_id, 'title' => $before['title'] ?? '', 'force' => $force ];
+		return [ 'action' => 'media_delete', 'media_id' => $media_id, 'title' => $before['title'] ?? '', 'force' => $force, 'rollback_id' => $rollback_id ];
 	}
 
 	private function restore_media( array $payload, array $context ): array {
@@ -231,6 +303,11 @@ final class MediaRuntimeManager {
 			wp_untrash_post( $media_id );
 		}
 
+		// Restore prior metadata after an update.
+		if ( 'update' === $record['action'] ) {
+			$this->restore_metadata( $media_id, $before );
+		}
+
 		// Restore featured image
 		if ( in_array( $record['action'], [ 'featured_image_assign', 'featured_image_remove' ], true ) && isset( $before['post_id'] ) ) {
 			$parent = $before['post_id'];
@@ -257,7 +334,7 @@ final class MediaRuntimeManager {
 		}
 
 		$existing_thumb = get_post_thumbnail_id( $post_id );
-		$this->store_rollback( $media_id, 'featured_image_assign', [
+		$rollback_id    = $this->store_rollback( $media_id, 'featured_image_assign', [
 			'post_id'      => $post_id,
 			'thumbnail_id' => $existing_thumb ?: 0,
 		], $context );
@@ -266,7 +343,7 @@ final class MediaRuntimeManager {
 
 		$this->audit->record( 'featured_image.assigned', [ 'media_id' => $media_id, 'post_id' => $post_id ] );
 
-		return [ 'action' => 'featured_image_assign', 'media_id' => $media_id, 'post_id' => $post_id ];
+		return [ 'action' => 'featured_image_assign', 'media_id' => $media_id, 'post_id' => $post_id, 'rollback_id' => $rollback_id ];
 	}
 
 	private function featured_remove( array $payload, array $context ): array {
@@ -275,8 +352,8 @@ final class MediaRuntimeManager {
 			return $this->error( 'wpcc_post_not_found', __( 'Post not found.', 'wp-command-center' ) );
 		}
 
-		$thumb_id = get_post_thumbnail_id( $post_id );
-		$this->store_rollback( $thumb_id ?: 0, 'featured_image_remove', [
+		$thumb_id    = get_post_thumbnail_id( $post_id );
+		$rollback_id = $this->store_rollback( $thumb_id ?: 0, 'featured_image_remove', [
 			'post_id'      => $post_id,
 			'thumbnail_id' => $thumb_id ?: 0,
 		], $context );
@@ -285,7 +362,7 @@ final class MediaRuntimeManager {
 
 		$this->audit->record( 'featured_image.removed', [ 'post_id' => $post_id, 'previous_thumb' => $thumb_id ] );
 
-		return [ 'action' => 'featured_image_remove', 'post_id' => $post_id ];
+		return [ 'action' => 'featured_image_remove', 'post_id' => $post_id, 'rollback_id' => $rollback_id ];
 	}
 
 	private function regenerate_metadata( array $payload, array $context ): array {
@@ -338,6 +415,9 @@ final class MediaRuntimeManager {
 			case 'upload':
 				wp_delete_attachment( $media_id, true );
 				break;
+			case 'update':
+				$this->restore_metadata( $media_id, $before );
+				break;
 			case 'delete':
 				wp_untrash_post( $media_id );
 				break;
@@ -364,9 +444,35 @@ final class MediaRuntimeManager {
 		return [ 'action' => 'media_rollback', 'rollback_id' => $rollback_id, 'media_id' => $media_id ];
 	}
 
-	private function store_rollback( int $media_id, string $action, array $before, array $context ): void {
-		if ( ! MediaRegistry::supports_rollback( $action ) ) {
+	/**
+	 * Restore an attachment's title/caption/description/alt from a snapshotted
+	 * before-state (used by both rollback paths for the media_update action).
+	 */
+	private function restore_metadata( int $media_id, array $before ): void {
+		if ( ! get_post( $media_id ) ) {
 			return;
+		}
+
+		wp_update_post( [
+			'ID'           => $media_id,
+			'post_title'   => (string) ( $before['title'] ?? '' ),
+			'post_excerpt' => (string) ( $before['caption'] ?? '' ),
+			'post_content' => (string) ( $before['description'] ?? '' ),
+		] );
+
+		update_post_meta( $media_id, '_wp_attachment_image_alt', (string) ( $before['alt'] ?? '' ) );
+	}
+
+	/**
+	 * Internal rollback-action names used in the stored records (and the
+	 * rollback()/restore_media() switches). Distinct from the public operation
+	 * action names (media_upload, …) which MediaRegistry::supports_rollback maps.
+	 */
+	private const ROLLBACKABLE = [ 'upload', 'update', 'replace', 'delete', 'featured_image_assign', 'featured_image_remove' ];
+
+	private function store_rollback( int $media_id, string $action, array $before, array $context ): string {
+		if ( ! in_array( $action, self::ROLLBACKABLE, true ) ) {
+			return '';
 		}
 
 		$rollbacks = get_option( 'wpcc_media_rollbacks', [] );
@@ -388,6 +494,8 @@ final class MediaRuntimeManager {
 		}
 
 		update_option( 'wpcc_media_rollbacks', $rollbacks );
+
+		return $rollback_id;
 	}
 
 	private function format_media( \WP_Post $post ): array {
@@ -399,6 +507,7 @@ final class MediaRuntimeManager {
 			'id'          => $post->ID,
 			'title'       => $post->post_title,
 			'caption'     => $post->post_excerpt,
+			'description' => $post->post_content,
 			'alt'         => get_post_meta( $post->ID, '_wp_attachment_image_alt', true ) ?? '',
 			'url'         => $src,
 			'mime_type'   => $mime,
