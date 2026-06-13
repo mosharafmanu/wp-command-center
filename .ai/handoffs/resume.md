@@ -1,6 +1,66 @@
 # WP Command Center - Claude Handoff
 
-Last verified: June 12, 2026 (Step 76 - Token Efficiency and Context Optimization)
+Last verified: June 13, 2026 — STEPs 78–83 complete (locally). Production deployment pending.
+
+**RESUME HERE:**
+
+STEPs 78–83 are **implemented and tested locally**. All 8 new test suites pass. Full regression: **3034 passed, 24 pre-existing failures** (same 6 failing suites throughout: `ai-client-layer` 1, `ai-integration-ux` 3, `claude-integration` 4, `cursor-certification` 2, `documentation-consistency` 11, `security-redaction` 3).
+
+**Immediate next action — deploy to mosharafmanu.com:**
+1. Upload updated plugin zip to `mosharafmanu.com` (replace existing install)
+2. First MCP request after deploy auto-heals any capability assignment via STEP 79 self-heal — no WP-CLI needed
+3. Plugin defaults to Developer Mode on deploy (all ops execute freely). Switch to **Client Mode** via: WP Admin → WP Command Center → Settings → Security Mode to restore approval gating
+4. Verify end-to-end: Claude Desktop → `system_info` (free diagnostic) → `plugin_manage {plugin_list}` (diagnostic, free) → `plugin_manage {plugin_activate}` (high risk → pending_approval response) → approve in WP Admin → confirm executed
+
+**Recommended next code step — STEP 84 (Licensing):**
+Developer Mode = Free. Client/Enterprise Mode = Pro. Approval UI = Pro. Identified in STEP 81 as required before public launch. Without this, all three modes and the full approval UI are freely available with no commercial gate.
+
+---
+
+**What was completed (STEPs 78–83):**
+
+| STEP | Feature | Test suite | Result |
+|---|---|---|---|
+| 78 | MCP Approval Runtime — `approval_manage` op, `pending_approval` structured response replaces `-32000` error | `test-mcp-approval-runtime.sh` (25), `test-approval-enforcement.sh` (16) | 41/41 PASS |
+| 79 | Token Capability Auto-Bootstrap — `bootstrap_token()` on create, `deprovision_token()` on revoke/delete, `ensure_token_capabilities()` self-heal on every MCP request | `test-capability-bootstrap.sh` (21) | 21/21 PASS |
+| 80 | Security Modes (Developer / Client / Enterprise) — `SecurityModeManager`, human-approver guard, Security Mode UI in Settings, Pending Approvals admin page | `test-security-modes.sh` (28) | 28/28 PASS |
+| 81 | System Info Runtime + security mode gating matrix validation — pure-PHP `system_info` op, WP-CLI structured error codes, `content_manage` action_risks fix | `test-system-info.sh` (24), `test-security-mode-validation.sh` (27) | 51/51 PASS |
+| 82 | Safe Updates Hardening — 4 bugs fixed (file.php fatal, MCP permission error, null result false success, missing `error.data.code`), 7 structured error codes, dry-run HEAD validation | `test-safe-updates-hardening.sh` (18) | 18/18 PASS |
+| 83 | Plugin stays active after update — capture `$was_active` + reactivate in `SafeUpdates.php` and `PluginManager.php` | `test-plugin-active-after-update.sh` (14) | 14/14 PASS |
+
+---
+
+**Production status (mosharafmanu.com):**
+
+- STEPs 78–83 are **not yet deployed** — local only
+- Claude Desktop token and MCP endpoint are working (`initialize` succeeds)
+- `wpcc_enforce_approval = 1` was set manually before STEP 80 — this flag is no longer read by `OperationExecutor` after STEP 80; the Security Mode option (`wpcc_security_mode`) drives behaviour instead
+- After deploying STEP 80, mode defaults to `developer` (all ops free) until admin switches to Client/Enterprise via UI
+
+**Open items (ranked by priority):**
+
+| Priority | Item | Notes |
+|---|---|---|
+| P0 | **Deploy STEPs 78–83 to production** | Upload plugin, verify MCP end-to-end, switch to Client Mode |
+| P0 | **STEP 84 — Licensing / Free-Pro gating** | Required before public launch; no gate exists yet |
+| P1 | Approval email notification | Notify admin by email when a pending approval is created |
+| P1 | Bulk approve by `plan_id` | Group approval card UI for plan-driven workflows |
+| P2 | Approval timeout + auto-reject cron | Auto-reject stale requests after N hours |
+| P3 | Enterprise Mode tuning (low-risk exception) | Possible product decision: exempt `low` risk from Enterprise gate |
+
+---
+
+**Key architectural facts (as of STEP 83):**
+
+- `SecurityModeManager::current()` reads `wpcc_security_mode` (option); defaults to `'developer'`
+- `OperationExecutor::run()` uses `SecurityModeManager::requires_approval($effective_risk)` — replaces old `wpcc_enforce_approval` binary flag; that flag is **no longer read**
+- `OperationExecutor::pending_approval()` auto-creates an approval request and returns `{status:"pending_approval", request_id, approval_url:"…/wp-admin/…?page=wpcc-approvals"}`
+- `ApprovalRuntimeManager`: `request_approve`, `request_reject`, `queue_run`, `queue_retry` blocked for token actors when `requires_human_approver()` is true (client/enterprise mode)
+- `CapabilityRegistry::ensure_token_capabilities()`: called on every MCP request in `McpServerRuntime::handle()`; no-op if assignment already exists; bootstraps if empty (self-heal backstop)
+- `AuthTokens::create()` calls `bootstrap_token()` immediately on token creation — no capability lockout on fresh install
+- `SafeUpdates::update_plugin()` + `PluginManager::plugin_update()`: capture `is_plugin_active()` before upgrade, call `activate_plugin()` after success — plugin stays active after REST/MCP update
+- `safe_updates` dry-run: validates filesystem writability + ZipArchive + HEAD request to download URL before any file write
+- `system_info`: pure-PHP, no WP-CLI/shell, works on all managed hosting
 
 ## Read First
 
@@ -1903,3 +1963,207 @@ Added summary-first MCP context modes (`compact`, `standard`, `verbose`), with c
 - `TOKEN-EFFICIENCY-REPORT.md`
 - `PERFORMANCE-OPTIMIZATION-REPORT.md`
 - `HANDOFF-STEP-76.md`
+
+---
+
+# Session Report — 2026-06-13: MCP Tool Execution Audit + Production Capability Lockout (Finding F)
+
+## Part 1 — Local MCP Tool Execution Failure Audit (DONE, validated 311/311)
+
+User reported "Failed to call tool" in Claude Desktop for `settings_manage`,
+`wp_cli_bridge`, `plugin_manage`, `theme_manage`, plus asked for a full
+`database_inspect` trace. All against the **local AMPPS dev site**
+(`http://localhost/ClientProjects/WordPress/2026/plugins-dev/wp-json/wp-command-center/v1/mcp`).
+
+Findings, all FIXED and validated live via `/mcp` POST:
+
+- **Finding A (FIXED earlier session):** `tools/list` `inputSchema.required`
+  contained numeric indices instead of parameter names. Fixed; 10/10.
+- **Finding C (FIXED):** `tools/list` mapped `boolean`/`object`/`array`
+  param types to `"string"`. Fixed with a `match()` in
+  `McpServerRuntime::tools_list()`.
+- **Finding C2 (FIXED):** `tools/list` dropped `enum`/`default` from
+  `inputSchema.properties`. Fixed; also added missing `enum` to
+  `OperationRegistry` for `database_inspect.action` and `settings_manage.action`.
+- **Finding C3 (FIXED):** same enum-completeness fix verified for all 9
+  `database_inspect` actions and all 14 `settings_manage` actions.
+- **Finding D (FIXED):** `WpCliBridge::is_available()`/`execute()` ran
+  `shell_exec()` with the ambient web-server PATH (no `wp` binary found under
+  mod_php) → always `-32000`. Fixed via new `shell_path_prefix()` prepending
+  `PHP_BINDIR` (built-in PHP constant, set in all SAPIs, ensures `wp`'s spawned
+  PHP uses the same `mysqli.default_socket`/php.ini as the web server — this
+  machine has multiple PHP/MySQL installs with different sockets). Also fixed
+  an identical duplicate probe in `SiteScanner::detect_wp_cli()` by delegating
+  to `WpCliBridge::is_available()`.
+- **Finding E (FIXED):** `SettingsRuntimeManager::run()` returned a plain
+  array (not `\WP_Error`) on invalid action, so `OperationExecutor` treated it
+  as success and `tools/call` returned a JSON-RPC `result` with an embedded
+  error instead of a proper JSON-RPC `error`. Fixed: `run()` now returns
+  `\WP_Error` for invalid action and per-method errors. `rollback()` (called
+  directly by REST, different contract) left unchanged.
+
+`database_inspect` itself never failed — full trace + real data
+(`db_size_mb: 22.47`, WP version `7.0`, site URL
+`http://localhost/ClientProjects/WordPress/2026/plugins-dev`) documented in
+`MCP-TOOL-EXECUTION-FAILURE-REPORT.md`. Full regression: **311/311 passed, 0
+failed across 10 suites**.
+
+**Environment note for this machine:** AMPPS Apache + AMPPS MySQL can be down
+after a restart while a separate Homebrew `mysqld` runs instead (different
+socket, different DB) — `wp eval` from CLI can succeed while the web `/mcp`
+endpoint is unreachable or DB-broken. Always verify both
+`curl http://localhost/.../` AND `wp eval` work before trusting MCP test
+results.
+
+## Part 2 — NEW: Production Capability Lockout (Finding F, UNRESOLVED)
+
+After Part 1, user sent a screenshot showing Claude Desktop still failing
+`database_inspect` with: *"The connection between the MCP server and your
+WordPress site isn't established yet."* Asked: **"this is expected now?"**
+
+### Discovery: Claude Desktop talks to PRODUCTION, not local dev
+
+`~/Library/Application Support/Claude/claude_desktop_config.json` configures
+the `wp-command-center` MCP server as a `bash -c` command that downloads
+`sdk/javascript/wpcc-mcp-relay.mjs` from **`https://mosharafmanu.com`** and
+runs it via `node`, with:
+```
+WPCC_MCP_URL=https://mosharafmanu.com/wp-json/wp-command-center/v1/mcp
+WPCC_SITE_URL=https://mosharafmanu.com
+WPCC_TOKEN=wpcc_V7nkukpsvwZrkDsFisSYSvw4VMY64dHZqGFF7ef1VZlIw180GHCkGAdsHjZmK8qi
+WPCC_CONTEXT_MODE=compact
+```
+This is **completely separate** from the local AMPPS site fixed in Part 1.
+(The `WPCC_TOKEN` value is a real token, not the literal `${WPCC_TOKEN}`
+placeholder from previously-OPEN Finding B — Finding B as originally defined
+does not appear to be the active blocker for this config, though
+`ClaudeIntegration::generate_mcp_config()` may still emit that placeholder for
+newly-generated configs and is worth re-checking.)
+
+### Diagnostic against `https://mosharafmanu.com/wp-json/wp-command-center/v1/mcp`
+
+- `initialize` → **succeeds** (`serverInfo.version: "0.1.0"`, same version as
+  local plugin `wp-command-center.php`). Token is valid/accepted — the
+  connection IS established, contrary to Claude's paraphrase.
+- `tools/call database_inspect (action=db_health_summary)` →
+  ```json
+  {"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"Operation denied: missing capability database.inspect"}}
+  ```
+
+### Root cause: zero capability assignments + enforce-by-default = total lockout
+
+- `resources/read wpcc://capabilities` on `mosharafmanu.com` returns
+  `"assignment_count":0,"subject_counts":[]` — `wpcc_capability_assignments`
+  is **completely empty**.
+- `wpcc_enforce_capabilities` was never set on that site, so
+  `get_option('wpcc_enforce_capabilities', true)` → `true` (5 call sites, all
+  default `true`).
+- `CapabilityRegistry::validate()` therefore denies **every one of the 22
+  operations in `OPERATION_MAP`** for **any** token — including
+  `database_inspect`, `settings_manage`, `wp_cli_bridge`, `plugin_manage`,
+  `theme_manage` (the original screenshot's 4 tools).
+- **Same root cause explains BOTH screenshots** — one unifying issue on
+  production, unrelated to Part 1's fixes.
+- **Chicken-and-egg:** `capability_manage` (action `capability_assign`,
+  which would fix this) itself requires `capability.admin`, also unassigned —
+  so the token can't self-bootstrap via MCP. There is also **no WP-Admin UI**
+  for capability assignment (`includes/Admin/views/*` has no such screen).
+- **Why local dev never hit this:** locally `wpcc_capability_assignments` =
+  `{"token:fab2991a-00be-4af8-a2c8-17860fff32e0":["system.admin"],"token:mcp-cap-test-token":["content.manage"]}`
+  and `wpcc_enforce_capabilities` is explicitly `'0'` (falsy string) — a
+  leftover dev/test setting from Step 44 development — so enforcement is OFF
+  locally and never appeared in 2,839+ local regression assertions.
+- Confirmed `includes/Core/Activator.php` does **not** seed
+  `wpcc_capability_assignments` or set `wpcc_enforce_capabilities` on
+  activation (zero grep hits) — every fresh production install ships
+  deny-by-default with **zero bootstrap path**.
+
+### Next steps for tomorrow morning
+
+1. Ask user: do they have WP-CLI/SSH or phpMyAdmin access to
+   `mosharafmanu.com`? (Required — I have no access to that server.)
+2. Apply one of, on `mosharafmanu.com`:
+   - **Quick unblock** (matches local dev):
+     `wp option update wpcc_enforce_capabilities 0`
+   - **Proper fix** — grant the configured token `system.admin`:
+     1. `wp option get wpcc_api_tokens --format=json` → find the record with
+        `token_preview == "wpcc_V7nkukp"` (first 12 chars of the configured
+        token) → note its `id`.
+     2. `wp option update wpcc_capability_assignments '{"token:<ID>":["system.admin"]}' --format=json`
+3. Re-test `tools/call database_inspect` and the original 4 tools against
+   `https://mosharafmanu.com/wp-json/wp-command-center/v1/mcp` after the fix.
+4. Decide on a longer-term product fix for Finding F (needs design
+   confirmation before implementing — candidates: seed a default
+   `system.admin` assignment on activation; exempt `capability_manage`'s
+   `capability_assign`/`capability_list`/`capability_get` actions from its own
+   capability gate for `full`-scope tokens so any full-scope token can always
+   self-bootstrap; add a WP-Admin "Capabilities" management screen; and/or
+   default `wpcc_enforce_capabilities` to `false` until an admin explicitly
+   enables it).
+5. Full writeup: `CAPABILITY-LOCKOUT-FINDING-F-REPORT.md` (plugin root) —
+   includes exact diagnostic commands/responses, code-level root cause with
+   line numbers, both remediation options (A/B) ready to run, and 4 candidate
+   long-term product fixes (§7) to discuss before implementing.
+
+---
+
+# STEP 83 Report — Plugin Stays Active After Update (2026-06-13)
+
+## Problem
+
+User reported: "If we update a plugin it's updated but deactivating from the active. Can the plugin still active after update?"
+
+## Root Cause
+
+`Plugin_Upgrader::upgrade()` registers two hooks:
+- `upgrader_pre_install → deactivate_plugin_before_upgrade()` — removes the plugin from `active_plugins` in **non-cron context** (i.e., always in REST/MCP)
+- `upgrader_post_install → active_after()` — only handles maintenance mode, and **only when `wp_doing_cron()` is true**; is a complete no-op in REST/MCP context
+
+Result: after a successful update via REST or MCP, the plugin is deactivated and nothing reactivates it.
+
+This is by design in WordPress: the admin update page shows a "Return to Plugins" link and the plugin stays deactivated so the human can review. But our REST/MCP API has no such review step — it should restore the pre-update active state automatically.
+
+## Fix
+
+### `includes/Operations/SafeUpdates.php`
+- Capture `$was_active = is_plugin_active($plugin_file)` before `Plugin_Upgrader::upgrade()`.
+- After successful upgrade (past all null/false/WP_Error guards), call `activate_plugin($plugin_file, '', false, true)` (silent, no redirect) if `$was_active`.
+- Added `'reactivated' => $was_active` to the success return array so callers know whether reactivation was performed.
+
+### `includes/Operations/PluginManager.php`
+- Same `$was_active` capture + `activate_plugin()` after success pattern applied to `plugin_update()`.
+- Also added missing `require_once ABSPATH . 'wp-admin/includes/file.php'` (fixes potential PHP fatal same as STEP 82 Bug 1) and `plugin.php` guard before `is_plugin_active()` in `plugin_update()`.
+
+## Tests
+
+New: `tests/test-plugin-active-after-update.sh` — 14/14 PASS.
+
+Verifies:
+1. `$was_active` captured before upgrade in SafeUpdates
+2. `activate_plugin()` called after upgrade in SafeUpdates
+3. `activate_plugin()` is positioned AFTER null/false error guards (error paths cannot trigger reactivation)
+4. `reactivated` key in SafeUpdates return array
+5. Same fix in PluginManager (was_active, activate_plugin, guard)
+6. `file.php` included before Plugin_Upgrader in PluginManager
+7. `plugin.php` included before `is_plugin_active()` in PluginManager
+8. `error_from_skin()` return is before `activate_plugin()` (error path exits first)
+
+## Regression
+
+Full regression (bf0a0x3ur): **3034 passed, 24 failed**. The 24 failures are pre-existing:
+- `test-ai-client-layer.sh` — 1
+- `test-ai-integration-ux.sh` — 3
+- `test-claude-integration.sh` — 4
+- `test-cursor-certification.sh` — 2
+- `test-documentation-consistency.sh` — 11
+- `test-security-redaction.sh` — 3
+
+No new failures introduced.
+
+## Files Changed
+
+| File | Change |
+|---|---|
+| `includes/Operations/SafeUpdates.php` | `$was_active` capture; `activate_plugin()` after success; `reactivated` in return |
+| `includes/Operations/PluginManager.php` | Same fix + `file.php` + `plugin.php` guards added to `plugin_update()` |
+| `tests/test-plugin-active-after-update.sh` | New — 14 assertions, 14/14 PASS |
