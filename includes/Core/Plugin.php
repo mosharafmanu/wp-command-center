@@ -8,6 +8,7 @@
 namespace WPCommandCenter\Core;
 
 use WPCommandCenter\Admin\AdminMenu;
+use WPCommandCenter\Admin\AdminRestApi;
 use WPCommandCenter\Admin\Assets;
 use WPCommandCenter\AiAgent\RestApi;
 use WPCommandCenter\Mcp\McpRestApi;
@@ -32,6 +33,7 @@ final class Plugin {
 
 		( new RestApi() )->init();
 		( new McpRestApi() )->init();
+		( new AdminRestApi() )->init();
 
 		if ( is_admin() ) {
 			( new AdminMenu() )->init();

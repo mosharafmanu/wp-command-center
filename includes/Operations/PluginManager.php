@@ -248,8 +248,17 @@ final class PluginManager {
 		$new_expected = $plugin_info['new_version'] ?? 'unknown';
 
 		if ( ! class_exists( 'Plugin_Upgrader' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
 			require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 		}
+
+		if ( ! function_exists( 'is_plugin_active' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		}
+
+		// Capture active state: deactivate_plugin_before_upgrade() removes it from
+		// active_plugins in non-cron context; active_after() is a no-op outside cron.
+		$was_active = is_plugin_active( $plugin_info['plugin_file'] );
 
 		$this->audit( 'plugin.update.started', [
 			'slug'        => $slug,
@@ -271,6 +280,10 @@ final class PluginManager {
 		if ( ! $result ) {
 			$this->audit( 'plugin.update.failed', [ 'slug' => $slug ], $context );
 			return new \WP_Error( 'wpcc_plugin_update_failed', __( 'Plugin update failed.', 'wp-command-center' ) );
+		}
+
+		if ( $was_active ) {
+			activate_plugin( $plugin_info['plugin_file'], '', false, true );
 		}
 
 		// Re-read version after update.

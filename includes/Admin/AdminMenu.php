@@ -9,6 +9,7 @@ final class AdminMenu {
 
 	public function init(): void {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
+		add_action( 'admin_bar_menu', [ $this, 'admin_bar_badge' ], 100 );
 	}
 
 	public function register_menu(): void {
@@ -30,6 +31,38 @@ final class AdminMenu {
 		add_submenu_page( 'wp-command-center', __( 'Rollback', 'wp-command-center' ), __( 'Rollback', 'wp-command-center' ), self::CAPABILITY, 'wpcc-rollback', [ $this, 'render_rollback' ] );
 		add_submenu_page( 'wp-command-center', __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, 'wpcc-settings', [ $this, 'render_settings' ] );
 		add_submenu_page( 'wp-command-center', __( 'AI Integrations', 'wp-command-center' ), __( 'AI Integrations', 'wp-command-center' ), self::CAPABILITY, 'wpcc-ai-integrations', [ $this, 'render_ai_integrations' ] );
+		add_submenu_page( 'wp-command-center', __( 'Pending Approvals', 'wp-command-center' ), __( 'Pending Approvals', 'wp-command-center' ), self::CAPABILITY, 'wpcc-approvals', [ $this, 'render_approvals' ] );
+	}
+
+	public function admin_bar_badge( \WP_Admin_Bar $wp_admin_bar ): void {
+		if ( ! current_user_can( self::CAPABILITY ) ) {
+			return;
+		}
+
+		if ( ! \WPCommandCenter\Operations\SecurityModeManager::requires_human_approver() ) {
+			return;
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_operation_requests';
+		$count = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$table} WHERE status = %s",
+			\WPCommandCenter\Operations\OperationManager::STATUS_PENDING_REVIEW
+		) );
+
+		if ( $count <= 0 ) {
+			return;
+		}
+
+		$wp_admin_bar->add_node( [
+			'id'    => 'wpcc-pending-approvals',
+			'title' => sprintf(
+				'%s <span style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
+				esc_html__( 'AI Requests', 'wp-command-center' ),
+				$count
+			),
+			'href'  => admin_url( 'admin.php?page=wpcc-approvals' ),
+		] );
 	}
 
 	public function render_dashboard(): void {
@@ -62,6 +95,10 @@ final class AdminMenu {
 
 	public function render_ai_integrations(): void {
 		$this->render_view( 'ai-integrations' );
+	}
+
+	public function render_approvals(): void {
+		$this->render_view( 'approvals' );
 	}
 
 	private function render_view( string $view ): void {

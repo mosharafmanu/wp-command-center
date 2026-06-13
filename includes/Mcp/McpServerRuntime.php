@@ -45,6 +45,14 @@ final class McpServerRuntime {
 
 		$this->audit( 'mcp.request', [ 'method' => $method, 'client' => $context['client'] ?? 'unknown' ], $context );
 
+		// Step 79 — Self-healing capability validation. Runs on every
+		// authenticated MCP request (any method) so a missing assignment is
+		// repaired before the first tools/call. Cheap when already populated
+		// (one get_option read, no write); no-ops if token_id is empty.
+		if ( ! empty( $context['token_id'] ) ) {
+			( new CapabilityRegistry() )->ensure_token_capabilities( $context['token_id'], $context['token_scope'] ?? '' );
+		}
+
 		// Notifications — no response expected (JSON-RPC 2.0 §4.1)
 		if ( null === $id ) {
 			if ( 'notifications/initialized' === $method ) {
@@ -168,8 +176,20 @@ final class McpServerRuntime {
 			$props = [];
 			foreach ( $op['parameters'] as $p ) {
 				$props[ $p['name'] ] = [
-					'type' => $p['type'] === 'integer' ? 'number' : 'string',
+					'type' => match ( $p['type'] ) {
+						'integer' => 'number',
+						'boolean' => 'boolean',
+						'object'  => 'object',
+						'array'   => 'array',
+						default   => 'string',
+					},
 				];
+				if ( isset( $p['enum'] ) ) {
+					$props[ $p['name'] ]['enum'] = $p['enum'];
+				}
+				if ( isset( $p['default'] ) ) {
+					$props[ $p['name'] ]['default'] = $p['default'];
+				}
 				if ( ContextModeOptimizer::COMPACT !== $mode ) {
 					$props[ $p['name'] ]['description'] = $p['description'] ?? $p['name'];
 				}
@@ -196,7 +216,7 @@ final class McpServerRuntime {
 				'inputSchema' => [
 					'type'       => 'object',
 					'properties' => $props,
-					'required'   => array_keys( array_filter( $op['parameters'], static fn( $p ) => ! empty( $p['required'] ) ) ),
+					'required'   => array_values( array_map( static fn( $p ) => $p['name'], array_filter( $op['parameters'], static fn( $p ) => ! empty( $p['required'] ) ) ) ),
 				],
 			];
 		}
@@ -211,6 +231,15 @@ final class McpServerRuntime {
 		$args      = $params['arguments'] ?? [];
 		$mode      = ContextModeOptimizer::normalize( $args['context_mode'] ?? $params['context_mode'] ?? null );
 		unset( $args['context_mode'] );
+
+		// B5: Lift AI continuity fields from args into context so OperationExecutor
+		// can store them on auto-created approval requests.
+		foreach ( [ 'plan_id', 'session_id', 'task_id', 'step' ] as $field ) {
+			if ( isset( $args[ $field ] ) && ! isset( $context[ $field ] ) ) {
+				$context[ $field ] = $args[ $field ];
+				unset( $args[ $field ] );
+			}
+		}
 
 		$this->audit( 'mcp.tool.invoke', [ 'tool' => $tool_name, 'args' => $args ], $context );
 
@@ -239,8 +268,8 @@ final class McpServerRuntime {
 		$result   = $executor->run( $tool_name, $args, $context );
 
 		if ( ! $result['success'] ) {
-			$err = $result['errors'][0] ?? [ 'message' => 'Unknown error' ];
-			return $this->error( -32000, $err['message'], null );
+			$err = $result['errors'][0] ?? [ 'code' => 'unknown_error', 'message' => 'Unknown error' ];
+			return $this->error( -32000, $err['message'], null, [ 'code' => $err['code'] ?? 'unknown_error' ] );
 		}
 
 		$optimized = ( new ContextModeOptimizer() )->optimize( $result['result'], $mode );
@@ -272,9 +301,13 @@ final class McpServerRuntime {
 
 	// ── Helpers ──
 
-	private function error( int $code, string $message, mixed $id ): array {
+	private function error( int $code, string $message, mixed $id, array $data = [] ): array {
+		$error = [ 'code' => $code, 'message' => $message ];
+		if ( ! empty( $data ) ) {
+			$error['data'] = $data;
+		}
 		return [
-			'error' => [ 'code' => $code, 'message' => $message ],
+			'error' => $error,
 			'id'    => $id,
 		];
 	}

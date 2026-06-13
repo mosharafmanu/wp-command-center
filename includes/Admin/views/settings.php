@@ -2,6 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use WPCommandCenter\Security\AuthTokens;
+use WPCommandCenter\Operations\SecurityModeManager;
 
 $auth_tokens = new AuthTokens();
 $notice      = null;
@@ -12,7 +13,22 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 
 	$action = sanitize_text_field( wp_unslash( $_POST['wpcc_action'] ) );
 
-	if ( 'create_token' === $action ) {
+	if ( 'set_security_mode' === $action ) {
+		$mode = sanitize_key( wp_unslash( $_POST['wpcc_security_mode'] ?? '' ) );
+		if ( in_array( $mode, SecurityModeManager::MODES, true ) ) {
+			update_option( 'wpcc_security_mode', $mode );
+			$notice = [
+				'type'    => 'success',
+				'message' => sprintf(
+					/* translators: %s: security mode label */
+					__( 'Security mode updated to %s.', 'wp-command-center' ),
+					SecurityModeManager::label()
+				),
+			];
+		} else {
+			$notice = [ 'type' => 'error', 'message' => __( 'Invalid security mode.', 'wp-command-center' ) ];
+		}
+	} elseif ( 'create_token' === $action ) {
 		$label   = isset( $_POST['label'] ) ? sanitize_text_field( wp_unslash( $_POST['label'] ) ) : '';
 		$scope   = isset( $_POST['scope'] ) ? sanitize_key( wp_unslash( $_POST['scope'] ) ) : AuthTokens::SCOPE_READ_ONLY;
 		$expires = isset( $_POST['expires'] ) ? sanitize_key( wp_unslash( $_POST['expires'] ) ) : 'never';
@@ -32,16 +48,6 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 			$new_token = $result['token'];
 			$notice    = [ 'type' => 'success', 'message' => __( 'API token created. Copy it now — it will not be shown again.', 'wp-command-center' ) ];
 		}
-	} elseif ( 'toggle_enforce_approval' === $action ) {
-		$enabled = ! empty( $_POST['wpcc_enforce_approval'] );
-		update_option( 'wpcc_enforce_approval', $enabled );
-
-		$notice = [
-			'type'    => 'success',
-			'message' => $enabled
-				? __( 'Approval enforcement enabled. Operations marked "requires approval" will now be blocked unless requested through the request → approve → execute workflow.', 'wp-command-center' )
-				: __( 'Approval enforcement disabled. Operations marked "requires approval" will execute immediately when called directly.', 'wp-command-center' ),
-		];
 	} elseif ( in_array( $action, [ 'revoke_token', 'delete_token' ], true ) ) {
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 
@@ -60,8 +66,8 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 	}
 }
 
-$enforce_approval = (bool) get_option( 'wpcc_enforce_approval', false );
-$tokens         = $auth_tokens->list();
+$current_mode = SecurityModeManager::current();
+$tokens       = $auth_tokens->list();
 $rest_base      = rest_url( 'wp-command-center/v1' );
 $expiry_options = [
 	'never' => __( 'Never', 'wp-command-center' ),
@@ -112,6 +118,42 @@ $endpoints = [
 			<p><input type="text" readonly="readonly" class="large-text code" value="<?php echo esc_attr( $new_token ); ?>" onclick="this.select();" /></p>
 		</div>
 	<?php endif; ?>
+
+	<h2><?php esc_html_e( 'Security Mode', 'wp-command-center' ); ?></h2>
+	<p><?php esc_html_e( 'Controls whether AI agents can execute write operations immediately or must wait for administrator approval. Diagnostic and read-only operations are never gated, in any mode.', 'wp-command-center' ); ?></p>
+
+	<form method="post">
+		<?php wp_nonce_field( 'wpcc_settings' ); ?>
+		<input type="hidden" name="wpcc_action" value="set_security_mode" />
+		<fieldset>
+			<legend class="screen-reader-text"><?php esc_html_e( 'Security Mode', 'wp-command-center' ); ?></legend>
+
+			<label style="display:block;margin-bottom:14px;padding:14px 16px;border:1px solid <?php echo $current_mode === SecurityModeManager::MODE_DEVELOPER ? '#2271b1' : '#ddd'; ?>;border-radius:4px;background:<?php echo $current_mode === SecurityModeManager::MODE_DEVELOPER ? '#f0f6fc' : '#fff'; ?>;cursor:pointer;max-width:640px;">
+				<input type="radio" name="wpcc_security_mode" value="<?php echo esc_attr( SecurityModeManager::MODE_DEVELOPER ); ?>" <?php checked( $current_mode, SecurityModeManager::MODE_DEVELOPER ); ?> style="margin-top:2px;float:left;" />
+				<span style="display:block;margin-left:24px;">
+					<strong><?php esc_html_e( 'Developer Mode', 'wp-command-center' ); ?></strong>
+					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'No approval gate. AI agents can execute all operations immediately. Recommended during development and staging. Full audit trail and rollback remain active.', 'wp-command-center' ); ?></span>
+				</span>
+			</label>
+
+			<label style="display:block;margin-bottom:14px;padding:14px 16px;border:1px solid <?php echo $current_mode === SecurityModeManager::MODE_CLIENT ? '#2271b1' : '#ddd'; ?>;border-radius:4px;background:<?php echo $current_mode === SecurityModeManager::MODE_CLIENT ? '#f0f6fc' : '#fff'; ?>;cursor:pointer;max-width:640px;">
+				<input type="radio" name="wpcc_security_mode" value="<?php echo esc_attr( SecurityModeManager::MODE_CLIENT ); ?>" <?php checked( $current_mode, SecurityModeManager::MODE_CLIENT ); ?> style="margin-top:2px;float:left;" />
+				<span style="display:block;margin-left:24px;">
+					<strong><?php esc_html_e( 'Client Mode', 'wp-command-center' ); ?></strong>
+					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'Medium, high, and critical operations require administrator approval before running. Read-only and diagnostic operations always execute freely. Switch to this mode before handing a site to a client.', 'wp-command-center' ); ?></span>
+				</span>
+			</label>
+
+			<label style="display:block;margin-bottom:14px;padding:14px 16px;border:1px solid <?php echo $current_mode === SecurityModeManager::MODE_ENTERPRISE ? '#2271b1' : '#ddd'; ?>;border-radius:4px;background:<?php echo $current_mode === SecurityModeManager::MODE_ENTERPRISE ? '#f0f6fc' : '#fff'; ?>;cursor:pointer;max-width:640px;">
+				<input type="radio" name="wpcc_security_mode" value="<?php echo esc_attr( SecurityModeManager::MODE_ENTERPRISE ); ?>" <?php checked( $current_mode, SecurityModeManager::MODE_ENTERPRISE ); ?> style="margin-top:2px;float:left;" />
+				<span style="display:block;margin-left:24px;">
+					<strong><?php esc_html_e( 'Enterprise Mode', 'wp-command-center' ); ?></strong>
+					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'All non-diagnostic operations require administrator approval. Maximum human oversight for compliance environments or sites with strict change management requirements.', 'wp-command-center' ); ?></span>
+				</span>
+			</label>
+		</fieldset>
+		<?php submit_button( __( 'Save Security Mode', 'wp-command-center' ) ); ?>
+	</form>
 
 	<h2><?php esc_html_e( 'API Tokens', 'wp-command-center' ); ?></h2>
 	<p><?php esc_html_e( 'AI agents (Claude, Codex, custom integrations) authenticate to the REST API using a bearer token. Read-only tokens can query Site Intelligence, Diagnostics, File Access, and Patches; full-access tokens can additionally create, approve, apply, and roll back patches.', 'wp-command-center' ); ?></p>
@@ -244,24 +286,4 @@ $endpoints = [
 		<li><?php esc_html_e( 'Revoke a token immediately if it is lost or compromised; revoked tokens stop working on their next request.', 'wp-command-center' ); ?></li>
 	</ul>
 
-	<h3><?php esc_html_e( 'Operation Approval Enforcement', 'wp-command-center' ); ?></h3>
-	<p><?php esc_html_e( 'A subset of operations (plugin/theme management, settings changes, user management, database writes, and similar higher-risk actions) are marked "requires approval" in the operation catalog.', 'wp-command-center' ); ?></p>
-	<p>
-		<?php if ( $enforce_approval ) : ?>
-			<?php esc_html_e( 'Enforcement is currently ON: these operations are blocked when called directly via REST or MCP. An AI agent (or human) must first create a request via POST /operations/requests, an administrator must approve it via POST /operations/requests/{id}/approve, and only then can it be executed via POST /operations/requests/{id}/execute.', 'wp-command-center' ); ?>
-		<?php else : ?>
-			<?php esc_html_e( 'Enforcement is currently OFF (default): these operations execute immediately when called directly via REST or MCP, the same as any other operation. The request → approve → execute workflow still exists and can be used voluntarily, but it is not required.', 'wp-command-center' ); ?>
-		<?php endif; ?>
-	</p>
-	<p><?php esc_html_e( 'Turning enforcement ON adds a mandatory human-in-the-loop step before an AI agent can run higher-risk operations — useful if you want every such change reviewed before it happens. Turning it OFF (default) lets AI agents act autonomously across all operations, which is faster but relies on capability assignments and token scopes for access control instead.', 'wp-command-center' ); ?></p>
-
-	<form method="post">
-		<?php wp_nonce_field( 'wpcc_settings' ); ?>
-		<input type="hidden" name="wpcc_action" value="toggle_enforce_approval" />
-		<label>
-			<input type="checkbox" name="wpcc_enforce_approval" value="1" <?php checked( $enforce_approval ); ?> />
-			<?php esc_html_e( 'Require approval for operations marked "requires approval" before they can be executed.', 'wp-command-center' ); ?>
-		</label>
-		<?php submit_button( __( 'Save', 'wp-command-center' ), 'secondary', '', false ); ?>
-	</form>
 </div>

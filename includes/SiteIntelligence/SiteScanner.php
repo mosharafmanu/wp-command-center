@@ -207,16 +207,16 @@ final class SiteScanner {
 	}
 
 	/**
-	 * Best-effort, read-only probe for a WP-CLI binary on PATH (§9).
+	 * Best-effort, read-only probe for a WP-CLI binary (§9). Delegates to
+	 * WpCliBridge::is_available(), which extends PATH with PHP_BINDIR so
+	 * the probe succeeds under PHP-FPM/mod_php, not just CLI.
 	 */
 	private function detect_wp_cli( bool $shell_exec_enabled ): bool {
 		if ( ! $shell_exec_enabled ) {
 			return false;
 		}
 
-		$output = @shell_exec( 'wp --version 2>/dev/null' );
-
-		return ! empty( $output ) && stripos( (string) $output, 'wp-cli' ) !== false;
+		return ( new \WPCommandCenter\Operations\WpCliBridge() )->is_available();
 	}
 
 	private function get_debug_info(): array {

@@ -123,7 +123,7 @@ assert_eq "cleanup: 0 caps" "0" "$(echo "$MC3" | jq -r '.capabilities | length')
 
 echo "== 25. Manifest operation counts =="
 MAPCOUNT=$(echo "$MANIFEST" | jq -r '.capability_management.operation_map | keys | length')
-assert_eq "manifest: 24 mapped operations" "24" "$MAPCOUNT"
+assert_eq "manifest: 25 mapped operations" "25" "$MAPCOUNT"
 
 echo "== 26. Context shows assigned capabilities =="
 assert_true "context: assigned_capabilities is array" "$(echo "$CONTEXT" | jq -r 'if (.assigned_capabilities | type) == "array" then "true" else "false" end')"

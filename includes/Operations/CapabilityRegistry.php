@@ -6,6 +6,9 @@
 
 namespace WPCommandCenter\Operations;
 
+use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Security\AuthTokens;
+
 defined( 'ABSPATH' ) || exit;
 
 final class CapabilityRegistry {
@@ -84,6 +87,9 @@ final class CapabilityRegistry {
 		'comments_manage'     => self::CAP_COMMENTS_MANAGE,
 		'widgets_manage'      => self::CAP_WIDGETS_MANAGE,
 		'cpt_manage'          => self::CAP_CPT_MANAGE,
+		// MCP Approval Runtime — control plane over the request/approval/
+		// queue pipeline itself; gated to system.admin (see Step 78 report).
+		'approval_manage'     => self::CAP_SYSTEM_ADMIN,
 		// Seed operations are unrestricted (read-only/low-risk):
 		// 'content_seed', 'acf_seed', 'cf7_seed', 'woo_product_seed'
 		// They do not require explicit capability assignment.
@@ -95,6 +101,24 @@ final class CapabilityRegistry {
 	 * operation requires a `full`-scope token, mirroring RestApi::require_write().
 	 */
 	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage' ];
+
+	/**
+	 * Step 79 — Capability profiles. Single source of truth for the
+	 * capabilities a token receives automatically based on its scope.
+	 */
+	const PROFILE_READ_ONLY    = 'read_only';
+	const PROFILE_FULL_ACCESS  = 'full_access';
+	const PROFILE_SYSTEM_ADMIN = 'system_admin';
+
+	const PROFILES = [
+		// Mirrors READ_ONLY_SCOPE_OPERATIONS exactly.
+		self::PROFILE_READ_ONLY    => [ self::CAP_DATABASE_INSPECT, self::CAP_SEARCH_MANAGE ],
+		// system.admin's $has_admin shortcut == unrestricted; required so
+		// approval_manage (the escape hatch when wpcc_enforce_approval=1)
+		// is always reachable by a full-scope token.
+		self::PROFILE_FULL_ACCESS  => [ self::CAP_SYSTEM_ADMIN ],
+		self::PROFILE_SYSTEM_ADMIN => [ self::CAP_SYSTEM_ADMIN ],
+	];
 
 	const ALL_CAPABILITIES = [
 		self::CAP_CONTENT_MANAGE,
@@ -190,6 +214,81 @@ final class CapabilityRegistry {
 	public function get_for_subject( string $subject, string $subject_id ): array {
 		$all = $this->get_assignments();
 		return $all[ $subject . ':' . $subject_id ] ?? [];
+	}
+
+	/**
+	 * The capability profile a freshly created token of the given scope
+	 * should receive. Fails safe to read_only for anything other than
+	 * AuthTokens::SCOPE_FULL.
+	 */
+	public static function profile_for_scope( string $scope ): string {
+		return AuthTokens::SCOPE_FULL === $scope ? self::PROFILE_FULL_ACCESS : self::PROFILE_READ_ONLY;
+	}
+
+	public function capabilities_for_profile( string $profile ): array {
+		return self::PROFILES[ $profile ] ?? [];
+	}
+
+	/**
+	 * Step 79 — Provision a token's capability assignment from its scope's
+	 * profile. Overwrites any existing assignment for this token; only call
+	 * on token creation or when the existing assignment is empty
+	 * (see ensure_token_capabilities()).
+	 */
+	public function bootstrap_token( string $token_id, string $scope, string $reason = 'token_created' ): array {
+		$profile = self::profile_for_scope( $scope );
+		$caps    = $this->capabilities_for_profile( $profile );
+
+		$all = $this->get_assignments();
+		$all[ 'token:' . $token_id ] = $caps;
+		$this->save_assignments( $all );
+
+		( new AuditLog() )->record( 'capability.bootstrap', [
+			'token_id'     => $token_id,
+			'scope'        => $scope,
+			'profile'      => $profile,
+			'capabilities' => $caps,
+			'reason'       => $reason,
+		] );
+
+		return $caps;
+	}
+
+	/**
+	 * Step 79 — Remove a token's capability assignment, e.g. on revoke/delete.
+	 */
+	public function deprovision_token( string $token_id ): void {
+		$all = $this->get_assignments();
+		$key = 'token:' . $token_id;
+
+		if ( ! isset( $all[ $key ] ) ) {
+			return;
+		}
+
+		unset( $all[ $key ] );
+		$this->save_assignments( $all );
+
+		( new AuditLog() )->record( 'capability.deprovisioned', [ 'token_id' => $token_id ] );
+	}
+
+	/**
+	 * Step 79 — Self-healing: if a token has no capability assignment at
+	 * all, bootstrap one from its scope's profile. Idempotent — a non-empty
+	 * existing assignment (including a manually customized one) is left
+	 * untouched.
+	 */
+	public function ensure_token_capabilities( string $token_id, string $scope ): array {
+		if ( '' === $token_id ) {
+			return [];
+		}
+
+		$existing = $this->get_for_subject( 'token', $token_id );
+
+		if ( ! empty( $existing ) ) {
+			return $existing;
+		}
+
+		return $this->bootstrap_token( $token_id, $scope, 'self_healed' );
 	}
 
 	public function validate( string $operation_id, string $subject = 'token', string $subject_id = '' ): array {

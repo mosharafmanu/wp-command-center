@@ -8,6 +8,8 @@
 
 namespace WPCommandCenter\Security;
 
+use WPCommandCenter\Operations\CapabilityRegistry;
+
 defined( 'ABSPATH' ) || exit;
 
 final class AuthTokens {
@@ -93,6 +95,10 @@ final class AuthTokens {
 
 		$this->write_manifest( $dir, $manifest );
 
+		// Step 79 — Auto-bootstrap capability assignment from token scope so
+		// the token is immediately usable over MCP with no manual setup.
+		( new CapabilityRegistry() )->bootstrap_token( $record['id'], $scope, 'token_created' );
+
 		return [
 			'token'  => $raw,
 			'record' => $record,
@@ -118,7 +124,15 @@ final class AuthTokens {
 	}
 
 	public function revoke( string $id ): bool|\WP_Error {
-		return $this->update( $id, [ 'status' => self::STATUS_REVOKED ] );
+		$result = $this->update( $id, [ 'status' => self::STATUS_REVOKED ] );
+
+		// Step 79 — Remove the revoked token's capability assignment so it
+		// cannot be reused and doesn't linger as a stale mapping.
+		if ( true === $result ) {
+			( new CapabilityRegistry() )->deprovision_token( $id );
+		}
+
+		return $result;
 	}
 
 	public function delete( string $id ): bool|\WP_Error {
@@ -136,6 +150,9 @@ final class AuthTokens {
 		}
 
 		$this->write_manifest( $dir, $filtered );
+
+		// Step 79 — Remove the deleted token's capability assignment.
+		( new CapabilityRegistry() )->deprovision_token( $id );
 
 		return true;
 	}

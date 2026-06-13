@@ -1,0 +1,28 @@
+# Files excluded from production deployment via rsync
+# Dev tooling
+.git/
+.github/
+.ai/
+tests/
+artifacts/
+wpcc-env*.sh
+
+# Dev-only docs (STEP plans, audit reports, debug logs)
+STEP-*.md
+*-REPORT.md
+*-FINDING-*.md
+*-DEBUG.md
+*-FIX.md
+*-INVESTIGATION.md
+*-ROOT-CAUSE.md
+*-PROTOCOL-FIX.md
+*-CACHE-INVESTIGATION.md
+AGENTS.md
+CONNECTING.md
+DOCUMENTATION-INDEX.md
+REPOSITORY-ORGANIZATION-REPORT.md
+ADMIN-CONNECTION-TEST-FIX.md
+
+# Local config / secrets
+*.local.json
+*.local.php

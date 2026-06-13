@@ -9,9 +9,9 @@ final class SettingsRuntimeManager {
 	private AuditLog $audit;
 	public function __construct(){ $this->audit=new AuditLog(); }
 
-	public function run(array $p,array $cx=[]):array{
+	public function run(array $p,array $cx=[]):array|\WP_Error{
 		$a=(string)($p['action']??'');
-		if(!in_array($a,SettingsRegistry::ACTIONS,true))return $this->err('wpcc_invalid_settings_action',__('Invalid settings action.','wp-command-center'));
+		if(!in_array($a,SettingsRegistry::ACTIONS,true))return new \WP_Error('wpcc_invalid_settings_action',__('Invalid settings action.','wp-command-center'));
 		$opts=[
 			SettingsRegistry::A_GENERAL_GET=>['general_get',false],SettingsRegistry::A_GENERAL_UPDATE=>['general_update',true],
 			SettingsRegistry::A_READING_GET=>['reading_get',false],SettingsRegistry::A_READING_UPDATE=>['reading_update',true],
@@ -23,7 +23,10 @@ final class SettingsRuntimeManager {
 		];
 		[$method,$is_mutation]=$opts[$a];
 		$result=$this->$method($p);
-		if($is_mutation&&!isset($result['error'])){
+		if(isset($result['error'])){
+			return new \WP_Error($result['code'],$result['message']);
+		}
+		if($is_mutation){
 			$rid=$this->store_rollback($a,[],$cx);
 			$labels=[
 				SettingsRegistry::A_GENERAL_UPDATE=>['settings.general.updated','Site settings updated'],

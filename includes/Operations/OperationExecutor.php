@@ -22,6 +22,8 @@ use WPCommandCenter\Operations\WorkflowRuntimeManager;
 use WPCommandCenter\Operations\CommentsRuntimeManager;
 use WPCommandCenter\Operations\WidgetsRuntimeManager;
 use WPCommandCenter\Operations\CPTRuntimeManager;
+use WPCommandCenter\Operations\ApprovalRuntimeManager;
+use WPCommandCenter\Operations\SecurityModeManager;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -88,16 +90,42 @@ final class OperationExecutor {
 			}
 		}
 
-		// 1c. Approval gate — enforces when wpcc_enforce_approval is enabled.
-		// When active, mutation operations require the request/approval workflow path.
+		// 1c. Step 80 — Security Mode approval gate.
+		// When a mode other than Developer requires approval for the operation's
+		// effective risk level, auto-create an approval request and return a
+		// structured pending_approval response instead of a -32000 error. The AI
+		// receives enough information to poll for completion without manual steps.
 		$is_queued    = ! empty( $context['queue_id'] );
 		$is_requested = ! empty( $context['request_id'] );
-		if ( get_option( 'wpcc_enforce_approval', false ) && ! $is_queued && ! $is_requested && ! empty( $operation['requires_approval'] ) ) {
-			$audit->record( 'operation.approval.required', [
-				'operation_id' => $operation_id,
-				'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
-			] );
-			return $this->fail( $operation_id, 'wpcc_approval_required', sprintf( __( 'Operation %s requires approval. Use the request/approval workflow.', 'wp-command-center' ), $operation_id ) );
+		if ( ! $is_queued && ! $is_requested ) {
+			$action         = (string) ( $payload['action'] ?? '' );
+			$effective_risk = SecurityModeManager::effective_risk( $operation, $action );
+
+			if ( SecurityModeManager::requires_approval( $effective_risk ) ) {
+				$request_meta = [
+					'session_id' => $context['session_id'] ?? null,
+					'task_id'    => $context['task_id'] ?? null,
+					'action_id'  => $context['action_id'] ?? null,
+					'plan_id'    => $context['plan_id'] ?? null,
+					'actor'      => $actor,
+				];
+
+				$request = ( new OperationManager() )->create_request( $operation_id, $payload, $request_meta );
+
+				if ( is_wp_error( $request ) ) {
+					return $this->fail( $operation_id, $request->get_error_code(), $request->get_error_message() );
+				}
+
+				$audit->record( 'operation.approval.auto_requested', array_merge( $links, [
+					'operation_id'  => $operation_id,
+					'request_id'    => $request['request_id'],
+					'risk_level'    => $effective_risk,
+					'security_mode' => SecurityModeManager::current(),
+					'actor'         => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] ) );
+
+				return $this->pending_approval( $operation_id, $request, $effective_risk, $action );
+			}
 		}
 
 		// 2. Validation: Operation is available.
@@ -232,6 +260,8 @@ final class OperationExecutor {
 				return new SnapshotManager();
 			case 'content_manage':
 				return new ContentManager();
+			case 'system_info':
+				return new SystemInfoRuntime();
 			case 'database_inspect':
 				return new DatabaseInspector();
 			case 'capability_manage':
@@ -266,9 +296,45 @@ final class OperationExecutor {
 				return new WidgetsRuntimeManager();
 			case 'cpt_manage':
 				return new CPTRuntimeManager();
+			case 'approval_manage':
+				return new ApprovalRuntimeManager();
 		}
 
 		return null;
+	}
+
+	/**
+	 * Step 80 — Structured result returned when an operation is queued for approval.
+	 * success = true so McpServerRuntime surfaces it as a tool result (not an error),
+	 * giving the AI the request_id and polling instructions in one response.
+	 */
+	private function pending_approval( string $operation_id, array $request, string $risk_level, string $action ): array {
+		$mode = SecurityModeManager::current();
+		return [
+			'operation_id' => $operation_id,
+			'success'      => true,
+			'result'       => [
+				'status'             => 'pending_approval',
+				'request_id'         => $request['request_id'],
+				'operation'          => $operation_id,
+				'action'             => $action,
+				'risk_level'         => $risk_level,
+				'security_mode'      => $mode,
+				'rollback_available' => true,
+				'approval_url'       => admin_url( 'admin.php?page=wpcc-approvals' ),
+				'message'            => sprintf(
+					/* translators: 1: security mode label, 2: request ID, 3: approval URL */
+					__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'wp-command-center' ),
+					$mode,
+					$request['request_id'],
+					admin_url( 'admin.php?page=wpcc-approvals' )
+				),
+			],
+			'errors'  => [],
+			'created' => [],
+			'updated' => [],
+			'skipped' => [],
+		];
 	}
 
 	/**

@@ -151,12 +151,12 @@ final class RestApi {
 
 	/**
 	 * Security posture for GET /agent/manifest "security".
-	 * `human_approval_required` reflects the live `wpcc_enforce_approval` option
-	 * rather than a hardcoded claim, so the manifest never overstates enforcement.
+	 * `human_approval_required` reflects the active Security Mode (Step 80A).
+	 * True in Client and Enterprise modes; false in Developer mode (default).
 	 */
 	private static function get_agent_security(): array {
 		return [
-			'human_approval_required' => (bool) get_option( 'wpcc_enforce_approval', false ),
+			'human_approval_required' => \WPCommandCenter\Operations\SecurityModeManager::requires_human_approver(),
 			'patch_auto_apply'        => false,
 			'rollback_supported'      => true,
 			'secret_redaction'        => true,

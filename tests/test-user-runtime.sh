@@ -19,7 +19,7 @@ echo "== 1. Operation Registration =="
 MANIFEST=$(api "$WPCC_BASE/agent/manifest")
 assert_true "op: user_manage in manifest" "$(echo "$MANIFEST" | jq -r 'any(.operations[]; .id == "user_manage")')"
 assert_eq "op: user_manage requires approval" "true" "$(echo "$MANIFEST" | jq -r '.operations[] | select(.id == "user_manage") | .requires_approval')"
-assert_eq "op: user_manage risk variable" "variable" "$(echo "$MANIFEST" | jq -r '.operations[] | select(.id == "user_manage") | .risk_level')"
+assert_eq "op: user_manage risk critical" "critical" "$(echo "$MANIFEST" | jq -r '.operations[] | select(.id == "user_manage") | .risk_level')"
 
 echo "== 2. Capability Enforcement =="
 DISC=$(api "$WPCC_BASE/claude/discovery")

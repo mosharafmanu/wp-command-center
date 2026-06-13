@@ -54,6 +54,13 @@ final class McpRestApi {
 			$token = $auth->validate( $matches[1] );
 			$tid   = is_array( $token ) ? ( $token['id'] ?? '' ) : '';
 			$scope = is_array( $token ) ? ( $token['scope'] ?? '' ) : '';
+
+			// Mirror RestApi::check_token() — set the WP current user so that
+			// wp_filesystem, upgrader, and any WP core internal that calls
+			// current_user_can() sees a valid principal rather than user 0.
+			if ( is_array( $token ) && ! empty( $token['user_id'] ) ) {
+				wp_set_current_user( (int) $token['user_id'] );
+			}
 		}
 
 		$context = [
@@ -75,9 +82,12 @@ final class McpRestApi {
 			$code   = isset( $result['error'] ) ? 202 : 200;
 			return new \WP_REST_Response( $result, $code );
 		} catch ( \Throwable $e ) {
+			$message = defined( 'WP_DEBUG' ) && WP_DEBUG
+				? $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()
+				: 'Internal error';
 			return new \WP_REST_Response( [
 				'jsonrpc' => '2.0',
-				'error'   => [ 'code' => -32603, 'message' => 'Internal error' ],
+				'error'   => [ 'code' => -32603, 'message' => $message ],
 				'id'      => $body['id'] ?? null,
 			], 500 );
 		}
