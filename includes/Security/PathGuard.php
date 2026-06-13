@@ -43,7 +43,7 @@ final class PathGuard {
 	 * real absolute path on success.
 	 */
 	public function resolve( string $relative_path ): string|\WP_Error {
-		$relative_path = trim( str_replace( '\\', '/', $relative_path ), '/' );
+		$relative_path = $this->normalize_relative( $relative_path );
 
 		if ( '' === $relative_path || str_contains( $relative_path, '..' ) ) {
 			return new \WP_Error( 'wpcc_invalid_path', __( 'Invalid path.', 'wp-command-center' ) );
@@ -67,6 +67,50 @@ final class PathGuard {
 		}
 
 		return $real;
+	}
+
+	/**
+	 * Normalize a caller-supplied path to the wp-content-relative form the rest
+	 * of the file API expects (e.g. "themes/foo/functions.php").
+	 *
+	 * Forgiving by design so AI agents and REST callers don't have to guess the
+	 * exact root: it accepts an absolute path under wp-content or the WP root, a
+	 * leading "wp-content/" prefix, and stray leading slashes. This only changes
+	 * the accepted *spelling* of the input — resolve() still realpaths the result
+	 * and enforces the allowed-root and deny-pattern checks, so it cannot widen
+	 * what is reachable.
+	 */
+	public function normalize_relative( string $path ): string {
+		// Normalize separators but keep any leading slash so absolute paths can
+		// be compared against WP_CONTENT_DIR / ABSPATH (both have a leading slash).
+		$norm = wp_normalize_path( str_replace( '\\', '/', $path ) );
+
+		if ( '' === trim( $norm, '/' ) ) {
+			return '';
+		}
+
+		$content = untrailingslashit( wp_normalize_path( WP_CONTENT_DIR ) );
+		$abspath = untrailingslashit( wp_normalize_path( ABSPATH ) );
+
+		// Absolute path under wp-content/ → strip to the relative remainder.
+		if ( str_starts_with( $norm . '/', $content . '/' ) ) {
+			$path = substr( $norm, strlen( $content ) );
+		} elseif ( str_starts_with( $norm . '/', $abspath . '/' ) ) {
+			// Absolute path under the WP root → strip the root (wp-content/ is
+			// then stripped below).
+			$path = substr( $norm, strlen( $abspath ) );
+		} else {
+			$path = $norm;
+		}
+
+		$path = trim( $path, '/' );
+
+		// Relative path that still carries a leading wp-content/ prefix.
+		if ( 0 === stripos( $path, 'wp-content/' ) ) {
+			$path = substr( $path, strlen( 'wp-content/' ) );
+		}
+
+		return trim( $path, '/' );
 	}
 
 	/**

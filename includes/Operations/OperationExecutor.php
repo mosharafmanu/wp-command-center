@@ -241,12 +241,17 @@ final class OperationExecutor {
 		// 4. Normalize response.
 		$normalized = $this->normalize_success( $operation_id, $result );
 
+		// STEP 87 — never persist or log raw file contents (file_read). The live
+		// response keeps `contents`; the durable result_json and audit copies omit
+		// it so /agent/context and history never expose file bodies.
+		$storable = $this->strip_for_storage( $normalized );
+
 		$res_id = $res_manager->create( array_merge( $res_base, [
 			'status'        => 'completed',
 			'created_count' => count( $normalized['created'] ),
 			'updated_count' => count( $normalized['updated'] ),
 			'skipped_count' => count( $normalized['skipped'] ),
-			'result_json'   => wp_json_encode( $normalized ),
+			'result_json'   => wp_json_encode( $storable ),
 		] ) );
 
 		$audit->record( 'operation.result.completed', array_merge( $links, [
@@ -256,13 +261,13 @@ final class OperationExecutor {
 		] ) );
 
 		$audit->record( "operation.{$operation_id}.completed", array_merge( $links, [
-			'result' => $result,
+			'result' => $this->strip_for_storage( is_array( $result ) ? $result : [] ),
 			'actor'  => $actor ? AuditLog::resolve_actor( $actor ) : null,
 		] ) );
 
 		$audit->record( 'operation.execution.completed', array_merge( $links, [
 			'operation_id' => $operation_id,
-			'result'       => $normalized,
+			'result'       => $storable,
 			'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 		] ) );
 
@@ -436,6 +441,26 @@ final class OperationExecutor {
 			'updated' => [],
 			'skipped' => [],
 		];
+	}
+
+	/**
+	 * STEP 87 — recursively remove `contents` keys from a result before it is
+	 * persisted to wpcc_operation_results or written to the audit log, so raw
+	 * file bodies (file_read) never reach /agent/context or operation history.
+	 * The live response returned to the caller is unaffected.
+	 */
+	private function strip_for_storage( array $data ): array {
+		foreach ( $data as $key => $value ) {
+			if ( 'contents' === $key ) {
+				unset( $data[ $key ] );
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$data[ $key ] = $this->strip_for_storage( $value );
+			}
+		}
+
+		return $data;
 	}
 
 	/**

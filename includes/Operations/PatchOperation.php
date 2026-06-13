@@ -33,6 +33,8 @@ use WPCommandCenter\Security\PathGuard;
 
 defined( 'ABSPATH' ) || exit;
 
+// PathGuard is imported above; normalize_relative() canonicalizes inbound paths.
+
 final class PatchOperation {
 
 	const ACTIONS = [ 'patch_preview', 'patch_create', 'patch_apply', 'patch_verify', 'patch_status' ];
@@ -302,7 +304,9 @@ final class PatchOperation {
 				return new \WP_Error( 'wpcc_invalid_file', __( 'Each file must be an object with path and modified.', 'wp-command-center' ) );
 			}
 
-			$path = isset( $file['path'] ) ? trim( (string) $file['path'], '/' ) : '';
+			// Accept wp-content-prefixed / absolute paths and canonicalize to the
+			// wp-content-relative form (e.g. "themes/foo/functions.php").
+			$path = isset( $file['path'] ) ? ( new PathGuard() )->normalize_relative( (string) $file['path'] ) : '';
 			if ( '' === $path ) {
 				return new \WP_Error( 'wpcc_invalid_path', __( 'Each file must have a path.', 'wp-command-center' ) );
 			}

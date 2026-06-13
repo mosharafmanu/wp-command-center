@@ -651,7 +651,7 @@ final class OperationRegistry {
 			'file_manage' => [
 				'id'                => 'file_manage',
 				'title'             => __( 'File Access', 'wp-command-center' ),
-				'description'       => __( 'Read files and browse the file tree under themes, plugins, and mu-plugins. Read-only. Blocked paths (.env, wp-config.php, vendor/, keys, etc.) are denied and secrets are redacted. Actions: file_read, file_tree, file_metadata.', 'wp-command-center' ),
+				'description'       => __( 'Read files and browse the file tree under themes, plugins, and mu-plugins. Read-only. Paths are relative to wp-content, e.g. "themes/my-theme/functions.php" or "plugins/my-plugin/file.php" (a leading "wp-content/" or an absolute path is also accepted). Blocked paths (.env, wp-config.php, vendor/, keys, etc.) are denied and secrets are redacted. Actions: file_read, file_tree, file_metadata.', 'wp-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'file_read'     => 'diagnostic',
@@ -661,7 +661,7 @@ final class OperationRegistry {
 				'requires_approval' => false,
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'file_read', 'file_tree', 'file_metadata' ], 'description' => 'The file action to perform.' ],
-					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Relative path under wp-content (required for file_read and file_metadata; optional for file_tree).' ],
+					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Path relative to wp-content, e.g. "themes/my-theme/functions.php" (a leading "wp-content/" or absolute path is also accepted). Required for file_read and file_metadata; optional for file_tree (omit to list the themes/plugins/mu-plugins roots).' ],
 				],
 				'available'         => true,
 			],
@@ -679,7 +679,7 @@ final class OperationRegistry {
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'search_text', 'search_symbol', 'search_file' ], 'description' => 'The search action to perform.' ],
 					[ 'name' => 'query', 'type' => 'string', 'required' => true, 'description' => 'The search term.' ],
-					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Limit the search to a relative directory under wp-content.' ],
+					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Limit the search to a directory relative to wp-content, e.g. "themes/my-theme" (a leading "wp-content/" or absolute path is also accepted). Omit to search all of themes/plugins/mu-plugins.' ],
 					[ 'name' => 'max_results', 'type' => 'integer', 'required' => false, 'description' => 'Maximum number of matches to return.' ],
 				],
 				'available'         => true,
@@ -699,7 +699,7 @@ final class OperationRegistry {
 				'requires_approval' => true,
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'patch_preview', 'patch_create', 'patch_apply', 'patch_verify', 'patch_status' ], 'description' => 'The patch action to perform.' ],
-					[ 'name' => 'files', 'type' => 'array', 'required' => false, 'description' => 'Array of { path, modified } objects (required for patch_preview and patch_create).' ],
+					[ 'name' => 'files', 'type' => 'array', 'required' => false, 'description' => 'Array of { path, modified } objects (required for patch_preview and patch_create). path is relative to wp-content, e.g. "themes/my-theme/functions.php" (a leading "wp-content/" or absolute path is also accepted); modified is the full new file content.' ],
 					[ 'name' => 'patch_id', 'type' => 'string', 'required' => false, 'description' => 'Patch ID (required for patch_apply, patch_verify, patch_status).' ],
 					[ 'name' => 'explanation', 'type' => 'string', 'required' => false, 'description' => 'Why the change is being made (patch_create).' ],
 					[ 'name' => 'risk_level', 'type' => 'string', 'required' => false, 'description' => 'low | medium | high (patch_create).' ],

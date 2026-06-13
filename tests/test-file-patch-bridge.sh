@@ -165,6 +165,17 @@ assert_eq "syntax validation works via API (no shell needed)" "false" "$(pj "$R"
 METHOD=$(pj "$R" '.files[0].syntax.method')
 { [ "$METHOD" = "tokenizer" ] || [ "$METHOD" = "php -l" ]; } && pass "syntax method available without SSH ($METHOD)" || fail "syntax method unexpected ($METHOD)"
 
+echo "== Path normalization: wp-content-prefixed + absolute paths accepted =="
+for P in "$REL" "wp-content/$REL" "$WP_ROOT/wp-content/$REL"; do
+  R=$(rest file_manage "$(jq -n --arg p "$P" '{action:"file_read",path:$p}')")
+  assert_eq "file_read accepts '${P:0:24}...'" "plugins/wpcc-bridge-sandbox/sub/target.php" "$(pj "$R" '.path // "ERR"')"
+done
+# Security must still hold after normalization.
+R=$(rest file_manage '{"action":"file_read","path":"wp-content/../wp-config.php"}')
+assert_eq "traversal via wp-content/.. still blocked" "wpcc_invalid_path" "$(pj "$R" '.code // "NOT_BLOCKED"')"
+R=$(rest file_manage "$(jq -n --arg p "$WP_ROOT/wp-config.php" '{action:"file_read",path:$p}')")
+assert_eq "absolute wp-config.php still blocked" "true" "$(pj "$R" '(.code // "") | test("wpcc_(not_found|file_blocked|path_not_allowed)")')"
+
 echo
 echo "================================================"
 echo "  File/Patch Bridge: $PASS passed, $FAIL failed"
