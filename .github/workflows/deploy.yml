@@ -19,23 +19,31 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Write private key
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Pin server fingerprints (scanned 2026-06-13 — do not replace with keyscan)
-          cat >> ~/.ssh/known_hosts << 'EOF'
-          [72.62.68.183]:65002 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINQQedliBFBvh2wnMrS5FIEXRc97rSqyBTsmUrAhWTiJ
-          [72.62.68.183]:65002 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC1ottJ+LwxSG/hsMUfeRiRG2Ox0ZVWcpTiTuuHKqKjFaX0Zt00N2cep7Sv/YJMtzeE6fUabkN9G19ehZbfGympPz8iSapv7XkCcHOOoW+d7keVosQnvJgqeskBXf2tGyDTs85pvfh3P1+5zPn5LEUIcVLQOqh+LvfwYp2+GD4tB5R/0vTWr6M4bmdp219cGPVn5AX0DyS3msVgNJ2G9TncFJKfi+Y0ACNGjJFGeQHkMXpuAlsfXHrXEh99/eG+huBmMMcpnjF6HIqjajywNTnPWSFz6EzosSci/EwG03UgjvK8hXwpypbA+oVMQXR+KEx2nHX6vMpfZ4+ZN5fTY/3AeHr44WETVRSY1AOaw0EmeU+Zu7NwUDpttAx4U8K4ty8FJKXF4HzTYd3hm7iNNY53aH4FL9Xk5ru6yhwOJ8RZ+ATmIjXJBTFh28EF+Wxfprm/7Ua1OvU0IZ/AaI1YYLOuA38XBI/JkpsjJxSGnQ1h5U8mVrWu6TTMytN9oQMRads=
-          [72.62.68.183]:65002 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEOrEol1bjJw12rKzqp9skjnbGlZzTtgrODbL9Ve1p2lH5VBlN3pVmXT2Vn2z5JR6gFhp6catMwTd3613HnDAbw=
-          EOF
+          # Pinned fingerprints scanned 2026-06-13
+          printf '%s\n' \
+            '[72.62.68.183]:65002 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINQQedliBFBvh2wnMrS5FIEXRc97rSqyBTsmUrAhWTiJ' \
+            '[72.62.68.183]:65002 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC1ottJ+LwxSG/hsMUfeRiRG2Ox0ZVWcpTiTuuHKqKjFaX0Zt00N2cep7Sv/YJMtzeE6fUabkN9G19ehZbfGympPz8iSapv7XkCcHOOoW+d7keVosQnvJgqeskBXf2tGyDTs85pvfh3P1+5zPn5LEUIcVLQOqh+LvfwYp2+GD4tB5R/0vTWr6M4bmdp219cGPVn5AX0DyS3msVgNJ2G9TncFJKfi+Y0ACNGjJFGeQHkMXpuAlsfXHrXEh99/eG+huBmMMcpnjF6HIqjajywNTnPWSFz6EzosSci/EwG03UgjvK8hXwpypbA+oVMQXR+KEx2nHX6vMpfZ4+ZN5fTY/3AeHr44WETVRSY1AOaw0EmeU+Zu7NwUDpttAx4U8K4ty8FJKXF4HzTYd3hm7iNNY53aH4FL9Xk5ru6yhwOJ8RZ+ATmIjXJBTFh28EF+Wxfprm/7Ua1OvU0IZ/AaI1YYLOuA38XBI/JkpsjJxSGnQ1h5U8mVrWu6TTMytN9oQMRads=' \
+            '[72.62.68.183]:65002 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEOrEol1bjJw12rKzqp9skjnbGlZzTtgrODbL9Ve1p2lH5VBlN3pVmXT2Vn2z5JR6gFhp6catMwTd3613HnDAbw=' \
+            > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+
+      - name: Test SSH connectivity
+        run: |
+          ssh -v \
+            -i ~/.ssh/deploy_key \
+            -p ${{ secrets.SSH_PORT }} \
+            -o ConnectTimeout=15 \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "echo SSH_OK"
 
       - name: Deploy via rsync
         run: |
           rsync -azv --delete \
             --exclude-from='.deploy-exclude' \
-            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }}" \
+            -e "ssh -i ~/.ssh/deploy_key -p ${{ secrets.SSH_PORT }} -o ConnectTimeout=15" \
             ./ \
             ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SSH_DEPLOY_PATH }}/
 
