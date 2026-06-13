@@ -221,7 +221,15 @@ final class PatchManager {
 			}
 
 			$original = (string) file_get_contents( $real );
-			$diff     = $this->diff_generator->generate( $original, $modified, $path );
+
+			// Reject patches that would strip/corrupt a plugin or theme bootstrap
+			// header (would deactivate the plugin / break the theme).
+			$header_error = PatchGuard::validate_change( $path, $original, $modified );
+			if ( is_wp_error( $header_error ) ) {
+				return $header_error;
+			}
+
+			$diff = $this->diff_generator->generate( $original, $modified, $path );
 
 			if ( '' !== $diff ) {
 				$has_changes = true;

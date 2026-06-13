@@ -151,6 +151,19 @@ final class PatchApproval {
 				) );
 			}
 
+			// Reject before writing anything if this would strip/corrupt a plugin
+			// or theme bootstrap header (defends against patches created before
+			// this rule existed, too).
+			$header_error = PatchGuard::validate_change( $file['path'], $file['original'], $file['modified'] );
+			if ( is_wp_error( $header_error ) ) {
+				$this->audit_log->record( 'patch.header_blocked', [
+					'patch_id' => $id,
+					'path'     => $file['path'],
+					'actor'    => AuditLog::resolve_actor( $actor ),
+				] );
+				return $header_error;
+			}
+
 			$targets[] = [
 				'path' => $file['path'],
 				'real' => $real,
@@ -195,9 +208,19 @@ final class PatchApproval {
 		$passed = true;
 
 		foreach ( $targets as $target ) {
-			$check                          = $this->verify_file( $target['real'] );
-			$checks[ $target['path'] ]      = $check;
-			$passed                         = $passed && $check['passed'];
+			$check = $this->verify_file( $target['real'] );
+
+			// Post-write header verification for plugin/theme bootstrap files: if
+			// the written file lost its header, fail so the auto-revert below
+			// restores it (the site never sees an invalid-header plugin/theme).
+			$header = PatchGuard::verify_written_file( $target['real'], $target['path'], $target['file']['original'] );
+			if ( $header['guarded'] ) {
+				$check['header'] = $header;
+				$check['passed'] = $check['passed'] && $header['passed'];
+			}
+
+			$checks[ $target['path'] ] = $check;
+			$passed                    = $passed && $check['passed'];
 		}
 
 		if ( ! $passed ) {

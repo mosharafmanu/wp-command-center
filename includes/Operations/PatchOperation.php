@@ -28,6 +28,7 @@ use WPCommandCenter\PatchSystem\PatchManager;
 use WPCommandCenter\PatchSystem\PatchApproval;
 use WPCommandCenter\PatchSystem\DiffGenerator;
 use WPCommandCenter\PatchSystem\DangerousFiles;
+use WPCommandCenter\PatchSystem\PatchGuard;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Security\PathGuard;
 
@@ -88,7 +89,11 @@ final class PatchOperation {
 				? $approval->tokenizer_check( $file['modified'] )
 				: [ 'passed' => true, 'message' => 'Not a PHP file — syntax check skipped.', 'method' => 'none' ];
 
-			$all_valid = $all_valid && $syntax['passed'];
+			// Flag changes that would strip a plugin/theme bootstrap header.
+			$header_error = PatchGuard::validate_change( $file['path'], $original, $file['modified'] );
+			$header_safe  = ! is_wp_error( $header_error );
+
+			$all_valid = $all_valid && $syntax['passed'] && $header_safe;
 
 			$danger = DangerousFiles::is_dangerous_path( $file['path'] );
 			if ( $danger ) {
@@ -96,11 +101,14 @@ final class PatchOperation {
 			}
 
 			$previews[] = [
-				'path'      => $file['path'],
-				'changed'   => '' !== $diff,
-				'diff'      => $diff,
-				'syntax'    => $syntax,
-				'dangerous' => $danger,
+				'path'           => $file['path'],
+				'changed'        => '' !== $diff,
+				'diff'           => $diff,
+				'syntax'         => $syntax,
+				'dangerous'      => $danger,
+				'bootstrap_file' => PatchGuard::is_bootstrap_file( $file['path'], $original ),
+				'header_safe'    => $header_safe,
+				'header_warning' => $header_safe ? '' : $header_error->get_error_message(),
 			];
 		}
 
