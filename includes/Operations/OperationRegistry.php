@@ -244,26 +244,29 @@ final class OperationRegistry {
 			[
 				'id'                => 'theme_manage',
 				'title'             => __( 'Theme Management', 'wp-command-center' ),
-				'description'       => __( 'Safely inspect and manage WordPress themes. Operations: list, install, activate, update, delete. Registry-driven, approval-aware, health-verified.', 'wp-command-center' ),
-				'risk_level'        => 'high',
+				'description'       => __( 'Safely inspect and manage WordPress themes. Operations: list, install, activate, update, delete. Registry-driven, approval-aware, health-verified. theme_delete is a CRITICAL destructive action: it requires confirm=true, confirmation_phrase="DELETE_THEME", and a reason; only inactive themes can be deleted.', 'wp-command-center' ),
+				'risk_level'        => 'critical',
 				'action_risks'      => [
 					'theme_list'     => 'diagnostic',
 					'theme_install'  => 'high',
 					'theme_activate' => 'high',
 					'theme_update'   => 'high',
-					'theme_delete'   => 'high',
+					'theme_delete'   => 'critical',
 				],
 				'requires_approval' => true,
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'theme_list', 'theme_install', 'theme_activate', 'theme_update', 'theme_delete' ], 'description' => 'The theme action to perform.' ],
 					[ 'name' => 'slug', 'type' => 'string', 'required' => false, 'description' => 'The theme slug (required for all actions except theme_list).' ],
+					[ 'name' => 'confirm', 'type' => 'boolean', 'required' => false, 'description' => 'Must be true to execute theme_delete (destructive confirmation).' ],
+					[ 'name' => 'confirmation_phrase', 'type' => 'string', 'required' => false, 'description' => 'Must equal "DELETE_THEME" to execute theme_delete.' ],
+					[ 'name' => 'reason', 'type' => 'string', 'required' => false, 'description' => 'Human-readable reason for the deletion; required for theme_delete.' ],
 				],
 				'available'         => true,
 			],
 			[
 				'id'                => 'plugin_manage',
 				'title'             => __( 'Plugin Management', 'wp-command-center' ),
-				'description'       => __( 'Safely inspect and manage WordPress plugins. Operations: list, install, activate, deactivate, update, delete. Registry-driven, approval-aware, health-verified.', 'wp-command-center' ),
+				'description'       => __( 'Safely inspect and manage WordPress plugins. Operations: list, install, activate, deactivate, update, delete. Registry-driven, approval-aware, health-verified. plugin_delete is a CRITICAL destructive action: it requires confirm=true, confirmation_phrase="DELETE_PLUGIN", and a reason; only inactive plugins can be deleted and the plugin folder is backed up first.', 'wp-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [
 					'plugin_list'       => 'diagnostic',
@@ -277,6 +280,9 @@ final class OperationRegistry {
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'plugin_list', 'plugin_install', 'plugin_activate', 'plugin_deactivate', 'plugin_update', 'plugin_delete' ], 'description' => 'The plugin action to perform.' ],
 					[ 'name' => 'slug', 'type' => 'string', 'required' => false, 'description' => 'The plugin slug (required for all actions except plugin_list).' ],
+					[ 'name' => 'confirm', 'type' => 'boolean', 'required' => false, 'description' => 'Must be true to execute plugin_delete (destructive confirmation).' ],
+					[ 'name' => 'confirmation_phrase', 'type' => 'string', 'required' => false, 'description' => 'Must equal "DELETE_PLUGIN" to execute plugin_delete.' ],
+					[ 'name' => 'reason', 'type' => 'string', 'required' => false, 'description' => 'Human-readable reason for the deletion; required for plugin_delete.' ],
 				],
 				'available'         => true,
 			],

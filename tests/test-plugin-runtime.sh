@@ -125,7 +125,9 @@ assert_eq "not found: deactivate rejected" "wpcc_plugin_not_found" "$(echo "$NOT
 NOT_FOUND3=$(api POST /operations/plugin_manage/run '{"action":"plugin_update","slug":"nonexistent-plugin-xyz-123"}')
 assert_eq "not found: update rejected" "wpcc_plugin_not_found" "$(echo "$NOT_FOUND3" | jq -r '.code // "none"')"
 
-NOT_FOUND4=$(api POST /operations/plugin_manage/run '{"action":"plugin_delete","slug":"nonexistent-plugin-xyz-123"}')
+# STEP 84: plugin_delete is now destructive-gated; supply confirmation so the
+# request reaches the existence guard instead of stopping at confirmation_required.
+NOT_FOUND4=$(api POST /operations/plugin_manage/run '{"action":"plugin_delete","slug":"nonexistent-plugin-xyz-123","confirm":true,"confirmation_phrase":"DELETE_PLUGIN","reason":"regression test"}')
 assert_eq "not found: delete rejected" "wpcc_plugin_not_found" "$(echo "$NOT_FOUND4" | jq -r '.code // "none"')"
 
 echo
@@ -151,7 +153,9 @@ fi
 echo
 echo "== 9. Cannot delete active plugin =="
 if [ -n "$ACTIVE_SLUG" ]; then
-	DELETE_ACTIVE=$(api POST /operations/plugin_manage/run "{\"action\":\"plugin_delete\",\"slug\":\"$ACTIVE_SLUG\"}")
+	# STEP 84: supply destructive confirmation so the request reaches the
+	# active-plugin guard instead of stopping at confirmation_required.
+	DELETE_ACTIVE=$(api POST /operations/plugin_manage/run "{\"action\":\"plugin_delete\",\"slug\":\"$ACTIVE_SLUG\",\"confirm\":true,\"confirmation_phrase\":\"DELETE_PLUGIN\",\"reason\":\"regression test\"}")
 	assert_eq "delete active: rejected" "wpcc_plugin_delete_active" "$(echo "$DELETE_ACTIVE" | jq -r '.code // "none"')"
 else
 	pass "delete active: no active plugins, skipped gracefully"

@@ -15,6 +15,7 @@ namespace WPCommandCenter\Admin;
 use WPCommandCenter\Operations\OperationManager;
 use WPCommandCenter\Operations\OperationRegistry;
 use WPCommandCenter\Operations\SecurityModeManager;
+use WPCommandCenter\Operations\DestructiveGuard;
 use WPCommandCenter\Security\AuditLog;
 
 defined( 'ABSPATH' ) || exit;
@@ -137,15 +138,21 @@ final class AdminRestApi {
 		$action    = $payload['action'] ?? '';
 		$risk      = SecurityModeManager::effective_risk( $operation, $action );
 
+		// STEP 84 — flag destructive requests so the approval card can render the
+		// irreversible-deletion warning prominently.
+		$destructive = DestructiveGuard::classify( $r['operation_id'], $payload );
+
 		return [
-			'request_id'   => $r['request_id'],
-			'operation_id' => $r['operation_id'],
-			'operation'    => $operation['title'] ?? $r['operation_id'],
-			'action'       => $action,
-			'risk_level'   => $risk,
-			'status'       => $r['status'],
-			'reason'       => $payload['reason'] ?? '',
-			'payload'      => $payload,
+			'request_id'          => $r['request_id'],
+			'operation_id'        => $r['operation_id'],
+			'operation'           => $operation['title'] ?? $r['operation_id'],
+			'action'              => $action,
+			'risk_level'          => $risk,
+			'status'              => $r['status'],
+			'reason'              => $payload['reason'] ?? '',
+			'destructive'         => null !== $destructive,
+			'destructive_warning' => null !== $destructive ? $destructive['warning'] : '',
+			'payload'             => $payload,
 			'session_id'   => $r['session_id'],
 			'plan_id'      => $r['plan_id'],
 			'created_at'   => (int) $r['created_at'],

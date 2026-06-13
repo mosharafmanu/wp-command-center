@@ -61,6 +61,11 @@ $api_base      = rest_url( 'wp-command-center/v1/admin' );
 .wpcc-card-result { margin-top:10px;padding:8px 12px;border-radius:3px;font-size:13px; }
 .wpcc-card-result.success { background:#edfaef;border:1px solid #00a32a;color:#1e1e1e; }
 .wpcc-card-result.error   { background:#fce9e9;border:1px solid #d63638;color:#1e1e1e; }
+.wpcc-card-destructive {
+	background:#fcf0f1;border:1px solid #d63638;color:#8a1f1f;border-radius:3px;
+	padding:8px 12px;margin:8px 0 10px;font-size:13px;font-weight:600;
+}
+.wpcc-card-destructive .dashicons,.wpcc-card-destructive .warn { color:#d63638; }
 </style>
 
 <script>
@@ -95,6 +100,12 @@ $api_base      = rest_url( 'wp-command-center/v1/admin' );
 		var reasonHtml = req.reason
 			? '<div class="wpcc-card-reason">' + escHtml( req.reason ) + '</div>'
 			: '';
+		var destructiveHtml = req.destructive
+			? '<div class="wpcc-card-destructive"><span class="warn">&#9888;</span> ' +
+				'<?php echo esc_js( __( 'DESTRUCTIVE — this permanently deletes data and cannot be undone.', 'wp-command-center' ) ); ?>' +
+				( req.destructive_warning ? ' ' + escHtml( req.destructive_warning ) : '' ) +
+				'</div>'
+			: '';
 		var actionLabel = req.action ? escHtml( req.action ) : '—';
 		var opLabel     = escHtml( req.operation );
 		var ago         = escHtml( req.created_ago );
@@ -105,6 +116,7 @@ $api_base      = rest_url( 'wp-command-center/v1/admin' );
 				'<span class="wpcc-card-title">' + opLabel + '</span>' +
 				'<span class="wpcc-risk-badge risk-' + escHtml(risk) + '">' + escHtml(label) + '</span>' +
 			'</div>' +
+			destructiveHtml +
 			'<table class="wpcc-card-meta"><tbody>' +
 				'<tr><td>Action</td><td>' + actionLabel + '</td></tr>' +
 				'<tr><td>Requested</td><td>' + ago + planInfo + '</td></tr>' +

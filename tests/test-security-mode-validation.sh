@@ -112,7 +112,9 @@ R=$(gate_result '{"jsonrpc":"2.0","id":26,"method":"tools/call","params":{"name"
 assert_eq "client: plugin_manage/plugin_install (high) → pending_approval" "pending_approval" "$R"
 
 # Critical — gated in client
-R=$(gate_result '{"jsonrpc":"2.0","id":27,"method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_delete","plugin":"hello-dolly/hello.php"}}}')
+# STEP 84: plugin_delete is destructive-gated; supply confirmation + slug so the
+# request reaches the Client-mode approval gate instead of confirmation_required.
+R=$(gate_result '{"jsonrpc":"2.0","id":27,"method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_delete","slug":"hello-dolly","confirm":true,"confirmation_phrase":"DELETE_PLUGIN","reason":"gating test"}}}')
 assert_eq "client: plugin_manage/plugin_delete (critical) → pending_approval" "pending_approval" "$R"
 
 R=$(gate_result '{"jsonrpc":"2.0","id":28,"method":"tools/call","params":{"name":"user_manage","arguments":{"action":"user_create","user_login":"testuser81","user_email":"test81@example.com","role":"subscriber"}}}')
@@ -157,7 +159,9 @@ R=$(gate_result '{"jsonrpc":"2.0","id":35,"method":"tools/call","params":{"name"
 assert_eq "enterprise: theme_manage/theme_install (high) → pending_approval" "pending_approval" "$R"
 
 # Critical — gated in enterprise
-R=$(gate_result '{"jsonrpc":"2.0","id":36,"method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_delete","plugin":"hello-dolly/hello.php"}}}')
+# STEP 84: plugin_delete is destructive-gated; supply confirmation + slug so the
+# request reaches the Enterprise-mode approval gate instead of confirmation_required.
+R=$(gate_result '{"jsonrpc":"2.0","id":36,"method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_delete","slug":"hello-dolly","confirm":true,"confirmation_phrase":"DELETE_PLUGIN","reason":"gating test"}}}')
 assert_eq "enterprise: plugin_manage/plugin_delete (critical) → pending_approval" "pending_approval" "$R"
 
 # AI cannot approve in enterprise

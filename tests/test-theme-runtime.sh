@@ -53,7 +53,8 @@ assert_eq "missing slug rejected" "wpcc_missing_theme_slug" "$(echo "$NS" | jq -
 echo "== 7. Theme not found =="
 NF=$(api POST /operations/theme_manage/run '{"action":"theme_activate","slug":"nonexistent-theme-xyz"}')
 assert_eq "not found: activate" "wpcc_theme_not_found" "$(echo "$NF" | jq -r '.code // "none"')"
-NF2=$(api POST /operations/theme_manage/run '{"action":"theme_delete","slug":"nonexistent-theme-xyz"}')
+# STEP 84: theme_delete is destructive-gated; supply confirmation to reach the guard.
+NF2=$(api POST /operations/theme_manage/run '{"action":"theme_delete","slug":"nonexistent-theme-xyz","confirm":true,"confirmation_phrase":"DELETE_THEME","reason":"regression test"}')
 assert_eq "not found: delete" "wpcc_theme_not_found" "$(echo "$NF2" | jq -r '.code // "none"')"
 
 echo "== 8. Duplicate install =="
@@ -71,7 +72,8 @@ fi
 
 echo "== 10. Delete active =="
 if [ -n "$ACTIVE_SLUG" ]; then
-  DA=$(api POST /operations/theme_manage/run "{\"action\":\"theme_delete\",\"slug\":\"$ACTIVE_SLUG\"}")
+  # STEP 84: supply destructive confirmation so the request reaches the active-theme guard.
+  DA=$(api POST /operations/theme_manage/run "{\"action\":\"theme_delete\",\"slug\":\"$ACTIVE_SLUG\",\"confirm\":true,\"confirmation_phrase\":\"DELETE_THEME\",\"reason\":\"regression test\"}")
   assert_eq "delete active rejected" "wpcc_theme_delete_active" "$(echo "$DA" | jq -r '.code // "none"')"
 else
   pass "delete active: skipped"
@@ -224,7 +226,8 @@ else
 fi
 
 echo "== 30. Delete non-existent theme =="
-DN=$(api POST /operations/theme_manage/run '{"action":"theme_delete","slug":"no-such-theme-abc"}')
+# STEP 84: theme_delete is destructive-gated; supply confirmation to reach the guard.
+DN=$(api POST /operations/theme_manage/run '{"action":"theme_delete","slug":"no-such-theme-abc","confirm":true,"confirmation_phrase":"DELETE_THEME","reason":"regression test"}')
 assert_eq "delete: not found" "wpcc_theme_not_found" "$(echo "$DN" | jq -r '.code // "none"')"
 
 echo "== 31. All error codes in catalog =="

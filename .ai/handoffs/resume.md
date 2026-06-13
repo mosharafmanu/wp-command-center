@@ -1,12 +1,15 @@
 # WP Command Center - Claude Handoff
 
-Last verified: June 13, 2026 — STEPs 78–83 deployed to production. CI/CD live.
+Last verified: June 13, 2026 — STEPs 78–83 deployed to production. STEP 84 (Destructive Guardrails) complete locally, NOT yet deployed. CI/CD live.
 
-**RESUME HERE → STEP 84 (Licensing / Free-Pro gating)**
+**RESUME HERE → deploy STEP 84, then Licensing / Free-Pro gating (was "STEP 84", now unscheduled)**
 
 STEPs 78–83 are **complete and deployed to mosharafmanu.com**. CI/CD is live: every `git push` to `main` auto-deploys via a webhook at `https://mosharafmanu.com/wpcc-deploy.php` (server does `git fetch + reset --hard origin/main` + `wp cache flush`). No manual deployment needed going forward.
 
-**Immediate next action — STEP 84 (Licensing):**
+**STEP 84 — Destructive Operation Guardrails (COMPLETE locally, 2026-06-13):**
+The "STEP 84" number was reassigned from Licensing to **Destructive Operation Guardrails**. Permanent deletes / live DB mutations now require an explicit confirmation handshake (confirm + confirmation_phrase + reason + target) enforced in EVERY security mode (incl. Developer) BEFORE the approval gate; plugin_delete takes a pre-delete folder backup + verifies removal. New `DestructiveGuard` classifier. Full doc: `.ai/steps/STEP-84-DESTRUCTIVE-OPERATION-GUARDRAILS.md`. Tests: `test-destructive-guardrails.sh` 21/21. Not committed/deployed yet — `git push` to deploy.
+
+**Still-open: Licensing / Free-Pro gating (P0, now unscheduled):**
 Developer Mode = Free tier. Client/Enterprise Mode = Pro tier. Approval UI = Pro. This is P0 before public launch — without it all three security modes and the full approval workflow are freely available with no commercial gate. Start by reading the product strategy: `.ai/steps/STEP-80-PRODUCT-SECURITY-MODES.md` §6 (future steps) and `docs/product/` for positioning context.
 
 **Production state (mosharafmanu.com as of 2026-06-13):**

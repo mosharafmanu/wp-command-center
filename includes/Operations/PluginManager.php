@@ -14,6 +14,7 @@ namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Health\HealthVerificationEngine;
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Operations\DestructiveGuard;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -55,6 +56,12 @@ final class PluginManager {
 		}
 
 		$risk = $this->registry->action_risk( $action );
+
+		// STEP 84 — carry the destructive reason into the handler context so it
+		// is recorded in the audit trail for permanent deletions.
+		if ( isset( $params['reason'] ) ) {
+			$context['destructive_reason'] = sanitize_text_field( (string) $params['reason'] );
+		}
 
 		return match ( $action ) {
 			PluginRegistry::ACTION_LIST       => $this->plugin_list(),
@@ -328,17 +335,37 @@ final class PluginManager {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
 
+		// delete_plugins() relies on WP_Filesystem() and request_filesystem_credentials(),
+		// which live in file.php and are not loaded in a REST/MCP request by default.
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		WP_Filesystem();
+
+		// STEP 84 — best-effort pre-delete backup of the plugin folder so the
+		// deletion is recoverable. delete_plugins() is permanent, so the backup
+		// (a zip archive of the plugin directory) is the only restore path.
+		$backup = $this->create_plugin_backup( $slug, $plugin_info['plugin_file'], $context );
+		$this->audit( 'plugin.delete.backup', [
+			'slug'             => $slug,
+			'backup_id'        => $backup['backup_id'],
+			'backup_available' => $backup['backup_available'],
+			'note'             => $backup['note'],
+		], $context );
+
 		// Store rollback metadata before deletion.
 		$before = [
-			'active'  => false,
-			'version' => $plugin_info['version'],
-			'slug'    => $slug,
+			'active'    => false,
+			'version'   => $plugin_info['version'],
+			'slug'      => $slug,
+			'backup_id' => $backup['backup_id'],
 		];
 		$rollback_id = $this->store_rollback( $slug, 'delete', $before, $context );
 
 		$this->audit( 'plugin.delete.started', [
 			'slug'    => $slug,
 			'version' => $plugin_info['version'],
+			'reason'  => $context['destructive_reason'] ?? '',
 		], $context );
 
 		$result = delete_plugins( [ $plugin_info['plugin_file'] ] );
@@ -348,10 +375,19 @@ final class PluginManager {
 			return new \WP_Error( 'wpcc_plugin_delete_failed', $result->get_error_message() );
 		}
 
+		// STEP 84 — verify the plugin is actually gone. get_plugins() is cached in
+		// the 'plugins' cache group and was populated earlier in this request, so
+		// clear it to force a fresh on-disk scan before checking.
+		wp_cache_delete( 'plugins', 'plugins' );
+		$verified_removed = ! $this->registry->is_installed( $slug );
+
 		$this->audit( 'plugin.delete', [
-			'slug'        => $slug,
-			'version'     => $plugin_info['version'],
-			'rollback_id' => $rollback_id,
+			'slug'             => $slug,
+			'version'          => $plugin_info['version'],
+			'rollback_id'      => $rollback_id,
+			'backup_id'        => $backup['backup_id'],
+			'verified_removed' => $verified_removed,
+			'reason'           => $context['destructive_reason'] ?? '',
 		], $context );
 
 		$health = null;
@@ -360,13 +396,136 @@ final class PluginManager {
 		}
 
 		return [
-			'action'           => 'plugin_delete',
-			'slug'             => $slug,
-			'deleted'          => true,
-			'rollback_id'      => $rollback_id,
-			'health_check'     => $health ? $health['status'] : 'skipped',
-			'health_required'  => $this->registry->requires_health_check( PluginRegistry::ACTION_DELETE ),
+			'action'             => 'plugin_delete',
+			'slug'               => $slug,
+			'deleted'            => true,
+			'verified_removed'   => $verified_removed,
+			'destructive'        => true,
+			'risk_level'         => DestructiveGuard::RISK_LEVEL,
+			'rollback_available' => $backup['backup_available'],
+			'backup_id'          => $backup['backup_id'],
+			'snapshot_id'        => $backup['backup_id'],
+			'rollback_id'        => $rollback_id,
+			'health_check'       => $health ? $health['status'] : 'skipped',
+			'health_required'    => $this->registry->requires_health_check( PluginRegistry::ACTION_DELETE ),
 		];
+	}
+
+	// ── Pre-delete backup (STEP 84) ──────────────────────────────
+
+	/**
+	 * Zip the plugin's files into a protected uploads directory before deletion.
+	 * Best-effort: returns backup_available=false (with a note) when ZipArchive
+	 * is unavailable or the archive cannot be written, never blocking the delete.
+	 *
+	 * @return array{backup_id:?string,backup_available:bool,size:int,note:string}
+	 */
+	private function create_plugin_backup( string $slug, string $plugin_file, array $context ): array {
+		$out = [ 'backup_id' => null, 'backup_available' => false, 'size' => 0, 'note' => '' ];
+
+		if ( ! class_exists( 'ZipArchive' ) ) {
+			$out['note'] = 'ZipArchive extension not available';
+			return $out;
+		}
+
+		$plugin_root = dirname( $plugin_file );
+		$is_single   = ( '.' === $plugin_root || '' === $plugin_root );
+		$source      = $is_single
+			? trailingslashit( WP_PLUGIN_DIR ) . $plugin_file
+			: trailingslashit( WP_PLUGIN_DIR ) . $plugin_root;
+
+		if ( ! file_exists( $source ) ) {
+			$out['note'] = 'plugin path not found on disk';
+			return $out;
+		}
+
+		$dir = $this->backup_dir();
+		if ( is_wp_error( $dir ) ) {
+			$out['note'] = $dir->get_error_message();
+			return $out;
+		}
+
+		$backup_id = wp_generate_uuid4();
+		$zip_path  = trailingslashit( $dir ) . $backup_id . '.zip';
+
+		$zip = new \ZipArchive();
+		if ( true !== $zip->open( $zip_path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE ) ) {
+			$out['note'] = 'could not create backup archive';
+			return $out;
+		}
+
+		if ( is_dir( $source ) ) {
+			$base  = trailingslashit( wp_normalize_path( WP_PLUGIN_DIR ) );
+			$files = new \RecursiveIteratorIterator(
+				new \RecursiveDirectoryIterator( $source, \FilesystemIterator::SKIP_DOTS ),
+				\RecursiveIteratorIterator::LEAVES_ONLY
+			);
+			foreach ( $files as $file ) {
+				if ( ! $file->isFile() ) {
+					continue;
+				}
+				$path  = wp_normalize_path( $file->getPathname() );
+				$local = ltrim( str_replace( $base, '', $path ), '/' );
+				$zip->addFile( $file->getPathname(), $local );
+			}
+		} else {
+			$zip->addFile( $source, $plugin_file );
+		}
+
+		$zip->close();
+
+		if ( ! file_exists( $zip_path ) ) {
+			$out['note'] = 'backup archive was not written';
+			return $out;
+		}
+
+		$size = (int) filesize( $zip_path );
+
+		$records               = get_option( 'wpcc_plugin_backups', [] );
+		$records[ $backup_id ] = [
+			'id'          => $backup_id,
+			'plugin_slug' => $slug,
+			'plugin_file' => $plugin_file,
+			'archive'     => $backup_id . '.zip',
+			'size'        => $size,
+			'hash'        => md5_file( $zip_path ) ?: '',
+			'created_at'  => time(),
+			'session_id'  => $context['session_id'] ?? '',
+			'task_id'     => $context['task_id'] ?? '',
+		];
+		update_option( 'wpcc_plugin_backups', $records );
+
+		$out['backup_id']        = $backup_id;
+		$out['backup_available'] = true;
+		$out['size']             = $size;
+		$out['note']             = 'plugin folder archived before deletion';
+		return $out;
+	}
+
+	/**
+	 * Protected storage directory for pre-delete plugin backups.
+	 */
+	private function backup_dir(): string|\WP_Error {
+		$upload = wp_upload_dir();
+		if ( ! empty( $upload['error'] ) ) {
+			return new \WP_Error( 'wpcc_upload_dir_error', $upload['error'] );
+		}
+
+		$dir = trailingslashit( $upload['basedir'] ) . 'wpcc-plugin-backups';
+		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
+			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the plugin backup directory.', 'wp-command-center' ) );
+		}
+
+		$htaccess = trailingslashit( $dir ) . '.htaccess';
+		if ( ! file_exists( $htaccess ) ) {
+			file_put_contents( $htaccess, "Require all denied\nDeny from all\n" );
+		}
+		$index = trailingslashit( $dir ) . 'index.php';
+		if ( ! file_exists( $index ) ) {
+			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
+		}
+
+		return $dir;
 	}
 
 	// ── Rollback action ──

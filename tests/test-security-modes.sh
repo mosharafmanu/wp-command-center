@@ -176,7 +176,9 @@ assert_ne "Client: plugin_list not pending_approval" "pending_approval" "$STATUS
 
 # ===================================================================
 echo "== F. Action-level risk: plugin_delete (critical) gated in Client Mode =="
-RESP=$(mcp '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_delete","slug":"hello-dolly"}},"id":51}')
+# STEP 84: plugin_delete is destructive-gated. Supply confirmation so the request
+# passes the confirmation guard and reaches the Client-mode approval gate.
+RESP=$(mcp '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_delete","slug":"hello-dolly","confirm":true,"confirmation_phrase":"DELETE_PLUGIN","reason":"security mode gating test"}},"id":51}')
 DATA=$(echo "$RESP" | jq -r '.result.content[0].text // empty')
 STATUS=$(echo "$DATA" | jq -r '.status // empty')
 assert_eq "Client: plugin_delete (critical) returns pending_approval" "pending_approval" "$STATUS"

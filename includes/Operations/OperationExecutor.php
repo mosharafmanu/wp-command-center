@@ -24,6 +24,7 @@ use WPCommandCenter\Operations\WidgetsRuntimeManager;
 use WPCommandCenter\Operations\CPTRuntimeManager;
 use WPCommandCenter\Operations\ApprovalRuntimeManager;
 use WPCommandCenter\Operations\SecurityModeManager;
+use WPCommandCenter\Operations\DestructiveGuard;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -90,13 +91,48 @@ final class OperationExecutor {
 			}
 		}
 
-		// 1c. Step 80 — Security Mode approval gate.
+		$is_queued    = ! empty( $context['queue_id'] );
+		$is_requested = ! empty( $context['request_id'] );
+
+		// 1c. STEP 84 — Destructive operation guardrail.
+		// Fires in EVERY security mode (including Developer) on the fresh-call
+		// path. A permanent delete / live DB mutation can neither execute nor be
+		// queued for approval until the caller echoes back an explicit
+		// confirmation phrase, a reason, and the target identifier. Already
+		// approved/queued runs carry the confirmation in their stored payload and
+		// skip this gate.
+		$destructive = null;
+		if ( ! $is_queued && ! $is_requested ) {
+			$destructive = DestructiveGuard::classify( $operation_id, $payload );
+			if ( null !== $destructive ) {
+				$missing = DestructiveGuard::missing_confirmation( $destructive, $payload );
+				if ( ! empty( $missing ) ) {
+					$audit->record( 'operation.destructive.confirmation_required', array_merge( $links, [
+						'operation_id' => $operation_id,
+						'action'       => (string) ( $payload['action'] ?? '' ),
+						'missing'      => $missing,
+						'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+					] ) );
+					return $this->confirmation_required( $operation_id, $payload, $destructive, $missing );
+				}
+
+				$audit->record( 'operation.destructive.confirmed', array_merge( $links, [
+					'operation_id' => $operation_id,
+					'action'       => (string) ( $payload['action'] ?? '' ),
+					'target'       => (string) ( $payload[ $destructive['target_key'] ] ?? '' ),
+					'reason'       => (string) ( $payload['reason'] ?? '' ),
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] ) );
+
+				$context['destructive'] = $destructive;
+			}
+		}
+
+		// 1d. Step 80 — Security Mode approval gate.
 		// When a mode other than Developer requires approval for the operation's
 		// effective risk level, auto-create an approval request and return a
 		// structured pending_approval response instead of a -32000 error. The AI
 		// receives enough information to poll for completion without manual steps.
-		$is_queued    = ! empty( $context['queue_id'] );
-		$is_requested = ! empty( $context['request_id'] );
 		if ( ! $is_queued && ! $is_requested ) {
 			$action         = (string) ( $payload['action'] ?? '' );
 			$effective_risk = SecurityModeManager::effective_risk( $operation, $action );
@@ -124,7 +160,7 @@ final class OperationExecutor {
 					'actor'         => $actor ? AuditLog::resolve_actor( $actor ) : null,
 				] ) );
 
-				return $this->pending_approval( $operation_id, $request, $effective_risk, $action );
+				return $this->pending_approval( $operation_id, $request, $effective_risk, $action, $destructive );
 			}
 		}
 
@@ -308,26 +344,83 @@ final class OperationExecutor {
 	 * success = true so McpServerRuntime surfaces it as a tool result (not an error),
 	 * giving the AI the request_id and polling instructions in one response.
 	 */
-	private function pending_approval( string $operation_id, array $request, string $risk_level, string $action ): array {
+	private function pending_approval( string $operation_id, array $request, string $risk_level, string $action, ?array $destructive = null ): array {
 		$mode = SecurityModeManager::current();
+		$result = [
+			'status'             => 'pending_approval',
+			'request_id'         => $request['request_id'],
+			'operation'          => $operation_id,
+			'action'             => $action,
+			'risk_level'         => $risk_level,
+			'security_mode'      => $mode,
+			'rollback_available' => null !== $destructive ? (bool) $destructive['backup_capable'] : true,
+			'approval_url'       => admin_url( 'admin.php?page=wpcc-approvals' ),
+		];
+
+		// STEP 84 — flag destructive requests so the AI and the approval card
+		// both surface the irreversible-deletion warning.
+		if ( null !== $destructive ) {
+			$result['destructive'] = true;
+			$result['warning']     = $destructive['warning'];
+		}
+
+		$result['message'] = sprintf(
+			/* translators: 1: security mode label, 2: request ID, 3: approval URL */
+			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'wp-command-center' ),
+			$mode,
+			$request['request_id'],
+			admin_url( 'admin.php?page=wpcc-approvals' )
+		);
+
+		return [
+			'operation_id' => $operation_id,
+			'success'      => true,
+			'result'       => $result,
+			'errors'       => [],
+			'created'      => [],
+			'updated'      => [],
+			'skipped'      => [],
+		];
+	}
+
+	/**
+	 * STEP 84 — Structured result returned when a destructive operation is
+	 * requested without complete confirmation. success = true so the AI receives
+	 * an actionable instruction (not a -32000 error) telling it exactly which
+	 * confirmation parameters to resend.
+	 */
+	private function confirmation_required( string $operation_id, array $payload, array $descriptor, array $missing ): array {
+		$action = (string) ( $payload['action'] ?? '' );
+
+		$required_parameters = [
+			'confirm'                 => true,
+			'confirmation_phrase'     => $descriptor['phrase'],
+			'reason'                  => __( 'a human-readable reason for the deletion', 'wp-command-center' ),
+			$descriptor['target_key'] => __( 'the identifier of the target to delete', 'wp-command-center' ),
+		];
+
 		return [
 			'operation_id' => $operation_id,
 			'success'      => true,
 			'result'       => [
-				'status'             => 'pending_approval',
-				'request_id'         => $request['request_id'],
-				'operation'          => $operation_id,
-				'action'             => $action,
-				'risk_level'         => $risk_level,
-				'security_mode'      => $mode,
-				'rollback_available' => true,
-				'approval_url'       => admin_url( 'admin.php?page=wpcc-approvals' ),
-				'message'            => sprintf(
-					/* translators: 1: security mode label, 2: request ID, 3: approval URL */
-					__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'wp-command-center' ),
-					$mode,
-					$request['request_id'],
-					admin_url( 'admin.php?page=wpcc-approvals' )
+				'status'                => 'confirmation_required',
+				'operation'             => $operation_id,
+				'action'                => $action,
+				'destructive'           => true,
+				'risk_level'            => DestructiveGuard::RISK_LEVEL,
+				'rollback_available'    => (bool) $descriptor['backup_capable'],
+				'confirmation_required' => true,
+				'confirmation_phrase'   => $descriptor['phrase'],
+				'target_parameter'      => $descriptor['target_key'],
+				'missing'               => array_values( $missing ),
+				'warning'               => $descriptor['warning'],
+				'required_parameters'   => $required_parameters,
+				'message'               => sprintf(
+					/* translators: 1: confirmation phrase, 2: target parameter name, 3: comma-separated missing fields */
+					__( 'This is a CRITICAL destructive operation. To proceed, resend the request with confirm=true, confirmation_phrase="%1$s", a non-empty reason, and the %2$s of the target. Missing: %3$s.', 'wp-command-center' ),
+					$descriptor['phrase'],
+					$descriptor['target_key'],
+					implode( ', ', $missing )
 				),
 			],
 			'errors'  => [],
