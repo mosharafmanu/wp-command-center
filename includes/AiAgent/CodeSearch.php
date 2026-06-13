@@ -111,6 +111,61 @@ final class CodeSearch {
 	}
 
 	/**
+	 * Find files whose name (or relative path) matches a query substring.
+	 * Reuses the same allow-listed roots and deny-list filtering as search().
+	 * STEP 87 — backs the code_search/search_file operation.
+	 *
+	 * @return array{query:string,path:string,matches:array<int,array{file:string,name:string}>,match_count:int,files_scanned:int,truncated:bool}|\WP_Error
+	 */
+	public function find_files( string $query, array $args = [] ): array|\WP_Error {
+		$query = trim( $query );
+
+		if ( '' === $query ) {
+			return new \WP_Error( 'wpcc_empty_query', __( 'Please enter a search term.', 'wp-command-center' ) );
+		}
+
+		$relative_path = isset( $args['path'] ) ? trim( str_replace( '\\', '/', (string) $args['path'] ), '/' ) : '';
+		$max_results   = isset( $args['max_results'] ) ? max( 1, (int) $args['max_results'] ) : self::DEFAULT_MAX_RESULTS;
+
+		$roots = $this->resolve_search_roots( $relative_path );
+
+		if ( is_wp_error( $roots ) ) {
+			return $roots;
+		}
+
+		$needle        = strtolower( $query );
+		$matches       = [];
+		$files_scanned = 0;
+		$truncated     = false;
+
+		foreach ( $roots as $root ) {
+			foreach ( $this->iterate_files( $root ) as $file ) {
+				if ( $files_scanned >= self::MAX_FILES_SCANNED || count( $matches ) >= $max_results ) {
+					$truncated = true;
+					break 2;
+				}
+
+				++$files_scanned;
+
+				$relative = ltrim( str_replace( trailingslashit( wp_normalize_path( WP_CONTENT_DIR ) ), '', wp_normalize_path( $file->getPathname() ) ), '/' );
+
+				if ( false !== stripos( $relative, $needle ) ) {
+					$matches[] = [ 'file' => $relative, 'name' => $file->getFilename() ];
+				}
+			}
+		}
+
+		return [
+			'query'         => $query,
+			'path'          => $relative_path,
+			'matches'       => $matches,
+			'match_count'   => count( $matches ),
+			'files_scanned' => $files_scanned,
+			'truncated'     => $truncated,
+		];
+	}
+
+	/**
 	 * @return array<int, string>|\WP_Error Absolute root directories to search.
 	 */
 	private function resolve_search_roots( string $relative_path ): array|\WP_Error {

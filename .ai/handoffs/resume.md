@@ -1,8 +1,11 @@
 # WP Command Center - Claude Handoff
 
-Last verified: June 13, 2026 — STEPs 78–83 deployed to production. STEP 84 (Destructive Guardrails) complete locally, NOT yet deployed. CI/CD live.
+Last verified: June 13, 2026 — STEPs 78–84 deployed to production. STEP 87 (REST+MCP File/Patch Bridge) complete; deploying. CI/CD live.
 
-**RESUME HERE → deploy STEP 84, then Licensing / Free-Pro gating (was "STEP 84", now unscheduled)**
+**RESUME HERE → Licensing / Free-Pro gating (the original "STEP 84" scope, still unscheduled)**
+
+**STEP 87 — REST+MCP File/Patch Bridge (COMPLETE 2026-06-13):**
+file_manage / code_search / patch_manage / rollback_manage operations bridge the existing REST file/patch services to MCP (any OperationRegistry op = MCP tool). Tokenizer syntax fallback blocks broken applies without shell. Dangerous-file edits require `APPLY_PATCH` confirmation. Doc: `.ai/steps/STEP-87-REST-MCP-FILE-PATCH-BRIDGE.md`. Tests: `test-file-patch-bridge.sh` 32/32.
 
 STEPs 78–83 are **complete and deployed to mosharafmanu.com**. CI/CD is live: every `git push` to `main` auto-deploys via a webhook at `https://mosharafmanu.com/wpcc-deploy.php` (server does `git fetch + reset --hard origin/main` + `wp cache flush`). No manual deployment needed going forward.
 

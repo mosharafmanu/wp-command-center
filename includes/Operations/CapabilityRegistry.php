@@ -90,6 +90,12 @@ final class CapabilityRegistry {
 		// MCP Approval Runtime — control plane over the request/approval/
 		// queue pipeline itself; gated to system.admin (see Step 78 report).
 		'approval_manage'     => self::CAP_SYSTEM_ADMIN,
+		// STEP 87 — File / Patch bridge. Read ops reuse search.manage; the
+		// patch/rollback write ops reuse snapshot.manage (the file-safety subsystem).
+		'file_manage'         => self::CAP_SEARCH_MANAGE,
+		'code_search'         => self::CAP_SEARCH_MANAGE,
+		'patch_manage'        => self::CAP_SNAPSHOT_MANAGE,
+		'rollback_manage'     => self::CAP_SNAPSHOT_MANAGE,
 		// Seed operations are unrestricted (read-only/low-risk):
 		// 'content_seed', 'acf_seed', 'cf7_seed', 'woo_product_seed'
 		// They do not require explicit capability assignment.
@@ -100,7 +106,7 @@ final class CapabilityRegistry {
 	 * regardless of CapabilityRegistry::OPERATION_MAP mapping). Every other
 	 * operation requires a `full`-scope token, mirroring RestApi::require_write().
 	 */
-	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage' ];
+	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search' ];
 
 	/**
 	 * Step 79 — Capability profiles. Single source of truth for the

@@ -461,6 +461,10 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/database_inspect/run', 'scope' => 'read_only', 'description' => 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.' ],
 		[ 'method' => 'POST', 'path' => '/operations/content_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress content: { action: content_list|content_get|content_create|content_update|content_delete|content_publish|content_unpublish|content_schedule|taxonomy_assign|featured_image_assign, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/snapshot_manage/run', 'scope' => 'full', 'description' => 'Create, list, inspect, verify, and restore file snapshots: { action: snapshot_create|snapshot_list|snapshot_details|snapshot_restore|snapshot_verify, path?, label?, snapshot_id? }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/file_manage/run', 'scope' => 'read_only', 'description' => 'Read files and browse the file tree (shared service with MCP file_manage): { action: file_read|file_tree|file_metadata, path? }. Blocked paths denied; secrets redacted.' ],
+		[ 'method' => 'POST', 'path' => '/operations/code_search/run', 'scope' => 'read_only', 'description' => 'Search code (shared service with MCP code_search): { action: search_text|search_symbol|search_file, query, path?, max_results? }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/patch_manage/run', 'scope' => 'full', 'description' => 'Patch Engine (shared service with MCP patch_manage): { action: patch_preview|patch_create|patch_apply|patch_verify|patch_status, files?, patch_id?, confirm?, confirmation_phrase? }. Apply snapshots + verifies syntax + auto-reverts.' ],
+		[ 'method' => 'POST', 'path' => '/operations/rollback_manage/run', 'scope' => 'full', 'description' => 'Rollback Engine (shared service with MCP rollback_manage): { action: rollback_list|rollback_get|rollback_apply|rollback_verify, patch_id? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/theme_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress themes: { action: theme_list|theme_install|theme_activate|theme_update|theme_delete, slug? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/plugin_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress plugins: { action: plugin_list|plugin_install|plugin_activate|plugin_deactivate|plugin_update|plugin_delete, slug? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/option_manage/run', 'scope' => 'full', 'description' => 'Safely inspect or update a registered WordPress option: { action: option_get|option_update|option_rollback, option_id, value?, rollback_id? }.' ],
@@ -902,6 +906,33 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/plugin_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_plugin_manage' ],
+			'permission_callback' => [ $this, 'require_write' ],
+		] );
+
+		// STEP 87 — File / Patch bridge: same shared services as MCP, via the
+		// OperationExecutor. file_manage/code_search are read-only; patch/rollback
+		// require write scope.
+		register_rest_route( self::NAMESPACE, '/operations/file_manage/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_file_manage' ],
+			'permission_callback' => [ $this, 'require_read' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/operations/code_search/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_code_search' ],
+			'permission_callback' => [ $this, 'require_read' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/operations/patch_manage/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_patch_manage' ],
+			'permission_callback' => [ $this, 'require_write' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/operations/rollback_manage/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_rollback_manage' ],
 			'permission_callback' => [ $this, 'require_write' ],
 		] );
 
@@ -2537,6 +2568,57 @@ final class RestApi {
 
 		$executor = new OperationExecutor();
 		$result   = $executor->run( 'plugin_manage', $params, $context );
+
+		if ( ! $result['success'] ) {
+			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
+			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
+		}
+
+		return new \WP_REST_Response( $result['result'] );
+	}
+
+	// ── STEP 87 — File / Patch bridge REST callbacks ──
+	// Each runs the operation through the SAME OperationExecutor + shared services
+	// that MCP uses, including the token_scope so read-only tokens are enforced
+	// identically across both transports.
+
+	public function run_file_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'file_manage', $request );
+	}
+
+	public function run_code_search( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'code_search', $request );
+	}
+
+	public function run_patch_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'patch_manage', $request );
+	}
+
+	public function run_rollback_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'rollback_manage', $request );
+	}
+
+	/**
+	 * Shared dispatcher for the STEP 87 file/patch operations: builds the actor +
+	 * continuity context (and token_scope, so READ_ONLY_SCOPE_OPERATIONS is
+	 * enforced), runs the executor, and maps the structured result to a response.
+	 */
+	private function run_bridge_operation( string $operation_id, \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$params  = $request->get_params();
+		$record  = $this->validated_token( $request ) ?: [];
+		$context = [
+			'actor'       => $this->token_actor( $request ),
+			'token_id'    => $record['id'] ?? '',
+			'token_scope' => $record['scope'] ?? '',
+		];
+
+		foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id' ] as $key ) {
+			if ( $request->get_param( $key ) ) {
+				$context[ $key ] = sanitize_text_field( (string) $request->get_param( $key ) );
+			}
+		}
+
+		$result = ( new OperationExecutor() )->run( $operation_id, $params, $context );
 
 		if ( ! $result['success'] ) {
 			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];

@@ -647,6 +647,85 @@ final class OperationRegistry {
 				],
 				'available'         => true,
 			],
+			// ── STEP 87 — File / Patch bridge (shared services, REST + MCP) ──
+			'file_manage' => [
+				'id'                => 'file_manage',
+				'title'             => __( 'File Access', 'wp-command-center' ),
+				'description'       => __( 'Read files and browse the file tree under themes, plugins, and mu-plugins. Read-only. Blocked paths (.env, wp-config.php, vendor/, keys, etc.) are denied and secrets are redacted. Actions: file_read, file_tree, file_metadata.', 'wp-command-center' ),
+				'risk_level'        => 'diagnostic',
+				'action_risks'      => [
+					'file_read'     => 'diagnostic',
+					'file_tree'     => 'diagnostic',
+					'file_metadata' => 'diagnostic',
+				],
+				'requires_approval' => false,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'file_read', 'file_tree', 'file_metadata' ], 'description' => 'The file action to perform.' ],
+					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Relative path under wp-content (required for file_read and file_metadata; optional for file_tree).' ],
+				],
+				'available'         => true,
+			],
+			'code_search' => [
+				'id'                => 'code_search',
+				'title'             => __( 'Code Search', 'wp-command-center' ),
+				'description'       => __( 'Search code under themes, plugins, and mu-plugins. Read-only. Blocked files are skipped and secrets in matches are redacted. Actions: search_text, search_symbol (function/class/hook), search_file (by name).', 'wp-command-center' ),
+				'risk_level'        => 'diagnostic',
+				'action_risks'      => [
+					'search_text'   => 'diagnostic',
+					'search_symbol' => 'diagnostic',
+					'search_file'   => 'diagnostic',
+				],
+				'requires_approval' => false,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'search_text', 'search_symbol', 'search_file' ], 'description' => 'The search action to perform.' ],
+					[ 'name' => 'query', 'type' => 'string', 'required' => true, 'description' => 'The search term.' ],
+					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Limit the search to a relative directory under wp-content.' ],
+					[ 'name' => 'max_results', 'type' => 'integer', 'required' => false, 'description' => 'Maximum number of matches to return.' ],
+				],
+				'available'         => true,
+			],
+			'patch_manage' => [
+				'id'                => 'patch_manage',
+				'title'             => __( 'Patch Engine', 'wp-command-center' ),
+				'description'       => __( 'Safely propose and apply file changes through the Patch Engine. Every apply snapshots the file first, verifies PHP syntax (php -l or tokenizer fallback), and auto-reverts on failure. Patches touching high-risk files (theme functions.php, active theme templates, plugin main files) require confirm=true and confirmation_phrase="APPLY_PATCH". Actions: patch_preview, patch_create, patch_apply, patch_verify, patch_status.', 'wp-command-center' ),
+				'risk_level'        => 'high',
+				'action_risks'      => [
+					'patch_preview' => 'diagnostic',
+					'patch_status'  => 'diagnostic',
+					'patch_verify'  => 'diagnostic',
+					'patch_create'  => 'low',
+					'patch_apply'   => 'high',
+				],
+				'requires_approval' => true,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'patch_preview', 'patch_create', 'patch_apply', 'patch_verify', 'patch_status' ], 'description' => 'The patch action to perform.' ],
+					[ 'name' => 'files', 'type' => 'array', 'required' => false, 'description' => 'Array of { path, modified } objects (required for patch_preview and patch_create).' ],
+					[ 'name' => 'patch_id', 'type' => 'string', 'required' => false, 'description' => 'Patch ID (required for patch_apply, patch_verify, patch_status).' ],
+					[ 'name' => 'explanation', 'type' => 'string', 'required' => false, 'description' => 'Why the change is being made (patch_create).' ],
+					[ 'name' => 'risk_level', 'type' => 'string', 'required' => false, 'description' => 'low | medium | high (patch_create).' ],
+					[ 'name' => 'confirm', 'type' => 'boolean', 'required' => false, 'description' => 'Required true to apply a patch touching a high-risk file.' ],
+					[ 'name' => 'confirmation_phrase', 'type' => 'string', 'required' => false, 'description' => 'Must equal "APPLY_PATCH" to apply a patch touching a high-risk file.' ],
+				],
+				'available'         => true,
+			],
+			'rollback_manage' => [
+				'id'                => 'rollback_manage',
+				'title'             => __( 'Rollback Engine', 'wp-command-center' ),
+				'description'       => __( 'List, inspect, verify, and apply patch rollbacks. rollback_apply restores every affected file from the pre-apply snapshot with hash verification. Actions: rollback_list, rollback_get, rollback_apply, rollback_verify.', 'wp-command-center' ),
+				'risk_level'        => 'high',
+				'action_risks'      => [
+					'rollback_list'   => 'diagnostic',
+					'rollback_get'    => 'diagnostic',
+					'rollback_verify' => 'diagnostic',
+					'rollback_apply'  => 'high',
+				],
+				'requires_approval' => true,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'rollback_list', 'rollback_get', 'rollback_apply', 'rollback_verify' ], 'description' => 'The rollback action to perform.' ],
+					[ 'name' => 'patch_id', 'type' => 'string', 'required' => false, 'description' => 'Patch ID (required for rollback_get, rollback_apply, rollback_verify).' ],
+				],
+				'available'         => true,
+			],
 		];
 
 		// B6: Add optional `reason` param to any write operation so AI agents can

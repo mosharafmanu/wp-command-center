@@ -346,47 +346,77 @@ final class PatchApproval {
 	}
 
 	/**
-	 * @return array{passed: bool, message: string}
+	 * Validate the syntax of a PHP file. Prefers a real `php -l` via shell when
+	 * available; otherwise falls back to a tokenizer/parser pass that needs no
+	 * shell and still catches syntax errors (STEP 87). Public so the patch
+	 * preview/verify operations can reuse the exact same validation.
+	 *
+	 * @return array{passed: bool, message: string, method: string}
 	 */
-	private function verify_file( string $real_path ): array {
+	public function verify_file( string $real_path ): array {
 		if ( 'php' !== strtolower( pathinfo( $real_path, PATHINFO_EXTENSION ) ) ) {
 			return [
 				'passed'  => true,
 				'message' => __( 'Not a PHP file — syntax check skipped.', 'wp-command-center' ),
+				'method'  => 'none',
 			];
 		}
 
-		if ( ! $this->can_shell_exec() ) {
+		// Preferred: real `php -l` via shell.
+		if ( $this->can_shell_exec() ) {
+			foreach ( $this->lint_binaries() as $binary ) {
+				$output = shell_exec( escapeshellarg( $binary ) . ' -l ' . escapeshellarg( $real_path ) . ' 2>&1' );
+
+				if ( ! is_string( $output ) ) {
+					continue;
+				}
+
+				if ( str_contains( $output, 'No syntax errors detected' ) ) {
+					return [ 'passed' => true, 'message' => trim( $output ), 'method' => 'php -l' ];
+				}
+
+				if ( str_starts_with( trim( $output ), 'Usage:' ) ) {
+					// This binary doesn't support -l (e.g. PHP_BINARY points at
+					// php-fpm on FPM-based hosts); try the next candidate.
+					continue;
+				}
+
+				return [ 'passed' => false, 'message' => trim( $output ), 'method' => 'php -l' ];
+			}
+		}
+
+		// Fallback: tokenizer/parser validation (no shell required).
+		return $this->tokenizer_check( (string) file_get_contents( $real_path ) );
+	}
+
+	/**
+	 * Validate PHP source via the tokenizer using TOKEN_PARSE, which raises a
+	 * ParseError on a syntax error. Works on hosts without shell access, so a
+	 * broken patch is still blocked (STEP 87, safety requirement 2).
+	 *
+	 * @return array{passed: bool, message: string, method: string}
+	 */
+	public function tokenizer_check( string $code ): array {
+		if ( ! function_exists( 'token_get_all' ) || ! defined( 'TOKEN_PARSE' ) ) {
 			return [
 				'passed'  => true,
-				'message' => __( 'Syntax check skipped (shell execution unavailable).', 'wp-command-center' ),
+				'message' => __( 'Syntax check skipped (tokenizer unavailable).', 'wp-command-center' ),
+				'method'  => 'none',
 			];
 		}
 
-		foreach ( $this->lint_binaries() as $binary ) {
-			$output = shell_exec( escapeshellarg( $binary ) . ' -l ' . escapeshellarg( $real_path ) . ' 2>&1' );
-
-			if ( ! is_string( $output ) ) {
-				continue;
-			}
-
-			if ( str_contains( $output, 'No syntax errors detected' ) ) {
-				return [ 'passed' => true, 'message' => trim( $output ) ];
-			}
-
-			if ( str_starts_with( trim( $output ), 'Usage:' ) ) {
-				// This binary doesn't support -l (e.g. PHP_BINARY points at
-				// php-fpm on FPM-based hosts); try the next candidate.
-				continue;
-			}
-
-			return [ 'passed' => false, 'message' => trim( $output ) ];
+		try {
+			token_get_all( $code, TOKEN_PARSE );
+			return [
+				'passed'  => true,
+				'message' => __( 'No syntax errors detected (tokenizer).', 'wp-command-center' ),
+				'method'  => 'tokenizer',
+			];
+		} catch ( \ParseError $e ) {
+			return [ 'passed' => false, 'message' => 'PHP parse error: ' . $e->getMessage(), 'method' => 'tokenizer' ];
+		} catch ( \Throwable $e ) {
+			return [ 'passed' => false, 'message' => 'PHP syntax error: ' . $e->getMessage(), 'method' => 'tokenizer' ];
 		}
-
-		return [
-			'passed'  => true,
-			'message' => __( 'Syntax check skipped (no compatible PHP CLI binary found).', 'wp-command-center' ),
-		];
 	}
 
 	/**

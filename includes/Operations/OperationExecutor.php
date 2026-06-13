@@ -334,6 +334,14 @@ final class OperationExecutor {
 				return new CPTRuntimeManager();
 			case 'approval_manage':
 				return new ApprovalRuntimeManager();
+			case 'file_manage':
+				return new FileManager();
+			case 'code_search':
+				return new CodeSearchOperation();
+			case 'patch_manage':
+				return new PatchOperation();
+			case 'rollback_manage':
+				return new RollbackOperation();
 		}
 
 		return null;

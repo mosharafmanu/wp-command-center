@@ -23,6 +23,8 @@
 
 namespace WPCommandCenter\Operations;
 
+use WPCommandCenter\PatchSystem\DangerousFiles;
+
 defined( 'ABSPATH' ) || exit;
 
 final class DestructiveGuard {
@@ -33,6 +35,7 @@ final class DestructiveGuard {
 	const PHRASE_MEDIA   = 'DELETE_MEDIA';
 	const PHRASE_CONTENT = 'DELETE_CONTENT';
 	const PHRASE_DB      = 'RUN_DESTRUCTIVE_DB';
+	const PHRASE_PATCH   = 'APPLY_PATCH';
 
 	/** Every destructive operation is reported at the highest risk tier. */
 	const RISK_LEVEL = 'critical';
@@ -104,6 +107,24 @@ final class DestructiveGuard {
 						false,
 						__( 'Permanently deletes content, bypassing the trash. This cannot be undone.', 'wp-command-center' )
 					);
+				}
+				break;
+
+			case 'patch_manage':
+				// Applying a patch that touches a high-risk file (theme
+				// functions.php, an active theme template, or a plugin main file)
+				// requires explicit confirmation in every mode. Ordinary files
+				// keep the fast path (no confirmation in Developer mode).
+				if ( 'patch_apply' === $action ) {
+					$patch_id = isset( $payload['patch_id'] ) ? (string) $payload['patch_id'] : '';
+					if ( '' !== $patch_id && ! empty( DangerousFiles::dangerous_in_patch( $patch_id ) ) ) {
+						return self::descriptor(
+							self::PHRASE_PATCH,
+							'patch_id',
+							true,
+							__( 'This patch modifies a high-risk file (theme functions.php, an active theme template, or a plugin main file). A bad edit can take the site down; a pre-apply snapshot is taken so it can be rolled back.', 'wp-command-center' )
+						);
+					}
 				}
 				break;
 
