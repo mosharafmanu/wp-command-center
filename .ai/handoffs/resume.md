@@ -6,12 +6,13 @@ Last verified: June 14, 2026.
 
 Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
 
-- **Current step:** STEP 91 — SEO Runtime (next)
-- **Completed:** STEP 89 — MCP Error Surface Hardening ✅ (commit `1a8cbbc`); STEP 90 — Media Runtime ✅ (commit pending)
-- **Deployed through:** STEP 88 (patch header guard, commit c0795e0 + 5518bd8 on production). STEPs 89+ committed locally, **not yet pushed**.
-- **Test counts:** STEP 89 `test-mcp-error-surface.sh` 18/18; STEP 90 `test-media-runtime-step90.sh` 25/25; full regression 3166 passed / 24 pre-existing failures / 0 net-new.
-- **Outstanding risks:** (1) deploy webhook does in-place `git reset --hard` on the live plugin → can race-deactivate it (harden `wpcc-deploy.php` to OPcache-reset + reactivate). (2) in-band `{error:true}` manager convention still used over REST (could migrate to WP_Error). (3) media delete rollback needs `MEDIA_TRASH`; (4) final-validation flakes transiently back-to-back.
-- **Next step:** STEP 91 — SEO Runtime (unified Rank Math + Yoast). From-scratch build; NO SEO plugin active on dev site → must install Yoast or Rank Math locally for acceptance testing.
+- **Current step:** STEP 92 — ACF Runtime (next)
+- **Completed:** STEP 89 — MCP Error Surface ✅ `1a8cbbc`; STEP 90 — Media Runtime ✅ `ce20f90`; STEP 91 — SEO Runtime ✅ (commit pending)
+- **Deployed through:** STEP 88 (commit c0795e0 + 5518bd8 on production). STEPs 89–91 committed locally, **not yet pushed**.
+- **Test counts:** STEP 89 18/18; STEP 90 25/25; STEP 91 `test-seo-runtime-step91.sh` 24/24; full regression 3190 passed / 24 pre-existing failures / 0 net-new.
+- **Dev-env note:** Yoast SEO 27.8 installed on the dev site for STEP 91 acceptance (outside the WPCC git repo). Production may not have an SEO plugin → `seo_manage` is `available:false` there until one is active (graceful).
+- **Outstanding risks:** (1) deploy webhook in-place `git reset --hard` can race-deactivate the live plugin (harden `wpcc-deploy.php`). (2) in-band `{error:true}` manager convention still over REST. (3) media delete rollback needs `MEDIA_TRASH`. (4) final-validation flakes transiently back-to-back.
+- **Next step:** STEP 92 — ACF Runtime (build/manage ACF field groups, fields, layouts). `ACFRuntimeManager` already exists (28 actions) — audit before building; needs ACF active on dev site.
 
 ---
 

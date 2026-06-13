@@ -736,6 +736,28 @@ final class OperationRegistry {
 				],
 				'available'         => true,
 			],
+			// ── STEP 91 — Unified SEO runtime (Rank Math / Yoast) ──
+			'seo_manage' => [
+				'id'                => 'seo_manage',
+				'title'             => __( 'SEO Management', 'wp-command-center' ),
+				'description'       => __( 'Unified SEO management for the active SEO plugin (Rank Math or Yoast). Read, update, validate, and analyze SEO metadata (title, meta description, focus keyword, canonical, Open Graph, Twitter cards, robots). Rollback-capable, approval-aware. Actions: seo_get, seo_update, seo_validate, seo_analyze, seo_restore.', 'wp-command-center' ),
+				'risk_level'        => 'medium',
+				'action_risks'      => [
+					'seo_get'      => 'diagnostic',
+					'seo_validate' => 'diagnostic',
+					'seo_analyze'  => 'diagnostic',
+					'seo_update'   => 'medium',
+					'seo_restore'  => 'medium',
+				],
+				'requires_approval' => true,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'seo_get', 'seo_update', 'seo_validate', 'seo_analyze', 'seo_restore' ], 'description' => 'The SEO action to perform.' ],
+					[ 'name' => 'content_id', 'type' => 'integer', 'required' => false, 'description' => 'Post/page ID (required for get/update/analyze; optional for validate).' ],
+					[ 'name' => 'seo', 'type' => 'object', 'required' => false, 'description' => 'SEO fields for update/validate: title, description, focus_keyword, canonical, og_title, og_description, og_image, twitter_title, twitter_description, twitter_image, robots (array of directives).' ],
+					[ 'name' => 'rollback_id', 'type' => 'string', 'required' => false, 'description' => 'Rollback record ID (required for seo_restore).' ],
+				],
+				'available'         => SeoProvider::is_available(),
+			],
 		];
 
 		// B6: Add optional `reason` param to any write operation so AI agents can

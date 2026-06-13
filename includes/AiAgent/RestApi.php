@@ -466,6 +466,7 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/code_search/run', 'scope' => 'read_only', 'description' => 'Search code (shared service with MCP code_search): { action: search_text|search_symbol|search_file, query, path?, max_results? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/patch_manage/run', 'scope' => 'full', 'description' => 'Patch Engine (shared service with MCP patch_manage): { action: patch_preview|patch_create|patch_apply|patch_verify|patch_status, files?, patch_id?, confirm?, confirmation_phrase? }. Apply snapshots + verifies syntax + auto-reverts.' ],
 		[ 'method' => 'POST', 'path' => '/operations/rollback_manage/run', 'scope' => 'full', 'description' => 'Rollback Engine (shared service with MCP rollback_manage): { action: rollback_list|rollback_get|rollback_apply|rollback_verify, patch_id? }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/seo_manage/run', 'scope' => 'full', 'description' => 'Unified SEO runtime (Rank Math/Yoast): { action: seo_get|seo_update|seo_validate|seo_analyze|seo_restore, content_id?, seo?, rollback_id? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/theme_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress themes: { action: theme_list|theme_install|theme_activate|theme_update|theme_delete, slug? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/plugin_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress plugins: { action: plugin_list|plugin_install|plugin_activate|plugin_deactivate|plugin_update|plugin_delete, slug? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/option_manage/run', 'scope' => 'full', 'description' => 'Safely inspect or update a registered WordPress option: { action: option_get|option_update|option_rollback, option_id, value?, rollback_id? }.' ],
@@ -934,6 +935,13 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/rollback_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_rollback_manage' ],
+			'permission_callback' => [ $this, 'require_write' ],
+		] );
+
+		// STEP 91 — SEO runtime.
+		register_rest_route( self::NAMESPACE, '/operations/seo_manage/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_seo_manage' ],
 			'permission_callback' => [ $this, 'require_write' ],
 		] );
 
@@ -2597,6 +2605,10 @@ final class RestApi {
 
 	public function run_rollback_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		return $this->run_bridge_operation( 'rollback_manage', $request );
+	}
+
+	public function run_seo_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'seo_manage', $request );
 	}
 
 	/**

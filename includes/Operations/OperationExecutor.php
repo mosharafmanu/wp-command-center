@@ -347,6 +347,8 @@ final class OperationExecutor {
 				return new PatchOperation();
 			case 'rollback_manage':
 				return new RollbackOperation();
+			case 'seo_manage':
+				return new SeoRuntimeManager();
 		}
 
 		return null;

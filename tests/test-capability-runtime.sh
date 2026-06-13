@@ -122,9 +122,9 @@ MC3=$(api POST /operations/capability_manage/run '{"action":"capability_get","su
 assert_eq "cleanup: 0 caps" "0" "$(echo "$MC3" | jq -r '.capabilities | length')"
 
 echo "== 25. Manifest operation counts =="
-# STEP 87 added 4 mapped operations (file_manage, code_search, patch_manage, rollback_manage).
+# STEP 87 added 4 + STEP 91 added 1 (seo_manage) = 30 mapped operations.
 MAPCOUNT=$(echo "$MANIFEST" | jq -r '.capability_management.operation_map | keys | length')
-assert_eq "manifest: 29 mapped operations" "29" "$MAPCOUNT"
+assert_eq "manifest: 30 mapped operations" "30" "$MAPCOUNT"
 
 echo "== 26. Context shows assigned capabilities =="
 assert_true "context: assigned_capabilities is array" "$(echo "$CONTEXT" | jq -r 'if (.assigned_capabilities | type) == "array" then "true" else "false" end')"

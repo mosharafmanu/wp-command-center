@@ -96,6 +96,8 @@ final class CapabilityRegistry {
 		'code_search'         => self::CAP_SEARCH_MANAGE,
 		'patch_manage'        => self::CAP_SNAPSHOT_MANAGE,
 		'rollback_manage'     => self::CAP_SNAPSHOT_MANAGE,
+		// STEP 91 — SEO runtime edits post meta; gated like content.
+		'seo_manage'          => self::CAP_CONTENT_MANAGE,
 		// Seed operations are unrestricted (read-only/low-risk):
 		// 'content_seed', 'acf_seed', 'cf7_seed', 'woo_product_seed'
 		// They do not require explicit capability assignment.
