@@ -192,6 +192,7 @@ final class RestApi {
 		'wpcc_empty_query'                  => 'Please enter a search term.',
 		'wpcc_file_blocked'                 => 'Access to this path is blocked for security reasons.',
 		'wpcc_file_changed'                 => 'The file has changed on disk since the patch was generated.',
+		'wpcc_patch_breaks_header'          => 'The patch would remove or invalidate a plugin (Plugin Name) or theme (Theme Name) bootstrap header, which would deactivate it.',
 		'wpcc_file_too_large'               => 'File is too large to patch.',
 		'wpcc_insufficient_scope'           => 'This API token is read-only and cannot perform this action.',
 		'wpcc_invalid_action'               => 'Invalid action.',
