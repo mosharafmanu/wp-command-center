@@ -1,19 +1,19 @@
 # WP Command Center - Claude Handoff
 
-Last verified: June 13, 2026 — STEPs 78–83 complete (locally). Production deployment pending.
+Last verified: June 13, 2026 — STEPs 78–83 deployed to production. CI/CD live.
 
-**RESUME HERE:**
+**RESUME HERE → STEP 84 (Licensing / Free-Pro gating)**
 
-STEPs 78–83 are **implemented and tested locally**. All 8 new test suites pass. Full regression: **3034 passed, 24 pre-existing failures** (same 6 failing suites throughout: `ai-client-layer` 1, `ai-integration-ux` 3, `claude-integration` 4, `cursor-certification` 2, `documentation-consistency` 11, `security-redaction` 3).
+STEPs 78–83 are **complete and deployed to mosharafmanu.com**. CI/CD is live: every `git push` to `main` auto-deploys via a webhook at `https://mosharafmanu.com/wpcc-deploy.php` (server does `git fetch + reset --hard origin/main` + `wp cache flush`). No manual deployment needed going forward.
 
-**Immediate next action — deploy to mosharafmanu.com:**
-1. Upload updated plugin zip to `mosharafmanu.com` (replace existing install)
-2. First MCP request after deploy auto-heals any capability assignment via STEP 79 self-heal — no WP-CLI needed
-3. Plugin defaults to Developer Mode on deploy (all ops execute freely). Switch to **Client Mode** via: WP Admin → WP Command Center → Settings → Security Mode to restore approval gating
-4. Verify end-to-end: Claude Desktop → `system_info` (free diagnostic) → `plugin_manage {plugin_list}` (diagnostic, free) → `plugin_manage {plugin_activate}` (high risk → pending_approval response) → approve in WP Admin → confirm executed
+**Immediate next action — STEP 84 (Licensing):**
+Developer Mode = Free tier. Client/Enterprise Mode = Pro tier. Approval UI = Pro. This is P0 before public launch — without it all three security modes and the full approval workflow are freely available with no commercial gate. Start by reading the product strategy: `.ai/steps/STEP-80-PRODUCT-SECURITY-MODES.md` §6 (future steps) and `docs/product/` for positioning context.
 
-**Recommended next code step — STEP 84 (Licensing):**
-Developer Mode = Free. Client/Enterprise Mode = Pro. Approval UI = Pro. Identified in STEP 81 as required before public launch. Without this, all three modes and the full approval UI are freely available with no commercial gate.
+**Production state (mosharafmanu.com as of 2026-06-13):**
+- STEPs 78–83 deployed — git commit `8d0f49c`
+- Plugin defaults to **Developer Mode** (all ops execute freely)
+- To enable approval gating: WP Admin → WP Command Center → Settings → Security Mode → switch to Client Mode
+- MCP self-heal (STEP 79) fires on first request — no WP-CLI needed after any deploy
 
 ---
 
@@ -32,16 +32,15 @@ Developer Mode = Free. Client/Enterprise Mode = Pro. Approval UI = Pro. Identifi
 
 **Production status (mosharafmanu.com):**
 
-- STEPs 78–83 are **not yet deployed** — local only
-- Claude Desktop token and MCP endpoint are working (`initialize` succeeds)
-- `wpcc_enforce_approval = 1` was set manually before STEP 80 — this flag is no longer read by `OperationExecutor` after STEP 80; the Security Mode option (`wpcc_security_mode`) drives behaviour instead
-- After deploying STEP 80, mode defaults to `developer` (all ops free) until admin switches to Client/Enterprise via UI
+- STEPs 78–83 **deployed** — git commit `8d0f49c` (2026-06-13)
+- CI/CD live: `git push origin main` → GitHub Actions → `wpcc-deploy.php` webhook → `git reset --hard origin/main` + cache flush
+- Mode currently: `developer` (all ops free). Switch to Client Mode via Settings UI to enable approval gating.
+- `wpcc_enforce_approval` flag no longer read — `wpcc_security_mode` option drives behaviour (STEP 80)
 
 **Open items (ranked by priority):**
 
 | Priority | Item | Notes |
 |---|---|---|
-| P0 | **Deploy STEPs 78–83 to production** | Upload plugin, verify MCP end-to-end, switch to Client Mode |
 | P0 | **STEP 84 — Licensing / Free-Pro gating** | Required before public launch; no gate exists yet |
 | P1 | Approval email notification | Notify admin by email when a pending approval is created |
 | P1 | Bulk approve by `plan_id` | Group approval card UI for plan-driven workflows |
