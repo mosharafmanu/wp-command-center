@@ -34,8 +34,9 @@ assert_true "setup: read_only token created" "$( [ -n "$RO_TOKEN" ] && echo true
 echo "== 2. Seed operations — read_only token denied via MCP (was the S-2 bypass) =="
 for op in content_seed acf_seed cf7_seed woo_product_seed; do
 	RESP=$(mcp "$RO_TOKEN" "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"$op\",\"arguments\":{}},\"id\":1}")
-	assert_eq "scope: $op denied for read_only (code -32001)" "-32001" "$(echo "$RESP" | jq -r '.error.code // empty')"
-	assert_true "scope: $op denial message mentions read-only" "$(echo "$RESP" | jq -r '(.error.message // "") | test("read-only"; "i")')"
+	# STEP 89: scope denials are isError tool results with a structured code.
+	assert_eq "scope: $op denied for read_only (wpcc_token_read_only)" "wpcc_token_read_only" "$(echo "$RESP" | jq -r '.result.content[0].text | fromjson | .code // empty')"
+	assert_true "scope: $op denial message mentions read-only" "$(echo "$RESP" | jq -r '(.result.content[0].text | fromjson | .message // "") | test("read-only"; "i")')"
 done
 
 # ===================================================================

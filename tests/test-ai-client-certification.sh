@@ -81,7 +81,7 @@ fi
 
 echo "== 9. Claude Gold — Rollback =="
 TEST_PATH="themes/mosharaf-core/style.css"
-PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/* Certification validation */"}], explanation: "Gold certification rollback test", risk_level: "low"}')
+PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/*\nTheme Name: Mosharaf Core\n*/\n/* Certification validation */"}], explanation: "Gold certification rollback test", risk_level: "low"}')
 PATCH=$(curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$PATCH_BODY" "$WPCC_BASE/patches")
 PATCH_ID=$(echo "$PATCH" | jq -r '.id // empty')
 assert_true "cert: rollback: patch created" "$(echo "$PATCH" | jq -r 'if .id then "true" else "false" end')"

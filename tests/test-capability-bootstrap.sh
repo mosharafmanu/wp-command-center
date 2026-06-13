@@ -125,8 +125,9 @@ RESP=$(mcp "$TOKEN_D" '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"
 assert_true "D: database_inspect succeeds for read-only token" "$(echo "$RESP" | jq -r 'if .result then "true" else "false" end')"
 
 RESP=$(mcp "$TOKEN_D" '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_list"}},"id":5}')
-assert_eq "D: plugin_manage blocked for read-only token (-32001)" "-32001" "$(echo "$RESP" | jq -r '.error.code // empty')"
-assert_true "D: denial message mentions read-only" "$(echo "$RESP" | jq -r '(.error.message // "") | test("read-only"; "i")')"
+# STEP 89: denials are isError tool results with a structured code.
+assert_eq "D: plugin_manage blocked for read-only token (wpcc_token_read_only)" "wpcc_token_read_only" "$(echo "$RESP" | jq -r '.result.content[0].text | fromjson | .code // empty')"
+assert_true "D: denial message mentions read-only" "$(echo "$RESP" | jq -r '(.result.content[0].text | fromjson | .message // "") | test("read-only"; "i")')"
 
 # ===================================================================
 echo "== 5. Cleanup =="

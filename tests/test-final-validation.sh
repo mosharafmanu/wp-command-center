@@ -247,7 +247,7 @@ assert_true "queue: requests list" "$(echo "$REQS" | jq -r 'if type == "array" t
 echo "= 8. ROLLBACK (patch create → approve → apply → rollback) ="
 # ═══════════════════════════════════════════════════════════════════
 TEST_PATH="themes/mosharaf-core/style.css"
-PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/* Step 75 final validation marker */"}], explanation: "Final platform validation rollback test", risk_level: "low"}')
+PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/*\nTheme Name: Mosharaf Core\n*/\n/* Step 75 final validation marker */"}], explanation: "Final platform validation rollback test", risk_level: "low"}')
 PATCH=$(api_post -d "$PATCH_BODY" "$WPCC_BASE/patches")
 PATCH_ID=$(echo "$PATCH" | jq -r '.id // empty')
 assert_true "rollback: patch created" "$(echo "$PATCH" | jq -r 'if .id then "true" else "false" end')"

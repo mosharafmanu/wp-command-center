@@ -153,7 +153,7 @@ FILE_META=$(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/files/met
 HAS_FILE=$(echo "$FILE_META" | jq -r 'if .path then "true" else "false" end')
 assert_true "rollback: file accessible" "$HAS_FILE"
 
-PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/* Step 49 validation marker */"}], explanation: "Production beta validation rollback test", risk_level: "low"}')
+PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/*\nTheme Name: Mosharaf Core\n*/\n/* Step 49 validation marker */"}], explanation: "Production beta validation rollback test", risk_level: "low"}')
 PATCH=$(api_post -d "$PATCH_BODY" "$WPCC_BASE/patches")
 PATCH_ID=$(echo "$PATCH" | jq -r '.id // empty')
 assert_true "rollback: patch created" "$(echo "$PATCH" | jq -r 'if .id then "true" else "false" end')"

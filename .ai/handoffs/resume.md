@@ -1,8 +1,21 @@
 # WP Command Center - Claude Handoff
 
-Last verified: June 13, 2026 — STEPs 78–84 deployed to production. STEP 87 (REST+MCP File/Patch Bridge) complete; deploying. CI/CD live.
+Last verified: June 14, 2026.
 
-**RESUME HERE → Licensing / Free-Pro gating (the original "STEP 84" scope, still unscheduled)**
+## Runtime Roadmap Progress Log (WPCC-RUNTIME-ROADMAP.md)
+
+Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
+
+- **Current step:** STEP 90 — Media Runtime (next)
+- **Completed:** STEP 89 — MCP Error Surface Hardening ✅ (commit pending)
+- **Deployed through:** STEP 88 (patch header guard, commit c0795e0 + 5518bd8 on production). STEPs 89+ committed locally, **not yet pushed**.
+- **Test counts:** STEP 89 acceptance `test-mcp-error-surface.sh` 18/18; full regression ~3129 passed / 24 pre-existing failures / 0 net-new.
+- **Outstanding risks:** (1) deploy webhook does in-place `git reset --hard` on the live plugin → can race-deactivate it (harden `wpcc-deploy.php` to OPcache-reset + reactivate). (2) in-band `{error:true}` manager convention still used over REST (STEP 90+ can migrate to WP_Error). (3) final-validation flakes transiently back-to-back.
+- **Next step:** STEP 90 — Media Runtime. Audit done: `MediaRuntimeManager` already has list/get/search/upload/replace/delete/restore/featured; gap = `media_update` (alt/caption/title/description on existing media) + `media_set_featured`/`media_remove_featured` aliases.
+
+---
+
+**RESUME HERE → STEP 90 (Media Runtime), then continue roadmap. Licensing / Free-Pro gating remains separately unscheduled.**
 
 **STEP 87 — REST+MCP File/Patch Bridge (COMPLETE 2026-06-13):**
 file_manage / code_search / patch_manage / rollback_manage operations bridge the existing REST file/patch services to MCP (any OperationRegistry op = MCP tool). Tokenizer syntax fallback blocks broken applies without shell. Dangerous-file edits require `APPLY_PATCH` confirmation. Doc: `.ai/steps/STEP-87-REST-MCP-FILE-PATCH-BRIDGE.md`. Tests: `test-file-patch-bridge.sh` 32/32.

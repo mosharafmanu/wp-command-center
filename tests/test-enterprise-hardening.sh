@@ -68,7 +68,7 @@ fi
 # ===================================================================
 echo "== 5. Rollback — Patch Create/Approve/Apply/Rollback =="
 TEST_PATH="themes/mosharaf-core/style.css"
-PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/* Enterprise hardening validation */"}], explanation: "Enterprise hardening rollback test", risk_level: "low"}')
+PATCH_BODY=$(jq -n --arg path "$TEST_PATH" '{files: [{path: $path, modified: "/*\nTheme Name: Mosharaf Core\n*/\n/* Enterprise hardening validation */"}], explanation: "Enterprise hardening rollback test", risk_level: "low"}')
 PATCH=$(api_post -d "$PATCH_BODY" "$WPCC_BASE/patches")
 PATCH_ID=$(echo "$PATCH" | jq -r '.id // empty')
 assert_true "rollback: patch created" "$(echo "$PATCH" | jq -r 'if .id then "true" else "false" end')"

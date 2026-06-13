@@ -35,6 +35,11 @@ mcp() {
         "$WPCC_BASE/mcp"
 }
 
+# STEP 89: tool/business failures are isError results ({isError,code,message});
+# only transport failures remain JSON-RPC errors. These read either shape.
+err_code() { echo "$1" | jq -r 'if (.result.isError == true) then (.result.content[0].text | fromjson | .code) elif .error then (.error.data.code // (.error.code|tostring)) else "" end // empty' 2>/dev/null; }
+err_msg()  { echo "$1" | jq -r 'if (.result.isError == true) then (.result.content[0].text | fromjson | .message) elif .error then .error.message else "" end // empty' 2>/dev/null; }
+
 rest() {
     curl -s -X POST \
         -H "Authorization: Bearer $WPCC_TOKEN" \
@@ -47,7 +52,7 @@ rest() {
 echo "== 1. Validation guards (unchanged) =="
 
 R=$(mcp '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"plugin","slug":"non-existent-plugin-xyz","dry_run":true}}}')
-ERR_MSG=$(echo "$R" | jq -r '.error.message // empty')
+ERR_MSG=$(err_msg "$R")
 RESULT_CODE=$(echo "$R" | jq -r '.result.content[0].text // empty' | jq -r '.code // empty')
 COMBINED="${ERR_MSG}${RESULT_CODE}"
 if echo "$COMBINED" | grep -qi "not found\|wpcc_plugin_not_found"; then
@@ -57,7 +62,7 @@ else
 fi
 
 R=$(mcp '{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"theme","slug":"non-existent-theme-xyz","dry_run":true}}}')
-ERR_MSG=$(echo "$R" | jq -r '.error.message // empty')
+ERR_MSG=$(err_msg "$R")
 if echo "$ERR_MSG" | grep -qi "not found"; then
     pass "validation: non-existent theme returns not-found error"
 else
@@ -65,7 +70,7 @@ else
 fi
 
 R=$(mcp '{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"invalid","slug":"something","dry_run":true}}}')
-ERR_MSG=$(echo "$R" | jq -r '.error.message // empty')
+ERR_MSG=$(err_msg "$R")
 if echo "$ERR_MSG" | grep -qi "invalid\|type"; then
     pass "validation: invalid type blocked"
 else
@@ -78,7 +83,7 @@ echo "== 2. Dry-run includes preflight data =="
 # Use classic-editor which is a free plugin. Even if no update, we test the path.
 R=$(mcp '{"jsonrpc":"2.0","id":20,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"plugin","slug":"classic-editor","dry_run":true}}}')
 # classic-editor may or may not have an update; test structure either way
-ERR=$(echo "$R" | jq -r '.error.code // empty')
+ERR=$(err_code "$R")
 DATA=$(echo "$R" | jq -r '.result.content[0].text // empty')
 STATUS=$(echo "$DATA" | jq -r '.status // empty')
 
@@ -101,7 +106,7 @@ echo "== 3. MCP path: no longer returns 'no permission' (Bug #1 fix) =="
 # ACF Pro has an update available; it needs a license. After fix the error
 # should be download_failed or license_missing, NOT wpcc_insufficient_permissions.
 R=$(mcp '{"jsonrpc":"2.0","id":30,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"plugin","slug":"advanced-custom-fields-pro","dry_run":false}}}')
-ERR_MSG=$(echo "$R" | jq -r '.error.message // empty')
+ERR_MSG=$(err_msg "$R")
 
 if echo "$ERR_MSG" | grep -qi "permission"; then
     fail "MCP fix: still returning permissions error (wp_set_current_user not called)"
@@ -113,7 +118,7 @@ fi
 echo "== 4. MCP path: error.data.code is present (Bug #3 fix) =="
 
 R=$(mcp '{"jsonrpc":"2.0","id":31,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"plugin","slug":"advanced-custom-fields-pro","dry_run":false}}}')
-DATA_CODE=$(echo "$R" | jq -r '.error.data.code // empty')
+DATA_CODE=$(err_code "$R")
 assert_nonempty "MCP error.data.code present" "$DATA_CODE"
 assert_ne "MCP error.data.code is not 'null'" "null" "$DATA_CODE"
 
@@ -121,7 +126,7 @@ assert_ne "MCP error.data.code is not 'null'" "null" "$DATA_CODE"
 echo "== 5. Error code is structured (license_missing or download_failed) =="
 
 R=$(mcp '{"jsonrpc":"2.0","id":32,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"plugin","slug":"advanced-custom-fields-pro","dry_run":false}}}')
-DATA_CODE=$(echo "$R" | jq -r '.error.data.code // empty')
+DATA_CODE=$(err_code "$R")
 if [ "$DATA_CODE" = "license_missing" ] || [ "$DATA_CODE" = "download_failed" ] || [ "$DATA_CODE" = "unknown_update_failure" ]; then
     pass "structured error code: $DATA_CODE (expected: license_missing|download_failed|unknown_update_failure)"
 else
@@ -243,7 +248,7 @@ echo "== 10. MCP error response has data.code for all operation failures =="
 
 # Test with a different operation to confirm the McpServerRuntime fix is generic
 R=$(mcp '{"jsonrpc":"2.0","id":40,"method":"tools/call","params":{"name":"safe_updates","arguments":{"type":"plugin","slug":"non-existent-xyz","dry_run":false}}}')
-DATA_CODE=$(echo "$R" | jq -r '.error.data.code // empty')
+DATA_CODE=$(err_code "$R")
 assert_nonempty "MCP error.data.code present for validation error" "$DATA_CODE"
 
 # ===================================================================

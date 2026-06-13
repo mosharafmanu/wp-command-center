@@ -250,7 +250,7 @@ final class McpServerRuntime {
 		$token_scope = $context['token_scope'] ?? '';
 		if ( AuthTokens::SCOPE_READ_ONLY === $token_scope && $cap_reg->requires_full_scope( $tool_name ) ) {
 			$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'insufficient_scope' ], $context );
-			return $this->error( -32001, __( 'This API token is read-only and cannot perform this action.', 'wp-command-center' ), null );
+			return $this->tool_error( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform this action.', 'wp-command-center' ) );
 		}
 
 		// Capability check
@@ -259,7 +259,11 @@ final class McpServerRuntime {
 			$validation = $cap_reg->validate( $tool_name, 'token', $token_id );
 			if ( ! $validation['allowed'] ) {
 				$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'missing_capability', 'required' => $validation['required_capability'] ], $context );
-				return $this->error( -32001, 'Operation denied: missing capability ' . $validation['required_capability'], null );
+				return $this->tool_error( 'wpcc_capability_denied', sprintf(
+					/* translators: %s: capability name */
+					__( 'Operation denied: missing capability %s', 'wp-command-center' ),
+					(string) $validation['required_capability']
+				) );
 			}
 		}
 
@@ -269,7 +273,16 @@ final class McpServerRuntime {
 
 		if ( ! $result['success'] ) {
 			$err = $result['errors'][0] ?? [ 'code' => 'unknown_error', 'message' => 'Unknown error' ];
-			return $this->error( -32000, $err['message'], null, [ 'code' => $err['code'] ?? 'unknown_error' ] );
+			return $this->tool_error( (string) ( $err['code'] ?? 'unknown_error' ), (string) ( $err['message'] ?? 'Unknown error' ) );
+		}
+
+		// STEP 89 — some runtime managers report failures in-band as a result of
+		// the shape { error:true, code, message } rather than a WP_Error (e.g.
+		// media_*). Surface those as isError too, so every failure is uniform and
+		// AI-readable regardless of the handler's internal convention.
+		$payload = $result['result'] ?? [];
+		if ( is_array( $payload ) && ! empty( $payload['error'] ) && isset( $payload['code'] ) && is_string( $payload['code'] ) ) {
+			return $this->tool_error( $payload['code'], (string) ( $payload['message'] ?? 'Operation failed.' ) );
 		}
 
 		$optimized = ( new ContextModeOptimizer() )->optimize( $result['result'], $mode );
@@ -309,6 +322,31 @@ final class McpServerRuntime {
 		return [
 			'error' => $error,
 			'id'    => $id,
+		];
+	}
+
+	/**
+	 * STEP 89 — MCP error surface hardening.
+	 *
+	 * Return a tool-execution failure as an MCP `isError` result (per the MCP
+	 * spec) instead of a JSON-RPC protocol error, so AI agents receive the
+	 * structured code + message as tool output and can explain/recover from it.
+	 * JSON-RPC errors (via error(), -326xx) remain reserved for transport/
+	 * protocol failures — parse errors, unknown method, unknown resource.
+	 *
+	 * The content payload mirrors the documented shape:
+	 *   { "isError": true, "code": "wpcc_*", "message": "…" }
+	 */
+	private function tool_error( string $code, string $message ): array {
+		return [
+			'result' => [
+				'content'  => [ [ 'type' => 'text', 'text' => wp_json_encode( [
+					'isError' => true,
+					'code'    => $code,
+					'message' => $message,
+				] ) ] ],
+				'isError'  => true,
+			],
 		];
 	}
 
