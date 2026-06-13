@@ -116,6 +116,9 @@ final class OperationResults {
 
 	private function normalize_result( array $row ): array {
 		$row['result_json'] = json_decode( $row['result_json'], true ) ?: [];
+		// STEP 87 — defense in depth: never surface raw file contents from stored
+		// results, even legacy rows written before strip_for_storage existed.
+		$row['result_json'] = self::strip_contents( $row['result_json'] );
 		$row['error_json']  = json_decode( $row['error_json'], true ) ?: [];
 		$row['execution_time_ms'] = (int) $row['execution_time_ms'];
 		$row['created_count'] = (int) $row['created_count'];
@@ -127,5 +130,23 @@ final class OperationResults {
 		$row['created_at'] = (int) $row['created_at'];
 
 		return $row;
+	}
+
+	/**
+	 * Recursively remove `contents` keys from a decoded result so stored file
+	 * bodies are never returned to clients (agent context, results endpoint).
+	 */
+	private static function strip_contents( array $data ): array {
+		foreach ( $data as $key => $value ) {
+			if ( 'contents' === $key ) {
+				unset( $data[ $key ] );
+				continue;
+			}
+			if ( is_array( $value ) ) {
+				$data[ $key ] = self::strip_contents( $value );
+			}
+		}
+
+		return $data;
 	}
 }
