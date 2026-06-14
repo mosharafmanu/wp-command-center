@@ -51,6 +51,12 @@ final class WooCommerceRuntimeManager {
 			WooCommerceRegistry::ACTION_ORDER_LIST        => $this->order_list( $payload ),
 			WooCommerceRegistry::ACTION_ORDER_GET         => $this->order_get( $payload ),
 			WooCommerceRegistry::ACTION_ORDER_SEARCH      => $this->order_search( $payload ),
+			WooCommerceRegistry::ACTION_ORDER_UPDATE        => $this->order_update( $payload, $context ),
+			WooCommerceRegistry::ACTION_ORDER_NOTE_ADD      => $this->order_note_add( $payload, $context ),
+			WooCommerceRegistry::ACTION_ORDER_STATUS_CHANGE => $this->order_status_change( $payload, $context ),
+			WooCommerceRegistry::ACTION_REFUND_CREATE       => $this->refund_create( $payload, $context ),
+			WooCommerceRegistry::ACTION_CUSTOMER_GET        => $this->customer_get( $payload ),
+			WooCommerceRegistry::ACTION_CUSTOMER_SEARCH     => $this->customer_search( $payload ),
 			WooCommerceRegistry::ACTION_COUPON_LIST       => $this->coupon_list( $payload ),
 			WooCommerceRegistry::ACTION_COUPON_GET        => $this->coupon_get( $payload ),
 			WooCommerceRegistry::ACTION_COUPON_CREATE     => $this->coupon_create( $payload, $context ),
@@ -382,6 +388,123 @@ final class WooCommerceRuntimeManager {
 		return [ 'action' => 'order_search', 'items' => $items, 'total' => count( $items ) ];
 	}
 
+	// ── STEP 94 — order + customer management ──
+
+	private const ORDER_BILLING_FIELDS = [ 'first_name', 'last_name', 'email', 'phone', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country' ];
+
+	private function order_update( array $payload, array $context ): array {
+		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+
+		$before = [ 'customer_note' => $o->get_customer_note(), 'billing' => [] ];
+		foreach ( self::ORDER_BILLING_FIELDS as $f ) { $before['billing'][ $f ] = $o->{"get_billing_$f"}(); }
+
+		if ( isset( $payload['customer_note'] ) ) {
+			$o->set_customer_note( sanitize_textarea_field( (string) $payload['customer_note'] ) );
+		}
+		if ( isset( $payload['billing'] ) && is_array( $payload['billing'] ) ) {
+			foreach ( self::ORDER_BILLING_FIELDS as $f ) {
+				if ( isset( $payload['billing'][ $f ] ) ) {
+					$o->{"set_billing_$f"}( sanitize_text_field( (string) $payload['billing'][ $f ] ) );
+				}
+			}
+		}
+		$o->save();
+
+		$rollback_id = $this->store_rollback( $o->get_id(), 'order_update', $before, $context );
+		$this->audit->record( 'order.updated', [ 'order_id' => $o->get_id() ] );
+		return [ 'action' => 'order_update', 'order_id' => $o->get_id(), 'rollback_id' => $rollback_id ];
+	}
+
+	private function order_note_add( array $payload, array $context ): array {
+		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		$note = sanitize_textarea_field( (string) ( $payload['note'] ?? '' ) );
+		if ( '' === $note ) return $this->error( 'wpcc_empty_note', __( 'A note is required.', 'wp-command-center' ) );
+		$is_customer = ! empty( $payload['customer_note'] );
+
+		$note_id = $o->add_order_note( $note, $is_customer ? 1 : 0, false );
+
+		$rollback_id = $this->store_rollback( $o->get_id(), 'order_note_add', [ 'note_id' => $note_id ], $context );
+		$this->audit->record( 'order.note_added', [ 'order_id' => $o->get_id(), 'note_id' => $note_id, 'customer_note' => $is_customer ] );
+		return [ 'action' => 'order_note_add', 'order_id' => $o->get_id(), 'note_id' => $note_id, 'customer_note' => $is_customer, 'rollback_id' => $rollback_id ];
+	}
+
+	private function order_status_change( array $payload, array $context ): array {
+		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		$status = sanitize_key( (string) ( $payload['status'] ?? '' ) );
+		$status = str_starts_with( $status, 'wc-' ) ? substr( $status, 3 ) : $status;
+		if ( ! array_key_exists( 'wc-' . $status, wc_get_order_statuses() ) ) {
+			return $this->error( 'wpcc_invalid_order_status', sprintf( __( 'Invalid order status: %s', 'wp-command-center' ), esc_html( $status ) ) );
+		}
+
+		$before = [ 'status' => $o->get_status() ];
+		$o->update_status( $status, sanitize_text_field( (string) ( $payload['note'] ?? '' ) ), true );
+
+		$rollback_id = $this->store_rollback( $o->get_id(), 'order_status_change', $before, $context );
+		$this->audit->record( 'order.status_changed', [ 'order_id' => $o->get_id(), 'from' => $before['status'], 'to' => $status ] );
+		return [ 'action' => 'order_status_change', 'order_id' => $o->get_id(), 'status' => $o->get_status(), 'previous_status' => $before['status'], 'rollback_id' => $rollback_id ];
+	}
+
+	private function refund_create( array $payload, array $context ): array {
+		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		$amount = isset( $payload['amount'] ) ? (string) $payload['amount'] : (string) $o->get_remaining_refund_amount();
+		if ( (float) $amount <= 0 ) return $this->error( 'wpcc_invalid_refund_amount', __( 'Refund amount must be greater than zero.', 'wp-command-center' ) );
+
+		$refund = wc_create_refund( [
+			'order_id' => $o->get_id(),
+			'amount'   => $amount,
+			'reason'   => sanitize_text_field( (string) ( $payload['reason'] ?? '' ) ),
+		] );
+		if ( is_wp_error( $refund ) ) {
+			return $this->error( 'wpcc_refund_failed', $refund->get_error_message() );
+		}
+
+		$rollback_id = $this->store_rollback( $refund->get_id(), 'refund_create', [ 'order_id' => $o->get_id() ], $context );
+		$this->audit->record( 'order.refunded', [ 'order_id' => $o->get_id(), 'refund_id' => $refund->get_id(), 'amount' => $amount ] );
+		return [ 'action' => 'refund_create', 'order_id' => $o->get_id(), 'refund_id' => $refund->get_id(), 'amount' => $amount, 'rollback_id' => $rollback_id ];
+	}
+
+	private function customer_get( array $payload ): array {
+		$id = (int) ( $payload['customer_id'] ?? 0 );
+		if ( $id <= 0 && ! empty( $payload['email'] ) ) {
+			$u = get_user_by( 'email', sanitize_email( (string) $payload['email'] ) );
+			$id = $u ? (int) $u->ID : 0;
+		}
+		if ( $id <= 0 ) return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'wp-command-center' ) );
+		try { $c = new \WC_Customer( $id ); } catch ( \Exception $e ) { return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'wp-command-center' ) ); }
+		if ( ! $c->get_id() ) return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'wp-command-center' ) );
+
+		$this->audit->record( 'customer.get', [ 'customer_id' => $id ] );
+		return [ 'action' => 'customer_get', 'customer' => $this->format_customer( $c ) ];
+	}
+
+	private function customer_search( array $payload ): array {
+		$s = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
+		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( 'Search term is required.', 'wp-command-center' ) );
+		$users = get_users( [ 'search' => '*' . $s . '*', 'search_columns' => [ 'user_login', 'user_email', 'display_name' ], 'number' => 50, 'fields' => [ 'ID' ] ] );
+		$items = [];
+		foreach ( $users as $u ) {
+			try { $c = new \WC_Customer( (int) $u->ID ); if ( $c->get_id() ) $items[] = $this->format_customer( $c ); } catch ( \Exception $e ) { /* skip */ }
+		}
+		return [ 'action' => 'customer_search', 'customers' => $items, 'total' => count( $items ) ];
+	}
+
+	private function format_customer( \WC_Customer $c ): array {
+		return [
+			'id'          => $c->get_id(),
+			'email'       => $c->get_email(),
+			'first_name'  => $c->get_first_name(),
+			'last_name'   => $c->get_last_name(),
+			'username'    => $c->get_username(),
+			'order_count' => $c->get_order_count(),
+			'total_spent' => $c->get_total_spent(),
+			'date_registered' => $c->get_date_created() ? $c->get_date_created()->date( 'Y-m-d' ) : '',
+		];
+	}
+
 	// ── Coupons ──
 
 	private function coupon_list( array $payload ): array {
@@ -483,6 +606,30 @@ final class WooCommerceRuntimeManager {
 				elseif ( 'price_update' === $action ) { $p = wc_get_product( $entity_id ); if ( $p ) { $p->set_regular_price( $before['regular'] ); $p->set_sale_price( $before['sale'] ); $p->save(); } }
 				elseif ( in_array( $action, [ 'category_assign', 'category_remove' ] ) ) { $p = wc_get_product( $entity_id ); if ( $p ) { $p->set_category_ids( $before['category_ids'] ?? [] ); $p->save(); } }
 				elseif ( in_array( $action, [ 'attribute_assign', 'attribute_remove' ] ) ) { $p = wc_get_product( $entity_id ); if ( $p ) { $p->set_attributes( $before['attributes'] ?? [] ); $p->save(); } }
+				// STEP 94 — order/refund rollbacks (entity_type defaults to product).
+				elseif ( 'order_update' === $action ) {
+					$o = wc_get_order( $entity_id );
+					if ( $o ) {
+						if ( isset( $before['customer_note'] ) ) $o->set_customer_note( (string) $before['customer_note'] );
+						if ( isset( $before['billing'] ) && is_array( $before['billing'] ) ) {
+							foreach ( self::ORDER_BILLING_FIELDS as $f ) {
+								if ( isset( $before['billing'][ $f ] ) ) $o->{"set_billing_$f"}( (string) $before['billing'][ $f ] );
+							}
+						}
+						$o->save();
+					}
+				}
+				elseif ( 'order_status_change' === $action ) {
+					$o = wc_get_order( $entity_id );
+					if ( $o && isset( $before['status'] ) ) $o->update_status( (string) $before['status'], __( 'Rolled back by WP Command Center.', 'wp-command-center' ), true );
+				}
+				elseif ( 'order_note_add' === $action ) {
+					if ( ! empty( $before['note_id'] ) ) wp_delete_comment( (int) $before['note_id'], true );
+				}
+				elseif ( 'refund_create' === $action ) {
+					$refund = wc_get_order( $entity_id );
+					if ( $refund instanceof \WC_Order_Refund ) $refund->delete( true );
+				}
 				break;
 			case 'coupon':
 				if ( 'coupon_delete' === $action ) { wp_publish_post( $entity_id ); }

@@ -41,10 +41,17 @@ final class WooCommerceRegistry {
 	const ACTION_VARIATION_CREATE  = 'variation_create';
 	const ACTION_VARIATION_UPDATE  = 'variation_update';
 	const ACTION_VARIATION_DELETE  = 'variation_delete';
-	// Orders (read-only)
-	const ACTION_ORDER_LIST        = 'order_list';
-	const ACTION_ORDER_GET         = 'order_get';
-	const ACTION_ORDER_SEARCH      = 'order_search';
+	// Orders
+	const ACTION_ORDER_LIST          = 'order_list';
+	const ACTION_ORDER_GET           = 'order_get';
+	const ACTION_ORDER_SEARCH        = 'order_search';
+	// STEP 94 — order + customer management
+	const ACTION_ORDER_UPDATE        = 'order_update';
+	const ACTION_ORDER_NOTE_ADD      = 'order_note_add';
+	const ACTION_ORDER_STATUS_CHANGE = 'order_status_change';
+	const ACTION_REFUND_CREATE       = 'refund_create';
+	const ACTION_CUSTOMER_GET        = 'customer_get';
+	const ACTION_CUSTOMER_SEARCH     = 'customer_search';
 	// Coupons
 	const ACTION_COUPON_LIST       = 'coupon_list';
 	const ACTION_COUPON_GET        = 'coupon_get';
@@ -63,6 +70,8 @@ final class WooCommerceRegistry {
 		self::ACTION_VARIATION_LIST, self::ACTION_VARIATION_GET, self::ACTION_VARIATION_CREATE,
 		self::ACTION_VARIATION_UPDATE, self::ACTION_VARIATION_DELETE,
 		self::ACTION_ORDER_LIST, self::ACTION_ORDER_GET, self::ACTION_ORDER_SEARCH,
+		self::ACTION_ORDER_UPDATE, self::ACTION_ORDER_NOTE_ADD, self::ACTION_ORDER_STATUS_CHANGE,
+		self::ACTION_REFUND_CREATE, self::ACTION_CUSTOMER_GET, self::ACTION_CUSTOMER_SEARCH,
 		self::ACTION_COUPON_LIST, self::ACTION_COUPON_GET, self::ACTION_COUPON_CREATE,
 		self::ACTION_COUPON_UPDATE, self::ACTION_COUPON_DELETE,
 	];
@@ -90,6 +99,7 @@ final class WooCommerceRegistry {
 			self::ACTION_CATEGORY_LIST, self::ACTION_ATTRIBUTE_LIST,
 			self::ACTION_VARIATION_LIST, self::ACTION_VARIATION_GET,
 			self::ACTION_ORDER_LIST, self::ACTION_ORDER_GET, self::ACTION_ORDER_SEARCH,
+			self::ACTION_CUSTOMER_GET, self::ACTION_CUSTOMER_SEARCH,
 			self::ACTION_COUPON_LIST, self::ACTION_COUPON_GET ];
 		foreach ( $low as $a ) { self::$action_risk[ $a ] = self::RISK_LOW; self::$action_approval[ $a ] = false; }
 
@@ -99,14 +109,16 @@ final class WooCommerceRegistry {
 			self::ACTION_PRICE_UPDATE, self::ACTION_SALE_PRICE_UPDATE,
 			self::ACTION_CATEGORY_ASSIGN, self::ACTION_CATEGORY_REMOVE,
 			self::ACTION_ATTRIBUTE_ASSIGN, self::ACTION_ATTRIBUTE_REMOVE,
-			self::ACTION_VARIATION_UPDATE, self::ACTION_COUPON_UPDATE ];
+			self::ACTION_VARIATION_UPDATE, self::ACTION_COUPON_UPDATE,
+			self::ACTION_ORDER_UPDATE, self::ACTION_ORDER_NOTE_ADD, self::ACTION_ORDER_STATUS_CHANGE ];
 		foreach ( $med as $a ) { self::$action_risk[ $a ] = self::RISK_MEDIUM; self::$action_approval[ $a ] = true; }
 
 		// High
 		$high = [ self::ACTION_PRODUCT_CREATE, self::ACTION_PRODUCT_DELETE,
 			self::ACTION_PRODUCT_PUBLISH, self::ACTION_PRODUCT_UNPUBLISH,
 			self::ACTION_VARIATION_CREATE, self::ACTION_VARIATION_DELETE,
-			self::ACTION_COUPON_CREATE, self::ACTION_COUPON_DELETE ];
+			self::ACTION_COUPON_CREATE, self::ACTION_COUPON_DELETE,
+			self::ACTION_REFUND_CREATE ];
 		foreach ( $high as $a ) { self::$action_risk[ $a ] = self::RISK_HIGH; self::$action_approval[ $a ] = true; }
 
 		// Rollback support — all mutations
@@ -116,7 +128,8 @@ final class WooCommerceRegistry {
 			self::ACTION_CATEGORY_ASSIGN, self::ACTION_CATEGORY_REMOVE,
 			self::ACTION_ATTRIBUTE_ASSIGN, self::ACTION_ATTRIBUTE_REMOVE,
 			self::ACTION_VARIATION_CREATE, self::ACTION_VARIATION_UPDATE, self::ACTION_VARIATION_DELETE,
-			self::ACTION_COUPON_CREATE, self::ACTION_COUPON_UPDATE, self::ACTION_COUPON_DELETE ];
+			self::ACTION_COUPON_CREATE, self::ACTION_COUPON_UPDATE, self::ACTION_COUPON_DELETE,
+			self::ACTION_ORDER_UPDATE, self::ACTION_ORDER_NOTE_ADD, self::ACTION_ORDER_STATUS_CHANGE, self::ACTION_REFUND_CREATE ];
 		foreach ( $rb as $a ) { self::$action_rollback[ $a ] = true; }
 	}
 

@@ -6,10 +6,11 @@ Last verified: June 14, 2026.
 
 Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
 
-- **Current step:** STEP 94 — WooCommerce Order Runtime (next)
-- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 WooCommerce Product ✅ (commit pending)
-- **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–93 committed locally, **not yet pushed**.
-- **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 23/23; 93 `test-woocommerce-product-step93.sh` 19/19; full regression 3232 passed / 24 pre-existing / 0 net-new.
+- **Current step:** STEP 95 — Site Builder Runtime (next)
+- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 `622f3ef`; 94 WooCommerce Order ✅ (commit pending)
+- **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–94 committed locally, **not yet pushed**.
+- **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 23/23; 93 19/19; 94 `test-woocommerce-order-step94.sh` 23/23; full regression 3255 passed / 24 pre-existing / 0 net-new.
+- **Next step:** STEP 95 — Site Builder. page_create/update/delete + pattern_create + template_assign + navigation_manage MISSING → new `site_builder_manage` operation; menu_create/update already in `menu_manage` (reuse). Workflow: create page → create menu → assign menu → publish → verify frontend.
 - **Dev-env note:** Yoast SEO 27.8 + ACF Pro 6.4.2 + WooCommerce 10.8.1 active on dev (outside WPCC git). ACF: STEP 92 cleanup accidentally deleted theme DB-synced groups; RESTORED via importing wp-content/themes/mosharaf-core/acf-json/*.json — never bulk-delete ACF posts without sparing theme groups.
 - **Outstanding risks:** (1) deploy webhook in-place `git reset --hard` can race-deactivate the live plugin. (2) in-band `{error:true}` manager convention over REST. (3) media delete rollback needs `MEDIA_TRASH`. (4) final-validation flakes transiently back-to-back.
 - **Next step:** STEP 93 — WooCommerce Product. product CRUD/duplicate/publish + categories/attributes/variations exist; GAP = short_description/images/categories/tags/attributes in product_create/update + acceptance. STEP 94 orders: order_update/order_note_add/order_status_change/refund_create/customer_get/customer_search all MISSING.
