@@ -95,14 +95,24 @@ final class WorkflowRuntimeManager {
 		$executor=new OperationExecutor();
 		$exec_id=wp_generate_uuid4();
 		$started=microtime(true);
-		$results=[];$completed=[];$status='completed';$rolled_back=null;
+		$results=[];$completed=[];$status='completed';$rolled_back=null;$step_outputs=[];
 		$total=count($steps);
 		foreach($steps as $i=>$step){
 			$op=(string)($step['operation_id']??'');
-			$payload=(array)($step['payload']??[]);
+			// F6.2 — resolve inter-step references ({{steps.N.result.x}}, {{steps.N.created.0}}, ...)
+			// in this step's payload against earlier steps' outputs before executing.
+			$unresolved=[];
+			$payload=$this->resolve_refs((array)($step['payload']??[]),$step_outputs,$unresolved);
 			$s_start=microtime(true);
-			$r=$executor->run($op,$payload,$cx);
+			if(!empty($unresolved)){
+				$msg=__('Unresolved step reference(s): ','wp-command-center').implode(', ',$unresolved);
+				$r=['success'=>false,'result'=>['error'=>true,'code'=>'wpcc_unresolved_reference','message'=>$msg],
+					'errors'=>[['code'=>'wpcc_unresolved_reference','message'=>$msg]],'created'=>[]];
+			}else{
+				$r=$executor->run($op,$payload,$cx);
+			}
 			$s_end=microtime(true);
+			$step_outputs[$i]=is_array($r)?$r:[];
 			$ok=(($r['success']??false)===true)&&empty($r['result']['error']);
 			$rb=$r['result']['rollback_id']??null;
 			// F6.1 — capture the resources the step created. Many create operations
@@ -168,6 +178,51 @@ final class WorkflowRuntimeManager {
 	private function all_verified(array $rolled_back):bool{
 		foreach($rolled_back as $r){ if(empty($r['success'])) return false; }
 		return true;
+	}
+
+	/**
+	 * F6.2 — Recursively resolve {{ steps.N.path }} references in a step payload
+	 * against the outputs of earlier steps. A placeholder that is the WHOLE value
+	 * is replaced preserving the resolved value's type (so an int post ID stays an
+	 * int); a placeholder embedded in a larger string is interpolated. References
+	 * that cannot be resolved are collected in $unresolved (the step then fails
+	 * with wpcc_unresolved_reference rather than silently passing a literal).
+	 */
+	private function resolve_refs($value,array $outputs,array &$unresolved){
+		if(is_array($value)){
+			$out=[];
+			foreach($value as $k=>$v){ $out[$k]=$this->resolve_refs($v,$outputs,$unresolved); }
+			return $out;
+		}
+		if(!is_string($value)||false===strpos($value,'{{')) return $value;
+		if(preg_match('/^\s*\{\{\s*(.+?)\s*\}\}\s*$/',$value,$m)){
+			$found=false;$res=$this->lookup_ref($m[1],$outputs,$found);
+			if(!$found){ $unresolved[]=trim($m[1]); return $value; }
+			return $res;
+		}
+		return preg_replace_callback('/\{\{\s*(.+?)\s*\}\}/',function($mm) use($outputs,&$unresolved){
+			$found=false;$res=$this->lookup_ref($mm[1],$outputs,$found);
+			if(!$found){ $unresolved[]=trim($mm[1]); return $mm[0]; }
+			return is_scalar($res)?(string)$res:wp_json_encode($res);
+		},$value);
+	}
+
+	/** Look up a `steps.<index>.<dot.path>` reference in prior step outputs. */
+	private function lookup_ref(string $ref,array $outputs,bool &$found){
+		$found=false;
+		$parts=array_values(array_filter(explode('.',trim($ref)),static fn($s)=>'' !== $s));
+		if(count($parts)<2||'steps'!==$parts[0]||!ctype_digit($parts[1])) return null;
+		$idx=(int)$parts[1];
+		if(!array_key_exists($idx,$outputs)) return null;
+		$cur=$outputs[$idx];
+		for($i=2;$i<count($parts);$i++){
+			$key=$parts[$i];
+			if(is_array($cur)&&array_key_exists($key,$cur)) $cur=$cur[$key];
+			elseif(is_array($cur)&&ctype_digit($key)&&array_key_exists((int)$key,$cur)) $cur=$cur[(int)$key];
+			else return null;
+		}
+		$found=true;
+		return $cur;
 	}
 
 	private function record_execution(string $wid,string $exec_id,string $status,float $started,array $results,string $on_failure,?array $rolled_back):void{
