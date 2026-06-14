@@ -6,14 +6,15 @@ Last verified: June 14, 2026.
 
 Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
 
-- **Current step:** STEP 98 — Reporting Runtime (next, final roadmap step)
-- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 `622f3ef`; 94 `60a2c75`; 95 `1815aa2`; 96 `6bf006e`; 97 `0035891`
-- **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–97 committed locally, **not yet pushed**.
-- **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 23/23; 93 19/19; 94 23/23; 95 21/21; 96 26/26; 97 `test-workflow-step97.sh` 36/36 (+ test-workflow-runtime 53/53); full regression 24 pre-existing / 0 net-new.
+- **Current step:** ROADMAP COMPLETE (89–98). Awaiting owner batch-deploy decision.
+- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 `622f3ef`; 94 `60a2c75`; 95 `1815aa2`; 96 `6bf006e`; 97 `0035891`; 98 Reporting ✅ (commit pending)
+- **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–98 committed locally, **not yet pushed**.
+- **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 23/23; 93 19/19; 94 23/23; 95 21/21; 96 26/26; 97 36/36; 98 `test-reporting-step98.sh` 29/29; full regression 24 pre-existing / 0 net-new.
 - **Dev plugins:** Yoast SEO 27.8, ACF Pro 6.4.2, WooCommerce 10.8.1, Elementor 4.1.3 — all active on dev (outside WPCC git).
 - **STEP 96 — Elementor (COMPLETE locally):** `elementor_manage` reads (get_page/export_structure/list_widgets) + edits (update_text/image/button) the `_elementor_data` widget tree over REST+MCP; rollback-capable, cache-clearing, verified on Elementor 4.1.3. `test-elementor-step96.sh` 26/26. Doc `.ai/steps/STEP-96-ELEMENTOR-RUNTIME.md`.
 - **STEP 97 — Workflow (COMPLETE locally):** hardened `workflow_manage` execute() — **single approval** (`within_workflow` skips the per-step approval gate but keeps destructive-guard + capability checks; owner-approved security-model change), execution timeline, `on_failure` stop/continue/rollback, rollback awareness. Added **unified `OperationExecutor::rollback()` dispatcher** (the missing cross-manager rollback router) + `workflow_rollback` action. `test-workflow-step97.sh` 36/36. Doc `.ai/steps/STEP-97-WORKFLOW-RUNTIME.md`.
-- **Next step:** STEP 98 — Reporting Runtime (final): Site Health, Plugin Health, Security, Content, WooCommerce, Agent/Approval/Patch Activity reports.
+- **STEP 98 — Reporting (COMPLETE locally):** read-only `report_manage` op — 8 reports (report_list + site/plugin health, security, content, woocommerce, agent/approval/patch activity). Mirrors `system_info` posture (no capability, `require_read`, operation_map stays 32). Activity reports aggregate the audit log; graceful degradation when a subsystem is absent. `test-reporting-step98.sh` 29/29. Doc `.ai/steps/STEP-98-REPORTING-RUNTIME.md`.
+- **ROADMAP COMPLETE (STEPs 89–98).** All committed locally, **not pushed**. Production runs STEP 88. Next action is the **owner's** batch-deploy decision (`git push origin main` → `wpcc-deploy.php` webhook). No further roadmap steps remain; the long-term commercial layer (Licensing/Billing/SaaS) is explicitly "Not Now".
 - **Dev-env note:** Yoast SEO 27.8 + ACF Pro 6.4.2 + WooCommerce 10.8.1 active on dev (outside WPCC git). ACF: STEP 92 cleanup accidentally deleted theme DB-synced groups; RESTORED via importing wp-content/themes/mosharaf-core/acf-json/*.json — never bulk-delete ACF posts without sparing theme groups.
 - **Outstanding risks:** (1) deploy webhook in-place `git reset --hard` can race-deactivate the live plugin. (2) in-band `{error:true}` manager convention over REST. (3) media delete rollback needs `MEDIA_TRASH`. (4) final-validation flakes transiently back-to-back.
 - **Next step:** STEP 93 — WooCommerce Product. product CRUD/duplicate/publish + categories/attributes/variations exist; GAP = short_description/images/categories/tags/attributes in product_create/update + acceptance. STEP 94 orders: order_update/order_note_add/order_status_change/refund_create/customer_get/customer_search all MISSING.

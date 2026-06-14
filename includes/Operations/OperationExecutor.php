@@ -387,6 +387,8 @@ final class OperationExecutor {
 				return new SiteBuilderRuntimeManager();
 			case 'elementor_manage':
 				return new ElementorRuntimeManager();
+			case 'report_manage':
+				return new ReportingRuntimeManager();
 		}
 
 		return null;

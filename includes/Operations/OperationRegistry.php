@@ -851,6 +851,30 @@ final class OperationRegistry {
 				],
 				'available'         => true,
 			],
+			// ── STEP 98 — Reporting runtime ──
+			'report_manage' => [
+				'id'                => 'report_manage',
+				'title'             => __( 'Reporting Runtime', 'wp-command-center' ),
+				'description'       => __( 'Generate read-only operational reports: report_site_health, report_plugin_health, report_security, report_content, report_woocommerce, report_agent_activity, report_approval_activity, report_patch_activity (and report_list to enumerate them). Inventory reports read WordPress/plugin data; activity reports aggregate the audit log. No writes, no rollback.', 'wp-command-center' ),
+				'risk_level'        => 'diagnostic',
+				'action_risks'      => [
+					'report_list'              => 'diagnostic',
+					'report_site_health'       => 'diagnostic',
+					'report_plugin_health'     => 'diagnostic',
+					'report_security'          => 'diagnostic',
+					'report_content'           => 'diagnostic',
+					'report_woocommerce'       => 'diagnostic',
+					'report_agent_activity'    => 'diagnostic',
+					'report_approval_activity' => 'diagnostic',
+					'report_patch_activity'    => 'diagnostic',
+				],
+				'requires_approval' => false,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'report_list', 'report_site_health', 'report_plugin_health', 'report_security', 'report_content', 'report_woocommerce', 'report_agent_activity', 'report_approval_activity', 'report_patch_activity' ], 'description' => 'The report to generate.' ],
+					[ 'name' => 'limit', 'type' => 'integer', 'required' => false, 'description' => 'Audit entries to scan for activity reports (default 1000, max 5000).' ],
+				],
+				'available'         => true,
+			],
 		];
 
 		// B6: Add optional `reason` param to any write operation so AI agents can

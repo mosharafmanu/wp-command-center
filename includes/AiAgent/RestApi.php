@@ -460,6 +460,7 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/safe_updates/run', 'scope' => 'full', 'description' => 'Safely update a plugin or theme with health verification: { type: plugin|theme, slug, dry_run? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/capability_manage/run', 'scope' => 'full', 'description' => 'Manage platform capabilities: { action: capability_list|capability_get|capability_assign|capability_remove|capability_validate, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/database_inspect/run', 'scope' => 'read_only', 'description' => 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.' ],
+		[ 'method' => 'POST', 'path' => '/operations/report_manage/run', 'scope' => 'read_only', 'description' => 'Read-only operational reports: { action: report_list|report_site_health|report_plugin_health|report_security|report_content|report_woocommerce|report_agent_activity|report_approval_activity|report_patch_activity, limit? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/content_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress content: { action: content_list|content_get|content_create|content_update|content_delete|content_publish|content_unpublish|content_schedule|taxonomy_assign|featured_image_assign, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/snapshot_manage/run', 'scope' => 'full', 'description' => 'Create, list, inspect, verify, and restore file snapshots: { action: snapshot_create|snapshot_list|snapshot_details|snapshot_restore|snapshot_verify, path?, label?, snapshot_id? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/file_manage/run', 'scope' => 'read_only', 'description' => 'Read files and browse the file tree (shared service with MCP file_manage): { action: file_read|file_tree|file_metadata, path? }. Blocked paths denied; secrets redacted.' ],
@@ -888,6 +889,13 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/database_inspect/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_database_inspect' ],
+			'permission_callback' => [ $this, 'require_read' ],
+		] );
+
+		// STEP 98 — Reporting runtime (read-only).
+		register_rest_route( self::NAMESPACE, '/operations/report_manage/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_report_manage' ],
 			'permission_callback' => [ $this, 'require_read' ],
 		] );
 
@@ -2767,6 +2775,23 @@ final class RestApi {
 		}
 		$executor = new OperationExecutor();
 		$result   = $executor->run( 'database_inspect', $params, $context );
+		if ( ! $result['success'] ) {
+			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
+			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
+		}
+		return new \WP_REST_Response( $result['result'] );
+	}
+
+	public function run_report_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$params  = $request->get_params();
+		$context = [ 'actor' => $this->token_actor( $request ) ];
+		foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id' ] as $k ) {
+			if ( $request->get_param( $k ) ) {
+				$context[ $k ] = sanitize_text_field( (string) $request->get_param( $k ) );
+			}
+		}
+		$executor = new OperationExecutor();
+		$result   = $executor->run( 'report_manage', $params, $context );
 		if ( ! $result['success'] ) {
 			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
 			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
