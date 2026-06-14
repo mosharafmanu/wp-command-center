@@ -6,12 +6,13 @@ Last verified: June 14, 2026.
 
 Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
 
-- **Current step:** STEP 96 — Elementor Runtime (next)
-- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 `622f3ef`; 94 `60a2c75`; 95 Site Builder ✅ (commit pending)
-- **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–95 committed locally, **not yet pushed**.
-- **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 23/23; 93 19/19; 94 23/23; 95 `test-site-builder-step95.sh` 21/21; full regression 3276 passed / 24 pre-existing / 0 net-new.
+- **Current step:** STEP 97 — Workflow Runtime (next)
+- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 `622f3ef`; 94 `60a2c75`; 95 `1815aa2`; 96 Elementor ✅ (commit pending)
+- **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–96 committed locally, **not yet pushed**.
+- **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 23/23; 93 19/19; 94 23/23; 95 21/21; 96 `test-elementor-step96.sh` 26/26; full regression 24 pre-existing / 0 net-new.
 - **Dev plugins:** Yoast SEO 27.8, ACF Pro 6.4.2, WooCommerce 10.8.1, Elementor 4.1.3 — all active on dev (outside WPCC git).
-- **Next step:** STEP 96 — Elementor. From-scratch `elementor_manage`: read (get_page/export_structure/list_widgets), edit (update_text/image/button) via `_elementor_data` JSON tree. Then STEP 97 (Workflow), 98 (Reporting).
+- **STEP 96 — Elementor (COMPLETE locally):** `elementor_manage` reads (get_page/export_structure/list_widgets) + edits (update_text/image/button) the `_elementor_data` widget tree over REST+MCP; rollback-capable, cache-clearing, verified on Elementor 4.1.3. `test-elementor-step96.sh` 26/26. Doc `.ai/steps/STEP-96-ELEMENTOR-RUNTIME.md`.
+- **Next step:** STEP 97 — Workflow Runtime (multi-step AI execution plans, single approval). Then STEP 98 (Reporting).
 - **Dev-env note:** Yoast SEO 27.8 + ACF Pro 6.4.2 + WooCommerce 10.8.1 active on dev (outside WPCC git). ACF: STEP 92 cleanup accidentally deleted theme DB-synced groups; RESTORED via importing wp-content/themes/mosharaf-core/acf-json/*.json — never bulk-delete ACF posts without sparing theme groups.
 - **Outstanding risks:** (1) deploy webhook in-place `git reset --hard` can race-deactivate the live plugin. (2) in-band `{error:true}` manager convention over REST. (3) media delete rollback needs `MEDIA_TRASH`. (4) final-validation flakes transiently back-to-back.
 - **Next step:** STEP 93 — WooCommerce Product. product CRUD/duplicate/publish + categories/attributes/variations exist; GAP = short_description/images/categories/tags/attributes in product_create/update + acceptance. STEP 94 orders: order_update/order_note_add/order_status_change/refund_create/customer_get/customer_search all MISSING.

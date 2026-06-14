@@ -351,6 +351,8 @@ final class OperationExecutor {
 				return new SeoRuntimeManager();
 			case 'site_builder_manage':
 				return new SiteBuilderRuntimeManager();
+			case 'elementor_manage':
+				return new ElementorRuntimeManager();
 		}
 
 		return null;

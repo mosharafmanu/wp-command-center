@@ -100,6 +100,8 @@ final class CapabilityRegistry {
 		'seo_manage'          => self::CAP_CONTENT_MANAGE,
 		// STEP 95 — Site builder creates pages/patterns/navigation; gated like content.
 		'site_builder_manage' => self::CAP_CONTENT_MANAGE,
+		// STEP 96 — Elementor edits page widget content; gated like content.
+		'elementor_manage'    => self::CAP_CONTENT_MANAGE,
 		// Seed operations are unrestricted (read-only/low-risk):
 		// 'content_seed', 'acf_seed', 'cf7_seed', 'woo_product_seed'
 		// They do not require explicit capability assignment.

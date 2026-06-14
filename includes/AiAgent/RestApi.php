@@ -469,6 +469,8 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/seo_manage/run', 'scope' => 'full', 'description' => 'Unified SEO runtime (Rank Math/Yoast): { action: seo_get|seo_update|seo_validate|seo_analyze|seo_restore, content_id?, seo?, rollback_id? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/site_builder_manage/run', 'scope' => 'full', 'description' => 'Site builder: { action: page_create|page_update|page_delete|page_get|page_list|template_assign|template_list|pattern_create|navigation_manage|menu_create|menu_update|menu_assign, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/site_builder_manage/rollback', 'scope' => 'full', 'description' => 'Roll back a site builder operation: { rollback_id }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/elementor_manage/run', 'scope' => 'full', 'description' => 'Elementor: { action: elementor_get_page|elementor_export_structure|elementor_list_widgets|elementor_update_text|elementor_update_image|elementor_update_button, page_id, widget_id, ... }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/elementor_manage/rollback', 'scope' => 'full', 'description' => 'Roll back an Elementor widget edit: { rollback_id }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/theme_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress themes: { action: theme_list|theme_install|theme_activate|theme_update|theme_delete, slug? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/plugin_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress plugins: { action: plugin_list|plugin_install|plugin_activate|plugin_deactivate|plugin_update|plugin_delete, slug? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/option_manage/run', 'scope' => 'full', 'description' => 'Safely inspect or update a registered WordPress option: { action: option_get|option_update|option_rollback, option_id, value?, rollback_id? }.' ],
@@ -956,6 +958,18 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/site_builder_manage/rollback', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_site_builder_rollback' ],
+			'permission_callback' => [ $this, 'require_write' ],
+		] );
+
+		// STEP 96 — Elementor runtime.
+		register_rest_route( self::NAMESPACE, '/operations/elementor_manage/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_elementor_manage' ],
+			'permission_callback' => [ $this, 'require_write' ],
+		] );
+		register_rest_route( self::NAMESPACE, '/operations/elementor_manage/rollback', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_elementor_rollback' ],
 			'permission_callback' => [ $this, 'require_write' ],
 		] );
 
@@ -2636,6 +2650,21 @@ final class RestApi {
 			if ( $request->get_param( $k ) ) $context[ $k ] = sanitize_text_field( (string) $request->get_param( $k ) );
 		}
 		$result = ( new \WPCommandCenter\Operations\SiteBuilderRuntimeManager() )->rollback( $params, $context );
+		if ( ! empty( $result['error'] ) ) return $this->with_status( new \WP_Error( $result['code'], $result['message'] ) );
+		return new \WP_REST_Response( $result );
+	}
+
+	public function run_elementor_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'elementor_manage', $request );
+	}
+
+	public function run_elementor_rollback( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$params  = $request->get_params();
+		$context = [ 'actor' => $this->token_actor( $request ) ];
+		foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id' ] as $k ) {
+			if ( $request->get_param( $k ) ) $context[ $k ] = sanitize_text_field( (string) $request->get_param( $k ) );
+		}
+		$result = ( new \WPCommandCenter\Operations\ElementorRuntimeManager() )->rollback( $params, $context );
 		if ( ! empty( $result['error'] ) ) return $this->with_status( new \WP_Error( $result['code'], $result['message'] ) );
 		return new \WP_REST_Response( $result );
 	}

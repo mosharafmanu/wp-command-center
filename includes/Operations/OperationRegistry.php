@@ -819,6 +819,34 @@ final class OperationRegistry {
 				],
 				'available'         => true,
 			],
+			// ── STEP 96 — Elementor runtime ──
+			'elementor_manage' => [
+				'id'                => 'elementor_manage',
+				'title'             => __( 'Elementor', 'wp-command-center' ),
+				'description'       => __( 'Read and edit Elementor pages: export the page structure, list widgets, and update a widget\'s text, image, or button by widget id. Operates on the page\'s _elementor_data element tree, clears Elementor cache after edits. Rollback-capable, approval-aware. Actions: elementor_get_page, elementor_export_structure, elementor_list_widgets, elementor_update_text, elementor_update_image, elementor_update_button.', 'wp-command-center' ),
+				'risk_level'        => 'medium',
+				'action_risks'      => [
+					'elementor_get_page'         => 'diagnostic',
+					'elementor_export_structure' => 'diagnostic',
+					'elementor_list_widgets'     => 'diagnostic',
+					'elementor_update_text'      => 'medium',
+					'elementor_update_image'     => 'medium',
+					'elementor_update_button'    => 'medium',
+				],
+				'requires_approval' => true,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'elementor_get_page', 'elementor_export_structure', 'elementor_list_widgets', 'elementor_update_text', 'elementor_update_image', 'elementor_update_button' ], 'description' => 'The Elementor action.' ],
+					[ 'name' => 'page_id', 'type' => 'integer', 'required' => false, 'description' => 'Elementor page / post ID (all actions).' ],
+					[ 'name' => 'widget_id', 'type' => 'string', 'required' => false, 'description' => 'Target widget id (update actions). Obtain from elementor_list_widgets.' ],
+					[ 'name' => 'text', 'type' => 'string', 'required' => false, 'description' => 'Text content (update_text) or button label (update_button).' ],
+					[ 'name' => 'field', 'type' => 'string', 'required' => false, 'description' => 'Override the settings key for update_text (default by widget type: heading=title, text-editor=editor, button=text).' ],
+					[ 'name' => 'image_url', 'type' => 'string', 'required' => false, 'description' => 'Image URL (update_image).' ],
+					[ 'name' => 'image_id', 'type' => 'integer', 'required' => false, 'description' => 'Attachment ID (update_image).' ],
+					[ 'name' => 'url', 'type' => 'string', 'required' => false, 'description' => 'Button link URL (update_button).' ],
+					[ 'name' => 'rollback_id', 'type' => 'string', 'required' => false, 'description' => 'Rollback record ID.' ],
+				],
+				'available'         => true,
+			],
 		];
 
 		// B6: Add optional `reason` param to any write operation so AI agents can
