@@ -201,6 +201,9 @@ final class RestApi {
 		'wpcc_invalid_agent_action'         => 'Invalid agent action.',
 		'wpcc_invalid_label'                => 'Please enter a label for this token.',
 		'wpcc_invalid_media_enhance_action' => 'Invalid media enhance action.',
+		'wpcc_media_no_files'               => 'The attachment has no files on disk to operate on.',
+		'wpcc_thumbnail_snapshot_failed'    => 'Could not snapshot the attachment before regeneration; the operation was aborted without changes.',
+		'wpcc_thumbnail_regenerate_failed'  => 'Thumbnail regeneration failed to produce the expected sizes; the pre-regeneration state was restored.',
 		'wpcc_invalid_path'                 => 'The supplied path is missing or invalid.',
 		'wpcc_invalid_plan'                 => 'Plan title and objective are required.',
 		'wpcc_invalid_plan_action'          => 'Invalid plan action.',
@@ -463,7 +466,8 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/capability_manage/run', 'scope' => 'full', 'description' => 'Manage platform capabilities: { action: capability_list|capability_get|capability_assign|capability_remove|capability_validate, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/database_inspect/run', 'scope' => 'read_only', 'description' => 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.' ],
 		[ 'method' => 'POST', 'path' => '/operations/report_manage/run', 'scope' => 'read_only', 'description' => 'Read-only operational reports: { action: report_list|report_site_health|report_plugin_health|report_security|report_content|report_woocommerce|report_agent_activity|report_approval_activity|report_patch_activity, limit? }.' ],
-		[ 'method' => 'POST', 'path' => '/operations/media_enhance/run', 'scope' => 'read_only', 'description' => 'Read-only media-enhancement diagnostics: { action: media_enhance_capabilities|image_sizes_list|image_size_usage_audit|image_size_recommendations|image_size_verify|srcset_verify|responsive_image_audit|missing_sizes_audit|image_size_context_audit, media_id?, limit? }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/media_enhance/run', 'scope' => 'read_only', 'description' => 'Media-enhancement runtime. Read diagnostics (read token): { action: media_enhance_capabilities|image_sizes_list|image_size_usage_audit|image_size_recommendations|image_size_verify|srcset_verify|responsive_image_audit|missing_sizes_audit|image_size_context_audit|thumbnail_verify, media_id?, limit? }. Reversible regeneration (full token): { action: thumbnail_regenerate|thumbnail_regenerate_attachment|thumbnail_regenerate_batch, media_id?, mode?, media_ids?, cursor?, limit? }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/media_enhance/rollback', 'scope' => 'full', 'description' => 'Reverse a thumbnail regeneration (delete created files + restore the pre-regeneration snapshot byte-for-byte): { rollback_id }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/content_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress content: { action: content_list|content_get|content_create|content_update|content_delete|content_publish|content_unpublish|content_schedule|taxonomy_assign|featured_image_assign, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/snapshot_manage/run', 'scope' => 'full', 'description' => 'Create, list, inspect, verify, and restore file snapshots: { action: snapshot_create|snapshot_list|snapshot_details|snapshot_restore|snapshot_verify, path?, label?, snapshot_id? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/file_manage/run', 'scope' => 'read_only', 'description' => 'Read files and browse the file tree (shared service with MCP file_manage): { action: file_read|file_tree|file_metadata, path? }. Blocked paths denied; secrets redacted.' ],
@@ -902,11 +906,20 @@ final class RestApi {
 			'permission_callback' => [ $this, 'require_read' ],
 		] );
 
-		// STEP 100.3 — Media Enhancement runtime (read-only diagnostics).
+		// STEP 100.3/100.4 read diagnostics + STEP 100.5 reversible regeneration.
+		// Per-action scope: read actions need a read token, write (regenerate)
+		// actions need a full token (see require_media_enhance).
 		register_rest_route( self::NAMESPACE, '/operations/media_enhance/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_media_enhance' ],
-			'permission_callback' => [ $this, 'require_read' ],
+			'permission_callback' => [ $this, 'require_media_enhance' ],
+		] );
+
+		// STEP 100.5 — reverse a thumbnail regeneration (snapshot restore).
+		register_rest_route( self::NAMESPACE, '/operations/media_enhance/rollback', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_media_enhance_rollback' ],
+			'permission_callback' => [ $this, 'require_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/content_manage/run', [
@@ -1219,6 +1232,24 @@ final class RestApi {
 	 */
 	public function require_write( \WP_REST_Request $request ): bool|\WP_Error {
 		return $this->check_token( $request, AuthTokens::SCOPE_FULL );
+	}
+
+	/**
+	 * STEP 100.5 — media_enhance has both read diagnostics and reversible write
+	 * (regeneration) actions on one route. Gate per action: write actions require
+	 * a full token, read actions a read token.
+	 */
+	public function require_media_enhance( \WP_REST_Request $request ): bool|\WP_Error {
+		$action = (string) $request->get_param( 'action' );
+		// Write (regeneration) actions — kept in sync with
+		// MediaEnhancementRegistry::WRITE_ACTIONS. Listed inline here because the
+		// registry class shares a file with the manager and isn't autoloadable on
+		// its own at permission-callback time (before the handler is resolved).
+		$write_actions = [ 'thumbnail_regenerate', 'thumbnail_regenerate_attachment', 'thumbnail_regenerate_batch' ];
+		if ( in_array( $action, $write_actions, true ) ) {
+			return $this->require_write( $request );
+		}
+		return $this->require_read( $request );
 	}
 
 	private function check_token( \WP_REST_Request $request, string $required_scope ): bool|\WP_Error {
@@ -2824,6 +2855,22 @@ final class RestApi {
 			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
 		}
 		return new \WP_REST_Response( $result['result'] );
+	}
+
+	public function run_media_enhance_rollback( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		$params  = $request->get_params();
+		$context = [ 'actor' => $this->token_actor( $request ) ];
+		foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id' ] as $k ) {
+			if ( $request->get_param( $k ) ) {
+				$context[ $k ] = sanitize_text_field( (string) $request->get_param( $k ) );
+			}
+		}
+		$manager = new \WPCommandCenter\Operations\MediaEnhancementRuntimeManager();
+		$result  = $manager->rollback( $params, $context );
+		if ( isset( $result['error'] ) && $result['error'] ) {
+			return $this->with_status( new \WP_Error( $result['code'], $result['message'] ) );
+		}
+		return new \WP_REST_Response( $result );
 	}
 
 	public function run_capability_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {

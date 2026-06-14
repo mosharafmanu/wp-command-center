@@ -31,6 +31,11 @@ final class MediaEnhancementRegistry {
 	const A_RESPONSIVE_AUDIT     = 'responsive_image_audit';
 	const A_MISSING_SIZES_AUDIT  = 'missing_sizes_audit';
 	const A_SIZE_CONTEXT_AUDIT   = 'image_size_context_audit';
+	// STEP 100.5 — thumbnail regeneration (reversible writes + read verify).
+	const A_THUMB_REGENERATE      = 'thumbnail_regenerate';
+	const A_THUMB_REGENERATE_ATT  = 'thumbnail_regenerate_attachment';
+	const A_THUMB_REGENERATE_BATCH = 'thumbnail_regenerate_batch';
+	const A_THUMB_VERIFY          = 'thumbnail_verify';
 
 	const ACTIONS = [
 		self::A_CAPABILITIES,
@@ -42,11 +47,22 @@ final class MediaEnhancementRegistry {
 		self::A_RESPONSIVE_AUDIT,
 		self::A_MISSING_SIZES_AUDIT,
 		self::A_SIZE_CONTEXT_AUDIT,
+		self::A_THUMB_REGENERATE,
+		self::A_THUMB_REGENERATE_ATT,
+		self::A_THUMB_REGENERATE_BATCH,
+		self::A_THUMB_VERIFY,
 	];
 
-	/** Every media_enhance action (STEP 100.3 + 100.4) is read-only. */
+	/** Reversible write actions (snapshot-backed); everything else is read-only. */
+	const WRITE_ACTIONS = [
+		self::A_THUMB_REGENERATE,
+		self::A_THUMB_REGENERATE_ATT,
+		self::A_THUMB_REGENERATE_BATCH,
+	];
+
+	/** Per-action risk: STEP 100.3/100.4 reads = diagnostic; 100.5 regen writes = medium. */
 	public static function get_risk( string $a ): string {
-		return 'diagnostic';
+		return in_array( $a, self::WRITE_ACTIONS, true ) ? 'medium' : 'diagnostic';
 	}
 }
 
@@ -61,6 +77,12 @@ final class MediaEnhancementRuntimeManager {
 
 	/** An original this many × the largest registered display size is "oversized". */
 	private const OVERSIZE_FACTOR = 1.5;
+
+	/** STEP 100.5 — rollback record store + batch chunk bounds. */
+	private const ROLLBACK_STORE = 'wpcc_media_enhance_rollbacks';
+	private const ROLLBACK_MAX    = 100;
+	private const BATCH_DEFAULT   = 20;
+	private const BATCH_MAX       = 50;
 
 	/** WordPress core default registered subsizes (everything else is theme/plugin). */
 	private const CORE_SIZES = [ 'thumbnail', 'medium', 'medium_large', 'large' ];
@@ -87,6 +109,10 @@ final class MediaEnhancementRuntimeManager {
 			MediaEnhancementRegistry::A_RESPONSIVE_AUDIT     => $this->responsive_image_audit( $p ),
 			MediaEnhancementRegistry::A_MISSING_SIZES_AUDIT  => $this->missing_sizes_audit( $p ),
 			MediaEnhancementRegistry::A_SIZE_CONTEXT_AUDIT   => $this->image_size_context_audit( $p ),
+			MediaEnhancementRegistry::A_THUMB_REGENERATE     => $this->thumbnail_regenerate( $p, $cx ),
+			MediaEnhancementRegistry::A_THUMB_REGENERATE_ATT => $this->thumbnail_regenerate( $p, $cx ),
+			MediaEnhancementRegistry::A_THUMB_REGENERATE_BATCH => $this->thumbnail_regenerate_batch( $p, $cx ),
+			MediaEnhancementRegistry::A_THUMB_VERIFY         => $this->thumbnail_verify( $p ),
 		};
 
 		if ( is_wp_error( $report ) ) {
@@ -659,6 +685,320 @@ final class MediaEnhancementRuntimeManager {
 			return new \WP_Error( 'wpcc_not_an_image', __( 'Attachment is not an image.', 'wp-command-center' ) );
 		}
 		return $id;
+	}
+
+	// ── STEP 100.5 — Thumbnail regeneration (reversible write) ───
+
+	/**
+	 * Regenerate intermediate size files for one attachment. `mode`:
+	 *  - `missing` (default): generate only the missing *applicable* sizes; a
+	 *    no-op (no snapshot, no write) when nothing is missing.
+	 *  - `all`: rebuild every registered size from the original.
+	 * Snapshot-backed (STEP 100.1): a byte-for-byte snapshot is captured BEFORE
+	 * any write; if it cannot be captured the operation aborts without mutating.
+	 * Sizes larger than the original are never generated (WordPress no-upscale).
+	 * The result is verified; on failure the snapshot is restored and an error
+	 * returned (no partial state).
+	 */
+	private function thumbnail_regenerate( array $p, array $cx = [] ): array|\WP_Error {
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		$mode = ( 'all' === ( $p['mode'] ?? 'missing' ) ) ? 'all' : 'missing';
+		$res  = $this->do_regenerate( $id, $mode, '', $cx );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		return [ 'thumbnail_regenerate' => $res ];
+	}
+
+	/**
+	 * Cursor-based batch regeneration over image attachments (or an explicit
+	 * `media_ids` list). Each item is independently snapshot-backed and reversible;
+	 * all items share a `batch_id`. Bounded by `limit` (default 20, max 50);
+	 * returns `next_cursor` until the candidate set is exhausted.
+	 */
+	private function thumbnail_regenerate_batch( array $p, array $cx = [] ): array {
+		$mode  = ( 'all' === ( $p['mode'] ?? 'missing' ) ) ? 'all' : 'missing';
+		$limit = max( 1, min( self::BATCH_MAX, isset( $p['limit'] ) ? (int) $p['limit'] : self::BATCH_DEFAULT ) );
+		$cursor = max( 0, isset( $p['cursor'] ) ? (int) $p['cursor'] : 0 );
+
+		if ( ! empty( $p['media_ids'] ) && is_array( $p['media_ids'] ) ) {
+			$candidates = array_values( array_map( 'intval', $p['media_ids'] ) );
+		} else {
+			$candidates = $this->image_attachment_ids( self::SCAN_MAX );
+		}
+		$total = count( $candidates );
+		$chunk = array_slice( $candidates, $cursor, $limit );
+
+		$batch_id = wp_generate_uuid4();
+		$results  = [];
+		$regenerated = $skipped = $failed = 0;
+		foreach ( $chunk as $id ) {
+			$one = $this->do_regenerate( (int) $id, $mode, $batch_id, $cx );
+			if ( is_wp_error( $one ) ) {
+				$failed++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'failed', 'code' => $one->get_error_code(), 'message' => $one->get_error_message() ];
+			} elseif ( ! empty( $one['no_action'] ) ) {
+				$skipped++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'no_action', 'rollback_id' => null ];
+			} else {
+				$regenerated++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'regenerated', 'rollback_id' => $one['rollback_id'], 'regenerated' => $one['regenerated'] ];
+			}
+		}
+
+		$next = $cursor + $limit;
+		$next_cursor = $next < $total ? $next : null;
+
+		return [ 'thumbnail_regenerate_batch' => [
+			'batch_id'     => $batch_id,
+			'mode'         => $mode,
+			'total'        => $total,
+			'cursor'       => $cursor,
+			'processed'    => count( $chunk ),
+			'regenerated'  => $regenerated,
+			'no_action'    => $skipped,
+			'failed'       => $failed,
+			'next_cursor'  => $next_cursor,
+			'results'      => $results,
+		] ];
+	}
+
+	/**
+	 * Read-only post-regeneration verification: are all *applicable* registered
+	 * sizes present on disk, and is the attachment metadata complete?
+	 */
+	private function thumbnail_verify( array $p ): array|\WP_Error {
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		$class   = $this->classify_sizes( $id );
+		$meta_ok = $this->metadata_complete( $id );
+		$applicable_present = $class['present'];
+		$applicable_missing = $class['missing'];
+		return [ 'thumbnail_verify' => [
+			'media_id'           => $id,
+			'applicable_present' => $applicable_present,
+			'applicable_missing' => $applicable_missing,
+			'not_applicable'     => $class['not_applicable'],
+			'metadata_complete'  => $meta_ok['complete'],
+			'complete'           => empty( $applicable_missing ) && $meta_ok['complete'],
+		] ];
+	}
+
+	/**
+	 * Core regeneration routine shared by the single and batch actions.
+	 * Returns the success payload, a `no_action` payload, or a WP_Error (after
+	 * restoring the pre-write snapshot on any post-snapshot failure).
+	 *
+	 * @return array|\WP_Error
+	 */
+	private function do_regenerate( int $id, string $mode, string $batch_id, array $cx ) {
+		$original = get_attached_file( $id );
+		if ( ! $original || ! is_file( $original ) ) {
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no original file on disk.', 'wp-command-center' ) );
+		}
+
+		$before    = $this->classify_sizes( $id );
+		$subsizes  = $this->registered_subsizes();
+		$applicable = array_merge( $before['present'], $before['missing'] ); // excludes not_applicable
+		$targets   = ( 'all' === $mode ) ? $applicable : $before['missing'];
+
+		// Audit-first: nothing to do → no snapshot, no write, no rollback record.
+		if ( empty( $targets ) ) {
+			return [
+				'media_id'    => $id,
+				'mode'        => $mode,
+				'no_action'   => true,
+				'regenerated' => [],
+				'skipped'     => $before['not_applicable'],
+				'message'     => __( 'No regeneration required; all applicable sizes are present.', 'wp-command-center' ),
+			];
+		}
+
+		// Snapshot BEFORE any mutation; abort if it cannot be captured.
+		$snapshot = ( new MediaSnapshot() )->capture( $id, 'thumbnail_regenerate' );
+		if ( is_wp_error( $snapshot ) ) {
+			return new \WP_Error( 'wpcc_thumbnail_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before regeneration: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+		}
+		$snapshot_id = $snapshot['id'];
+		$before_files = $this->size_files_abs( $id );
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+
+		if ( 'all' === $mode ) {
+			$new_meta = wp_generate_attachment_metadata( $id, $original );
+			if ( is_wp_error( $new_meta ) || ! is_array( $new_meta ) ) {
+				( new MediaSnapshot() )->restore( $snapshot_id );
+				( new MediaSnapshot() )->delete( $snapshot_id );
+				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', __( 'Regeneration failed to produce metadata; restored pre-regeneration state.', 'wp-command-center' ) );
+			}
+			wp_update_attachment_metadata( $id, $new_meta );
+		} else {
+			$editor = wp_get_image_editor( $original );
+			if ( is_wp_error( $editor ) ) {
+				( new MediaSnapshot() )->restore( $snapshot_id );
+				( new MediaSnapshot() )->delete( $snapshot_id );
+				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( __( 'No usable image editor: %s; restored pre-regeneration state.', 'wp-command-center' ), $editor->get_error_message() ) );
+			}
+			$to_make = [];
+			foreach ( $targets as $name ) {
+				if ( isset( $subsizes[ $name ] ) ) {
+					$to_make[ $name ] = [
+						'width'  => (int) $subsizes[ $name ]['width'],
+						'height' => (int) $subsizes[ $name ]['height'],
+						'crop'   => (bool) $subsizes[ $name ]['crop'],
+					];
+				}
+			}
+			$resized = $editor->multi_resize( $to_make );
+			$meta    = wp_get_attachment_metadata( $id );
+			$meta    = is_array( $meta ) ? $meta : [];
+			if ( is_array( $resized ) ) {
+				$meta['sizes'] = array_merge( $meta['sizes'] ?? [], $resized );
+				wp_update_attachment_metadata( $id, $meta );
+			}
+		}
+
+		// Verify: every targeted size must now be present on disk.
+		$after  = $this->classify_sizes( $id );
+		$still_missing = array_values( array_intersect( $targets, $after['missing'] ) );
+		if ( ! empty( $still_missing ) ) {
+			( new MediaSnapshot() )->restore( $snapshot_id );
+			$this->delete_created_files( $before_files, $id );
+			( new MediaSnapshot() )->delete( $snapshot_id );
+			return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( __( 'Regeneration did not produce: %s. Restored pre-regeneration state.', 'wp-command-center' ), implode( ', ', $still_missing ) ) );
+		}
+
+		$created     = array_values( array_diff( $this->size_files_abs( $id ), $before_files ) );
+		$rollback_id = $this->store_rollback( $id, $snapshot_id, $created, $mode, $targets, $batch_id, $cx );
+
+		$this->audit->record( 'media_enhance.thumbnail_regenerated', [
+			'media_id' => $id, 'mode' => $mode, 'regenerated' => $targets, 'rollback_id' => $rollback_id, 'batch_id' => $batch_id ?: null,
+		] );
+
+		return [
+			'media_id'    => $id,
+			'mode'        => $mode,
+			'regenerated' => array_values( $targets ),
+			'skipped'     => $after['not_applicable'],
+			'present'     => $after['present'],
+			'verified'    => true,
+			'snapshot_id' => $snapshot_id,
+			'rollback_id' => $rollback_id,
+			'batch_id'    => $batch_id ?: null,
+		];
+	}
+
+	/**
+	 * Reverse a regeneration: delete any files created by it, then restore the
+	 * pre-regeneration snapshot byte-for-byte (original + prior size files +
+	 * metadata). Routed here by OperationExecutor::rollback and the REST
+	 * /media_enhance/rollback route. Returns the in-band error convention on
+	 * failure (`{error:true,code,message}`).
+	 */
+	public function rollback( array $payload, array $context = [] ): array {
+		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
+		if ( '' === $rollback_id ) {
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
+		}
+
+		$store = get_option( self::ROLLBACK_STORE, [] );
+		$record = null;
+		$idx    = null;
+		foreach ( $store as $i => $r ) {
+			if ( ( $r['id'] ?? '' ) === $rollback_id ) {
+				$record = $r;
+				$idx    = $i;
+				break;
+			}
+		}
+		if ( null === $record ) {
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+		}
+		if ( ! empty( $record['rollback_applied'] ) ) {
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+		}
+
+		// Delete files created by the regeneration (not part of the snapshot)…
+		foreach ( (array) ( $record['created_files'] ?? [] ) as $abs ) {
+			if ( is_string( $abs ) && is_file( $abs ) ) {
+				@unlink( $abs );
+			}
+		}
+		// …then restore the pre-regeneration bytes + metadata.
+		$restore = ( new MediaSnapshot() )->restore( (string) ( $record['snapshot_id'] ?? '' ) );
+		$verified = is_array( $restore ) && ! empty( $restore['verified'] );
+
+		$store[ $idx ]['rollback_applied'] = true;
+		update_option( self::ROLLBACK_STORE, $store );
+
+		$this->audit->record( 'media_enhance.rollback.applied', [
+			'rollback_id' => $rollback_id, 'media_id' => (int) $record['media_id'], 'verified' => $verified,
+		] );
+
+		return [
+			'action'      => 'thumbnail_regenerate_rollback',
+			'rollback_id' => $rollback_id,
+			'media_id'    => (int) $record['media_id'],
+			'verified'    => $verified,
+		];
+	}
+
+	/** Persist a rollback record; returns its id (capped FIFO). */
+	private function store_rollback( int $media_id, string $snapshot_id, array $created_files, string $mode, array $regenerated, string $batch_id, array $context ): string {
+		$store = get_option( self::ROLLBACK_STORE, [] );
+		$id    = wp_generate_uuid4();
+		$store[] = [
+			'id'               => $id,
+			'media_id'         => $media_id,
+			'snapshot_id'      => $snapshot_id,
+			'created_files'    => array_values( $created_files ),
+			'mode'             => $mode,
+			'regenerated'      => array_values( $regenerated ),
+			'batch_id'         => $batch_id ?: null,
+			'rollback_applied' => false,
+			'created_at'       => time(),
+			'session_id'       => $context['session_id'] ?? null,
+			'task_id'          => $context['task_id'] ?? null,
+		];
+		while ( count( $store ) > self::ROLLBACK_MAX ) {
+			array_shift( $store );
+		}
+		update_option( self::ROLLBACK_STORE, $store );
+		return $id;
+	}
+
+	/** Absolute paths of an attachment's current intermediate size files (excludes original). */
+	private function size_files_abs( int $id ): array {
+		$meta = wp_get_attachment_metadata( $id );
+		$base = $this->attachment_base_dir( $id );
+		$out  = [];
+		if ( is_array( $meta ) && ! empty( $meta['sizes'] ) && '' !== $base ) {
+			foreach ( $meta['sizes'] as $s ) {
+				$file = (string) ( $s['file'] ?? '' );
+				if ( '' !== $file ) {
+					$out[] = $base . '/' . $file;
+				}
+			}
+		}
+		return array_values( array_unique( $out ) );
+	}
+
+	/** Delete size files present now but absent from $before (used on failed-regen cleanup). */
+	private function delete_created_files( array $before_files, int $id ): void {
+		foreach ( array_diff( $this->size_files_abs( $id ), $before_files ) as $abs ) {
+			if ( is_string( $abs ) && is_file( $abs ) ) {
+				@unlink( $abs );
+			}
+		}
+	}
+
+	private function error( string $code, string $message ): array {
+		return [ 'error' => true, 'code' => $code, 'message' => $message ];
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────
