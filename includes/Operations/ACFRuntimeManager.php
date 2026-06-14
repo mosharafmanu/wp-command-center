@@ -7,6 +7,9 @@ defined( 'ABSPATH' ) || exit;
 
 final class ACFRuntimeManager {
 
+	/** F3.2 — recursion guard for nested-field serialization. */
+	private const MAX_FIELD_DEPTH = 10;
+
 	private AuditLog $audit;
 
 	public function __construct() {
@@ -66,7 +69,7 @@ final class ACFRuntimeManager {
 		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
 		$fields = acf_get_fields( $id );
 		$this->audit->record( 'acf.group.get', [ 'group_id' => $id ] );
-		return [ 'action' => 'acf_group_get', 'group' => $this->summarize_group( $g ), 'fields' => array_map( [ $this, 'summarize_field' ], $fields ?: [] ) ];
+		return [ 'action' => 'acf_group_get', 'group' => $this->summarize_group( $g ), 'fields' => array_map( [ $this, 'detail_field' ], $fields ?: [] ) ];
 	}
 
 	private function group_create( array $p, array $cx ): array {
@@ -193,7 +196,7 @@ final class ACFRuntimeManager {
 				if ( $f ) $fields = array_merge( $fields, $f );
 			}
 		}
-		$items = array_map( [ $this, 'summarize_field' ], $fields ?: [] );
+		$items = array_map( [ $this, 'detail_field' ], $fields ?: [] );
 		return [ 'action' => 'acf_field_list', 'fields' => $items, 'total' => count( $items ) ];
 	}
 
@@ -201,7 +204,7 @@ final class ACFRuntimeManager {
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
 		$f = acf_get_field( $key );
 		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'wp-command-center' ) );
-		return [ 'action' => 'acf_field_get', 'field' => $this->summarize_field( $f ) ];
+		return [ 'action' => 'acf_field_get', 'field' => $this->detail_field( $f ) ];
 	}
 
 	private function field_create( array $p, array $cx ): array {
@@ -689,6 +692,65 @@ final class ACFRuntimeManager {
 
 	private function summarize_field( array $f ): array {
 		return [ 'key' => $f['key'] ?? '', 'label' => $f['label'] ?? '', 'name' => $f['name'] ?? '', 'type' => $f['type'] ?? 'text', 'required' => $f['required'] ?? false, 'parent' => $f['parent'] ?? '' ];
+	}
+
+	/**
+	 * F3.2 — Recursively serialize a field including its nested structure so an
+	 * agent can read back what it created. Repeater/group fields expose their
+	 * `sub_fields`; flexible_content exposes `layouts`, each with its own
+	 * `sub_fields`. Sub-fields are stored as separate field posts parented to the
+	 * container, so acf_get_fields() is passed the field ARRAY (which carries the
+	 * post ID) to resolve them — a field KEY string resolves only field groups.
+	 *
+	 * Read-only: used by acf_group_get / acf_field_get / acf_field_list. The flat
+	 * summarize_field() is deliberately left for rollback before-state, which is
+	 * fed back to acf_update_field() and must stay a plain field array.
+	 *
+	 * @param array<string,mixed> $f     ACF field array.
+	 * @param int                 $depth Recursion guard against pathological nesting.
+	 * @return array<string,mixed>
+	 */
+	private function detail_field( array $f, int $depth = 0 ): array {
+		$out  = $this->summarize_field( $f );
+		$type = (string) ( $f['type'] ?? '' );
+
+		if ( $depth >= self::MAX_FIELD_DEPTH || ! function_exists( 'acf_get_fields' ) ) {
+			return $out;
+		}
+
+		// Repeater / group — children parented directly to this field.
+		if ( in_array( $type, [ 'repeater', 'group' ], true ) ) {
+			$children          = acf_get_fields( $f ) ?: [];
+			$out['sub_fields'] = array_values( array_map(
+				fn( $sf ) => $this->detail_field( $sf, $depth + 1 ),
+				$children
+			) );
+			return $out;
+		}
+
+		// Flexible content — children carry parent_layout; group them under each
+		// layout declared on the field, preserving layout metadata.
+		if ( 'flexible_content' === $type ) {
+			$children  = acf_get_fields( $f ) ?: [];
+			$by_layout = [];
+			foreach ( $children as $sf ) {
+				$lk                 = (string) ( $sf['parent_layout'] ?? '' );
+				$by_layout[ $lk ][] = $this->detail_field( $sf, $depth + 1 );
+			}
+			$out['layouts'] = [];
+			foreach ( (array) ( $f['layouts'] ?? [] ) as $lkey => $layout ) {
+				$key              = (string) ( $layout['key'] ?? $lkey );
+				$out['layouts'][] = [
+					'key'        => $key,
+					'name'       => $layout['name'] ?? '',
+					'label'      => $layout['label'] ?? '',
+					'display'    => $layout['display'] ?? 'block',
+					'sub_fields' => $by_layout[ $key ] ?? [],
+				];
+			}
+		}
+
+		return $out;
 	}
 
 	private function error( string $code, string $message ): array {

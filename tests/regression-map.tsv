@@ -5,7 +5,7 @@
 #   primary_suite  the single direct acceptance suite run in T0 for this group.
 #   suites         all suites for the group (T1).
 # Lines starting with # are ignored. Unknown/missing suite files are skipped at run time.
-acf	ACFRuntimeManager|ACFRegistry|AcfSeed|\bacf_manage\b|\bacf_seed\b	test-acf-group-delete-f31.sh	test-acf-runtime.sh,test-acf-runtime-step92.sh,test-acf-seed.sh,test-acf-group-delete-f31.sh
+acf	ACFRuntimeManager|ACFRegistry|AcfSeed|\bacf_manage\b|\bacf_seed\b	test-acf-group-delete-f31.sh	test-acf-runtime.sh,test-acf-runtime-step92.sh,test-acf-seed.sh,test-acf-group-delete-f31.sh,test-acf-nested-read-f32.sh
 media	MediaRuntimeManager|MediaRegistry|MediaSnapshot|MediaImport|\bmedia_manage\b|\bmedia_import\b	test-media-snapshot-step100-1.sh	test-media-snapshot-step100-1.sh,test-media-replace-step100-2.sh,test-media-runtime.sh,test-media-runtime-step90.sh,test-media-import.sh
 workflow	WorkflowRuntimeManager|\bworkflow_manage\b	test-workflow-rollback-f61.sh	test-workflow-runtime.sh,test-workflow-step97.sh,test-workflow-rollback-f61.sh,test-workflow-dataflow-f62.sh
 seo	SeoRuntimeManager|SeoProvider|SeoRegistry|\bseo_manage\b	test-seo-runtime-step91.sh	test-seo-runtime-step91.sh
