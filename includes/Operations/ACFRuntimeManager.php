@@ -101,11 +101,59 @@ final class ACFRuntimeManager {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
 		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
-		$before = $this->summarize_group( $g );
-		$this->store_rollback( $id, 'group_delete', $before, $cx );
+		$key = (string) ( $g['key'] ?? '' );
+
+		// F3.1 — capture the FULL group definition (not the stripped summary, which
+		// stored `location` as a count and could not be restored) so a rollback can
+		// recreate it. `ID` is dropped so the restore re-creates a fresh post by key.
+		$before = $g;
+		unset( $before['ID'] );
+		$rollback_id = $this->store_rollback( $id, 'group_delete', $before, $cx );
+
+		// Delete the DB post, then remove any runtime-owned acf-json file in ACF's
+		// writable save path so acf-json sync cannot silently re-register the group
+		// on the next request (the production false-success cause). Read-only
+		// theme/plugin load paths are intentionally left untouched.
 		acf_delete_field_group( $id );
-		$this->audit->record( 'acf.group.deleted', [ 'group_id' => $id ] );
-		return [ 'action' => 'acf_group_delete', 'group_id' => $id ];
+		$this->purge_owned_local_json( $key );
+
+		// F3.1 — NEVER report success unless the group is actually gone. It persists
+		// when it is resolvable in-memory (a purely-local group with no DB post) or
+		// a JSON definition remains in a load path that would resurrect it next
+		// request. Previously this handler returned success unconditionally.
+		if ( $this->group_will_persist( $key, $id ) ) {
+			return $this->error(
+				'wpcc_acf_group_delete_failed',
+				__( 'Field group still exists after delete — it is defined in a read-only local JSON/PHP source (e.g. theme acf-json) and was not removed.', 'wp-command-center' )
+			);
+		}
+
+		$this->audit->record( 'acf.group.deleted', [ 'group_id' => $id, 'key' => $key ] );
+		return [ 'action' => 'acf_group_delete', 'group_id' => $id, 'key' => $key, 'deleted' => true, 'rollback_id' => $rollback_id ];
+	}
+
+	/** Delete a runtime/UI-owned acf-json file in ACF's configured save path (only). */
+	private function purge_owned_local_json( string $key ): void {
+		if ( '' === $key || ! function_exists( 'acf_get_setting' ) ) return;
+		$save = acf_get_setting( 'save_json' );
+		if ( ! is_string( $save ) || '' === $save ) return;
+		$file = untrailingslashit( wp_normalize_path( $save ) ) . '/' . $key . '.json';
+		if ( is_file( $file ) && is_writable( $file ) ) {
+			@unlink( $file );
+		}
+	}
+
+	/** True when the group would survive the delete (in-memory local def, or JSON in any load path). */
+	private function group_will_persist( string $key, string $id ): bool {
+		if ( acf_get_field_group( $id ) ) return true;
+		if ( '' !== $key && acf_get_field_group( $key ) ) return true;
+		if ( '' !== $key && function_exists( 'acf_get_setting' ) ) {
+			foreach ( (array) acf_get_setting( 'load_json' ) as $path ) {
+				$file = untrailingslashit( wp_normalize_path( (string) $path ) ) . '/' . $key . '.json';
+				if ( is_file( $file ) ) return true;
+			}
+		}
+		return false;
 	}
 
 	private function group_duplicate( array $p, array $cx ): array {

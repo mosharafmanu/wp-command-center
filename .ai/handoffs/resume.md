@@ -2,6 +2,11 @@
 
 Last verified: June 14, 2026.
 
+## Remediation Sprint (WPCC-Acceptance-Test-Report-2026-06-14)
+
+One finding at a time; each: audit → root cause → fix → acceptance test (reproduces the exact failure) → regression → local commit. Order: F3.1, F6.1, F6.2, F2.1, F2.2, F3.2.
+- **F3.1 acf_group_delete false-success — FIXED locally.** Root cause: handler returned success unconditionally (never verified, no rollback_id); on acf-json-synced installs the deleted DB post resurrected from the JSON file next request. Fix: delete DB post → purge runtime-owned acf-json in ACF save path → **verify gone** (in-memory + all load-path JSON); report `wpcc_acf_group_delete_failed` if it would persist from a read-only source; return `deleted:true`+`rollback_id`; full group captured for restore. `test-acf-group-delete-f31.sh` 15/15. Next = F6.1.
+
 ## Runtime Roadmap Progress Log (WPCC-RUNTIME-ROADMAP.md)
 
 Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
