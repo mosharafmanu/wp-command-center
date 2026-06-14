@@ -163,18 +163,37 @@ Notes:
 
 ---
 
-## Estimated time savings
+## Measured runtime (2026-06-14, serial, one machine)
 
-Analytical (anchor: full serial ≈ 8–12 min; exact numbers should be measured with
-the tiers in place):
+A timed full pass recorded per-suite duration:
+
+- **Full serial wall time: 1,910 s (~32 min)** for 85 suites (~3,400 assertions) —
+  *materially worse than the earlier 8–12 min guess; the suite is heavier and
+  `wp eval` / network costs dominate.*
+- **Slowest 9 suites (≈40% of total time):** `final-validation` 76s,
+  `woocommerce-runtime` 69s, `patch-lifecycle` 69s, `structured-wp-cli-runtime`
+  59s, `production-validation` 55s, `enterprise-hardening` 55s, `media-runtime`
+  53s, `user-runtime` 48s, `theme-runtime` 48s. Most are heavy validators or
+  network/`wp eval`-dense — exactly the quarantine/network sets.
+- **A new bottleneck surfaced: test isolation.** The timed run reported 30
+  failures (not 24). The 6 extra were **environment drift**: `test-theme-runtime`
+  left the active theme switched to `mosharaf-core` (acf-json source-of-truth)
+  without restoring it → acf-json auto-sync turned on → `acf-group-delete-f31`
+  (5) and `site-builder-step95` (1) failed. Restoring the theme → both green.
+  *This is a real flakiness source: a late-alphabet test corrupts shared state
+  for the next run's early tests.* Recommendation: theme/option-mutating suites
+  must snapshot+restore, and/or the T2 runner should restore active theme +
+  flush ACF local store between suites.
+
+## Estimated time savings (now anchored to the 1,910 s measurement)
 
 | Workflow today | Time | With tiers | Time |
 |---|---|---|---|
-| Per remediation fix | full suite ~**8–12 min** | T0 then T1 | ~**0.5 + 1.5 = ~2 min** |
-| Iterating on one runtime (×5) | ~**40–60 min** | 5 × T0/T1 | ~**10 min** |
-| Pre-deploy | full ~10 min | T2 parallel | ~**3–5 min** |
+| Per remediation fix | full ~**32 min** | T0 then T1 | ~**0.3 + 1.5 = ~2 min** |
+| Iterating on one runtime (×5) | ~**2.5+ hours** | 5 × T0/T1 | ~**10 min** |
+| Pre-deploy | full ~**32 min** serial | T2 parallel `-j6` | ~**6–10 min** |
 
-**Per-fix dev-loop reduction: ~80–85%** (~10 min → ~2 min), plus removal of the
+**Per-fix dev-loop reduction: ~90%+** (~32 min → ~2 min), plus removal of the
 24-failure noise so green/red is unambiguous. The full suite still runs — once,
 before deploy — so coverage is unchanged.
 
@@ -204,5 +223,46 @@ before deploy — so coverage is unchanged.
 
 ---
 
-*No code written. This is the strategy; implementation awaits approval. The
-current full-suite discipline remains in force until the tiers exist.*
+---
+
+## Implementation (built)
+
+The tiered runner is implemented:
+
+| File | Purpose |
+|---|---|
+| `tests/run.sh` | Tiered runner: `--tier T0\|T1\|T2`, `--changed` (auto-select from `git diff` names+content), `--runtime NAME`, `--files`/`--content` (testable injection), `--list`, `-j N` parallel. Lints changed PHP; runs the selected suites; **diffs failures against the baseline to report net-new automatically**; retries network suites once. |
+| `tests/regression-map.tsv` | Selection manifest: `group → trigger_regex → primary_suite → suites`. Triggers match source-file paths **and** operation ids, so a new `acf_manage` route/registry block selects the ACF group even though the edit is in `RestApi.php`/`OperationRegistry.php` (the wiring-fan-out caveat from §6, solved). |
+| `tests/regression-quarantine.txt` | Suites excluded from T0/T1 (chronic 6 + heavy validators). Still run in T2. |
+| `tests/regression-baseline.tsv` | The 24 known failures (suite→count). Powers automatic net-new computation. |
+| `tests/test-suite-selection.sh` | **Acceptance test (43 assertions) proving selection is correct**: per-runtime isolation, op-id selection, core fan-out, T0=primary-only/network-free, T2=all suites, quarantine never in T1 but present in T2, `--runtime` forcing. |
+
+### Measured tier times (demo, theme restored)
+- **T0 `--runtime acf`: 14 s** (15/15, net-new 0) — 1 primary suite + lint.
+- **T1 `--runtime workflow`: 145 s** (215/215, net-new 0) — 7 suites (4 workflow +
+  3 core-light).
+- vs **full serial 1,910 s** → the dev loop drops from ~32 min to **~0.25–2.5 min**
+  (≈**92–99%** less per check), while T2 still covers everything before deploy.
+
+### Usage
+
+```
+tests/run.sh --tier T0 --changed      # pre-edit: lint + primary suite of changed runtime  (<30s)
+tests/run.sh --tier T1 --changed      # pre-commit: runtime suites + core/cap/MCP           (1-2 min)
+tests/run.sh --tier T2 -j 6           # pre-deploy: full suite, parallel, net-new vs baseline
+tests/run.sh --tier T1 --runtime acf  # force a runtime without a file change
+tests/run.sh --tier T1 --changed --list   # show what WOULD run (no execution)
+```
+
+Exit code is non-zero only on **net-new** failures or a lint failure — the chronic
+24 baseline does not fail the run, so "0 net-new" is computed, not eyeballed.
+
+### Safety / coverage preserved
+- T2 still runs **every** suite (incl. quarantine) before deploy.
+- Quarantine is excluded only from the local T0/T1 loop; CI/T2 still executes it
+  and the baseline diff still catches any *new* failure inside those suites.
+- Suite selection is itself covered by an acceptance test, so the map can't
+  silently drift.
+
+*Strategy implemented; the regression-strategy task can later layer on parallel
+CI sharding and a true PHPUnit unit tier (registries/resolvers/guards).*

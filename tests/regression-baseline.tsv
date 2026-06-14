@@ -1,0 +1,9 @@
+# Known pre-existing failures (the "24 baseline"). Columns: suite <TAB> failing_assertions.
+# T2/full uses this to compute net-new failures automatically (suite_fail - baseline,
+# floored at 0; any failure in a suite not listed here counts fully as net-new).
+test-ai-client-layer.sh	1
+test-ai-integration-ux.sh	3
+test-claude-integration.sh	4
+test-cursor-certification.sh	2
+test-documentation-consistency.sh	11
+test-security-redaction.sh	3

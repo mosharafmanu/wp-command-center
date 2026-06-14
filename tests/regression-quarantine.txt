@@ -1,0 +1,23 @@
+# Suites excluded from the local T0/T1 tiers (they still run in T2/full + CI).
+# Two reasons: (a) chronic pre-existing failures that are not runtime logic, and
+# (b) heavy whole-platform validators that don't pinpoint a runtime and/or flake
+# back-to-back. T2 (full) still runs these; net-new is measured vs the baseline.
+#
+# (a) Chronic pre-existing failures (the 24, in 6 suites)
+test-ai-client-layer.sh
+test-ai-integration-ux.sh
+test-claude-integration.sh
+test-cursor-certification.sh
+test-documentation-consistency.sh
+test-security-redaction.sh
+# (b) Heavy / whole-platform validators (CI + pre-deploy only)
+test-ai-client-certification.sh
+test-enterprise-hardening.sh
+test-health-verification.sh
+test-token-efficiency.sh
+test-final-validation.sh
+test-production-validation.sh
+test-real-site-validation.sh
+test-e2e-runtime.sh
+test-cleanup.sh
+test-mcp-tool-schema-compliance.sh

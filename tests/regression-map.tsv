@@ -1,0 +1,38 @@
+# WPCC tiered-regression selection manifest.
+# Columns (TAB-separated): group <TAB> trigger_regex <TAB> primary_suite <TAB> suites(comma-sep)
+#   trigger_regex  ERE matched against the change signal (changed file paths + diff
+#                  content + an operation id). Match -> the group's suites are selected.
+#   primary_suite  the single direct acceptance suite run in T0 for this group.
+#   suites         all suites for the group (T1).
+# Lines starting with # are ignored. Unknown/missing suite files are skipped at run time.
+acf	ACFRuntimeManager|ACFRegistry|AcfSeed|\bacf_manage\b|\bacf_seed\b	test-acf-group-delete-f31.sh	test-acf-runtime.sh,test-acf-runtime-step92.sh,test-acf-seed.sh,test-acf-group-delete-f31.sh
+media	MediaRuntimeManager|MediaRegistry|MediaSnapshot|MediaImport|\bmedia_manage\b|\bmedia_import\b	test-media-snapshot-step100-1.sh	test-media-snapshot-step100-1.sh,test-media-replace-step100-2.sh,test-media-runtime.sh,test-media-runtime-step90.sh,test-media-import.sh
+workflow	WorkflowRuntimeManager|\bworkflow_manage\b	test-workflow-rollback-f61.sh	test-workflow-runtime.sh,test-workflow-step97.sh,test-workflow-rollback-f61.sh,test-workflow-dataflow-f62.sh
+seo	SeoRuntimeManager|SeoProvider|SeoRegistry|\bseo_manage\b	test-seo-runtime-step91.sh	test-seo-runtime-step91.sh
+woocommerce	WooCommerceRuntimeManager|WooProductSeed|\bwoocommerce_manage\b|\bwoo_product_seed\b	test-woocommerce-runtime.sh	test-woocommerce-runtime.sh,test-woocommerce-product-step93.sh,test-woocommerce-order-step94.sh,test-woo-product-seed.sh
+elementor	ElementorRuntimeManager|ElementorRegistry|\belementor_manage\b	test-elementor-step96.sh	test-elementor-step96.sh
+content	ContentManager|ContentSeed|\bcontent_manage\b|\bcontent_seed\b	test-content-runtime.sh	test-content-runtime.sh,test-content-seed.sh
+sitebuilder	SiteBuilderRuntimeManager|\bsite_builder_manage\b	test-site-builder-step95.sh	test-site-builder-step95.sh
+menu	MenuRuntimeManager|\bmenu_manage\b	test-menu-runtime.sh	test-menu-runtime.sh
+widgets	WidgetsRuntimeManager|\bwidgets_manage\b	test-widgets-runtime.sh	test-widgets-runtime.sh
+cpt	CPTRuntimeManager|\bcpt_manage\b	test-cpt-runtime.sh	test-cpt-runtime.sh
+comments	CommentsRuntimeManager|\bcomments_manage\b	test-comments-runtime.sh	test-comments-runtime.sh
+forms	FormsRuntimeManager|Cf7Seed|\bforms_manage\b|\bcf7_seed\b	test-forms-runtime.sh	test-forms-runtime.sh,test-cf7-seed.sh
+user	UserManager|\buser_manage\b	test-user-runtime.sh	test-user-runtime.sh
+option	OptionManager|\boption_manage\b	test-option-runtime.sh	test-option-runtime.sh
+settings	SettingsRuntimeManager|\bsettings_manage\b	test-site-settings-runtime.sh	test-site-settings-runtime.sh
+plugin	PluginManager|\bplugin_manage\b	test-plugin-runtime.sh	test-plugin-runtime.sh,test-plugin-active-after-update.sh
+theme	ThemeManager|\btheme_manage\b	test-theme-runtime.sh	test-theme-runtime.sh
+updates	SafeUpdates|\bsafe_updates\b	test-safe-updates-hardening.sh	test-safe-updates.sh,test-safe-updates-hardening.sh,test-plugin-active-after-update.sh
+patch	PatchOperation|RollbackOperation|PatchSystem/|\bpatch_manage\b|\brollback_manage\b	test-patch-lifecycle.sh	test-file-patch-bridge.sh,test-patch-lifecycle.sh,test-patch-header-guard.sh
+snapshot	SnapshotManager|\bsnapshot_manage\b	test-snapshot-runtime.sh	test-snapshot-runtime.sh
+search	SearchRuntimeManager|SearchReplace|\bsearch_manage\b|\bsafe_search_replace\b	test-search-runtime.sh	test-search-runtime.sh,test-safe-search-replace.sh
+bulk	BulkRuntimeManager|\bbulk_manage\b	test-bulk-runtime.sh	test-bulk-runtime.sh
+database	DatabaseInspector|DatabaseExport|DatabaseRegistry|\bdatabase_inspect\b	test-database-inspection-runtime.sh	test-database-inspection-runtime.sh
+reporting	ReportingRuntimeManager|\breport_manage\b	test-reporting-step98.sh	test-reporting-step98.sh
+system	SystemInfoRuntime|WpCliBridge|\bsystem_info\b|\bwp_cli_bridge\b	test-system-info.sh	test-system-info.sh,test-structured-wp-cli-runtime.sh,test-wp-cli-bridge.sh
+security	SecurityModeManager|ApprovalRuntimeManager|DestructiveGuard|OperationManager|Security/	test-security-modes.sh	test-security-modes.sh,test-security-mode-validation.sh,test-approval-enforcement.sh,test-mcp-approval-runtime.sh,test-destructive-guardrails.sh,test-mcp-scope-enforcement.sh
+capability	CapabilityRegistry|CapabilityManager|\bcapability_manage\b	test-capability-runtime.sh	test-capability-runtime.sh,test-capability-bootstrap.sh
+recommendations	Recommend	test-recommendations.sh	test-recommendations.sh,test-recommendation-workflow.sh
+mcp	McpServerRuntime|McpServer|/mcp	test-mcp-runtime.sh	test-mcp-runtime.sh,test-mcp-error-surface.sh,test-mcp-tool-schema-compliance.sh,test-mcp-scope-enforcement.sh
+core	OperationExecutor|OperationRegistry|AiAgent/RestApi	test-operations-registry.sh	test-operations-registry.sh,test-operation-requests.sh,test-operation-retry.sh,test-operation-worker.sh,test-agent-manifest.sh,test-agent-actions.sh
