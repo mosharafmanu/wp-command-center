@@ -133,7 +133,13 @@ final class OperationExecutor {
 		// effective risk level, auto-create an approval request and return a
 		// structured pending_approval response instead of a -32000 error. The AI
 		// receives enough information to poll for completion without manual steps.
-		if ( ! $is_queued && ! $is_requested ) {
+		// STEP 97 — Single-approval workflows. A step running inside an already
+		// approved workflow execution (`within_workflow`) skips the per-step
+		// approval gate: the whole plan was reviewed and approved as one unit by
+		// the `workflow_execute` approval. The destructive-confirmation guard (1c)
+		// and capability checks above still apply to every step (defense in depth).
+		$within_workflow = ! empty( $context['within_workflow'] );
+		if ( ! $is_queued && ! $is_requested && ! $within_workflow ) {
 			$action         = (string) ( $payload['action'] ?? '' );
 			$effective_risk = SecurityModeManager::effective_risk( $operation, $action );
 
@@ -272,6 +278,34 @@ final class OperationExecutor {
 		] ) );
 
 		return $normalized;
+	}
+
+	/**
+	 * STEP 97 — Unified rollback dispatcher. Routes a rollback request to the
+	 * runtime manager that owns the operation by reusing the handler resolver, so
+	 * any operation whose manager exposes a public `rollback()` can be reversed by
+	 * `{ operation_id, rollback_id }` without each caller knowing the manager. Used
+	 * by the Workflow runtime to auto-reverse completed steps on failure.
+	 */
+	public function rollback( string $operation_id, array $payload, array $context = [] ): array {
+		$handler = $this->resolve_handler( $operation_id );
+		if ( ! $handler || ! method_exists( $handler, 'rollback' ) ) {
+			return [
+				'success'      => false,
+				'operation_id' => $operation_id,
+				'error'        => true,
+				'code'         => 'wpcc_rollback_unsupported',
+				'message'      => __( 'Operation does not support rollback.', 'wp-command-center' ),
+			];
+		}
+		$result = $handler->rollback( $payload, $context );
+		$ok     = is_array( $result ) && empty( $result['error'] );
+		( new AuditLog() )->record( 'operation.rollback.dispatched', [
+			'operation_id' => $operation_id,
+			'rollback_id'  => $payload['rollback_id'] ?? null,
+			'success'      => $ok,
+		] );
+		return array_merge( [ 'success' => $ok, 'operation_id' => $operation_id ], is_array( $result ) ? $result : [] );
 	}
 
 	/**

@@ -130,7 +130,7 @@ assert_true "timeline: workflow operation completed" "$(echo "$TL" | jq -r 'any(
 # ── 18. Manifest operations list ──
 echo "== 18. Manifest Operations =="
 assert_true "manifest: workflow_manage in ops" "$(echo "$MANIFEST" | jq -r 'any(.operations[]; .id == "workflow_manage")')"
-assert_eq "manifest: 9 supported actions" "9" "$(echo "$MANIFEST" | jq -r '.operations[]|select(.id=="workflow_manage")|.parameters[]|select(.name=="action")|.description' | grep -o 'workflow_[a-z]*' | wc -l | tr -d ' ')"
+assert_eq "manifest: 10 supported actions" "10" "$(echo "$MANIFEST" | jq -r '.operations[]|select(.id=="workflow_manage")|.parameters[]|select(.name=="action")|.description' | grep -o 'workflow_[a-z]*' | wc -l | tr -d ' ')"
 
 # ── 19. Error catalog ──
 echo "== 19. Error Catalog =="

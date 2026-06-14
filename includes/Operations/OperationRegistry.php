@@ -591,7 +591,7 @@ final class OperationRegistry {
 			'workflow_manage' => [
 				'id'          => 'workflow_manage',
 				'title'       => __( 'Workflow Runtime', 'wp-command-center' ),
-				'description' => __( 'Create, list, get, update, delete, execute, import, and export multi-step operation workflows. Supports executing any registered operation (e.g. database_inspect) within workflow steps. History tracking, MCP discovery, and timeline integration.', 'wp-command-center' ),
+				'description' => __( 'Create, list, get, update, delete, execute, import, export, and roll back multi-step operation workflows. A single workflow_execute approval covers every step (single approval); each step records an execution timeline (start/finish/duration) and its rollback_id (rollback awareness). The on_failure policy controls recovery — stop (default), continue, or rollback (auto-reverse completed steps). workflow_rollback reverses a past execution by execution_id. Supports executing any registered operation within steps.', 'wp-command-center' ),
 				'risk_level'  => 'high',
 				'action_risks' => [
 					'workflow_list'    => 'diagnostic',
@@ -603,11 +603,15 @@ final class OperationRegistry {
 					'workflow_delete'  => 'high',
 					'workflow_execute' => 'high',
 					'workflow_import'  => 'high',
+					'workflow_rollback'=> 'high',
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Workflow action: workflow_list, workflow_get, workflow_create, workflow_update, workflow_delete, workflow_execute, workflow_import, workflow_export, workflow_history.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Workflow action: workflow_list, workflow_get, workflow_create, workflow_update, workflow_delete, workflow_execute, workflow_import, workflow_export, workflow_history, workflow_rollback.' ],
 					[ 'name' => 'workflow_id', 'type' => 'string', 'required' => false, 'description' => 'Workflow identifier (required for get, update, delete, execute, export).' ],
+					[ 'name' => 'steps', 'type' => 'array', 'required' => false, 'description' => 'Ordered steps for create/update: each is { operation_id, payload }.' ],
+					[ 'name' => 'on_failure', 'type' => 'string', 'required' => false, 'enum' => [ 'stop', 'continue', 'rollback' ], 'description' => 'workflow_execute failure policy: stop (default), continue, or rollback (auto-reverse completed steps).' ],
+					[ 'name' => 'execution_id', 'type' => 'string', 'required' => false, 'description' => 'Execution identifier returned by workflow_execute (required for workflow_rollback).' ],
 				],
 				'available'         => true,
 			],
