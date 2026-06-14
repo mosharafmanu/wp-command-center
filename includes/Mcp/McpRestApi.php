@@ -45,6 +45,10 @@ final class McpRestApi {
 			return new \WP_REST_Response( [ 'jsonrpc' => '2.0', 'error' => [ 'code' => -32700, 'message' => 'Parse error' ], 'id' => null ], 400 );
 		}
 
+		// F2.2 — Cap synchronous execution below the MCP client timeout so the
+		// server cannot keep writing after the client has abandoned the request.
+		McpServerRuntime::apply_time_budget( $body['id'] ?? null );
+
 		$header  = $request->get_header( 'authorization' );
 		$matches = [];
 		$tid     = '';

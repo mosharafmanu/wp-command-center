@@ -25,12 +25,129 @@ final class McpServerRuntime {
 	const NAMESPACE = 'wp-command-center/v1';
 	const MCP_VERSION = '2024-11-05';
 
+	/**
+	 * F2.2 — Synchronous execution-time budget.
+	 *
+	 * MCP clients (Claude Desktop, Cursor) abandon a request at ~240s, while PHP
+	 * max_execution_time is often far higher (480s on the production host).
+	 * Without a server-side budget, an op running in that 240–480s window keeps
+	 * executing — and writing — after the client has already reported failure: a
+	 * silent partial write. We cap synchronous MCP execution just under the
+	 * client timeout so the failure is mutual and clean; genuinely long work
+	 * belongs on the OperationQueue/worker, not a synchronous tool call.
+	 */
+	const MCP_CLIENT_TIMEOUT = 240; // Observed MCP client abandonment (seconds).
+	const MCP_TIME_BUDGET    = 200; // Default server budget (< client timeout).
+
 	private AuditLog $audit;
 	private Redactor $redactor;
 
 	public function __construct() {
 		$this->audit    = new AuditLog();
 		$this->redactor = new Redactor();
+	}
+
+	// ── F2.2 — Synchronous execution-time budget ──
+
+	/**
+	 * Effective synchronous execution budget, in seconds.
+	 *
+	 * Filterable via `wpcc_mcp_time_budget`; return 0 to disable capping entirely
+	 * (escape hatch for hosts that prefer PHP's own limit). The result is clamped
+	 * to stay strictly below the client timeout so a structured timeout response
+	 * still has a chance to reach the client before it gives up.
+	 */
+	public static function time_budget(): int {
+		$budget = (int) apply_filters( 'wpcc_mcp_time_budget', self::MCP_TIME_BUDGET );
+		if ( $budget <= 0 ) {
+			return 0; // Capping disabled.
+		}
+		return min( $budget, self::MCP_CLIENT_TIMEOUT - 1 );
+	}
+
+	/**
+	 * Cap the current request's execution time at the synchronous budget so the
+	 * server cannot keep writing after the MCP client has abandoned the request.
+	 *
+	 * Only ever LOWERS the limit: a host that already caps execution below the
+	 * budget (e.g. 30s shared hosting) is left untouched — its silent-write
+	 * window is already closed. Also registers a shutdown handler that turns a
+	 * timeout fatal into a clean, AI-readable error plus a terminal audit event,
+	 * so a timed-out op no longer reads as "stuck started" in reporting (F7.3).
+	 *
+	 * @param mixed $id JSON-RPC request id, echoed back on a timeout response.
+	 */
+	public static function apply_time_budget( $id = null ): void {
+		$budget = self::time_budget();
+		if ( $budget <= 0 || ! function_exists( 'set_time_limit' ) ) {
+			return;
+		}
+
+		$current = (int) ini_get( 'max_execution_time' );
+		// 0 = unlimited (CLI / some hosts) → always cap. Otherwise only lower.
+		if ( 0 === $current || $current > $budget ) {
+			@set_time_limit( $budget ); // phpcs:ignore WordPress.PHP.NoSilencedErrors -- disabled-function safe.
+		}
+
+		register_shutdown_function( [ self::class, 'handle_timeout_shutdown' ], $id );
+	}
+
+	/**
+	 * Shutdown handler: if the request died on the execution-time limit, record a
+	 * terminal audit event and (best-effort) emit a structured timeout response.
+	 *
+	 * The audit event is the guaranteed behavior; emitting clean JSON is
+	 * best-effort because WP's own fatal handler may have already sent output.
+	 *
+	 * @param mixed $id JSON-RPC request id.
+	 */
+	public static function handle_timeout_shutdown( $id = null ): void {
+		$err = error_get_last();
+		if ( null === $err || E_ERROR !== (int) ( $err['type'] ?? 0 ) ) {
+			return;
+		}
+		if ( false === stripos( (string) ( $err['message'] ?? '' ), 'Maximum execution time' ) ) {
+			return;
+		}
+
+		( new AuditLog() )->record( 'mcp.timeout', [
+			'source' => 'mcp',
+			'budget' => self::time_budget(),
+		] );
+
+		if ( headers_sent() ) {
+			return;
+		}
+		status_header( 200 );
+		header( 'Content-Type: application/json; charset=utf-8' );
+		echo wp_json_encode( self::timeout_response( $id ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * Structured JSON-RPC body for a synchronous-budget timeout. Mirrors the
+	 * isError tool-result shape so an agent reads code + message as tool output.
+	 *
+	 * @param mixed $id JSON-RPC request id.
+	 * @return array<string,mixed>
+	 */
+	public static function timeout_response( $id = null ): array {
+		$message = sprintf(
+			/* translators: %d: seconds */
+			__( 'Operation exceeded the %ds synchronous execution budget. Queue long-running work instead of calling it synchronously.', 'wp-command-center' ),
+			self::time_budget()
+		);
+		return [
+			'jsonrpc' => '2.0',
+			'id'      => $id,
+			'result'  => [
+				'content' => [ [ 'type' => 'text', 'text' => wp_json_encode( [
+					'isError' => true,
+					'code'    => 'wpcc_operation_timeout',
+					'message' => $message,
+				] ) ] ],
+				'isError' => true,
+			],
+		];
 	}
 
 	/**

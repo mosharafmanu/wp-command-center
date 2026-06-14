@@ -387,6 +387,7 @@ final class RestApi {
 		'wpcc_missing_operation'            => 'Operation name is required.',
 		'wpcc_capability_denied'            => 'Operation denied due to missing capability.',
 		'wpcc_approval_required'            => 'Operation requires approval via the request workflow.',
+		'wpcc_operation_timeout'            => 'Operation exceeded the synchronous execution budget; queue long-running work instead.',
 	];
 
 	/**
