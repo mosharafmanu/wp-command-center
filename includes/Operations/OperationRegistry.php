@@ -882,6 +882,27 @@ final class OperationRegistry {
 				],
 				'available'         => true,
 			],
+			// ── STEP 100.3 — Media Enhancement runtime (foundation, read-only) ──
+			'media_enhance' => [
+				'id'                => 'media_enhance',
+				'title'             => __( 'Media Enhancement Runtime', 'wp-command-center' ),
+				'description'       => __( 'Read-only media-enhancement diagnostics: media_enhance_capabilities (GD/Imagick + WebP/AVIF encode probe), image_sizes_list (all registered sizes incl. theme add_image_size), image_size_usage_audit (per-size on-disk coverage across the library), image_size_recommendations (unused/oversized sizes), image_size_verify (which registered sizes exist for one attachment). Foundation for later thumbnail/WebP/optimization sub-steps. No writes, no rollback.', 'wp-command-center' ),
+				'risk_level'        => 'diagnostic',
+				'action_risks'      => [
+					'media_enhance_capabilities'  => 'diagnostic',
+					'image_sizes_list'            => 'diagnostic',
+					'image_size_usage_audit'      => 'diagnostic',
+					'image_size_recommendations'  => 'diagnostic',
+					'image_size_verify'           => 'diagnostic',
+				],
+				'requires_approval' => false,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'media_enhance_capabilities', 'image_sizes_list', 'image_size_usage_audit', 'image_size_recommendations', 'image_size_verify' ], 'description' => 'The diagnostic to run.' ],
+					[ 'name' => 'media_id', 'type' => 'integer', 'required' => false, 'description' => 'Attachment ID (required for image_size_verify).' ],
+					[ 'name' => 'limit', 'type' => 'integer', 'required' => false, 'description' => 'Attachments to scan for library-wide audits (default 500, max 5000).' ],
+				],
+				'available'         => true,
+			],
 		];
 
 		// B6: Add optional `reason` param to any write operation so AI agents can

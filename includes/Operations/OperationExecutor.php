@@ -389,6 +389,8 @@ final class OperationExecutor {
 				return new ElementorRuntimeManager();
 			case 'report_manage':
 				return new ReportingRuntimeManager();
+			case 'media_enhance':
+				return new MediaEnhancementRuntimeManager();
 		}
 
 		return null;

@@ -102,6 +102,8 @@ final class CapabilityRegistry {
 		'site_builder_manage' => self::CAP_CONTENT_MANAGE,
 		// STEP 96 — Elementor edits page widget content; gated like content.
 		'elementor_manage'    => self::CAP_CONTENT_MANAGE,
+		// STEP 100.3 — Media Enhancement runtime; gated like media.
+		'media_enhance'       => self::CAP_MEDIA_MANAGE,
 		// Seed operations are unrestricted (read-only/low-risk):
 		// 'content_seed', 'acf_seed', 'cf7_seed', 'woo_product_seed'
 		// They do not require explicit capability assignment.
