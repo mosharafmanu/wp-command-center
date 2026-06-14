@@ -2,6 +2,15 @@
 
 Last verified: June 14, 2026.
 
+## Tiered Regression Runner (`d0052c3`, 2026-06-14)
+
+Local remediation no longer runs all 85 suites. `tests/run.sh --tier T0|T1|T2 [--changed|--runtime NAME]`:
+- **T0** (~14s): lint changed PHP + the changed runtime's primary acceptance suite (network-free).
+- **T1** (~1–2.5m): runtime suites + `operations-registry`+`capability-runtime`+`mcp-error-surface`.
+- **T2**: full 85 (pre-deploy), `-jN` parallel, net-new vs `tests/regression-baseline.tsv` (the 24).
+- Selection: `tests/regression-map.tsv` (file-path AND operation-id triggers); `tests/regression-quarantine.txt` excludes chronic-6 + heavy validators from T0/T1. Proven by `tests/test-suite-selection.sh` (43/43). Measured full serial = **1910s (~32m)**.
+- **Test-isolation finding:** `test-theme-runtime` leaves the active theme switched (mosharaf-core) without restoring → acf-json sync on → `acf-group-delete-f31`+`site-builder-step95` flake. Restore theme to `hello-elementor` to fix. (Env restored after this work.) Recommend theme/option-mutating suites snapshot+restore.
+
 ## Remediation Sprint (WPCC-Acceptance-Test-Report-2026-06-14)
 
 One finding at a time; each: audit → root cause → fix → acceptance test (reproduces the exact failure) → regression → local commit. Order: F3.1, F6.1, F6.2, F2.1, F2.2, F3.2.
