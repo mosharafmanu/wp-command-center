@@ -2,21 +2,42 @@
 
 Last verified: June 14, 2026.
 
+## ►► SESSION STATE — START HERE (2026-06-14)
+
+- **Production:** runs roadmap **STEP 98** (`586f38c` deployed & verified; 38 ops/MCP tools; Developer mode). All work since is **local-only, NOT pushed** (10 unpushed commits; owner deploys).
+- **Active remediation sprint** against `WPCC-Acceptance-Test-Report-2026-06-14.md`: **F3.1 ✅ `13bf288`**, **F6.1 ✅ `c3bebbe`**, **F6.2 ✅ `9aa5f81`** done. **Next = F2.1 (SEO timeout)** — NOT started.
+- **STEP 100** (Media Enhancement): **P1 done** — 100.1 `a2505a1`, 100.2 `998ad6f`. **Next runtime step after remediation = 100.3** (`media_enhance` op). Design `b77d1c5`, plan `798e1e6`.
+- **Regression workflow:** use `tests/run.sh` tiers (below), not the raw 85-suite loop.
+- **Dev env must be `hello-elementor` theme** (a theme test can drift it to `mosharaf-core` → acf-json flakes). Verify: `wp eval 'echo get_option("stylesheet");'`.
+- **Git:** branch `main`; ignore working-tree noise (`.claude/scheduled_tasks.lock`, `artifacts/step-36-*`, untracked root `WPCC-RUNTIME-ROADMAP.md`).
+
 ## Tiered Regression Runner (`d0052c3`, 2026-06-14)
 
-Local remediation no longer runs all 85 suites. `tests/run.sh --tier T0|T1|T2 [--changed|--runtime NAME]`:
-- **T0** (~14s): lint changed PHP + the changed runtime's primary acceptance suite (network-free).
-- **T1** (~1–2.5m): runtime suites + `operations-registry`+`capability-runtime`+`mcp-error-surface`.
-- **T2**: full 85 (pre-deploy), `-jN` parallel, net-new vs `tests/regression-baseline.tsv` (the 24).
-- Selection: `tests/regression-map.tsv` (file-path AND operation-id triggers); `tests/regression-quarantine.txt` excludes chronic-6 + heavy validators from T0/T1. Proven by `tests/test-suite-selection.sh` (43/43). Measured full serial = **1910s (~32m)**.
-- **Test-isolation finding:** `test-theme-runtime` leaves the active theme switched (mosharaf-core) without restoring → acf-json sync on → `acf-group-delete-f31`+`site-builder-step95` flake. Restore theme to `hello-elementor` to fix. (Env restored after this work.) Recommend theme/option-mutating suites snapshot+restore.
+Local remediation no longer runs all 85 suites. `tests/run.sh --tier T0|T1|T2 [--changed|--runtime NAME] [-j N] [--list]`:
+
+| Tier | When to use | What runs | Measured |
+|---|---|---|---|
+| **T0** | every edit / pre-commit smoke | lint changed PHP + the changed runtime's primary acceptance suite (network-free) | ~14s |
+| **T1** | before each local commit | runtime suites + `operations-registry` + `capability-runtime` + `mcp-error-surface` | ~1–2.5m |
+| **T2** | ONLY before push/deploy | full 85, `-jN` parallel, net-new vs baseline | full (~32m serial / ~6–10m `-j6`) |
+
+Commands: `tests/run.sh --tier T0 --changed` · `--tier T1 --changed` (or `--runtime NAME`) · `--tier T2 -j6` · add `--list` to preview selection. Exit code is non-zero only on **net-new** failures or lint failure (the chronic 24 baseline is OK).
+- Selection map `tests/regression-map.tsv` (matches file paths AND operation ids, so a new `x_manage` route/registry block still selects that runtime); `tests/regression-quarantine.txt` excludes chronic-6 + heavy validators from T0/T1 (still run in T2); baseline `tests/regression-baseline.tsv` (the 24). Selection proven by `tests/test-suite-selection.sh` (43/43). Full design + measurements: `.ai/REGRESSION-STRATEGY-AUDIT.md`.
+- **Known test-isolation flake:** `test-theme-runtime` leaves the active theme as `mosharaf-core` without restoring → acf-json sync on → `acf-group-delete-f31` + `site-builder-step95` fail. Fix = `wp theme activate hello-elementor`. (Env restored after this work.) Recommend theme/option-mutating suites snapshot+restore.
 
 ## Remediation Sprint (WPCC-Acceptance-Test-Report-2026-06-14)
 
 One finding at a time; each: audit → root cause → fix → acceptance test (reproduces the exact failure) → regression → local commit. Order: F3.1, F6.1, F6.2, F2.1, F2.2, F3.2.
 - **F3.1 acf_group_delete false-success — FIXED locally (`13bf288`).** Root cause: handler returned success unconditionally (never verified, no rollback_id); on acf-json-synced installs the deleted DB post resurrected from the JSON file next request. Fix: delete DB post → purge runtime-owned acf-json in ACF save path → **verify gone** (in-memory + all load-path JSON); report `wpcc_acf_group_delete_failed` if it would persist from a read-only source; return `deleted:true`+`rollback_id`; full group captured for restore. `test-acf-group-delete-f31.sh` 15/15.
 - **F6.1 workflow on_failure:rollback no-op — FIXED locally (`c3bebbe`).** Root cause (my STEP 97 code): a step was only recorded reversible if its sub-op returned a `rollback_id`; `content_create` returns none, so create steps were skipped on rollback → orphaned posts. Fix: capture each step's `created` resource IDs (from executor `created`), mark such steps `rollbackable`, and on rollback reverse via dispatcher (rollback_id) **and/or** delete created posts, then **verify** they're gone (status `rolled_back` only when all verified, else `rollback_incomplete`). `workflow_rollback` rebuilds reversible set from created IDs too. `test-workflow-rollback-f61.sh` 16/16.
-- **F6.2 workflow inter-step data flow — FIXED locally.** Root cause: no template engine; step payloads ran verbatim so `{{steps.0.result.content_id}}` reached the sub-op as a literal. Fix: `resolve_refs()` recursively resolves `{{steps.N.path}}` against prior steps' normalized outputs before each step runs — whole-value refs preserve type (int post ID), inline refs interpolate; unresolvable refs fail the step with `wpcc_unresolved_reference` (no silent literal). `test-workflow-dataflow-f62.sh` 13/13 (create→update→publish via refs, interpolation, bad-ref→rollback, MCP). Next = F2.1.
+- **F6.2 workflow inter-step data flow — FIXED locally (`9aa5f81`).** Root cause: no template engine; step payloads ran verbatim so `{{steps.0.result.content_id}}` reached the sub-op as a literal. Fix: `resolve_refs()` recursively resolves `{{steps.N.path}}` against prior steps' normalized outputs before each step runs — whole-value refs preserve type (int post ID), inline refs interpolate; unresolvable refs fail the step with `wpcc_unresolved_reference` (no silent literal). `test-workflow-dataflow-f62.sh` 13/13 (create→update→publish via refs, interpolation, bad-ref→rollback, MCP).
+
+**Remaining remediation findings (priority order, NOT started):**
+- **F2.1** 🟠 SEO `seo_get` hangs to ~4-min timeout (blocking loopback/external HTTP in the SEO module; drags activity/report tables via lock contention). Repro: `seo_get` on any post.
+- **F2.2** 🟠 MCP client timeout (~240s) < PHP `max_execution_time` (480s) → slow ops surface as hard failures while still writing server-side (silent partial-write risk).
+- **F3.2** 🟠 Nested ACF read: `acf_group_get`/`acf_field_get` omit repeater sub-fields + flex-content layouts; no export action. Can create nested structures but not read them back.
+- (Lower-priority report findings F1.x/F3.4/F3.5/F6.3/F6.4/F7.x logged in the report but out of this sprint's scope unless re-prioritized.)
+- **NEXT TASK when resumed:** F2.1 (SEO timeout). Use `tests/run.sh --tier T1 --runtime seo` (then `--tier T2` before any deploy). Source of truth: `/Volumes/Tools/MyProductions-Markdown/WPCC/WPCC-Acceptance-Test-Report-2026-06-14.md`.
 
 ## Runtime Roadmap Progress Log (WPCC-RUNTIME-ROADMAP.md)
 
@@ -37,11 +58,11 @@ Executing the roadmap autonomously, committing each step **locally** (not auto-d
   - **P1 (100.1+100.2) DONE. Next: STEP 100.3** (P2) — `media_enhance` op + capability probe + image-size audit. **Not started**; per owner, stop after 100.2. Build order continues 100.3→100.4→100.5, P3 100.6→100.7, P4 100.8→100.9.
 - **Dev-env note:** Yoast SEO 27.8 + ACF Pro 6.4.2 + WooCommerce 10.8.1 active on dev (outside WPCC git). ACF: STEP 92 cleanup accidentally deleted theme DB-synced groups; RESTORED via importing wp-content/themes/mosharaf-core/acf-json/*.json — never bulk-delete ACF posts without sparing theme groups.
 - **Outstanding risks:** (1) deploy webhook in-place `git reset --hard` can race-deactivate the live plugin. (2) in-band `{error:true}` manager convention over REST. (3) media delete rollback needs `MEDIA_TRASH`. (4) final-validation flakes transiently back-to-back.
-- **Next step:** STEP 93 — WooCommerce Product. product CRUD/duplicate/publish + categories/attributes/variations exist; GAP = short_description/images/categories/tags/attributes in product_create/update + acceptance. STEP 94 orders: order_update/order_note_add/order_status_change/refund_create/customer_get/customer_search all MISSING.
+- *(historical) STEPs 93/94 WooCommerce now COMPLETE & deployed — see the roadmap table above.*
 
 ---
 
-**RESUME HERE → STEP 90 (Media Runtime), then continue roadmap. Licensing / Free-Pro gating remains separately unscheduled.**
+**RESUME POINTER → see "►► SESSION STATE — START HERE" at the top of this file. (Historical note: the roadmap 89–98 is complete & deployed; the live thread is the remediation sprint, next = F2.1.) Licensing / Free-Pro gating remains separately unscheduled.**
 
 **STEP 87 — REST+MCP File/Patch Bridge (COMPLETE 2026-06-13):**
 file_manage / code_search / patch_manage / rollback_manage operations bridge the existing REST file/patch services to MCP (any OperationRegistry op = MCP tool). Tokenizer syntax fallback blocks broken applies without shell. Dangerous-file edits require `APPLY_PATCH` confirmation. Doc: `.ai/steps/STEP-87-REST-MCP-FILE-PATCH-BRIDGE.md`. Tests: `test-file-patch-bridge.sh` 32/32.
