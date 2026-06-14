@@ -11,6 +11,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Debug DEPLOY_TOKEN (length + hash only, no secret leak)
+        run: |
+          TOK="${{ secrets.DEPLOY_TOKEN }}"
+          echo "DEPLOY_TOKEN length: ${#TOK}"
+          GOT=$(printf %s "$TOK" | sha256sum | cut -d' ' -f1)
+          EXP="0f0ac4d4b2acf8d58d63a88843fa363c999201f4cf41ef6197ff6312f6425100"
+          if [ "$GOT" = "$EXP" ]; then echo "TOKEN MATCH: yes"; else echo "TOKEN MATCH: no"; fi
+
       - name: Trigger server-side git pull
         run: |
           response=$(curl -sf \
