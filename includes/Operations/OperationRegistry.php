@@ -783,6 +783,42 @@ final class OperationRegistry {
 				],
 				'available'         => SeoProvider::is_available(),
 			],
+			// ── STEP 95 — Site Builder runtime ──
+			'site_builder_manage' => [
+				'id'                => 'site_builder_manage',
+				'title'             => __( 'Site Builder', 'wp-command-center' ),
+				'description'       => __( 'Construct WordPress sites: pages (create/update/delete with parent, order, status, template), page templates, block patterns (reusable blocks), block-theme navigation, and menus (delegated to menu_manage). Rollback-capable, approval-aware. Actions: page_list, page_get, page_create, page_update, page_delete, template_list, template_assign, pattern_create, pattern_list, navigation_manage, menu_create, menu_update, menu_assign.', 'wp-command-center' ),
+				'risk_level'        => 'medium',
+				'action_risks'      => [
+					'page_list'         => 'diagnostic',
+					'page_get'          => 'diagnostic',
+					'template_list'     => 'diagnostic',
+					'pattern_list'      => 'diagnostic',
+					'page_create'       => 'medium',
+					'page_update'       => 'medium',
+					'page_delete'       => 'medium',
+					'template_assign'   => 'medium',
+					'pattern_create'    => 'medium',
+					'navigation_manage' => 'medium',
+					'menu_create'       => 'medium',
+					'menu_update'       => 'medium',
+					'menu_assign'       => 'medium',
+				],
+				'requires_approval' => true,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'page_list', 'page_get', 'page_create', 'page_update', 'page_delete', 'template_list', 'template_assign', 'pattern_create', 'pattern_list', 'navigation_manage', 'menu_create', 'menu_update', 'menu_assign' ], 'description' => 'The site builder action.' ],
+					[ 'name' => 'page_id', 'type' => 'integer', 'required' => false, 'description' => 'Page ID (page_get/update/delete, template_assign).' ],
+					[ 'name' => 'title', 'type' => 'string', 'required' => false, 'description' => 'Title (page_create/update, pattern_create, navigation_manage).' ],
+					[ 'name' => 'content', 'type' => 'string', 'required' => false, 'description' => 'Content / block markup.' ],
+					[ 'name' => 'status', 'type' => 'string', 'required' => false, 'description' => 'publish | draft | pending | private (pages).' ],
+					[ 'name' => 'parent', 'type' => 'integer', 'required' => false, 'description' => 'Parent page ID.' ],
+					[ 'name' => 'menu_order', 'type' => 'integer', 'required' => false, 'description' => 'Page order.' ],
+					[ 'name' => 'template', 'type' => 'string', 'required' => false, 'description' => 'Page template slug (template_assign / page_create).' ],
+					[ 'name' => 'op', 'type' => 'string', 'required' => false, 'description' => 'navigation_manage op: create | update | get.' ],
+					[ 'name' => 'rollback_id', 'type' => 'string', 'required' => false, 'description' => 'Rollback record ID.' ],
+				],
+				'available'         => true,
+			],
 		];
 
 		// B6: Add optional `reason` param to any write operation so AI agents can

@@ -349,6 +349,8 @@ final class OperationExecutor {
 				return new RollbackOperation();
 			case 'seo_manage':
 				return new SeoRuntimeManager();
+			case 'site_builder_manage':
+				return new SiteBuilderRuntimeManager();
 		}
 
 		return null;
