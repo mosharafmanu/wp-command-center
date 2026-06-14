@@ -345,7 +345,7 @@ final class OperationRegistry {
 			'media_manage' => [
 				'id'                => 'media_manage',
 				'title'             => __( 'Media Management', 'wp-command-center' ),
-				'description'       => __( 'Safely manage WordPress media: list, get, search, upload, update (title/alt/caption/description), replace, delete, restore, set/remove featured image, regenerate metadata. WordPress API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'description'       => __( 'Safely manage WordPress media: list, get, search, upload, update (title/alt/caption/description), replace, delete, restore, set/remove featured image, regenerate metadata. File-level snapshots (media_snapshot_create/restore/verify/list) capture an attachment\'s bytes + sizes + metadata for byte-for-byte restoration. WordPress API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'media_list'                => 'diagnostic',
@@ -361,6 +361,10 @@ final class OperationRegistry {
 					'media_set_featured'        => 'medium',
 					'media_remove_featured'     => 'medium',
 					'media_regenerate_metadata' => 'low',
+					'media_snapshot_create'     => 'low',
+					'media_snapshot_verify'     => 'diagnostic',
+					'media_snapshot_list'       => 'diagnostic',
+					'media_snapshot_restore'    => 'medium',
 				],
 				'requires_approval' => true,
 				'parameters'        => [
@@ -372,6 +376,8 @@ final class OperationRegistry {
 					[ 'name' => 'description', 'type' => 'string', 'required' => false, 'description' => 'Description (media_upload, media_update).' ],
 					[ 'name' => 'source_url', 'type' => 'string', 'required' => false, 'description' => 'HTTPS image URL (media_upload, media_replace).' ],
 					[ 'name' => 'post_id', 'type' => 'integer', 'required' => false, 'description' => 'Target post ID (media_set_featured, media_remove_featured).' ],
+					[ 'name' => 'snapshot_id', 'type' => 'string', 'required' => false, 'description' => 'Media snapshot ID (media_snapshot_restore, media_snapshot_verify).' ],
+					[ 'name' => 'label', 'type' => 'string', 'required' => false, 'description' => 'Optional label for media_snapshot_create.' ],
 				],
 				'available'         => true,
 			],

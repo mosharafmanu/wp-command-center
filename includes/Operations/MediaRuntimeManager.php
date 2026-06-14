@@ -33,8 +33,53 @@ final class MediaRuntimeManager {
 			MediaRegistry::ACTION_FEATURED_REMOVE,
 			MediaRegistry::ACTION_REMOVE_FEATURED     => $this->featured_remove( $payload, $context ),
 			MediaRegistry::ACTION_REGENERATE_METADATA => $this->regenerate_metadata( $payload, $context ),
+			MediaRegistry::ACTION_SNAPSHOT_CREATE     => $this->snapshot_create( $payload, $context ),
+			MediaRegistry::ACTION_SNAPSHOT_RESTORE    => $this->snapshot_restore( $payload, $context ),
+			MediaRegistry::ACTION_SNAPSHOT_VERIFY     => $this->snapshot_verify( $payload ),
+			MediaRegistry::ACTION_SNAPSHOT_LIST       => $this->snapshot_list( $payload ),
 			default => $this->error( 'wpcc_unknown_media_action', __( 'Unknown media action.', 'wp-command-center' ) ),
 		};
+	}
+
+	// ── STEP 100.1 — file-level snapshot primitives ──────────────
+
+	private function snapshot_create( array $payload, array $context ): array {
+		$media_id = (int) ( $payload['media_id'] ?? 0 );
+		$label    = sanitize_text_field( (string) ( $payload['label'] ?? '' ) );
+		$result   = ( new MediaSnapshot() )->capture( $media_id, $label );
+		if ( is_wp_error( $result ) ) {
+			return $this->error( $result->get_error_code(), $result->get_error_message() );
+		}
+		return [ 'action' => 'media_snapshot_create', 'snapshot_id' => $result['id'], 'media_id' => $result['attachment_id'], 'files' => $result['files'] ];
+	}
+
+	private function snapshot_restore( array $payload, array $context ): array {
+		$snapshot_id = (string) ( $payload['snapshot_id'] ?? '' );
+		if ( '' === $snapshot_id ) {
+			return $this->error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'wp-command-center' ) );
+		}
+		$result = ( new MediaSnapshot() )->restore( $snapshot_id );
+		if ( is_wp_error( $result ) ) {
+			return $this->error( $result->get_error_code(), $result->get_error_message() );
+		}
+		return array_merge( [ 'action' => 'media_snapshot_restore', 'snapshot_id' => $snapshot_id ], $result );
+	}
+
+	private function snapshot_verify( array $payload ): array {
+		$snapshot_id = (string) ( $payload['snapshot_id'] ?? '' );
+		if ( '' === $snapshot_id ) {
+			return $this->error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'wp-command-center' ) );
+		}
+		$result = ( new MediaSnapshot() )->verify( $snapshot_id );
+		if ( is_wp_error( $result ) ) {
+			return $this->error( $result->get_error_code(), $result->get_error_message() );
+		}
+		return array_merge( [ 'action' => 'media_snapshot_verify', 'snapshot_id' => $snapshot_id ], $result );
+	}
+
+	private function snapshot_list( array $payload ): array {
+		$media_id = (int) ( $payload['media_id'] ?? 0 );
+		return [ 'action' => 'media_snapshot_list', 'snapshots' => ( new MediaSnapshot() )->list( $media_id ) ];
 	}
 
 	private function list_media( array $payload ): array {
