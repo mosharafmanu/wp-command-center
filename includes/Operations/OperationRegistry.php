@@ -378,7 +378,7 @@ final class OperationRegistry {
 			'woocommerce_manage' => [
 				'id'                => 'woocommerce_manage',
 				'title'             => __( 'WooCommerce Management', 'wp-command-center' ),
-				'description'       => __( 'Safely manage WooCommerce: products, inventory, pricing, categories, attributes, variations, orders (read-only), coupons. WooCommerce API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'description'       => __( 'Safely manage WooCommerce. Products: create/update (simple or variable; name, description, short_description, sku, pricing, status, manage_stock/stock_quantity, categories, tags, image_id, gallery_image_ids, attributes:[{name,options,visible,variation}]), delete, duplicate, publish, unpublish. Plus inventory, pricing, categories, attributes, variations, orders, coupons. WooCommerce API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'product_list'           => 'diagnostic',

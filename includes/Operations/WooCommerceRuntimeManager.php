@@ -94,32 +94,33 @@ final class WooCommerceRuntimeManager {
 	private function product_create( array $payload, array $context ): array {
 		$name = sanitize_text_field( (string) ( $payload['name'] ?? '' ) );
 		if ( '' === $name ) return $this->error( 'wpcc_missing_name', __( 'Product name is required.', 'wp-command-center' ) );
-		$p = new \WC_Product_Simple();
+
+		$type = sanitize_key( (string) ( $payload['type'] ?? 'simple' ) );
+		$p    = match ( $type ) {
+			'variable' => new \WC_Product_Variable(),
+			'grouped'  => new \WC_Product_Grouped(),
+			'external' => new \WC_Product_External(),
+			default    => new \WC_Product_Simple(),
+		};
 		$p->set_name( $name );
-		if ( isset( $payload['regular_price'] ) ) $p->set_regular_price( (string) $payload['regular_price'] );
-		if ( isset( $payload['sale_price'] ) ) $p->set_sale_price( (string) $payload['sale_price'] );
-		if ( isset( $payload['description'] ) ) $p->set_description( sanitize_textarea_field( $payload['description'] ) );
-		if ( isset( $payload['sku'] ) ) $p->set_sku( sanitize_text_field( (string) $payload['sku'] ) );
-		if ( isset( $payload['status'] ) ) $p->set_status( sanitize_key( (string) $payload['status'] ) );
-		else $p->set_status( 'draft' );
-		if ( ! empty( $payload['manage_stock'] ) ) { $p->set_manage_stock( true ); $p->set_stock_quantity( (int) ( $payload['stock_quantity'] ?? 0 ) ); }
+		$p->set_status( isset( $payload['status'] ) ? sanitize_key( (string) $payload['status'] ) : 'draft' );
+		$this->apply_product_fields( $p, $payload );
 		$id = $p->save();
-		$this->store_rollback( $id, 'product_create', [], $context );
-		$this->audit->record( 'product.created', [ 'product_id' => $id, 'name' => $name ] );
-		return [ 'action' => 'product_create', 'product_id' => $id, 'name' => $name ];
+
+		$rollback_id = $this->store_rollback( $id, 'product_create', [], $context );
+		$this->audit->record( 'product.created', [ 'product_id' => $id, 'name' => $name, 'type' => $type ] );
+		return [ 'action' => 'product_create', 'product_id' => $id, 'name' => $name, 'type' => $type, 'rollback_id' => $rollback_id ];
 	}
 
 	private function product_update( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
 		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
-		$before = $this->format_product( $p );
-		if ( isset( $payload['name'] ) ) $p->set_name( sanitize_text_field( (string) $payload['name'] ) );
-		if ( isset( $payload['regular_price'] ) ) $p->set_regular_price( (string) $payload['regular_price'] );
-		if ( isset( $payload['description'] ) ) $p->set_description( sanitize_textarea_field( $payload['description'] ) );
+		$before = $this->snapshot_product( $p );
+		$this->apply_product_fields( $p, $payload );
 		$p->save();
-		$this->store_rollback( $p->get_id(), 'product_update', $before, $context );
+		$rollback_id = $this->store_rollback( $p->get_id(), 'product_update', $before, $context );
 		$this->audit->record( 'product.updated', [ 'product_id' => $p->get_id() ] );
-		return [ 'action' => 'product_update', 'product_id' => $p->get_id() ];
+		return [ 'action' => 'product_update', 'product_id' => $p->get_id(), 'rollback_id' => $rollback_id ];
 	}
 
 	private function product_delete( array $payload, array $context ): array {
@@ -475,6 +476,7 @@ final class WooCommerceRuntimeManager {
 		switch ( $etype ) {
 			case 'product':
 				if ( in_array( $action, [ 'product_create', 'variation_create', 'coupon_create' ] ) ) { $p = wc_get_product( $entity_id ); if ( $p ) $p->delete( true ); }
+				elseif ( 'product_update' === $action ) { $p = wc_get_product( $entity_id ); if ( $p ) $this->restore_product( $p, $before ); }
 				elseif ( 'product_delete' === $action ) { wp_publish_post( $entity_id ); }
 				elseif ( in_array( $action, [ 'product_publish', 'product_unpublish' ] ) ) { $p = wc_get_product( $entity_id ); if ( $p ) { $p->set_status( $before['status'] ); $p->save(); } }
 				elseif ( 'stock_update' === $action ) { $p = wc_get_product( $entity_id ); if ( $p ) { $p->set_stock_quantity( $before['stock'] ); $p->save(); } }
@@ -495,16 +497,126 @@ final class WooCommerceRuntimeManager {
 		return [ 'action' => 'woocommerce_rollback', 'rollback_id' => $rollback_id, 'entity_id' => $entity_id ];
 	}
 
-	private function store_rollback( int $id, string $action, array $before, array $context ): void {
-		if ( ! WooCommerceRegistry::supports_rollback( $action ) ) return;
+	private function store_rollback( int $id, string $action, array $before, array $context ): string {
+		if ( ! WooCommerceRegistry::supports_rollback( $action ) ) return '';
 		$etype = in_array( $action, [ 'coupon_create', 'coupon_update', 'coupon_delete' ] ) ? 'coupon'
 			: ( in_array( $action, [ 'variation_create', 'variation_update', 'variation_delete' ] ) ? 'variation' : 'product' );
 		$rollbacks = get_option( 'wpcc_woo_rollbacks', [] );
-		$rollbacks[] = [ 'id' => wp_generate_uuid4(), 'entity_id' => $id, 'entity_type' => $etype, 'action' => $action,
+		$rid = wp_generate_uuid4();
+		$rollbacks[] = [ 'id' => $rid, 'entity_id' => $id, 'entity_type' => $etype, 'action' => $action,
 			'before_state' => $before, 'rollback_applied' => false, 'created_at' => time(),
 			'session_id' => $context['session_id'] ?? null, 'task_id' => $context['task_id'] ?? null ];
 		if ( count( $rollbacks ) > 200 ) $rollbacks = array_slice( $rollbacks, -200 );
 		update_option( 'wpcc_woo_rollbacks', $rollbacks );
+		return $rid;
+	}
+
+	// ── STEP 93 — shared product field application ───────────────
+
+	/**
+	 * Apply the full product data model (title, descriptions, pricing, SKU,
+	 * inventory, categories, tags, images, attributes) to a WC_Product. Only
+	 * supplied keys are written.
+	 */
+	private function apply_product_fields( \WC_Product $p, array $payload ): void {
+		if ( isset( $payload['name'] ) )              $p->set_name( sanitize_text_field( (string) $payload['name'] ) );
+		if ( isset( $payload['description'] ) )       $p->set_description( wp_kses_post( (string) $payload['description'] ) );
+		if ( isset( $payload['short_description'] ) ) $p->set_short_description( wp_kses_post( (string) $payload['short_description'] ) );
+		if ( isset( $payload['sku'] ) )               $p->set_sku( sanitize_text_field( (string) $payload['sku'] ) );
+		if ( isset( $payload['regular_price'] ) )     $p->set_regular_price( (string) $payload['regular_price'] );
+		if ( isset( $payload['sale_price'] ) )        $p->set_sale_price( (string) $payload['sale_price'] );
+		if ( isset( $payload['status'] ) )            $p->set_status( sanitize_key( (string) $payload['status'] ) );
+
+		if ( array_key_exists( 'manage_stock', $payload ) ) {
+			$manage = ! empty( $payload['manage_stock'] );
+			$p->set_manage_stock( $manage );
+			if ( $manage && isset( $payload['stock_quantity'] ) ) $p->set_stock_quantity( (int) $payload['stock_quantity'] );
+		}
+		if ( isset( $payload['stock_status'] ) )      $p->set_stock_status( sanitize_key( (string) $payload['stock_status'] ) );
+
+		if ( isset( $payload['categories'] ) )        $p->set_category_ids( $this->resolve_terms( (array) $payload['categories'], 'product_cat' ) );
+		if ( isset( $payload['tags'] ) )              $p->set_tag_ids( $this->resolve_terms( (array) $payload['tags'], 'product_tag' ) );
+		if ( isset( $payload['image_id'] ) )          $p->set_image_id( (int) $payload['image_id'] );
+		if ( isset( $payload['gallery_image_ids'] ) ) $p->set_gallery_image_ids( array_map( 'intval', (array) $payload['gallery_image_ids'] ) );
+		if ( isset( $payload['attributes'] ) && is_array( $payload['attributes'] ) ) {
+			$p->set_attributes( $this->build_attributes( $payload['attributes'] ) );
+		}
+	}
+
+	/** Resolve category/tag names or IDs to term IDs, creating missing terms. */
+	private function resolve_terms( array $terms, string $taxonomy ): array {
+		$ids = [];
+		foreach ( $terms as $t ) {
+			if ( is_numeric( $t ) ) { $ids[] = (int) $t; continue; }
+			$name = sanitize_text_field( (string) $t );
+			if ( '' === $name ) continue;
+			$term = get_term_by( 'name', $name, $taxonomy );
+			if ( $term ) {
+				$ids[] = (int) $term->term_id;
+			} else {
+				$res = wp_insert_term( $name, $taxonomy );
+				if ( ! is_wp_error( $res ) ) $ids[] = (int) $res['term_id'];
+			}
+		}
+		return array_values( array_unique( $ids ) );
+	}
+
+	/** Full editable-state snapshot for product_update rollback. */
+	private function snapshot_product( \WC_Product $p ): array {
+		return [
+			'name'              => $p->get_name(),
+			'description'       => $p->get_description(),
+			'short_description' => $p->get_short_description(),
+			'sku'               => $p->get_sku(),
+			'regular_price'     => $p->get_regular_price(),
+			'sale_price'        => $p->get_sale_price(),
+			'status'            => $p->get_status(),
+			'manage_stock'      => $p->get_manage_stock(),
+			'stock_quantity'    => $p->get_stock_quantity(),
+			'stock_status'      => $p->get_stock_status(),
+			'category_ids'      => $p->get_category_ids(),
+			'tag_ids'           => $p->get_tag_ids(),
+			'image_id'          => $p->get_image_id(),
+			'gallery_image_ids' => $p->get_gallery_image_ids(),
+			'attributes'        => $p->get_attributes(),
+		];
+	}
+
+	/** Restore a product from a snapshot_product() snapshot (rollback). */
+	private function restore_product( \WC_Product $p, array $b ): void {
+		if ( isset( $b['name'] ) )              $p->set_name( (string) $b['name'] );
+		if ( isset( $b['description'] ) )       $p->set_description( (string) $b['description'] );
+		if ( isset( $b['short_description'] ) ) $p->set_short_description( (string) $b['short_description'] );
+		if ( isset( $b['sku'] ) )               $p->set_sku( (string) $b['sku'] );
+		if ( isset( $b['regular_price'] ) )     $p->set_regular_price( (string) $b['regular_price'] );
+		if ( isset( $b['sale_price'] ) )        $p->set_sale_price( (string) $b['sale_price'] );
+		if ( isset( $b['status'] ) )            $p->set_status( (string) $b['status'] );
+		if ( isset( $b['manage_stock'] ) ) {
+			$p->set_manage_stock( (bool) $b['manage_stock'] );
+			if ( $b['manage_stock'] ) $p->set_stock_quantity( $b['stock_quantity'] );
+		}
+		if ( isset( $b['stock_status'] ) )      $p->set_stock_status( (string) $b['stock_status'] );
+		if ( isset( $b['category_ids'] ) )      $p->set_category_ids( (array) $b['category_ids'] );
+		if ( isset( $b['tag_ids'] ) )           $p->set_tag_ids( (array) $b['tag_ids'] );
+		if ( array_key_exists( 'image_id', $b ) ) $p->set_image_id( (int) $b['image_id'] );
+		if ( isset( $b['gallery_image_ids'] ) ) $p->set_gallery_image_ids( (array) $b['gallery_image_ids'] );
+		if ( isset( $b['attributes'] ) )        $p->set_attributes( (array) $b['attributes'] );
+		$p->save();
+	}
+
+	/** Build WC_Product_Attribute objects from a simple array spec. */
+	private function build_attributes( array $attrs ): array {
+		$out = [];
+		foreach ( $attrs as $a ) {
+			if ( ! is_array( $a ) || empty( $a['name'] ) ) continue;
+			$obj = new \WC_Product_Attribute();
+			$obj->set_name( sanitize_text_field( (string) $a['name'] ) );
+			$obj->set_options( array_map( 'sanitize_text_field', (array) ( $a['options'] ?? [] ) ) );
+			$obj->set_visible( ! isset( $a['visible'] ) || ! empty( $a['visible'] ) );
+			$obj->set_variation( ! empty( $a['variation'] ) );
+			$out[] = $obj;
+		}
+		return $out;
 	}
 
 	private function error( string $code, string $message ): array {
