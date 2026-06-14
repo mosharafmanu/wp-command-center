@@ -6,13 +6,13 @@ Last verified: June 14, 2026.
 
 Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
 
-- **Current step:** STEP 92 — ACF Runtime (next)
-- **Completed:** STEP 89 — MCP Error Surface ✅ `1a8cbbc`; STEP 90 — Media Runtime ✅ `ce20f90`; STEP 91 — SEO Runtime ✅ (commit pending)
-- **Deployed through:** STEP 88 (commit c0795e0 + 5518bd8 on production). STEPs 89–91 committed locally, **not yet pushed**.
-- **Test counts:** STEP 89 18/18; STEP 90 25/25; STEP 91 `test-seo-runtime-step91.sh` 24/24; full regression 3190 passed / 24 pre-existing failures / 0 net-new.
-- **Dev-env note:** Yoast SEO 27.8 installed on the dev site for STEP 91 acceptance (outside the WPCC git repo). Production may not have an SEO plugin → `seo_manage` is `available:false` there until one is active (graceful).
-- **Outstanding risks:** (1) deploy webhook in-place `git reset --hard` can race-deactivate the live plugin (harden `wpcc-deploy.php`). (2) in-band `{error:true}` manager convention still over REST. (3) media delete rollback needs `MEDIA_TRASH`. (4) final-validation flakes transiently back-to-back.
-- **Next step:** STEP 92 — ACF Runtime (build/manage ACF field groups, fields, layouts). `ACFRuntimeManager` already exists (28 actions) — audit before building; needs ACF active on dev site.
+- **Current step:** STEP 93 — WooCommerce Product Runtime (next)
+- **Completed:** 89 MCP Error Surface `1a8cbbc`; 90 Media Runtime `ce20f90`; 91 SEO Runtime `901087c`; 92 ACF Runtime ✅ (commit pending)
+- **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–92 committed locally, **not yet pushed**.
+- **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 `test-acf-runtime-step92.sh` 23/23; full regression 3212 passed / 24 pre-existing / 0 net-new.
+- **Dev-env note:** Yoast SEO 27.8 + ACF Pro 6.4.2 + WooCommerce 10.8.1 active on dev (outside WPCC git). ACF: STEP 92 cleanup accidentally deleted theme DB-synced groups; RESTORED via importing wp-content/themes/mosharaf-core/acf-json/*.json — never bulk-delete ACF posts without sparing theme groups.
+- **Outstanding risks:** (1) deploy webhook in-place `git reset --hard` can race-deactivate the live plugin. (2) in-band `{error:true}` manager convention over REST. (3) media delete rollback needs `MEDIA_TRASH`. (4) final-validation flakes transiently back-to-back.
+- **Next step:** STEP 93 — WooCommerce Product. product CRUD/duplicate/publish + categories/attributes/variations exist; GAP = short_description/images/categories/tags/attributes in product_create/update + acceptance. STEP 94 orders: order_update/order_note_add/order_status_change/refund_create/customer_get/customer_search all MISSING.
 
 ---
 

@@ -33,6 +33,23 @@ final class ACFRegistry {
 	const ACTION_VALUE_UPDATE     = 'acf_value_update';
 	const ACTION_BULK_VALUE_UPDATE = 'acf_bulk_value_update';
 	const ACTION_INVENTORY         = 'acf_inventory';
+	// STEP 92 — flexible-content layout management.
+	const ACTION_LAYOUT_CREATE    = 'acf_layout_create';
+	const ACTION_LAYOUT_UPDATE    = 'acf_layout_update';
+
+	/**
+	 * Field types the runtime can create/update. Includes the STEP-92 required
+	 * set plus common scalar types. Nested types (repeater, flexible_content,
+	 * group) hold sub-fields created via field_create with `parent`.
+	 */
+	const FIELD_TYPES = [
+		'text', 'textarea', 'number', 'email', 'url', 'password', 'range',
+		'wysiwyg', 'image', 'file', 'gallery', 'oembed',
+		'select', 'checkbox', 'radio', 'button_group', 'true_false',
+		'link', 'post_object', 'page_link', 'relationship', 'taxonomy', 'user',
+		'date_picker', 'date_time_picker', 'time_picker', 'color_picker',
+		'repeater', 'flexible_content', 'group', 'clone', 'message', 'tab', 'accordion',
+	];
 
 	const ACTIONS = [
 		self::ACTION_GROUP_LIST, self::ACTION_GROUP_GET, self::ACTION_GROUP_CREATE, self::ACTION_GROUP_UPDATE,
@@ -43,6 +60,7 @@ final class ACFRegistry {
 		self::ACTION_JSON_STATUS, self::ACTION_JSON_EXPORT, self::ACTION_JSON_IMPORT, self::ACTION_JSON_SYNC, self::ACTION_JSON_DIFF,
 		self::ACTION_VALUE_GET, self::ACTION_VALUE_UPDATE, self::ACTION_BULK_VALUE_UPDATE,
 		self::ACTION_INVENTORY,
+		self::ACTION_LAYOUT_CREATE, self::ACTION_LAYOUT_UPDATE,
 	];
 
 	private static ?array $risk = null;
@@ -64,6 +82,7 @@ final class ACFRegistry {
 			self::ACTION_JSON_IMPORT => $H, self::ACTION_GROUP_DUPLICATE => $H,
 			self::ACTION_GROUP_ACTIVATE => $M, self::ACTION_GROUP_DEACTIVATE => $M,
 			self::ACTION_FIELD_DUPLICATE => $H,
+			self::ACTION_LAYOUT_CREATE => $H, self::ACTION_LAYOUT_UPDATE => $H,
 		];
 		self::$approval = [];
 		foreach ( self::ACTIONS as $a ) self::$approval[ $a ] = ( self::$risk[ $a ] ?? $M ) === $H;
@@ -72,6 +91,7 @@ final class ACFRegistry {
 			self::ACTION_FIELD_CREATE => true, self::ACTION_FIELD_UPDATE => true, self::ACTION_FIELD_DELETE => true,
 			self::ACTION_LOCATION_ASSIGN => true, self::ACTION_LOCATION_REMOVE => true,
 			self::ACTION_VALUE_UPDATE => true, self::ACTION_JSON_IMPORT => true,
+			self::ACTION_LAYOUT_CREATE => true, self::ACTION_LAYOUT_UPDATE => true,
 		];
 	}
 

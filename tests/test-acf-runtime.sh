@@ -187,7 +187,13 @@ BULK=$(api_post -d '{"action":"acf_bulk_value_update","post_id":1,"fields":{}}' 
 assert_contains "bulk: ok" "$BULK" "acf_bulk_value_update"
 
 echo "== 33. Inventory Fields =="
+# Create a throwaway group so the inventory count is deterministic regardless of
+# ambient ACF state, then re-fetch inventory.
+SEED=$(api_post -d '{"action":"acf_group_create","title":"ACF Inv Seed","location":[[{"param":"post_type","operator":"==","value":"post"}]]}' "$WPCC_BASE/operations/acf_manage/run")
+SEED_KEY=$(echo "$SEED" | jq -r '.group_id // empty')
+INV=$(api_post -d '{"action":"acf_inventory"}' "$WPCC_BASE/operations/acf_manage/run")
 assert_true "inv: groups >0" "$(if [ "$(echo "$INV"|jq -r '.groups')" -gt 0 ] 2>/dev/null; then echo true; else echo false; fi)"
+[ -n "$SEED_KEY" ] && api_post -d "{\"action\":\"acf_group_delete\",\"group_id\":\"$SEED_KEY\"}" "$WPCC_BASE/operations/acf_manage/run" >/dev/null
 
 echo ""
 echo "== Summary =="

@@ -47,6 +47,8 @@ final class ACFRuntimeManager {
 			ACFRegistry::ACTION_VALUE_UPDATE     => $this->value_update( $payload, $context ),
 			ACFRegistry::ACTION_BULK_VALUE_UPDATE => $this->bulk_value_update( $payload, $context ),
 			ACFRegistry::ACTION_INVENTORY         => $this->inventory( $payload ),
+			ACFRegistry::ACTION_LAYOUT_CREATE     => $this->layout_create( $payload, $context ),
+			ACFRegistry::ACTION_LAYOUT_UPDATE     => $this->layout_update( $payload, $context ),
 			default => $this->error( 'wpcc_unknown_acf_action', __( 'Unknown ACF action.', 'wp-command-center' ) ),
 		};
 	}
@@ -155,20 +157,99 @@ final class ACFRuntimeManager {
 	}
 
 	private function field_create( array $p, array $cx ): array {
-		$group_id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
-		$g = acf_get_field_group( $group_id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Parent field group not found.', 'wp-command-center' ) );
+		// Parent may be a field group, a repeater/group field key, or — together
+		// with parent_layout — a flexible-content field key.
+		$parent = sanitize_text_field( (string) ( $p['parent'] ?? $p['group_id'] ?? '' ) );
+		if ( '' === $parent ) {
+			return $this->error( 'wpcc_acf_missing_parent', __( 'group_id or parent is required.', 'wp-command-center' ) );
+		}
+		if ( ! $this->parent_exists( $parent ) ) {
+			return $this->error( 'wpcc_acf_parent_not_found', __( 'Parent field group or field not found.', 'wp-command-center' ) );
+		}
+
+		$type = sanitize_key( (string) ( $p['type'] ?? 'text' ) );
+		if ( ! in_array( $type, ACFRegistry::FIELD_TYPES, true ) ) {
+			return $this->error( 'wpcc_acf_unsupported_field_type', sprintf( __( 'Unsupported field type: %s', 'wp-command-center' ), esc_html( $type ) ) );
+		}
+
+		// acf_update_field only links a field when the parent is the numeric post
+		// ID of the parent group/field — a KEY string leaves it orphaned
+		// (post_parent = 0), which corrupts ACF. Resolve the key to its post ID.
+		$parent_ref = $parent;
+		$grp        = acf_get_field_group( $parent );
+		if ( $grp && isset( $grp['ID'] ) && $grp['ID'] ) {
+			$parent_ref = (int) $grp['ID'];
+		} else {
+			$pf = acf_get_field( $parent );
+			if ( $pf && isset( $pf['ID'] ) && $pf['ID'] ) {
+				$parent_ref = (int) $pf['ID'];
+			}
+		}
+
+		$key   = 'field_' . uniqid();
+		$label = sanitize_text_field( (string) ( $p['label'] ?? 'New Field' ) );
 		$field = [
-			'parent' => $group_id, 'key' => 'field_' . uniqid(),
-			'label' => sanitize_text_field( (string) ( $p['label'] ?? 'New Field' ) ),
-			'name'  => sanitize_title( (string) ( $p['name'] ?? '' ) ),
-			'type'  => sanitize_key( (string) ( $p['type'] ?? 'text' ) ),
+			'parent' => $parent_ref,
+			'key'    => $key,
+			'label'  => $label,
+			'name'   => sanitize_title( (string) ( $p['name'] ?? $label ) ),
+			'type'   => $type,
 		];
-		$result = acf_update_field( $field );
-		if ( ! $result ) return $this->error( 'wpcc_field_create_failed', __( 'Failed to create field.', 'wp-command-center' ) );
-		$this->store_rollback( $field['key'], 'field_create', [], $cx );
-		$this->audit->record( 'acf.field.created', [ 'field_key' => $field['key'], 'group_id' => $group_id ] );
-		return [ 'action' => 'acf_field_create', 'field_key' => $field['key'], 'label' => $field['label'], 'group_id' => $group_id ];
+
+		// Flexible-content layout sub-field association.
+		if ( isset( $p['parent_layout'] ) && '' !== (string) $p['parent_layout'] ) {
+			$field['parent_layout'] = sanitize_text_field( (string) $p['parent_layout'] );
+		}
+
+		// Common settings.
+		if ( isset( $p['instructions'] ) ) {
+			$field['instructions'] = sanitize_textarea_field( (string) $p['instructions'] );
+		}
+		if ( isset( $p['required'] ) ) {
+			$field['required'] = $this->boolish( $p['required'] ) ? 1 : 0;
+		}
+		if ( isset( $p['default_value'] ) && is_scalar( $p['default_value'] ) ) {
+			$field['default_value'] = sanitize_text_field( (string) $p['default_value'] );
+		}
+
+		// Type-specific configuration (choices, return_format, post_type, …).
+		if ( isset( $p['config'] ) && is_array( $p['config'] ) ) {
+			$field = array_merge( $field, $this->sanitize_config( $p['config'] ) );
+		}
+
+		if ( ! acf_update_field( $field ) ) {
+			return $this->error( 'wpcc_field_create_failed', __( 'Failed to create field.', 'wp-command-center' ) );
+		}
+
+		// Nested sub-fields (repeater / group): create each child under this field.
+		$sub_created = [];
+		if ( in_array( $type, [ 'repeater', 'group' ], true ) && ! empty( $p['sub_fields'] ) && is_array( $p['sub_fields'] ) ) {
+			foreach ( $p['sub_fields'] as $sf ) {
+				if ( ! is_array( $sf ) ) {
+					continue;
+				}
+				$sf['parent'] = $key;
+				unset( $sf['group_id'], $sf['parent_layout'] );
+				$r = $this->field_create( $sf, $cx );
+				if ( isset( $r['field_key'] ) ) {
+					$sub_created[] = $r['field_key'];
+				}
+			}
+		}
+
+		$rollback_id = $this->store_rollback( $key, 'field_create', [], $cx );
+		$this->audit->record( 'acf.field.created', [ 'field_key' => $key, 'parent' => $parent, 'type' => $type ] );
+
+		return [
+			'action'      => 'acf_field_create',
+			'field_key'   => $key,
+			'label'       => $label,
+			'name'        => $field['name'],
+			'type'        => $type,
+			'parent'      => $parent,
+			'sub_fields'  => $sub_created,
+			'rollback_id' => $rollback_id,
+		];
 	}
 
 	private function field_update( array $p, array $cx ): array {
@@ -196,6 +277,107 @@ final class ACFRuntimeManager {
 		return [ 'action' => 'acf_field_delete', 'field_key' => $key ];
 	}
 
+	// ── STEP 92 — flexible-content layouts ───────────────────────
+
+	private function layout_create( array $p, array $cx ): array {
+		$field_key = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
+		$f = acf_get_field( $field_key );
+		if ( ! $f ) {
+			return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'wp-command-center' ) );
+		}
+		if ( 'flexible_content' !== ( $f['type'] ?? '' ) ) {
+			return $this->error( 'wpcc_acf_not_flexible', __( 'Layouts can only be added to a flexible_content field.', 'wp-command-center' ) );
+		}
+
+		$name  = sanitize_title( (string) ( $p['name'] ?? $p['label'] ?? 'layout' ) );
+		$label = sanitize_text_field( (string) ( $p['label'] ?? $name ) );
+		if ( '' === $name ) {
+			return $this->error( 'wpcc_acf_missing_layout_name', __( 'A layout name or label is required.', 'wp-command-center' ) );
+		}
+
+		$layout_key   = 'layout_' . uniqid();
+		$before       = [ 'layouts' => $f['layouts'] ?? [] ];
+		$f['layouts'] = is_array( $f['layouts'] ?? null ) ? $f['layouts'] : [];
+
+		$f['layouts'][ $layout_key ] = [
+			'key'        => $layout_key,
+			'name'       => $name,
+			'label'      => $label,
+			'display'    => in_array( (string) ( $p['display'] ?? 'block' ), [ 'block', 'table', 'row' ], true ) ? (string) ( $p['display'] ?? 'block' ) : 'block',
+			'sub_fields' => [],
+			'min'        => '',
+			'max'        => '',
+		];
+
+		if ( ! acf_update_field( $f ) ) {
+			return $this->error( 'wpcc_acf_layout_create_failed', __( 'Failed to create layout.', 'wp-command-center' ) );
+		}
+
+		// Optional inline sub-fields for the new layout.
+		$sub_created = [];
+		if ( ! empty( $p['sub_fields'] ) && is_array( $p['sub_fields'] ) ) {
+			foreach ( $p['sub_fields'] as $sf ) {
+				if ( ! is_array( $sf ) ) {
+					continue;
+				}
+				$sf['parent']        = $field_key;
+				$sf['parent_layout'] = $layout_key;
+				unset( $sf['group_id'] );
+				$r = $this->field_create( $sf, $cx );
+				if ( isset( $r['field_key'] ) ) {
+					$sub_created[] = $r['field_key'];
+				}
+			}
+		}
+
+		$rollback_id = $this->store_rollback( $field_key, 'layout_create', $before, $cx );
+		$this->audit->record( 'acf.layout.created', [ 'field_key' => $field_key, 'layout_key' => $layout_key, 'name' => $name ] );
+
+		return [ 'action' => 'acf_layout_create', 'field_key' => $field_key, 'layout_key' => $layout_key, 'name' => $name, 'label' => $label, 'sub_fields' => $sub_created, 'rollback_id' => $rollback_id ];
+	}
+
+	private function layout_update( array $p, array $cx ): array {
+		$field_key  = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
+		$layout_key = sanitize_text_field( (string) ( $p['layout_key'] ?? '' ) );
+		$f = acf_get_field( $field_key );
+		if ( ! $f || 'flexible_content' !== ( $f['type'] ?? '' ) ) {
+			return $this->error( 'wpcc_acf_not_flexible', __( 'Flexible_content field not found.', 'wp-command-center' ) );
+		}
+
+		$layouts = is_array( $f['layouts'] ?? null ) ? $f['layouts'] : [];
+		$target  = null;
+		foreach ( $layouts as $lk => $lay ) {
+			if ( $lk === $layout_key || ( $lay['key'] ?? '' ) === $layout_key ) {
+				$target = $lk;
+				break;
+			}
+		}
+		if ( null === $target ) {
+			return $this->error( 'wpcc_acf_layout_not_found', __( 'Layout not found on this field.', 'wp-command-center' ) );
+		}
+
+		$before = [ 'layouts' => $layouts ];
+		if ( isset( $p['label'] ) ) {
+			$layouts[ $target ]['label'] = sanitize_text_field( (string) $p['label'] );
+		}
+		if ( isset( $p['name'] ) ) {
+			$layouts[ $target ]['name'] = sanitize_title( (string) $p['name'] );
+		}
+		if ( isset( $p['display'] ) && in_array( (string) $p['display'], [ 'block', 'table', 'row' ], true ) ) {
+			$layouts[ $target ]['display'] = (string) $p['display'];
+		}
+		$f['layouts'] = $layouts;
+
+		if ( ! acf_update_field( $f ) ) {
+			return $this->error( 'wpcc_acf_layout_update_failed', __( 'Failed to update layout.', 'wp-command-center' ) );
+		}
+
+		$rollback_id = $this->store_rollback( $field_key, 'layout_update', $before, $cx );
+		$this->audit->record( 'acf.layout.updated', [ 'field_key' => $field_key, 'layout_key' => $layout_key ] );
+
+		return [ 'action' => 'acf_layout_update', 'field_key' => $field_key, 'layout_key' => $layout_key, 'rollback_id' => $rollback_id ];
+	}
+
 	private function location_list( array $p ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
@@ -207,13 +389,32 @@ final class ACFRuntimeManager {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
 		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
-		$rules = $g['location'] ?? [];
-		$new = array_map( 'sanitize_text_field', (array) ( $p['rules'] ?? [] ) );
-		$before = $rules;
-		$rules[] = $new;
-		acf_update_field_group( array_merge( $g, [ 'location' => $rules ] ) );
+
+		// Accept a single rule { param, operator, value } or an array of rules
+		// (an AND group). ACF location = list of OR-groups; each OR-group is a
+		// list of AND-rules; each rule is an assoc array. Build a valid OR-group
+		// (a malformed rule here corrupts ACF's compatibility migration).
+		$raw = $p['rules'] ?? [];
+		$rule_list = isset( $raw['param'] ) ? [ $raw ] : ( is_array( $raw ) ? $raw : [] );
+		$and_group = [];
+		foreach ( $rule_list as $r ) {
+			if ( ! is_array( $r ) || ! isset( $r['param'] ) ) continue;
+			$and_group[] = [
+				'param'    => sanitize_text_field( (string) $r['param'] ),
+				'operator' => sanitize_text_field( (string) ( $r['operator'] ?? '==' ) ),
+				'value'    => sanitize_text_field( (string) ( $r['value'] ?? '' ) ),
+			];
+		}
+		if ( empty( $and_group ) ) {
+			return $this->error( 'wpcc_acf_invalid_location', __( 'A location rule { param, operator, value } is required.', 'wp-command-center' ) );
+		}
+
+		$before   = $g['location'] ?? [];
+		$location = is_array( $before ) ? $before : [];
+		$location[] = $and_group;
+		acf_update_field_group( array_merge( $g, [ 'location' => $location ] ) );
 		$this->store_rollback( $id, 'location_assign', [ 'location' => $before ], $cx );
-		return [ 'action' => 'acf_location_assign', 'group_id' => $id, 'location' => $rules ];
+		return [ 'action' => 'acf_location_assign', 'group_id' => $id, 'location' => $location ];
 	}
 
 	private function location_remove( array $p, array $cx ): array {
@@ -366,19 +567,72 @@ final class ACFRuntimeManager {
 			if ( $g ) acf_update_field_group( array_merge( $g, [ 'location' => $before['location'] ?? [] ] ) );
 		} elseif ( 'value_update' === $act ) {
 			if ( isset( $before['post_id'], $before['key'] ) ) update_field( $before['key'], $before['value'], $before['post_id'] );
+		} elseif ( in_array( $act, [ 'layout_create', 'layout_update' ], true ) ) {
+			$f = acf_get_field( $eid );
+			if ( $f ) { $f['layouts'] = $before['layouts'] ?? []; acf_update_field( $f ); }
 		}
 		$rollbacks[ $idx ]['rollback_applied'] = true;
 		update_option( 'wpcc_acf_rollbacks', $rollbacks );
 		return [ 'action' => 'acf_rollback', 'rollback_id' => $rid ];
 	}
 
-	private function store_rollback( string $id, string $action, array $before, array $cx ): void {
-		if ( ! ACFRegistry::supports_rollback( $action ) ) return;
+	/**
+	 * Internal rollback-action names stored in records (and used by rollback()).
+	 * Distinct from the public acf_* operation names that ACFRegistry maps, so
+	 * rollback is actually recorded (a prior name mismatch silently disabled it).
+	 */
+	private const ROLLBACKABLE = [
+		'group_create', 'group_update', 'group_delete', 'field_create', 'field_update',
+		'field_delete', 'location_assign', 'location_remove', 'value_update', 'json_import',
+		'layout_create', 'layout_update',
+	];
+
+	private function store_rollback( string $id, string $action, array $before, array $cx ): string {
+		if ( ! in_array( $action, self::ROLLBACKABLE, true ) ) return '';
 		$rollbacks = get_option( 'wpcc_acf_rollbacks', [] );
-		$rollbacks[] = [ 'id' => wp_generate_uuid4(), 'entity_id' => $id, 'action' => $action, 'before_state' => $before, 'rollback_applied' => false, 'created_at' => time(),
+		$rid = wp_generate_uuid4();
+		$rollbacks[] = [ 'id' => $rid, 'entity_id' => $id, 'action' => $action, 'before_state' => $before, 'rollback_applied' => false, 'created_at' => time(),
 			'session_id' => $cx['session_id'] ?? null, 'task_id' => $cx['task_id'] ?? null ];
 		if ( count( $rollbacks ) > 200 ) $rollbacks = array_slice( $rollbacks, -200 );
 		update_option( 'wpcc_acf_rollbacks', $rollbacks );
+		return $rid;
+	}
+
+	// ── STEP 92 helpers ──────────────────────────────────────────
+
+	private function parent_exists( string $parent ): bool {
+		return (bool) ( acf_get_field_group( $parent ) || acf_get_field( $parent ) );
+	}
+
+	private function boolish( $v ): bool {
+		if ( is_bool( $v ) ) return $v;
+		if ( is_string( $v ) ) return in_array( strtolower( trim( $v ) ), [ '1', 'true', 'yes', 'on' ], true );
+		return ! empty( $v );
+	}
+
+	/** Sanitize a field-config blob, blocking keys the runtime controls itself. */
+	private function sanitize_config( array $config ): array {
+		$blocked = [ 'key', 'parent', 'parent_layout', 'type', 'name', 'label', 'sub_fields', 'layouts' ];
+		$out = [];
+		foreach ( $config as $k => $v ) {
+			$k = sanitize_key( (string) $k );
+			if ( '' === $k || in_array( $k, $blocked, true ) ) continue;
+			$out[ $k ] = $this->sanitize_deep( $v );
+		}
+		return $out;
+	}
+
+	private function sanitize_deep( $v ) {
+		if ( is_array( $v ) ) {
+			$r = [];
+			foreach ( $v as $k => $vv ) {
+				$r[ is_int( $k ) ? $k : sanitize_text_field( (string) $k ) ] = $this->sanitize_deep( $vv );
+			}
+			return $r;
+		}
+		if ( is_bool( $v ) ) return $v ? 1 : 0;
+		if ( is_scalar( $v ) ) return sanitize_text_field( (string) $v );
+		return '';
 	}
 
 	private function summarize_group( array $g ): array {
