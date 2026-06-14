@@ -11,16 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Debug DEPLOY_TOKEN (length + hash only, no secret leak)
-        run: |
-          TOK="${{ secrets.DEPLOY_TOKEN }}"
-          echo "DEPLOY_TOKEN length: ${#TOK}"
-          GOT=$(printf %s "$TOK" | sha256sum | cut -d' ' -f1)
-          EXP="0f0ac4d4b2acf8d58d63a88843fa363c999201f4cf41ef6197ff6312f6425100"
-          if [ "$GOT" = "$EXP" ]; then echo "TOKEN MATCH: yes"; else echo "TOKEN MATCH: no"; fi
-
       - name: Trigger server-side git pull
         run: |
+          # NOTE: a custom User-Agent is required — the host WAF blocks the
+          # default curl/* UA from datacenter (GitHub runner) IPs with a 403.
           HTTP=$(curl -s -o resp.txt -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
@@ -29,8 +23,15 @@ jobs:
             --max-time 60 \
             "https://mosharafmanu.com/wpcc-deploy.php")
           echo "HTTP_CODE=$HTTP"
-          echo "----- RESPONSE BODY (first 1KB) -----"
-          head -c 1024 resp.txt || true
-          echo
-          echo "-------------------------------------"
-          test "$HTTP" = "200"
+          if [ "$HTTP" != "200" ]; then
+            echo "Deploy webhook returned $HTTP:"; head -c 2048 resp.txt; echo
+            exit 1
+          fi
+          python3 -c "
+          import sys, json
+          data = json.load(open('resp.txt'))
+          print('--- git pull ---'); print(data.get('pull',''))
+          print('--- cache flush ---'); print(data.get('cache',''))
+          if data.get('error'):
+              print('ERROR:', data['error']); sys.exit(1)
+          "
