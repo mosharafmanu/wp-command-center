@@ -105,16 +105,24 @@ final class WorkflowRuntimeManager {
 			$s_end=microtime(true);
 			$ok=(($r['success']??false)===true)&&empty($r['result']['error']);
 			$rb=$r['result']['rollback_id']??null;
+			// F6.1 — capture the resources the step created. Many create operations
+			// (e.g. content_create) return no rollback_id, so without this the step
+			// was treated as non-reversible and on_failure:rollback left orphans.
+			$created=array_values(array_unique(array_map('intval',(array)($r['created']??[]))));
 			$rec=['step'=>$i+1,'operation_id'=>$op,'success'=>$ok,
 				'started_at'=>(int)$s_start,'finished_at'=>(int)$s_end,'duration_ms'=>(int)(($s_end-$s_start)*1000),
-				'rollback_id'=>$rb,'rollbackable'=>null!==$rb];
+				'rollback_id'=>$rb,'created'=>$created,'rollbackable'=>(null!==$rb)||!empty($created)];
 			if(!$ok)$rec['error']=$r['errors'][0]??['code'=>$r['result']['code']??'error','message'=>$r['result']['message']??''];
 			$results[]=$rec;
-			if($ok){if(null!==$rb)$completed[]=['operation_id'=>$op,'rollback_id'=>$rb];continue;}
+			if($ok){if((null!==$rb)||!empty($created))$completed[]=['operation_id'=>$op,'rollback_id'=>$rb,'created'=>$created];continue;}
 			// Step failed — apply the failure policy.
 			$status='failed';
 			if('continue'===$on_failure)continue;
-			if('rollback'===$on_failure){$rolled_back=$this->rollback_steps($completed,$executor,$cx);$status='rolled_back';}
+			if('rollback'===$on_failure){
+				$rolled_back=$this->rollback_steps($completed,$executor,$cx);
+				// Honest status: only 'rolled_back' when every reversal verified.
+				$status=$this->all_verified($rolled_back)?'rolled_back':'rollback_incomplete';
+			}
 			for($j=$i+1;$j<$total;$j++)$results[]=['step'=>$j+1,'operation_id'=>(string)($steps[$j]['operation_id']??''),'success'=>false,'skipped'=>true];
 			break;
 		}
@@ -125,14 +133,41 @@ final class WorkflowRuntimeManager {
 		return $out;
 	}
 
-	/** Reverse the given completed steps (latest first) via the unified rollback dispatcher. */
+	/**
+	 * Reverse the given completed steps (latest first), then VERIFY the reversal.
+	 * Two reversal paths: (1) the unified rollback dispatcher when the step's
+	 * operation returned a rollback_id; (2) deletion of resources the step created
+	 * (covers create operations that expose no rollback_id, e.g. content_create).
+	 * Each reversed step is verified — created resources must no longer exist.
+	 */
 	private function rollback_steps(array $completed,OperationExecutor $executor,array $cx):array{
 		$out=[];
 		foreach(array_reverse($completed) as $c){
-			$r=$executor->rollback((string)$c['operation_id'],['rollback_id'=>$c['rollback_id']],$cx);
-			$out[]=['operation_id'=>$c['operation_id'],'rollback_id'=>$c['rollback_id'],'success'=>($r['success']??false)===true];
+			$op=(string)($c['operation_id']??'');
+			$rbid=$c['rollback_id']??null;
+			$created=array_values(array_unique(array_map('intval',(array)($c['created']??[]))));
+			$dispatched=null;
+			if(null!==$rbid&&''!==$rbid){
+				$r=$executor->rollback($op,['rollback_id'=>$rbid],$cx);
+				$dispatched=($r['success']??false)===true;
+			}
+			// Remove any still-present created resources (post-type entities).
+			foreach($created as $cid){ if($cid>0&&get_post($cid)){ wp_delete_post($cid,true); } }
+			// Verify: no created resource may remain.
+			$still=0; foreach($created as $cid){ if($cid>0&&get_post($cid)) $still++; }
+			$verified=(0===$still);
+			// Success: created-steps succeed iff verified gone; rollback_id-only
+			// steps succeed iff the dispatcher reported success.
+			$success=!empty($created)?$verified:(true===$dispatched);
+			$out[]=['operation_id'=>$op,'rollback_id'=>$rbid,'created'=>$created,'dispatched'=>$dispatched,'verified'=>$verified,'success'=>$success];
 		}
 		return $out;
+	}
+
+	/** True when every reversed step verified (or there was nothing to reverse). */
+	private function all_verified(array $rolled_back):bool{
+		foreach($rolled_back as $r){ if(empty($r['success'])) return false; }
+		return true;
 	}
 
 	private function record_execution(string $wid,string $exec_id,string $status,float $started,array $results,string $on_failure,?array $rolled_back):void{
@@ -154,12 +189,18 @@ final class WorkflowRuntimeManager {
 		if(null===$idx)return$this->err('execution_not_found',__('Execution not found.','wp-command-center'));
 		if(!empty($history[$idx]['rolled_back']))return$this->err('already_rolled_back',__('Execution already rolled back.','wp-command-center'));
 		$completed=[];
-		foreach(($history[$idx]['results']??[]) as $r){if(!empty($r['success'])&&!empty($r['rollback_id']))$completed[]=['operation_id'=>$r['operation_id'],'rollback_id'=>$r['rollback_id']];}
+		foreach(($history[$idx]['results']??[]) as $r){
+			if(empty($r['success']))continue;
+			if(!empty($r['rollback_id'])||!empty($r['created'])){
+				$completed[]=['operation_id'=>$r['operation_id']??'','rollback_id'=>$r['rollback_id']??null,'created'=>$r['created']??[]];
+			}
+		}
 		if(!$completed)return$this->err('nothing_to_rollback',__('No rollbackable steps in this execution.','wp-command-center'));
 		$rbres=$this->rollback_steps($completed,new OperationExecutor(),$cx);
-		$history[$idx]['rolled_back']=$rbres;$history[$idx]['status']='rolled_back';
+		$verified=$this->all_verified($rbres);
+		$history[$idx]['rolled_back']=$rbres;$history[$idx]['status']=$verified?'rolled_back':'rollback_incomplete';
 		update_option('wpcc_workflow_history',$history);
-		return['execution_id'=>$exec_id,'rolled_back'=>$rbres,'steps_rolled_back'=>count($rbres)];
+		return['execution_id'=>$exec_id,'rolled_back'=>$rbres,'steps_rolled_back'=>count($rbres),'verified'=>$verified];
 	}
 
 	private function import(array $p,array $cx):array{
