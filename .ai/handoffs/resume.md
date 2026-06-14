@@ -7,7 +7,7 @@ Last verified: June 14, 2026.
 Executing the roadmap autonomously, committing each step **locally** (not auto-deploying — production is fragile; owner deploys the batch when ready).
 
 - **Current step:** STEP 98 — Reporting Runtime (next, final roadmap step)
-- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 `622f3ef`; 94 `60a2c75`; 95 `1815aa2`; 96 `6bf006e`; 97 Workflow ✅ (commit pending)
+- **Completed:** 89 `1a8cbbc`; 90 `ce20f90`; 91 `901087c`; 92 `3509237`; 93 `622f3ef`; 94 `60a2c75`; 95 `1815aa2`; 96 `6bf006e`; 97 `0035891`
 - **Deployed through:** STEP 88 (c0795e0 + 5518bd8 on production). STEPs 89–97 committed locally, **not yet pushed**.
 - **Test counts:** 89 18/18; 90 25/25; 91 24/24; 92 23/23; 93 19/19; 94 23/23; 95 21/21; 96 26/26; 97 `test-workflow-step97.sh` 36/36 (+ test-workflow-runtime 53/53); full regression 24 pre-existing / 0 net-new.
 - **Dev plugins:** Yoast SEO 27.8, ACF Pro 6.4.2, WooCommerce 10.8.1, Elementor 4.1.3 — all active on dev (outside WPCC git).
