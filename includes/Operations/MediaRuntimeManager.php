@@ -26,6 +26,7 @@ final class MediaRuntimeManager {
 			MediaRegistry::ACTION_UPLOAD              => $this->upload_media( $payload, $context ),
 			MediaRegistry::ACTION_UPDATE              => $this->update_media( $payload, $context ),
 			MediaRegistry::ACTION_REPLACE             => $this->replace_media( $payload, $context ),
+			MediaRegistry::ACTION_REPLACE_VERIFY      => $this->replace_verify( $payload ),
 			MediaRegistry::ACTION_DELETE              => $this->delete_media( $payload, $context ),
 			MediaRegistry::ACTION_RESTORE             => $this->restore_media( $payload, $context ),
 			MediaRegistry::ACTION_FEATURED_ASSIGN,
@@ -80,6 +81,51 @@ final class MediaRuntimeManager {
 	private function snapshot_list( array $payload ): array {
 		$media_id = (int) ( $payload['media_id'] ?? 0 );
 		return [ 'action' => 'media_snapshot_list', 'snapshots' => ( new MediaSnapshot() )->list( $media_id ) ];
+	}
+
+	// ── STEP 100.2 — replace verification + abort cleanup ────────
+
+	/**
+	 * Report the current live file state of an attachment — used to confirm a
+	 * media_replace took effect, and that a rollback restored the original.
+	 */
+	private function replace_verify( array $payload ): array {
+		$media_id = (int) ( $payload['media_id'] ?? 0 );
+		$post     = get_post( $media_id );
+		if ( ! $post || 'attachment' !== $post->post_type ) {
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+		}
+		$file = get_attached_file( $media_id );
+		$meta = wp_get_attachment_metadata( $media_id );
+		$exists = $file && is_file( $file );
+		return [
+			'action'      => 'media_replace_verify',
+			'media_id'    => $media_id,
+			'file'        => $file ? wp_basename( $file ) : '',
+			'file_exists' => (bool) $exists,
+			'file_size'   => $exists ? ( filesize( $file ) ?: 0 ) : 0,
+			'hash'        => $exists ? md5_file( $file ) : '',
+			'mime_type'   => get_post_mime_type( $media_id ),
+			'width'       => is_array( $meta ) ? ( $meta['width'] ?? 0 ) : 0,
+			'height'      => is_array( $meta ) ? ( $meta['height'] ?? 0 ) : 0,
+			'sizes'       => is_array( $meta ) && ! empty( $meta['sizes'] ) ? array_keys( $meta['sizes'] ) : [],
+			'url'         => wp_get_attachment_url( $media_id ),
+		];
+	}
+
+	/** Discard a rollback record + its snapshot when a replace aborts before mutating. */
+	private function discard_replace_snapshot( string $rollback_id, string $snapshot_id ): void {
+		if ( '' !== $snapshot_id ) {
+			( new MediaSnapshot() )->delete( $snapshot_id );
+		}
+		if ( '' === $rollback_id ) {
+			return;
+		}
+		$rollbacks = get_option( 'wpcc_media_rollbacks', [] );
+		$kept      = array_values( array_filter( $rollbacks, static fn( $r ) => ( $r['id'] ?? '' ) !== $rollback_id ) );
+		if ( count( $kept ) !== count( $rollbacks ) ) {
+			update_option( 'wpcc_media_rollbacks', $kept );
+		}
 	}
 
 	private function list_media( array $payload ): array {
@@ -266,27 +312,73 @@ final class MediaRuntimeManager {
 		if ( ! $post || 'attachment' !== $post->post_type ) {
 			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
 		}
+		if ( '' === $source_url ) {
+			return $this->error( 'wpcc_missing_url', __( 'Source URL is required.', 'wp-command-center' ) );
+		}
 
-		$before      = $this->format_media( $post );
-		$rollback_id = $this->store_rollback( $media_id, 'replace', $before, $context );
+		$before = $this->format_media( $post );
 
-		require_once ABSPATH . 'wp-admin/includes/media.php';
+		// STEP 100.2 — capture a byte-level snapshot (original file + every size +
+		// metadata) BEFORE the destructive sideload, so rollback can restore the
+		// attachment exactly. If the snapshot cannot be taken, abort rather than
+		// perform an irreversible replace.
+		$snapshot = ( new MediaSnapshot() )->capture( $media_id, 'media_replace' );
+		if ( is_wp_error( $snapshot ) ) {
+			return $this->error( $snapshot->get_error_code(), $snapshot->get_error_message() );
+		}
+		$before['snapshot_id'] = $snapshot['id'];
+		$rollback_id           = $this->store_rollback( $media_id, 'replace', $before, $context );
+
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 
 		$tmp = download_url( $source_url );
 		if ( is_wp_error( $tmp ) ) {
+			// Replace never happened — discard the snapshot + its rollback record.
+			$this->discard_replace_snapshot( $rollback_id, $snapshot['id'] );
 			return $this->error( 'wpcc_download_failed', $tmp->get_error_message() );
 		}
 
-		$file_array = [ 'name' => basename( wp_parse_url( $source_url, PHP_URL_PATH ) ?: 'upload' ), 'tmp_name' => $tmp ];
-		$attach_id = media_handle_sideload( $file_array, 0, '', [ 'ID' => $media_id ] );
-		if ( is_wp_error( $attach_id ) ) {
+		// The downloaded source must be a real image.
+		if ( false === getimagesize( $tmp ) ) {
 			@unlink( $tmp );
-			return $this->error( 'wpcc_replace_failed', $attach_id->get_error_message() );
+			$this->discard_replace_snapshot( $rollback_id, $snapshot['id'] );
+			return $this->error( 'wpcc_replace_not_image', __( 'The source file is not a valid image.', 'wp-command-center' ) );
 		}
 
-		$this->audit->record( 'media.replaced', [ 'media_id' => $media_id, 'source' => $source_url ] );
+		// Replace IN PLACE at the original path so the attachment ID and URL are
+		// preserved, then regenerate sizes. NOTE: media_handle_sideload ignores an
+		// `ID` passed in post_data and instead creates a *new* orphan attachment —
+		// so we write the bytes to the existing file ourselves.
+		$orig_path = get_attached_file( $media_id );
+		$old_meta  = wp_get_attachment_metadata( $media_id );
+
+		if ( ! $orig_path || ! @copy( $tmp, $orig_path ) ) {
+			@unlink( $tmp );
+			$this->discard_replace_snapshot( $rollback_id, $snapshot['id'] );
+			return $this->error( 'wpcc_replace_failed', __( 'Failed to write the replacement file.', 'wp-command-center' ) );
+		}
+		@unlink( $tmp );
+
+		// Remove the previous generated size files, then regenerate from new bytes.
+		if ( is_array( $old_meta ) && ! empty( $old_meta['sizes'] ) ) {
+			$dir = trailingslashit( dirname( $orig_path ) );
+			foreach ( $old_meta['sizes'] as $size ) {
+				if ( ! empty( $size['file'] ) ) {
+					@unlink( $dir . $size['file'] );
+				}
+			}
+		}
+		wp_update_attachment_metadata( $media_id, wp_generate_attachment_metadata( $media_id, $orig_path ) );
+
+		// Keep the recorded mime type accurate (the original extension is retained).
+		$filetype = wp_check_filetype( $orig_path );
+		if ( ! empty( $filetype['type'] ) && $filetype['type'] !== get_post_mime_type( $media_id ) ) {
+			wp_update_post( [ 'ID' => $media_id, 'post_mime_type' => $filetype['type'] ] );
+		}
+		clean_post_cache( $media_id );
+
+		$this->audit->record( 'media.replaced', [ 'media_id' => $media_id, 'source' => $source_url, 'snapshot_id' => $snapshot['id'] ] );
 
 		return [ 'action' => 'media_replace', 'media_id' => $media_id, 'url' => wp_get_attachment_url( $media_id ), 'rollback_id' => $rollback_id ];
 	}
@@ -351,6 +443,11 @@ final class MediaRuntimeManager {
 		// Restore prior metadata after an update.
 		if ( 'update' === $record['action'] ) {
 			$this->restore_metadata( $media_id, $before );
+		}
+
+		// STEP 100.2 — restore original file bytes + sizes + metadata after a replace.
+		if ( 'replace' === $record['action'] && ! empty( $before['snapshot_id'] ) ) {
+			( new MediaSnapshot() )->restore( (string) $before['snapshot_id'] );
 		}
 
 		// Restore featured image
@@ -462,6 +559,13 @@ final class MediaRuntimeManager {
 				break;
 			case 'update':
 				$this->restore_metadata( $media_id, $before );
+				break;
+			case 'replace':
+				// STEP 100.2 — restore original bytes + sizes + metadata from the
+				// pre-replace snapshot (was previously a silent no-op).
+				if ( ! empty( $before['snapshot_id'] ) ) {
+					( new MediaSnapshot() )->restore( (string) $before['snapshot_id'] );
+				}
 				break;
 			case 'delete':
 				wp_untrash_post( $media_id );

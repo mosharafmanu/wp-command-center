@@ -15,6 +15,7 @@ final class MediaRegistry {
 	const ACTION_UPLOAD              = 'media_upload';
 	const ACTION_UPDATE              = 'media_update';
 	const ACTION_REPLACE             = 'media_replace';
+	const ACTION_REPLACE_VERIFY      = 'media_replace_verify';
 	const ACTION_DELETE              = 'media_delete';
 	const ACTION_RESTORE             = 'media_restore';
 	const ACTION_FEATURED_ASSIGN     = 'featured_image_assign';
@@ -31,7 +32,7 @@ final class MediaRegistry {
 
 	const ACTIONS = [
 		'media_list', 'media_get', 'media_search', 'media_upload', 'media_update',
-		'media_replace', 'media_delete', 'media_restore',
+		'media_replace', 'media_replace_verify', 'media_delete', 'media_restore',
 		'featured_image_assign', 'featured_image_remove',
 		'media_set_featured', 'media_remove_featured', 'media_regenerate_metadata',
 		'media_snapshot_create', 'media_snapshot_restore', 'media_snapshot_verify', 'media_snapshot_list',
@@ -41,6 +42,7 @@ final class MediaRegistry {
 		self::ACTION_LIST                => self::RISK_LOW,
 		self::ACTION_GET                 => self::RISK_LOW,
 		self::ACTION_SEARCH              => self::RISK_LOW,
+		self::ACTION_REPLACE_VERIFY      => self::RISK_LOW,
 		self::ACTION_UPDATE              => self::RISK_MEDIUM,
 		self::ACTION_FEATURED_ASSIGN     => self::RISK_MEDIUM,
 		self::ACTION_FEATURED_REMOVE     => self::RISK_MEDIUM,
@@ -61,6 +63,7 @@ final class MediaRegistry {
 		self::ACTION_LIST                => false,
 		self::ACTION_GET                 => false,
 		self::ACTION_SEARCH              => false,
+		self::ACTION_REPLACE_VERIFY      => false,
 		self::ACTION_UPDATE              => false,
 		self::ACTION_FEATURED_ASSIGN     => false,
 		self::ACTION_FEATURED_REMOVE     => false,

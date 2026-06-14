@@ -351,6 +351,7 @@ final class OperationRegistry {
 					'media_list'                => 'diagnostic',
 					'media_get'                 => 'diagnostic',
 					'media_search'              => 'diagnostic',
+					'media_replace_verify'      => 'diagnostic',
 					'media_upload'              => 'medium',
 					'media_update'              => 'medium',
 					'media_replace'             => 'medium',
