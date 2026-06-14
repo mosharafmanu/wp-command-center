@@ -28,12 +28,19 @@ jobs:
 
     steps:
       - name: Deploy over SSH
+        env:
+          # Base64-encoded private key — single line survives GitHub secret
+          # storage intact (raw multi-line PEM gets whitespace-mangled and
+          # fails with "error in libcrypto").
+          DEPLOY_SSH_KEY_B64: ${{ secrets.DEPLOY_SSH_KEY_B64 }}
         run: |
           set -euo pipefail
 
           mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 700 ~/.ssh
+          printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null  # fail fast if key is malformed
           ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
           ssh -i ~/.ssh/deploy_key \
