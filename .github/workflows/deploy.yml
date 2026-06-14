@@ -1,10 +1,9 @@
 name: Deploy to Production
 
-# SSH-based deploy: the runner SSHes into the host and runs `git pull` directly,
-# bypassing the public web endpoint (and the host WAF that intermittently 403'd
-# the GitHub-runner datacenter IPs on the old webhook). Auth is a dedicated
-# ed25519 deploy key — public half lives in the server's ~/.ssh/authorized_keys,
-# private half is the single repo secret DEPLOY_SSH_KEY.
+# SSH-based deploy: the runner SSHes into the host and runs git pull
+# directly. Auth is a dedicated ed25519 deploy key — public half lives in
+# the server's ~/.ssh/authorized_keys, private half is the single repo
+# secret DEPLOY_SSH_KEY_B64 (base64-encoded; decoded in the Deploy step).
 
 on:
   push:
