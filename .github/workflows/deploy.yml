@@ -21,21 +21,16 @@ jobs:
 
       - name: Trigger server-side git pull
         run: |
-          response=$(curl -sf \
+          HTTP=$(curl -s -o resp.txt -w "%{http_code}" \
             -X POST \
             -H "Authorization: Bearer ${{ secrets.DEPLOY_TOKEN }}" \
             -H "Content-Type: application/json" \
+            -A "wpcc-deploy-bot" \
             --max-time 60 \
             "https://mosharafmanu.com/wpcc-deploy.php")
-          echo "$response"
-          echo "$response" | python3 -c "
-          import sys, json
-          data = json.load(sys.stdin)
-          print('--- git pull ---')
-          print(data.get('pull',''))
-          print('--- cache flush ---')
-          print(data.get('cache',''))
-          if data.get('error'):
-              print('ERROR:', data['error'])
-              sys.exit(1)
-          "
+          echo "HTTP_CODE=$HTTP"
+          echo "----- RESPONSE BODY (first 1KB) -----"
+          head -c 1024 resp.txt || true
+          echo
+          echo "-------------------------------------"
+          test "$HTTP" = "200"
