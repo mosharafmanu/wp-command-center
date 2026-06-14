@@ -26,6 +26,11 @@ final class MediaEnhancementRegistry {
 	const A_SIZE_USAGE_AUDIT     = 'image_size_usage_audit';
 	const A_SIZE_RECOMMENDATIONS = 'image_size_recommendations';
 	const A_SIZE_VERIFY          = 'image_size_verify';
+	// STEP 100.4 — responsive image audit (read-only).
+	const A_SRCSET_VERIFY        = 'srcset_verify';
+	const A_RESPONSIVE_AUDIT     = 'responsive_image_audit';
+	const A_MISSING_SIZES_AUDIT  = 'missing_sizes_audit';
+	const A_SIZE_CONTEXT_AUDIT   = 'image_size_context_audit';
 
 	const ACTIONS = [
 		self::A_CAPABILITIES,
@@ -33,9 +38,13 @@ final class MediaEnhancementRegistry {
 		self::A_SIZE_USAGE_AUDIT,
 		self::A_SIZE_RECOMMENDATIONS,
 		self::A_SIZE_VERIFY,
+		self::A_SRCSET_VERIFY,
+		self::A_RESPONSIVE_AUDIT,
+		self::A_MISSING_SIZES_AUDIT,
+		self::A_SIZE_CONTEXT_AUDIT,
 	];
 
-	/** Every STEP 100.3 action is read-only. */
+	/** Every media_enhance action (STEP 100.3 + 100.4) is read-only. */
 	public static function get_risk( string $a ): string {
 		return 'diagnostic';
 	}
@@ -49,6 +58,9 @@ final class MediaEnhancementRuntimeManager {
 
 	/** A registered size whose largest edge exceeds this is flagged "oversized". */
 	private const OVERSIZED_EDGE = 2048;
+
+	/** An original this many × the largest registered display size is "oversized". */
+	private const OVERSIZE_FACTOR = 1.5;
 
 	/** WordPress core default registered subsizes (everything else is theme/plugin). */
 	private const CORE_SIZES = [ 'thumbnail', 'medium', 'medium_large', 'large' ];
@@ -71,6 +83,10 @@ final class MediaEnhancementRuntimeManager {
 			MediaEnhancementRegistry::A_SIZE_USAGE_AUDIT     => $this->size_usage_audit( $p ),
 			MediaEnhancementRegistry::A_SIZE_RECOMMENDATIONS => $this->size_recommendations( $p ),
 			MediaEnhancementRegistry::A_SIZE_VERIFY          => $this->size_verify( $p ),
+			MediaEnhancementRegistry::A_SRCSET_VERIFY        => $this->srcset_verify( $p ),
+			MediaEnhancementRegistry::A_RESPONSIVE_AUDIT     => $this->responsive_image_audit( $p ),
+			MediaEnhancementRegistry::A_MISSING_SIZES_AUDIT  => $this->missing_sizes_audit( $p ),
+			MediaEnhancementRegistry::A_SIZE_CONTEXT_AUDIT   => $this->image_size_context_audit( $p ),
 		};
 
 		if ( is_wp_error( $report ) ) {
@@ -273,15 +289,35 @@ final class MediaEnhancementRuntimeManager {
 	 * a defect, so the audit doesn't false-positive.
 	 */
 	private function size_verify( array $p ): array|\WP_Error {
-		$id   = (int) ( $p['media_id'] ?? $p['attachment_id'] ?? 0 );
-		$post = $id ? get_post( $id ) : null;
-		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+		$analysis = $this->analyze_sizes( $p );
+		if ( is_wp_error( $analysis ) ) {
+			return $analysis;
 		}
-		if ( ! wp_attachment_is_image( $id ) ) {
-			return new \WP_Error( 'wpcc_not_an_image', __( 'Attachment is not an image.', 'wp-command-center' ) );
-		}
+		return [ 'image_size_verify' => $analysis ];
+	}
 
+	/**
+	 * Validate the payload's attachment is an image, then classify its sizes.
+	 *
+	 * @return array{media_id:int,original:array,registered:int,present:array,missing:array,not_applicable:array,detail:array}|\WP_Error
+	 */
+	private function analyze_sizes( array $p ): array|\WP_Error {
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		return $this->classify_sizes( $id );
+	}
+
+	/**
+	 * Classify every registered size for a (validated) image attachment as
+	 * present / missing / not_applicable. Sizes larger than the original are
+	 * `not_applicable` (WordPress never upscales). Shared by size_verify, the
+	 * responsive audit, the missing-sizes audit, and the context audit.
+	 *
+	 * @return array{media_id:int,original:array,registered:int,present:array,missing:array,not_applicable:array,detail:array}
+	 */
+	private function classify_sizes( int $id ): array {
 		$meta     = wp_get_attachment_metadata( $id );
 		$meta     = is_array( $meta ) ? $meta : [];
 		$base_dir = $this->attachment_base_dir( $id );
@@ -305,7 +341,7 @@ final class MediaEnhancementRuntimeManager {
 				$on_disk = ( '' !== $file && '' !== $base_dir && file_exists( $base_dir . '/' . $file ) );
 			}
 
-			// A size that exceeds the original in both edges is never generated.
+			// A size that exceeds the original in either edge is never generated.
 			$too_large = ( $orig_w > 0 && $orig_h > 0 )
 				&& ( ( $w > 0 && $w > $orig_w ) || ( $h > 0 && $h > $orig_h ) )
 				&& ! $in_meta;
@@ -326,15 +362,303 @@ final class MediaEnhancementRuntimeManager {
 			}
 		}
 
-		return [ 'image_size_verify' => [
-			'media_id'        => $id,
-			'original'        => [ 'width' => $orig_w, 'height' => $orig_h ],
-			'registered'      => count( $subsizes ),
-			'present'         => $present,
-			'missing'         => $missing,
-			'not_applicable'  => $not_applicable,
-			'detail'          => $detail,
+		return [
+			'media_id'       => $id,
+			'original'       => [ 'width' => $orig_w, 'height' => $orig_h ],
+			'registered'     => count( $subsizes ),
+			'present'        => $present,
+			'missing'        => $missing,
+			'not_applicable' => $not_applicable,
+			'detail'         => $detail,
+		];
+	}
+
+	// ── STEP 100.4 — Responsive image audit (read-only) ──────────
+
+	/**
+	 * WordPress responsive (srcset/sizes) metadata for one attachment: the
+	 * generated srcset candidates, the `sizes` attribute, and whether the image
+	 * has a meaningful (>1 candidate) srcset for responsive delivery.
+	 */
+	private function srcset_verify( array $p ): array|\WP_Error {
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		return [ 'srcset' => $this->srcset_info( $id ) ];
+	}
+
+	/**
+	 * Full responsive-readiness report. With `media_id`: a per-attachment report
+	 * (size classification + srcset + metadata completeness + recommendations +
+	 * a single `responsive_ready` verdict). Without it: a library-wide aggregate
+	 * (counts of ready / not-ready / no-srcset / missing-sizes attachments).
+	 */
+	private function responsive_image_audit( array $p ): array|\WP_Error {
+		if ( isset( $p['media_id'] ) || isset( $p['attachment_id'] ) ) {
+			$report = $this->responsive_report( $p );
+			if ( is_wp_error( $report ) ) {
+				return $report;
+			}
+			return [ 'responsive_image_audit' => $report ];
+		}
+
+		$limit     = $this->scan_limit( $p );
+		$ids       = $this->image_attachment_ids( $limit + 1 );
+		$truncated = count( $ids ) > $limit;
+		if ( $truncated ) {
+			$ids = array_slice( $ids, 0, $limit );
+		}
+
+		$scanned = $ready = $no_srcset = $with_missing = $incomplete_meta = 0;
+		$samples = [];
+		foreach ( $ids as $id ) {
+			$scanned++;
+			$class  = $this->classify_sizes( $id );
+			$srcset = $this->srcset_info( $id );
+			$meta_ok = $this->metadata_complete( $id );
+
+			$has_missing = ! empty( $class['missing'] );
+			$has_srcset  = (bool) $srcset['has_srcset'];
+			if ( $has_missing ) { $with_missing++; }
+			if ( ! $has_srcset ) { $no_srcset++; }
+			if ( ! $meta_ok['complete'] ) { $incomplete_meta++; }
+
+			$is_ready = $has_srcset && ! $has_missing && $meta_ok['complete'];
+			if ( $is_ready ) {
+				$ready++;
+			} elseif ( count( $samples ) < 25 ) {
+				$samples[] = [
+					'media_id'        => $id,
+					'has_srcset'      => $has_srcset,
+					'missing'         => $class['missing'],
+					'metadata_complete' => $meta_ok['complete'],
+				];
+			}
+		}
+
+		return [ 'responsive_image_audit' => [
+			'scanned'           => $scanned,
+			'responsive_ready'  => $ready,
+			'not_ready'         => $scanned - $ready,
+			'without_srcset'    => $no_srcset,
+			'with_missing_sizes' => $with_missing,
+			'incomplete_metadata' => $incomplete_meta,
+			'truncated'         => $truncated,
+			'scan_limit'        => $limit,
+			'samples'           => $samples,
 		] ];
+	}
+
+	/**
+	 * Library-wide: image attachments missing one or more *applicable* registered
+	 * sizes (i.e. genuinely regenerable — not the upscale-skipped ones). Bounded
+	 * by `limit`. The audit a future thumbnail-regenerate step (100.5) consumes.
+	 */
+	private function missing_sizes_audit( array $p ): array {
+		$limit     = $this->scan_limit( $p );
+		$ids       = $this->image_attachment_ids( $limit + 1 );
+		$truncated = count( $ids ) > $limit;
+		if ( $truncated ) {
+			$ids = array_slice( $ids, 0, $limit );
+		}
+
+		$scanned = 0;
+		$with_missing = 0;
+		$attachments = [];
+		foreach ( $ids as $id ) {
+			$scanned++;
+			$class = $this->classify_sizes( $id );
+			if ( empty( $class['missing'] ) ) {
+				continue;
+			}
+			$with_missing++;
+			if ( count( $attachments ) < 100 ) {
+				$attachments[] = [
+					'media_id' => $id,
+					'title'    => get_the_title( $id ),
+					'missing'  => $class['missing'],
+				];
+			}
+		}
+
+		return [ 'missing_sizes_audit' => [
+			'scanned'      => $scanned,
+			'with_missing' => $with_missing,
+			'attachments'  => $attachments, // capped at 100
+			'truncated'    => $truncated,
+			'scan_limit'   => $limit,
+		] ];
+	}
+
+	/**
+	 * Compare an attachment's actual dimensions against the registered sizes that
+	 * act as its intended display contexts: flag an original that is oversized
+	 * (far larger than any display target → wasted bytes) or undersized (smaller
+	 * than registered display sizes it cannot fill, since WP will not upscale).
+	 */
+	private function image_size_context_audit( array $p ): array|\WP_Error {
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		$class    = $this->classify_sizes( $id );
+		$orig_w   = (int) $class['original']['width'];
+		$orig_h   = (int) $class['original']['height'];
+		$subsizes = $this->registered_subsizes();
+
+		$largest_w = 0;
+		$largest_name = '';
+		foreach ( $subsizes as $name => $dims ) {
+			$w = (int) ( $dims['width'] ?? 0 );
+			if ( $w > $largest_w ) {
+				$largest_w = $w;
+				$largest_name = $name;
+			}
+		}
+
+		$unfillable = count( $class['not_applicable'] );
+		$status = 'adequate';
+		$recommendations = [];
+
+		if ( $largest_w > 0 && $orig_w > 0 && $orig_w >= (int) round( $largest_w * self::OVERSIZE_FACTOR ) ) {
+			$status = 'oversized';
+			$recommendations[] = [
+				'issue'          => 'oversized_original',
+				'detail'         => sprintf( 'Original width %dpx is ≥ %.1f× the largest registered display size (%s, %dpx).', $orig_w, self::OVERSIZE_FACTOR, $largest_name, $largest_w ),
+				'recommendation' => 'Consider a max-dimension cap (big_image_size_threshold) or downscaling; the original exceeds every display target.',
+			];
+		} elseif ( $largest_w > 0 && $orig_w > 0 && $orig_w < $largest_w && $unfillable > 0 ) {
+			$status = 'undersized';
+			$recommendations[] = [
+				'issue'          => 'undersized_original',
+				'detail'         => sprintf( 'Original width %dpx cannot fill %d registered display size(s); WordPress will not upscale.', $orig_w, $unfillable ),
+				'recommendation' => 'Source a higher-resolution original to serve larger display contexts.',
+			];
+		}
+
+		return [ 'image_size_context_audit' => [
+			'media_id'             => $id,
+			'original'             => $class['original'],
+			'largest_display'      => [ 'name' => $largest_name, 'width' => $largest_w ],
+			'oversize_factor'      => self::OVERSIZE_FACTOR,
+			'unfillable_sizes'     => $class['not_applicable'],
+			'status'               => $status,
+			'recommendations'      => $recommendations,
+		] ];
+	}
+
+	// ── STEP 100.4 helpers ───────────────────────────────────────
+
+	/**
+	 * srcset / sizes metadata for an attachment (computed against the full size).
+	 *
+	 * @return array{srcset:string,sizes:string,candidate_count:int,has_srcset:bool}
+	 */
+	private function srcset_info( int $id ): array {
+		$srcset = wp_get_attachment_image_srcset( $id, 'full' );
+		$sizes  = wp_get_attachment_image_sizes( $id, 'full' );
+		$srcset = is_string( $srcset ) ? $srcset : '';
+		$sizes  = is_string( $sizes ) ? $sizes : '';
+		$count  = '' === $srcset ? 0 : count( array_filter( array_map( 'trim', explode( ',', $srcset ) ) ) );
+		return [
+			'srcset'          => $srcset,
+			'sizes'           => $sizes,
+			'candidate_count' => $count,
+			// A meaningful srcset needs at least two candidates to be responsive.
+			'has_srcset'      => $count >= 2,
+		];
+	}
+
+	/**
+	 * Whether an attachment's core image metadata is complete enough to drive
+	 * responsive output (width, height, file, a sizes map, and image_meta) plus
+	 * whether alt text is set.
+	 *
+	 * @return array{complete:bool,missing:array,has_alt:bool}
+	 */
+	private function metadata_complete( int $id ): array {
+		$meta    = wp_get_attachment_metadata( $id );
+		$meta    = is_array( $meta ) ? $meta : [];
+		$missing = [];
+		foreach ( [ 'width', 'height', 'file', 'sizes', 'image_meta' ] as $k ) {
+			if ( empty( $meta[ $k ] ) ) {
+				$missing[] = $k;
+			}
+		}
+		$alt = (string) get_post_meta( $id, '_wp_attachment_image_alt', true );
+		return [
+			'complete' => empty( $missing ),
+			'missing'  => $missing,
+			'has_alt'  => '' !== trim( $alt ),
+		];
+	}
+
+	/** Per-attachment responsive report (size classification + srcset + meta + verdict). */
+	private function responsive_report( array $p ): array|\WP_Error {
+		$class = $this->analyze_sizes( $p );
+		if ( is_wp_error( $class ) ) {
+			return $class;
+		}
+		$id      = (int) $class['media_id'];
+		$srcset  = $this->srcset_info( $id );
+		$meta_ok = $this->metadata_complete( $id );
+
+		$recommendations = [];
+		if ( ! empty( $class['missing'] ) ) {
+			$recommendations[] = [
+				'issue'          => 'missing_sizes',
+				'detail'         => sprintf( '%d applicable registered size(s) not generated on disk: %s.', count( $class['missing'] ), implode( ', ', $class['missing'] ) ),
+				'recommendation' => 'Regenerate thumbnails for this attachment (STEP 100.5).',
+			];
+		}
+		if ( ! $srcset['has_srcset'] ) {
+			$recommendations[] = [
+				'issue'          => 'no_responsive_srcset',
+				'detail'         => sprintf( 'srcset has %d candidate(s); responsive delivery needs ≥2.', $srcset['candidate_count'] ),
+				'recommendation' => 'Ensure multiple intermediate sizes exist (the original may be too small, or sizes are missing).',
+			];
+		}
+		if ( ! $meta_ok['complete'] ) {
+			$recommendations[] = [
+				'issue'          => 'incomplete_metadata',
+				'detail'         => 'Attachment metadata missing: ' . implode( ', ', $meta_ok['missing'] ) . '.',
+				'recommendation' => 'Regenerate attachment metadata.',
+			];
+		}
+
+		$responsive_ready = $srcset['has_srcset'] && empty( $class['missing'] ) && $meta_ok['complete'];
+
+		return [
+			'media_id'          => $id,
+			'original'          => $class['original'],
+			'registered'        => $class['registered'],
+			'present'           => $class['present'],
+			'missing'           => $class['missing'],
+			'not_applicable'    => $class['not_applicable'],
+			'srcset'            => $srcset,
+			'metadata'          => $meta_ok,
+			'responsive_ready'  => $responsive_ready,
+			'recommendations'   => $recommendations,
+		];
+	}
+
+	/**
+	 * Resolve and validate `media_id` / `attachment_id` as an image attachment.
+	 *
+	 * @return int|\WP_Error
+	 */
+	private function resolve_image_id( array $p ): int|\WP_Error {
+		$id   = (int) ( $p['media_id'] ?? $p['attachment_id'] ?? 0 );
+		$post = $id ? get_post( $id ) : null;
+		if ( ! $post || 'attachment' !== $post->post_type ) {
+			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+		}
+		if ( ! wp_attachment_is_image( $id ) ) {
+			return new \WP_Error( 'wpcc_not_an_image', __( 'Attachment is not an image.', 'wp-command-center' ) );
+		}
+		return $id;
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────

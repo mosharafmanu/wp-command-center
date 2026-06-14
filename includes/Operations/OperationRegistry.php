@@ -886,7 +886,7 @@ final class OperationRegistry {
 			'media_enhance' => [
 				'id'                => 'media_enhance',
 				'title'             => __( 'Media Enhancement Runtime', 'wp-command-center' ),
-				'description'       => __( 'Read-only media-enhancement diagnostics: media_enhance_capabilities (GD/Imagick + WebP/AVIF encode probe), image_sizes_list (all registered sizes incl. theme add_image_size), image_size_usage_audit (per-size on-disk coverage across the library), image_size_recommendations (unused/oversized sizes), image_size_verify (which registered sizes exist for one attachment). Foundation for later thumbnail/WebP/optimization sub-steps. No writes, no rollback.', 'wp-command-center' ),
+				'description'       => __( 'Read-only media-enhancement diagnostics. Foundation (100.3): media_enhance_capabilities (GD/Imagick + WebP/AVIF encode probe), image_sizes_list (registered sizes incl. theme add_image_size), image_size_usage_audit (per-size on-disk coverage), image_size_recommendations (unused/oversized sizes), image_size_verify (sizes present/missing/not_applicable for one attachment). Responsive audit (100.4): srcset_verify (WordPress srcset/sizes metadata for one attachment), responsive_image_audit (per-attachment responsive readiness with media_id, else a library-wide aggregate), missing_sizes_audit (attachments missing applicable sizes), image_size_context_audit (oversized/undersized original vs registered display sizes). No writes, no rollback.', 'wp-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'media_enhance_capabilities'  => 'diagnostic',
@@ -894,11 +894,15 @@ final class OperationRegistry {
 					'image_size_usage_audit'      => 'diagnostic',
 					'image_size_recommendations'  => 'diagnostic',
 					'image_size_verify'           => 'diagnostic',
+					'srcset_verify'               => 'diagnostic',
+					'responsive_image_audit'      => 'diagnostic',
+					'missing_sizes_audit'         => 'diagnostic',
+					'image_size_context_audit'    => 'diagnostic',
 				],
 				'requires_approval' => false,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'media_enhance_capabilities', 'image_sizes_list', 'image_size_usage_audit', 'image_size_recommendations', 'image_size_verify' ], 'description' => 'The diagnostic to run.' ],
-					[ 'name' => 'media_id', 'type' => 'integer', 'required' => false, 'description' => 'Attachment ID (required for image_size_verify).' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'media_enhance_capabilities', 'image_sizes_list', 'image_size_usage_audit', 'image_size_recommendations', 'image_size_verify', 'srcset_verify', 'responsive_image_audit', 'missing_sizes_audit', 'image_size_context_audit' ], 'description' => 'The diagnostic to run.' ],
+					[ 'name' => 'media_id', 'type' => 'integer', 'required' => false, 'description' => 'Attachment ID (required for image_size_verify, srcset_verify, image_size_context_audit; optional for responsive_image_audit — omit for a library-wide aggregate).' ],
 					[ 'name' => 'limit', 'type' => 'integer', 'required' => false, 'description' => 'Attachments to scan for library-wide audits (default 500, max 5000).' ],
 				],
 				'available'         => true,
