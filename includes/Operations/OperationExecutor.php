@@ -181,6 +181,11 @@ final class OperationExecutor {
 			return $this->fail( $operation_id, 'execution_failed', __( 'Execution logic not yet implemented for this operation.', 'wp-command-center' ) );
 		}
 
+		// STEP 102 — capture any rollback id stored by the handler during this run so
+		// normalize_success() can surface it uniformly (findings F-2 / F-3).
+		RollbackContext::boot();
+		RollbackContext::reset();
+
 		$result = $handler->run( $payload, $context );
 		$ended_at = microtime( true );
 		$duration = (int) ( ( $ended_at - $started_at ) * 1000 );
@@ -556,6 +561,20 @@ final class OperationExecutor {
 
 		if ( isset( $result['execution_result'] ) && is_array( $result['execution_result'] ) ) {
 			$base['updated'] = array_keys( array_filter( $result['execution_result'], fn( $s ) => 'updated' === $s ) );
+		}
+
+		// STEP 102 — uniform rollback contract. If the handler returned a rollback_id
+		// (some already do) or stored one during this run (captured by RollbackContext),
+		// surface it consistently so every reversible write exposes a discoverable,
+		// executable rollback handle (findings F-2 / F-3).
+		$rollback_id = $result['rollback_id'] ?? RollbackContext::last();
+		if ( is_string( $rollback_id ) && '' !== $rollback_id ) {
+			if ( ! isset( $base['result']['rollback_id'] ) ) {
+				$base['result']['rollback_id'] = $rollback_id;
+			}
+			$base['result']['rollback_available'] = true;
+			$base['rollback_id']        = $rollback_id;
+			$base['rollback_available'] = true;
 		}
 
 		return $base;

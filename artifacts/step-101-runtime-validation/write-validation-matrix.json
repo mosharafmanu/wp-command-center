@@ -1,0 +1,492 @@
+{
+  "step": "101.3",
+  "generated": "2026-06-15T17:49:36",
+  "mode": "reversible writes on DEV only; all assets cleaned up",
+  "totals": {
+    "evidence_records": 73,
+    "pass": 65,
+    "fail": 7,
+    "observation": 1,
+    "runtimes_write_tested": 16,
+    "runtimes_skipped": 9
+  },
+  "rollback_success_rate": {
+    "pass": 6,
+    "total": 12,
+    "pct": 50,
+    "per_runtime": {
+      "Option": "PASS",
+      "SEO": "PASS",
+      "Media": "PASS",
+      "Snapshot": "PASS",
+      "Patch": "PASS",
+      "Workflow": "PASS",
+      "Content": "FAIL",
+      "Menu": "FAIL",
+      "ACF": "FAIL",
+      "User": "FAIL",
+      "WooCommerce": "FAIL",
+      "Settings": "FAIL"
+    }
+  },
+  "approval_workflow": {
+    "steps_pass": 9,
+    "steps_total": 9,
+    "pct": 100
+  },
+  "audit_trail": {
+    "ok": true
+  },
+  "timeline": {
+    "ok": true
+  },
+  "matrix": [
+    {
+      "runtime": "Content",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "FAIL",
+      "summary": "write OK, verify OK; ROLLBACK BROKEN (F-1)",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "FAIL"
+        },
+        {
+          "step": "verify-restore",
+          "verdict": "FAIL"
+        },
+        {
+          "step": "workaround-restore",
+          "verdict": "PASS"
+        },
+        {
+          "step": "err-invalid-rollback",
+          "verdict": "OBSERVATION"
+        }
+      ]
+    },
+    {
+      "runtime": "Option",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "PASS",
+      "summary": "full create->verify->rollback->verify-restore",
+      "steps": [
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-restore",
+          "verdict": "PASS"
+        },
+        {
+          "step": "err-duplicate-rollback",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "SEO",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "PASS",
+      "summary": "full update->verify->restore->verify",
+      "steps": [
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-restore",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Media",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "PASS",
+      "summary": "full update->verify->REST rollback->verify-restore",
+      "steps": [
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-restore",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Menu",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "FAIL",
+      "summary": "write OK, verify OK; rollback_id not surfaced (F-2)",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "FAIL"
+        },
+        {
+          "step": "cleanup",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "ACF",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "FAIL",
+      "summary": "write OK, verify OK; rollback_id not surfaced (F-3)",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "FAIL"
+        },
+        {
+          "step": "cleanup",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "User",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "FAIL",
+      "summary": "write OK; update rollback_id not surfaced (F-3); delete-handshake cleanup OK",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "FAIL"
+        },
+        {
+          "step": "cleanup-delete",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "WooCommerce",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "FAIL",
+      "summary": "write OK, verify OK; price_update rollback_id not surfaced (F-3)",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "FAIL"
+        },
+        {
+          "step": "cleanup-delete",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Settings",
+      "write_tested": true,
+      "primary_write": "update",
+      "lifecycle_verdict": "FAIL",
+      "summary": "write OK; rollback_id not surfaced (F-3); manual restore",
+      "steps": [
+        {
+          "step": "update",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "FAIL"
+        },
+        {
+          "step": "verify-restore",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Snapshot",
+      "write_tested": true,
+      "primary_write": "create",
+      "lifecycle_verdict": "PASS",
+      "summary": "create->verify(hash)->details->restore",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify",
+          "verdict": "PASS"
+        },
+        {
+          "step": "details",
+          "verdict": "PASS"
+        },
+        {
+          "step": "restore",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Patch",
+      "write_tested": true,
+      "primary_write": "create",
+      "lifecycle_verdict": "PASS",
+      "summary": "create->apply->verify->rollback(via rollback_manage)->verify-restore",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "apply",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-restore",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Rollback",
+      "write_tested": true,
+      "primary_write": "rollback",
+      "lifecycle_verdict": "PASS",
+      "summary": "rollback_get/apply + duplicate & invalid-id negatives",
+      "steps": [
+        {
+          "step": "rollback-get",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback-apply",
+          "verdict": "PASS"
+        },
+        {
+          "step": "err-duplicate-rollback",
+          "verdict": "PASS"
+        },
+        {
+          "step": "err-invalid-id",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Workflow",
+      "write_tested": true,
+      "primary_write": "execute",
+      "lifecycle_verdict": "PASS",
+      "summary": "create->execute(timeline)->verify->history->workflow_rollback->verify-restore",
+      "steps": [
+        {
+          "step": "create",
+          "verdict": "PASS"
+        },
+        {
+          "step": "execute",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-change",
+          "verdict": "PASS"
+        },
+        {
+          "step": "timeline/history",
+          "verdict": "PASS"
+        },
+        {
+          "step": "rollback",
+          "verdict": "PASS"
+        },
+        {
+          "step": "verify-restore",
+          "verdict": "PASS"
+        },
+        {
+          "step": "cleanup",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Approval",
+      "write_tested": true,
+      "primary_write": "execute",
+      "lifecycle_verdict": "PASS",
+      "summary": "request->approve->queue_run->results + 3 negatives (gating/duplicate/invalid)",
+      "steps": [
+        {
+          "step": "plan-generation",
+          "verdict": "PASS"
+        },
+        {
+          "step": "request-get",
+          "verdict": "PASS"
+        },
+        {
+          "step": "err-execute-without-approval",
+          "verdict": "PASS"
+        },
+        {
+          "step": "approve",
+          "verdict": "PASS"
+        },
+        {
+          "step": "execute",
+          "verdict": "PASS"
+        },
+        {
+          "step": "results/audit",
+          "verdict": "PASS"
+        },
+        {
+          "step": "err-duplicate-execution",
+          "verdict": "PASS"
+        },
+        {
+          "step": "err-approve-nonexistent",
+          "verdict": "PASS"
+        },
+        {
+          "step": "cleanup",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Audit",
+      "write_tested": true,
+      "primary_write": "audit",
+      "lifecycle_verdict": "PASS",
+      "summary": "agent/patch/approval activity reports populated",
+      "steps": [
+        {
+          "step": "audit-records",
+          "verdict": "PASS"
+        },
+        {
+          "step": "patch-activity",
+          "verdict": "PASS"
+        },
+        {
+          "step": "approval-activity",
+          "verdict": "PASS"
+        }
+      ]
+    },
+    {
+      "runtime": "Timeline",
+      "write_tested": true,
+      "primary_write": "timeline",
+      "lifecycle_verdict": "PASS",
+      "summary": "GET /agent/timeline returns operation entries",
+      "steps": [
+        {
+          "step": "timeline-records",
+          "verdict": "PASS"
+        }
+      ]
+    }
+  ],
+  "skipped": {
+    "Elementor": "No Elementor-built page on dev (F-4 from 101.2); a valid _elementor_data fixture could not be created safely. Read-side validated in 101.2.",
+    "Theme": "Only write op is theme_activate/update (site-disrupting; dev must stay hello-elementor). Non-mutating theme reads validated in 101.2. theme_delete is destructive (excluded).",
+    "Plugin": "Write ops (activate/deactivate/update) risk breaking the dev site; plugin_delete is destructive. Reads validated in 101.2. Not exercised to keep dev stable.",
+    "Database": "database_inspect is read-only (no writes). safe_search_replace is the only DB write (critical, live table mutation) \u2014 not executed per the no-destructive/no-permanent mandate; dry-run is non-mutating only.",
+    "Seeder": "content_seed/acf_seed/cf7_seed/woo_product_seed are create-only generators with no rollback_id (reversed by delete), same pattern as content_create; not separately exercised.",
+    "Comments": "Has a working public rollback() (verified statically) but requires an existing comment fixture; not exercised this round (Content covers the post path; rollback contract proven via Option/SEO/Media/Patch).",
+    "CPT/Widgets": "cpt_create/widget_add register/site-structure writes; reversible but higher blast radius. Deferred \u2014 rollback contract already proven on safer runtimes.",
+    "Site Builder": "page_* overlaps Content (same WP post API). Content path exercised instead.",
+    "Bulk": "Batched multi-write; overlaps the single-op runtimes already tested. Deferred to avoid broad state churn."
+  }
+}

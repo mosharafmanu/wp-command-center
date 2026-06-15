@@ -90,7 +90,12 @@ final class ACFRuntimeManager {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
 		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
-		$before = $this->summarize_group( $g );
+		// STEP 102.6 (F-4): store the COMPLETE original group as the rollback before-state.
+		// summarize_group() was lossy (location collapsed to an int count, no post ID),
+		// so rollback()'s acf_update_field_group( $before ) could not faithfully restore.
+		// $g is the unmutated original here (the title/active edits below copy-on-write
+		// into $g, not $before), so this preserves the full group for exact restoration.
+		$before = $g;
 		if ( isset( $p['title'] ) ) $g['title'] = sanitize_text_field( (string) $p['title'] );
 		if ( isset( $p['active'] ) ) $g['active'] = (bool) $p['active'];
 		$result = acf_update_field_group( array_merge( $g, $p ) );

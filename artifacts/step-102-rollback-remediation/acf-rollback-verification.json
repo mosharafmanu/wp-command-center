@@ -1,0 +1,97 @@
+{
+  "step": "102.6",
+  "generated": "2026-06-15T19:33:41",
+  "runs": [
+    {
+      "run": 0,
+      "original": {
+        "title": "WPCC ACF Fix 0",
+        "location_count": 1,
+        "field_count": 1,
+        "field_key": true
+      },
+      "update": {
+        "rollback_id_present": true,
+        "rollback_available": true
+      },
+      "after_update": {
+        "title": "RENAMED 0",
+        "location_count": 2
+      },
+      "change_took_effect": true,
+      "rollback_executed": true,
+      "after_rollback": {
+        "title": "WPCC ACF Fix 0",
+        "location_count": 1,
+        "field_count": 1
+      },
+      "title_restored": true,
+      "location_restored": true,
+      "fields_intact": true,
+      "no_corruption": true,
+      "verdict": "PASS"
+    },
+    {
+      "run": 1,
+      "original": {
+        "title": "WPCC ACF Fix 1",
+        "location_count": 1,
+        "field_count": 1,
+        "field_key": true
+      },
+      "update": {
+        "rollback_id_present": true,
+        "rollback_available": true
+      },
+      "after_update": {
+        "title": "RENAMED 1",
+        "location_count": 2
+      },
+      "change_took_effect": true,
+      "rollback_executed": true,
+      "after_rollback": {
+        "title": "WPCC ACF Fix 1",
+        "location_count": 1,
+        "field_count": 1
+      },
+      "title_restored": true,
+      "location_restored": true,
+      "fields_intact": true,
+      "no_corruption": true,
+      "verdict": "PASS"
+    },
+    {
+      "run": 2,
+      "original": {
+        "title": "WPCC ACF Fix 2",
+        "location_count": 1,
+        "field_count": 1,
+        "field_key": true
+      },
+      "update": {
+        "rollback_id_present": true,
+        "rollback_available": true
+      },
+      "after_update": {
+        "title": "RENAMED 2",
+        "location_count": 2
+      },
+      "change_took_effect": true,
+      "rollback_executed": true,
+      "after_rollback": {
+        "title": "WPCC ACF Fix 2",
+        "location_count": 1,
+        "field_count": 1
+      },
+      "title_restored": true,
+      "location_restored": true,
+      "fields_intact": true,
+      "no_corruption": true,
+      "verdict": "PASS"
+    }
+  ],
+  "audit_trail_ok": true,
+  "acf_event_in_audit": true,
+  "timeline_ok": true,
+  "all_pass": true
+}

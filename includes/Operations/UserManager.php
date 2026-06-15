@@ -379,7 +379,13 @@ final class UserManager {
 	// ── Rollback Support ──
 
 	private function store_rollback( int $user_id, string $action, array $before, array $context ): void {
-		if ( ! UserRegistry::supports_rollback( $action ) ) {
+		// STEP 102 (F-3): UserManager stores/reverses rollbacks using SHORT action names
+		// ('create','update','delete','suspend','assign_role','remove_role' — see the
+		// rollback() switch), but UserRegistry::supports_rollback() is keyed by the LONG
+		// ACTION_* constants ('user_update', …). The mismatch made this gate ALWAYS
+		// return false, so no user rollback was ever stored. Normalize to the registry
+		// key (short forms map 1:1 to 'user_<action>') before the support check.
+		if ( ! UserRegistry::supports_rollback( 'user_' . $action ) && ! UserRegistry::supports_rollback( $action ) ) {
 			return;
 		}
 

@@ -1,0 +1,468 @@
+{
+  "step": "101.2",
+  "generated": "2026-06-15T16:55:56",
+  "source": "live MCP tools/call (read-only) against local dev",
+  "totals": {
+    "runtimes": 29,
+    "total_calls": 73,
+    "pass": 72,
+    "fail": 0,
+    "observations": 1,
+    "phase_b_read_pass": 25,
+    "phase_b_na_writeonly": 3,
+    "phase_c_pass": 13,
+    "perf_concerning": [
+      "Media Runtime"
+    ],
+    "perf_slow": [
+      "WP-CLI Runtime"
+    ]
+  },
+  "matrix": [
+    {
+      "runtime": "Site Intelligence & Diagnostics",
+      "tools": [
+        "system_info"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 1055,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Database Runtime",
+      "tools": [
+        "database_inspect",
+        "safe_search_replace"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "2 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 832,
+      "read_calls": 2,
+      "error_calls": 1
+    },
+    {
+      "runtime": "File Runtime",
+      "tools": [
+        "file_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 788,
+      "read_calls": 1,
+      "error_calls": 1
+    },
+    {
+      "runtime": "Code Search Runtime",
+      "tools": [
+        "code_search"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 778,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Patch Runtime",
+      "tools": [
+        "patch_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 806,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Snapshot Runtime",
+      "tools": [
+        "snapshot_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 810,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Rollback Runtime",
+      "tools": [
+        "rollback_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 826,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Agent / Authorization Runtime",
+      "tools": [
+        "capability_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 772,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Approval Runtime",
+      "tools": [
+        "approval_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "3 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 868,
+      "read_calls": 3,
+      "error_calls": 0
+    },
+    {
+      "runtime": "WP-CLI Runtime",
+      "tools": [
+        "wp_cli_bridge"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "2 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "SLOW",
+      "max_ms": 3711,
+      "read_calls": 2,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Plugin Runtime",
+      "tools": [
+        "plugin_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 1021,
+      "read_calls": 1,
+      "error_calls": 1
+    },
+    {
+      "runtime": "Theme Runtime",
+      "tools": [
+        "theme_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 837,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Update Runtime",
+      "tools": [
+        "safe_updates"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "N/A",
+      "phase_b_note": "write-only runtime; no non-mutating read action \u2014 not executed (read-only mandate)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "n/a",
+      "max_ms": null,
+      "read_calls": 0,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Option & Settings Runtime",
+      "tools": [
+        "option_manage",
+        "settings_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "4 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "2 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 857,
+      "read_calls": 4,
+      "error_calls": 2
+    },
+    {
+      "runtime": "Content Runtime",
+      "tools": [
+        "content_manage",
+        "comments_manage",
+        "cpt_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "5 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 1972,
+      "read_calls": 5,
+      "error_calls": 1
+    },
+    {
+      "runtime": "Media Runtime",
+      "tools": [
+        "media_manage",
+        "media_import",
+        "media_enhance"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "10 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "CONCERNING",
+      "max_ms": 25250,
+      "read_calls": 10,
+      "error_calls": 1
+    },
+    {
+      "runtime": "ACF Runtime",
+      "tools": [
+        "acf_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "2 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 770,
+      "read_calls": 2,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Forms Runtime",
+      "tools": [
+        "forms_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 783,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "WooCommerce Runtime",
+      "tools": [
+        "woocommerce_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "3 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 821,
+      "read_calls": 3,
+      "error_calls": 1
+    },
+    {
+      "runtime": "SEO Runtime",
+      "tools": [
+        "seo_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "2 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 799,
+      "read_calls": 2,
+      "error_calls": 1
+    },
+    {
+      "runtime": "Site Builder Runtime",
+      "tools": [
+        "site_builder_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "3 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 822,
+      "read_calls": 3,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Elementor Runtime",
+      "tools": [
+        "elementor_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "OBSERVATION",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 812,
+      "read_calls": 1,
+      "error_calls": 1
+    },
+    {
+      "runtime": "Menu Runtime",
+      "tools": [
+        "menu_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "2 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "2 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 862,
+      "read_calls": 2,
+      "error_calls": 2
+    },
+    {
+      "runtime": "Widgets Runtime",
+      "tools": [
+        "widgets_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 802,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "User Runtime",
+      "tools": [
+        "user_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "2 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "2 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 857,
+      "read_calls": 2,
+      "error_calls": 2
+    },
+    {
+      "runtime": "Workflow Runtime",
+      "tools": [
+        "workflow_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "1 read call(s)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 773,
+      "read_calls": 1,
+      "error_calls": 0
+    },
+    {
+      "runtime": "Bulk Operations Runtime",
+      "tools": [
+        "bulk_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "N/A",
+      "phase_b_note": "write-only runtime; no non-mutating read action \u2014 not executed (read-only mandate)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 795,
+      "read_calls": 0,
+      "error_calls": 1
+    },
+    {
+      "runtime": "Search & Reports Runtime",
+      "tools": [
+        "search_manage",
+        "report_manage"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "PASS",
+      "phase_b_note": "3 read call(s)",
+      "phase_c_errors": "PASS",
+      "phase_c_note": "1 invalid-input call(s) \u2192 graceful structured errors",
+      "phase_d_perf": "NORMAL",
+      "max_ms": 811,
+      "read_calls": 3,
+      "error_calls": 1
+    },
+    {
+      "runtime": "Seeder Runtime",
+      "tools": [
+        "content_seed",
+        "acf_seed",
+        "cf7_seed",
+        "woo_product_seed"
+      ],
+      "phase_a_discovery": "PASS",
+      "phase_b_read": "N/A",
+      "phase_b_note": "write-only runtime; no non-mutating read action \u2014 not executed (read-only mandate)",
+      "phase_c_errors": "N/A",
+      "phase_c_note": "no dedicated error case (covered by global registry/invalid-tool test)",
+      "phase_d_perf": "n/a",
+      "max_ms": null,
+      "read_calls": 0,
+      "error_calls": 0
+    }
+  ]
+}

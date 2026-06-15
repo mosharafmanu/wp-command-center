@@ -16,7 +16,7 @@ api() { local m="$1" p="$2" b="${3:-}"; if [ -n "$b" ]; then curl -s -X "$m" -H 
 echo "== 1. Manifest =="
 MANIFEST=$(api GET /agent/manifest)
 assert_true "manifest: content_management section" "$(echo "$MANIFEST" | jq -r 'if .content_management then "true" else "false" end')"
-assert_eq "manifest: 10 supported actions" "10" "$(echo "$MANIFEST" | jq -r '.content_management.supported_actions | length')"
+assert_eq "manifest: 11 supported actions" "11" "$(echo "$MANIFEST" | jq -r '.content_management.supported_actions | length')"
 assert_true "manifest: capability content_management" "$(echo "$MANIFEST" | jq -r '.capabilities.content_management // false')"
 
 echo "== 2. Context =="
@@ -141,8 +141,8 @@ echo "== 23. Operations registry =="
 OPS=$(api GET /operations)
 assert_true "ops: content_manage listed" "$(echo "$OPS" | jq -r 'any(.[]; .id == "content_manage")')"
 
-echo "== 24. All 10 actions in manifest =="
-for a in content_list content_get content_create content_update content_delete content_publish content_unpublish content_schedule taxonomy_assign featured_image_assign; do
+echo "== 24. All 11 actions in manifest =="
+for a in content_list content_get content_create content_update content_delete content_publish content_unpublish content_schedule taxonomy_assign featured_image_assign content_rollback; do
   H=$(echo "$MANIFEST" | jq -r ".content_management.supported_actions | index(\"$a\")")
   if [ "$H" != "null" ]; then pass "action: $a"; else fail "action: $a missing"; fi
 done

@@ -1,0 +1,161 @@
+{
+  "step": "102.5",
+  "generated": "2026-06-15T19:15:06",
+  "results": [
+    {
+      "runtime": "Content",
+      "group": "A",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": ""
+    },
+    {
+      "runtime": "Menu",
+      "group": "A",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": ""
+    },
+    {
+      "runtime": "ACF",
+      "group": "A",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": false,
+      "verdict": "FAIL",
+      "note": "surfacing+executability PASS; RESTORE FAILS (3/3 deterministic). Pre-existing defect, NOT a STEP 102 regression: group_update stores before_state=summarize_group() (lossy: location->int count, no post ID), and rollback() feeds that summary to acf_update_field_group() which cannot faithfully restore. STEP 102 code untouched here."
+    },
+    {
+      "runtime": "User",
+      "group": "A",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": ""
+    },
+    {
+      "runtime": "WooCommerce",
+      "group": "A",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": ""
+    },
+    {
+      "runtime": "Settings",
+      "group": "A",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": ""
+    },
+    {
+      "runtime": "Option",
+      "group": "B",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": ""
+    },
+    {
+      "runtime": "Media",
+      "group": "B",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": ""
+    },
+    {
+      "runtime": "Snapshot",
+      "group": "B",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": "snapshot_id handle; verify valid+restore"
+    },
+    {
+      "runtime": "Patch",
+      "group": "B",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": "patch_apply rollback_id + rollback_manage"
+    },
+    {
+      "runtime": "Workflow",
+      "group": "B",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": "execution_id handle; per-step rollback"
+    },
+    {
+      "runtime": "Forms",
+      "group": "C",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": "form_create->REST rollback"
+    },
+    {
+      "runtime": "SiteBuilder",
+      "group": "C",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": "page_update->REST rollback"
+    },
+    {
+      "runtime": "CPT",
+      "group": "C",
+      "rollback_id": true,
+      "rollback_available": true,
+      "executable": true,
+      "restored": true,
+      "verdict": "PASS",
+      "note": "cpt_create->REST rollback"
+    }
+  ],
+  "audit_trail_ok": true,
+  "timeline_ok": true,
+  "totals": {
+    "pass": 13,
+    "fail": 1,
+    "runtimes": 14
+  },
+  "acf_finding": {
+    "id": "F-4",
+    "severity": "MEDIUM",
+    "regression": false,
+    "root_cause": "ACFRuntimeManager::group_update captures before_state via summarize_group() (lossy); rollback() restores from it.",
+    "fix": "one line in group_update: store the full group array ($before=$g) instead of summarize_group($g).",
+    "note": "STEP 102 ACF 'restored=True' was a false positive (corrupted/empty read after lossy restore)."
+  }
+}

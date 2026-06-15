@@ -285,6 +285,7 @@ final class MenuRuntimeManager {
 		$act = $rec['action']; $eid = $rec['entity_id'];
 		if ( in_array( $act, [ 'menu_create', 'menu_import' ] ) ) wp_delete_nav_menu( (int) $eid );
 		elseif ( 'menu_delete' === $act ) { $b = $rec['before_state']; $mid = wp_create_nav_menu( $b['name'] ?? 'Restored' ); foreach ( $b['items'] ?? [] as $item ) wp_update_nav_menu_item( $mid, 0, [ 'menu-item-title' => $item['title'], 'menu-item-url' => $item['url'] ?? '#', 'menu-item-status' => 'publish' ] ); }
+		elseif ( 'menu_update' === $act ) { $b = $rec['before_state']; if ( ! empty( $b['name'] ) ) wp_update_term( (int) $eid, 'nav_menu', [ 'name' => (string) $b['name'] ] ); } // STEP 102 (F-2): menu_update was stored but had no reversal arm.
 		elseif ( in_array( $act, [ 'menu_item_add', 'menu_item_remove' ] ) ) { $b = $rec['before_state']; if ( ! empty( $b['id'] ) ) wp_delete_post( (int) $rec['entity_id'], true ); }
 		elseif ( in_array( $act, [ 'location_assign', 'location_remove' ] ) ) { $locs = get_theme_mod( 'nav_menu_locations' ) ?: []; $b = $rec['before_state']; if ( isset( $b['menu_id'] ) ) { if ( $b['menu_id'] ) $locs[ $eid ] = (int) $b['menu_id']; else unset( $locs[ $eid ] ); set_theme_mod( 'nav_menu_locations', $locs ); } }
 		$rollbacks[ $idx ]['rollback_applied'] = true; update_option( 'wpcc_menu_rollbacks', $rollbacks );

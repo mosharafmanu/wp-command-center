@@ -1,0 +1,1297 @@
+{
+  "step": "101.1",
+  "generated": "2026-06-15T16:40:22",
+  "source": "live MCP tools/list + REST /operations on local dev (verified against includes/Operations/OperationRegistry.php)",
+  "server_info": {
+    "name": "WP Command Center",
+    "version": "0.1.0",
+    "mcp_protocol": "2024-11-05"
+  },
+  "totals": {
+    "mcp_tools": 39,
+    "mcp_resources": 7,
+    "runtimes": 29,
+    "tools_available_on_dev": 39,
+    "unclassified_tools": 0
+  },
+  "mcp_resources": [
+    "wpcc://manifest",
+    "wpcc://context",
+    "wpcc://capabilities",
+    "wpcc://operations",
+    "wpcc://queue",
+    "wpcc://results",
+    "wpcc://recommendations"
+  ],
+  "runtimes": [
+    {
+      "runtime": "Site Intelligence & Diagnostics",
+      "note": "Read-only environment/health probe. Also surfaced via MCP resources (manifest/context/capabilities/operations/queue/results/recommendations) and REST /site-intelligence, /diagnostics, /health.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "system_info",
+          "title": "System Info",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 1,
+          "read_only_actions": [
+            "system_info"
+          ],
+          "write_actions": [],
+          "approval_required_actions": [],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Database Runtime",
+      "note": "database_inspect is read-only (no arbitrary SQL). safe_search_replace performs DB writes with dry-run + rollback.",
+      "tool_count": 2,
+      "tools": [
+        {
+          "tool": "database_inspect",
+          "title": "Database Inspection",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 1,
+          "read_only_actions": [
+            "database_inspect"
+          ],
+          "write_actions": [],
+          "approval_required_actions": [],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "safe_search_replace",
+          "title": "Safe Search & Replace",
+          "available": true,
+          "op_risk_level": "critical",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "safe_search_replace (critical)"
+          ],
+          "approval_required_actions": [
+            "safe_search_replace"
+          ],
+          "dangerous_actions": [
+            "safe_search_replace (critical)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "File Runtime",
+      "note": "Read-only file read/tree/metadata under themes/plugins/mu-plugins; blocked paths denied, secrets redacted.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "file_manage",
+          "title": "File Access",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 3,
+          "read_only_actions": [
+            "file_read",
+            "file_tree",
+            "file_metadata"
+          ],
+          "write_actions": [],
+          "approval_required_actions": [],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Code Search Runtime",
+      "note": "Read-only text/symbol/file search; blocked files skipped, secrets redacted.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "code_search",
+          "title": "Code Search",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 3,
+          "read_only_actions": [
+            "search_text",
+            "search_symbol",
+            "search_file"
+          ],
+          "write_actions": [],
+          "approval_required_actions": [],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Patch Runtime",
+      "note": "Propose/apply file changes via Patch Engine; snapshot+syntax-verify+auto-revert; high-risk files need APPLY_PATCH handshake.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "patch_manage",
+          "title": "Patch Engine",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 5,
+          "read_only_actions": [
+            "patch_preview",
+            "patch_status",
+            "patch_verify"
+          ],
+          "write_actions": [
+            "patch_create (low)",
+            "patch_apply (high)"
+          ],
+          "approval_required_actions": [
+            "patch_create",
+            "patch_apply"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Snapshot Runtime",
+      "note": "File snapshot create/list/details/verify/restore. (Media byte-level snapshots live under media_manage.media_snapshot_*.)",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "snapshot_manage",
+          "title": "Snapshot Management",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 5,
+          "read_only_actions": [
+            "snapshot_list",
+            "snapshot_details",
+            "snapshot_verify"
+          ],
+          "write_actions": [
+            "snapshot_create (medium)",
+            "snapshot_restore (high)"
+          ],
+          "approval_required_actions": [
+            "snapshot_create",
+            "snapshot_restore"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Rollback Runtime",
+      "note": "List/inspect/verify/apply patch rollbacks. Per-runtime /rollback REST routes and *_rollback sub-actions also exist.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "rollback_manage",
+          "title": "Rollback Engine",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 4,
+          "read_only_actions": [
+            "rollback_list",
+            "rollback_get",
+            "rollback_verify"
+          ],
+          "write_actions": [
+            "rollback_apply (high)"
+          ],
+          "approval_required_actions": [
+            "rollback_apply"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Agent / Authorization Runtime",
+      "note": "Token/agent capability authorization layer. assign/remove are critical; list/get/validate are diagnostic.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "capability_manage",
+          "title": "Capability Management",
+          "available": true,
+          "op_risk_level": "critical",
+          "requires_approval": true,
+          "action_count": 5,
+          "read_only_actions": [
+            "capability_list",
+            "capability_get",
+            "capability_validate"
+          ],
+          "write_actions": [
+            "capability_assign (critical)",
+            "capability_remove (critical)"
+          ],
+          "approval_required_actions": [
+            "capability_assign",
+            "capability_remove"
+          ],
+          "dangerous_actions": [
+            "capability_assign (critical)",
+            "capability_remove (critical)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Approval Runtime",
+      "note": "Request->Approval->Queue->Execute->Verify->Audit pipeline. Control-plane; diagnostic, never itself requires approval.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "approval_manage",
+          "title": "Approval Runtime",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 1,
+          "read_only_actions": [
+            "approval_manage"
+          ],
+          "write_actions": [],
+          "approval_required_actions": [],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "WP-CLI Runtime",
+      "note": "Structured WP-CLI command execution with risk-based approval. command_id registry not enumerated in op metadata (only 6 legacy bare commands).",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "wp_cli_bridge",
+          "title": "WP-CLI Bridge",
+          "available": true,
+          "op_risk_level": "critical",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "wp_cli_bridge (critical)"
+          ],
+          "approval_required_actions": [
+            "wp_cli_bridge"
+          ],
+          "dangerous_actions": [
+            "wp_cli_bridge (critical)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Plugin Runtime",
+      "note": "list/install/activate/deactivate/update/delete. plugin_delete critical (confirm + DELETE_PLUGIN + reason; folder backed up).",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "plugin_manage",
+          "title": "Plugin Management",
+          "available": true,
+          "op_risk_level": "critical",
+          "requires_approval": true,
+          "action_count": 6,
+          "read_only_actions": [
+            "plugin_list"
+          ],
+          "write_actions": [
+            "plugin_install (high)",
+            "plugin_activate (high)",
+            "plugin_deactivate (high)",
+            "plugin_update (high)",
+            "plugin_delete (critical)"
+          ],
+          "approval_required_actions": [
+            "plugin_install",
+            "plugin_activate",
+            "plugin_deactivate",
+            "plugin_update",
+            "plugin_delete"
+          ],
+          "dangerous_actions": [
+            "plugin_delete (critical)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Theme Runtime",
+      "note": "list/install/activate/update/delete. theme_delete critical (confirm + DELETE_THEME + reason; inactive only).",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "theme_manage",
+          "title": "Theme Management",
+          "available": true,
+          "op_risk_level": "critical",
+          "requires_approval": true,
+          "action_count": 5,
+          "read_only_actions": [
+            "theme_list"
+          ],
+          "write_actions": [
+            "theme_install (high)",
+            "theme_activate (high)",
+            "theme_update (high)",
+            "theme_delete (critical)"
+          ],
+          "approval_required_actions": [
+            "theme_install",
+            "theme_activate",
+            "theme_update",
+            "theme_delete"
+          ],
+          "dangerous_actions": [
+            "theme_delete (critical)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Update Runtime",
+      "note": "Core/plugin/theme updates with snapshot + health verification + dry-run HEAD validation.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "safe_updates",
+          "title": "Safe WordPress Updates",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "safe_updates (high)"
+          ],
+          "approval_required_actions": [
+            "safe_updates"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Option & Settings Runtime",
+      "note": "Registered options + core settings (general/reading/discussion/media/permalink/privacy). Updates high-risk, rollback-capable.",
+      "tool_count": 2,
+      "tools": [
+        {
+          "tool": "option_manage",
+          "title": "Option Management",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 3,
+          "read_only_actions": [
+            "option_get"
+          ],
+          "write_actions": [
+            "option_update (high)",
+            "option_rollback (high)"
+          ],
+          "approval_required_actions": [
+            "option_update",
+            "option_rollback"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "settings_manage",
+          "title": "Site Settings",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 14,
+          "read_only_actions": [
+            "settings_general_get",
+            "settings_reading_get",
+            "settings_discussion_get",
+            "settings_media_get",
+            "settings_permalink_get",
+            "settings_privacy_get",
+            "settings_inventory",
+            "settings_analyze"
+          ],
+          "write_actions": [
+            "settings_general_update (high)",
+            "settings_reading_update (high)",
+            "settings_discussion_update (high)",
+            "settings_media_update (high)",
+            "settings_permalink_update (high)",
+            "settings_privacy_update (high)"
+          ],
+          "approval_required_actions": [
+            "settings_general_update",
+            "settings_reading_update",
+            "settings_discussion_update",
+            "settings_media_update",
+            "settings_permalink_update",
+            "settings_privacy_update"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": true
+        }
+      ]
+    },
+    {
+      "runtime": "Content Runtime",
+      "note": "Posts/pages CRUD + publish/schedule/taxonomy/featured; comments moderation; custom post types & taxonomies (cpt_* high-risk).",
+      "tool_count": 3,
+      "tools": [
+        {
+          "tool": "content_manage",
+          "title": "Content Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 11,
+          "read_only_actions": [],
+          "write_actions": [
+            "content_list (low)",
+            "content_get (low)",
+            "content_create (medium)",
+            "content_update (medium)",
+            "content_delete (medium)",
+            "content_publish (medium)",
+            "content_unpublish (medium)",
+            "content_schedule (medium)",
+            "taxonomy_assign (medium)",
+            "featured_image_assign (medium)",
+            "content_rollback (medium)"
+          ],
+          "approval_required_actions": [
+            "content_list",
+            "content_get",
+            "content_create",
+            "content_update",
+            "content_delete",
+            "content_publish",
+            "content_unpublish",
+            "content_schedule",
+            "taxonomy_assign",
+            "featured_image_assign",
+            "content_rollback"
+          ],
+          "dangerous_actions": [
+            "content_delete (medium)"
+          ],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "comments_manage",
+          "title": "Comments Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 8,
+          "read_only_actions": [
+            "comment_list",
+            "comment_get"
+          ],
+          "write_actions": [
+            "comment_approve (medium)",
+            "comment_unapprove (medium)",
+            "comment_spam (medium)",
+            "comment_trash (medium)",
+            "comment_delete (medium)",
+            "comment_reply (medium)"
+          ],
+          "approval_required_actions": [
+            "comment_approve",
+            "comment_unapprove",
+            "comment_spam",
+            "comment_trash",
+            "comment_delete",
+            "comment_reply"
+          ],
+          "dangerous_actions": [
+            "comment_delete (medium)"
+          ],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "cpt_manage",
+          "title": "Custom Post Types",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 8,
+          "read_only_actions": [
+            "cpt_list",
+            "cpt_get",
+            "taxonomy_list"
+          ],
+          "write_actions": [
+            "cpt_create (high)",
+            "cpt_update (high)",
+            "cpt_disable (high)",
+            "taxonomy_create (high)",
+            "taxonomy_update (high)"
+          ],
+          "approval_required_actions": [
+            "cpt_create",
+            "cpt_update",
+            "cpt_disable",
+            "taxonomy_create",
+            "taxonomy_update"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Media Runtime",
+      "note": "media_manage CRUD/replace/restore/featured/snapshots; media_import URL import; media_enhance diagnostics + reversible thumbnail/webp/optimize writes + guarded unused_media_cleanup (TRASH only, CLEANUP_MEDIA handshake).",
+      "tool_count": 3,
+      "tools": [
+        {
+          "tool": "media_manage",
+          "title": "Media Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 18,
+          "read_only_actions": [
+            "media_list",
+            "media_get",
+            "media_search",
+            "media_replace_verify",
+            "media_snapshot_verify",
+            "media_snapshot_list"
+          ],
+          "write_actions": [
+            "media_upload (medium)",
+            "media_update (medium)",
+            "media_replace (medium)",
+            "media_delete (medium)",
+            "media_restore (medium)",
+            "featured_image_assign (medium)",
+            "featured_image_remove (medium)",
+            "media_set_featured (medium)",
+            "media_remove_featured (medium)",
+            "media_regenerate_metadata (low)",
+            "media_snapshot_create (low)",
+            "media_snapshot_restore (medium)"
+          ],
+          "approval_required_actions": [
+            "media_upload",
+            "media_update",
+            "media_replace",
+            "media_delete",
+            "media_restore",
+            "featured_image_assign",
+            "featured_image_remove",
+            "media_set_featured",
+            "media_remove_featured",
+            "media_regenerate_metadata",
+            "media_snapshot_create",
+            "media_snapshot_restore"
+          ],
+          "dangerous_actions": [
+            "media_delete (medium)"
+          ],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "media_import",
+          "title": "Media Library Import",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "media_import (medium)"
+          ],
+          "approval_required_actions": [
+            "media_import"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "media_enhance",
+          "title": "Media Enhancement Runtime",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 26,
+          "read_only_actions": [
+            "media_enhance_capabilities",
+            "image_sizes_list",
+            "image_size_usage_audit",
+            "image_size_recommendations",
+            "image_size_verify",
+            "srcset_verify",
+            "responsive_image_audit",
+            "missing_sizes_audit",
+            "image_size_context_audit",
+            "thumbnail_verify",
+            "webp_audit",
+            "webp_verify",
+            "image_optimize_audit",
+            "image_optimize_verify",
+            "media_usage_scan",
+            "media_usage_report",
+            "unused_media_find",
+            "orphaned_media_find"
+          ],
+          "write_actions": [
+            "thumbnail_regenerate (medium)",
+            "thumbnail_regenerate_attachment (medium)",
+            "thumbnail_regenerate_batch (medium)",
+            "webp_generate (medium)",
+            "webp_generate_batch (medium)",
+            "image_optimize (medium)",
+            "image_optimize_batch (medium)",
+            "unused_media_cleanup (high)"
+          ],
+          "approval_required_actions": [],
+          "dangerous_actions": [
+            "unused_media_cleanup (high)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "ACF Runtime",
+      "note": "Field groups/fields (incl. repeater/flexible/group/clone), layouts, locations, JSON sync, values. Gated on ACF active.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "acf_manage",
+          "title": "ACF Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 18,
+          "read_only_actions": [
+            "acf_group_list",
+            "acf_group_get",
+            "acf_field_list",
+            "acf_field_get",
+            "acf_location_list",
+            "acf_value_get",
+            "acf_inventory",
+            "acf_json_status"
+          ],
+          "write_actions": [
+            "acf_group_create (medium)",
+            "acf_group_update (medium)",
+            "acf_group_delete (medium)",
+            "acf_field_create (medium)",
+            "acf_field_update (medium)",
+            "acf_field_delete (medium)",
+            "acf_layout_create (medium)",
+            "acf_layout_update (medium)",
+            "acf_value_update (medium)",
+            "acf_bulk_value_update (medium)"
+          ],
+          "approval_required_actions": [
+            "acf_group_create",
+            "acf_group_update",
+            "acf_group_delete",
+            "acf_field_create",
+            "acf_field_update",
+            "acf_field_delete",
+            "acf_layout_create",
+            "acf_layout_update",
+            "acf_value_update",
+            "acf_bulk_value_update"
+          ],
+          "dangerous_actions": [
+            "acf_group_delete (medium)",
+            "acf_field_delete (medium)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Forms Runtime",
+      "note": "Provider-abstracted forms (CF7/FluentForms/WPForms/GravityForms): list/get/search/create/update/delete/entries/analysis.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "forms_manage",
+          "title": "Forms Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 9,
+          "read_only_actions": [
+            "form_list",
+            "form_get",
+            "form_search",
+            "entry_list",
+            "entry_get",
+            "form_analyze"
+          ],
+          "write_actions": [
+            "form_create (medium)",
+            "form_update (medium)",
+            "form_delete (medium)"
+          ],
+          "approval_required_actions": [
+            "form_create",
+            "form_update",
+            "form_delete"
+          ],
+          "dangerous_actions": [
+            "form_delete (medium)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "WooCommerce Runtime",
+      "note": "Products/inventory/pricing/categories/attributes/variations/orders/coupons/refunds. Gated on WooCommerce active. refund_create high.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "woocommerce_manage",
+          "title": "WooCommerce Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 32,
+          "read_only_actions": [
+            "product_list",
+            "product_get",
+            "stock_get",
+            "price_get",
+            "product_category_list",
+            "product_attribute_list",
+            "variation_list",
+            "variation_get",
+            "order_list",
+            "order_get",
+            "order_search",
+            "customer_get",
+            "customer_search",
+            "coupon_list",
+            "coupon_get"
+          ],
+          "write_actions": [
+            "order_update (medium)",
+            "order_note_add (medium)",
+            "order_status_change (medium)",
+            "refund_create (high)",
+            "product_create (medium)",
+            "product_update (medium)",
+            "product_delete (medium)",
+            "stock_update (medium)",
+            "stock_bulk_update (medium)",
+            "price_update (medium)",
+            "sale_price_update (medium)",
+            "variation_create (medium)",
+            "variation_update (medium)",
+            "variation_delete (medium)",
+            "coupon_create (medium)",
+            "coupon_update (medium)",
+            "coupon_delete (medium)"
+          ],
+          "approval_required_actions": [
+            "order_update",
+            "order_note_add",
+            "order_status_change",
+            "refund_create",
+            "product_create",
+            "product_update",
+            "product_delete",
+            "stock_update",
+            "stock_bulk_update",
+            "price_update",
+            "sale_price_update",
+            "variation_create",
+            "variation_update",
+            "variation_delete",
+            "coupon_create",
+            "coupon_update",
+            "coupon_delete"
+          ],
+          "dangerous_actions": [
+            "refund_create (high)",
+            "product_delete (medium)",
+            "variation_delete (medium)",
+            "coupon_delete (medium)"
+          ],
+          "params_thin_only_action": true
+        }
+      ]
+    },
+    {
+      "runtime": "SEO Runtime",
+      "note": "Unified Rank Math/Yoast metadata get/update/validate/analyze/restore. Gated on a supported SEO plugin.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "seo_manage",
+          "title": "SEO Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 5,
+          "read_only_actions": [
+            "seo_get",
+            "seo_validate",
+            "seo_analyze"
+          ],
+          "write_actions": [
+            "seo_update (medium)",
+            "seo_restore (medium)"
+          ],
+          "approval_required_actions": [
+            "seo_update",
+            "seo_restore"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Site Builder Runtime",
+      "note": "Pages/templates/block patterns/block-theme navigation; menus delegated to menu_manage.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "site_builder_manage",
+          "title": "Site Builder",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 13,
+          "read_only_actions": [
+            "page_list",
+            "page_get",
+            "template_list",
+            "pattern_list"
+          ],
+          "write_actions": [
+            "page_create (medium)",
+            "page_update (medium)",
+            "page_delete (medium)",
+            "template_assign (medium)",
+            "pattern_create (medium)",
+            "navigation_manage (medium)",
+            "menu_create (medium)",
+            "menu_update (medium)",
+            "menu_assign (medium)"
+          ],
+          "approval_required_actions": [
+            "page_create",
+            "page_update",
+            "page_delete",
+            "template_assign",
+            "pattern_create",
+            "navigation_manage",
+            "menu_create",
+            "menu_update",
+            "menu_assign"
+          ],
+          "dangerous_actions": [
+            "page_delete (medium)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Elementor Runtime",
+      "note": "Read/edit _elementor_data widget tree (text/image/button) by widget id; rollback-capable.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "elementor_manage",
+          "title": "Elementor",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 6,
+          "read_only_actions": [
+            "elementor_get_page",
+            "elementor_export_structure",
+            "elementor_list_widgets"
+          ],
+          "write_actions": [
+            "elementor_update_text (medium)",
+            "elementor_update_image (medium)",
+            "elementor_update_button (medium)"
+          ],
+          "approval_required_actions": [
+            "elementor_update_text",
+            "elementor_update_image",
+            "elementor_update_button"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Menu Runtime",
+      "note": "Navigation menus + items + locations; tree inspect/repair; export/import; analysis.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "menu_manage",
+          "title": "Menu Management",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 17,
+          "read_only_actions": [
+            "menu_list",
+            "menu_get",
+            "menu_item_list",
+            "menu_item_get",
+            "menu_location_list",
+            "menu_tree_get",
+            "menu_export"
+          ],
+          "write_actions": [
+            "menu_create (medium)",
+            "menu_update (medium)",
+            "menu_delete (medium)",
+            "menu_item_add (medium)",
+            "menu_item_update (medium)",
+            "menu_item_remove (medium)",
+            "menu_location_assign (medium)",
+            "menu_location_remove (medium)",
+            "menu_duplicate (medium)",
+            "menu_import (medium)"
+          ],
+          "approval_required_actions": [
+            "menu_create",
+            "menu_update",
+            "menu_delete",
+            "menu_item_add",
+            "menu_item_update",
+            "menu_item_remove",
+            "menu_location_assign",
+            "menu_location_remove",
+            "menu_duplicate",
+            "menu_import"
+          ],
+          "dangerous_actions": [
+            "menu_delete (medium)"
+          ],
+          "params_thin_only_action": true
+        }
+      ]
+    },
+    {
+      "runtime": "Widgets Runtime",
+      "note": "Widgets and sidebar assignments: list/get/add/update/remove; sidebar assign/remove.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "widgets_manage",
+          "title": "Widgets & Sidebars",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 7,
+          "read_only_actions": [
+            "widget_list",
+            "widget_get"
+          ],
+          "write_actions": [
+            "widget_add (medium)",
+            "widget_update (medium)",
+            "widget_remove (medium)",
+            "sidebar_assign (medium)",
+            "sidebar_remove (medium)"
+          ],
+          "approval_required_actions": [
+            "widget_add",
+            "widget_update",
+            "widget_remove",
+            "sidebar_assign",
+            "sidebar_remove"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "User Runtime",
+      "note": "Users: list/get/search/create/update/delete/suspend/reset_password/assign_role/remove_role. delete & role changes critical.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "user_manage",
+          "title": "User Management",
+          "available": true,
+          "op_risk_level": "critical",
+          "requires_approval": true,
+          "action_count": 10,
+          "read_only_actions": [
+            "user_list",
+            "user_get",
+            "user_search"
+          ],
+          "write_actions": [
+            "user_create (high)",
+            "user_update (high)",
+            "user_delete (critical)",
+            "user_suspend (high)",
+            "user_reset_password (high)",
+            "user_assign_role (critical)",
+            "user_remove_role (critical)"
+          ],
+          "approval_required_actions": [
+            "user_create",
+            "user_update",
+            "user_delete",
+            "user_suspend",
+            "user_reset_password",
+            "user_assign_role",
+            "user_remove_role"
+          ],
+          "dangerous_actions": [
+            "user_delete (critical)",
+            "user_suspend (high)",
+            "user_assign_role (critical)",
+            "user_remove_role (critical)"
+          ],
+          "params_thin_only_action": true
+        }
+      ]
+    },
+    {
+      "runtime": "Workflow Runtime",
+      "note": "Multi-step operation workflows; single approval covers all steps; on_failure stop/continue/rollback; executes any registered op.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "workflow_manage",
+          "title": "Workflow Runtime",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 10,
+          "read_only_actions": [
+            "workflow_list",
+            "workflow_get",
+            "workflow_history",
+            "workflow_export"
+          ],
+          "write_actions": [
+            "workflow_create (high)",
+            "workflow_update (high)",
+            "workflow_delete (high)",
+            "workflow_execute (high)",
+            "workflow_import (high)",
+            "workflow_rollback (high)"
+          ],
+          "approval_required_actions": [
+            "workflow_create",
+            "workflow_update",
+            "workflow_delete",
+            "workflow_execute",
+            "workflow_import",
+            "workflow_rollback"
+          ],
+          "dangerous_actions": [
+            "workflow_delete (high)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Bulk Operations Runtime",
+      "note": "Bulk content/media/woo/acf + batch_execute (critical: runs arbitrary batched ops). Rollback-capable.",
+      "tool_count": 1,
+      "tools": [
+        {
+          "tool": "bulk_manage",
+          "title": "Bulk Operations",
+          "available": true,
+          "op_risk_level": "high",
+          "requires_approval": true,
+          "action_count": 7,
+          "read_only_actions": [],
+          "write_actions": [
+            "bulk_publish (medium)",
+            "bulk_unpublish (medium)",
+            "bulk_content (high)",
+            "bulk_media (high)",
+            "bulk_woocommerce (high)",
+            "bulk_acf (high)",
+            "batch_execute (critical)"
+          ],
+          "approval_required_actions": [
+            "bulk_publish",
+            "bulk_unpublish",
+            "bulk_content",
+            "bulk_media",
+            "bulk_woocommerce",
+            "bulk_acf",
+            "batch_execute"
+          ],
+          "dangerous_actions": [
+            "batch_execute (critical)"
+          ],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Search & Reports Runtime",
+      "note": "search_manage universal site search + read-only site reports; report_manage 8 operational reports (activity reports read the audit log).",
+      "tool_count": 2,
+      "tools": [
+        {
+          "tool": "search_manage",
+          "title": "Search & Reports",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 1,
+          "read_only_actions": [
+            "search_manage"
+          ],
+          "write_actions": [],
+          "approval_required_actions": [],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "report_manage",
+          "title": "Reporting Runtime",
+          "available": true,
+          "op_risk_level": "diagnostic",
+          "requires_approval": false,
+          "action_count": 9,
+          "read_only_actions": [
+            "report_list",
+            "report_site_health",
+            "report_plugin_health",
+            "report_security",
+            "report_content",
+            "report_woocommerce",
+            "report_agent_activity",
+            "report_approval_activity",
+            "report_patch_activity"
+          ],
+          "write_actions": [],
+          "approval_required_actions": [],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    },
+    {
+      "runtime": "Seeder Runtime",
+      "note": "Sample-data generators: posts/pages, ACF values, CF7 forms, Woo products. ACF/CF7/Woo seeders gated on their plugins.",
+      "tool_count": 4,
+      "tools": [
+        {
+          "tool": "content_seed",
+          "title": "Content Seeding",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "content_seed (medium)"
+          ],
+          "approval_required_actions": [
+            "content_seed"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "acf_seed",
+          "title": "Seed ACF Fields",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "acf_seed (medium)"
+          ],
+          "approval_required_actions": [
+            "acf_seed"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "cf7_seed",
+          "title": "Contact Form 7 Seeding",
+          "available": true,
+          "op_risk_level": "low",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "cf7_seed (low)"
+          ],
+          "approval_required_actions": [
+            "cf7_seed"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        },
+        {
+          "tool": "woo_product_seed",
+          "title": "WooCommerce Product Seeder",
+          "available": true,
+          "op_risk_level": "medium",
+          "requires_approval": true,
+          "action_count": 1,
+          "read_only_actions": [],
+          "write_actions": [
+            "woo_product_seed (medium)"
+          ],
+          "approval_required_actions": [
+            "woo_product_seed"
+          ],
+          "dangerous_actions": [],
+          "params_thin_only_action": false
+        }
+      ]
+    }
+  ],
+  "unclassified_tools": []
+}

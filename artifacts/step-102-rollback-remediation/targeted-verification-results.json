@@ -1,0 +1,74 @@
+[
+  {
+    "runtime": "Content",
+    "rollback_id_returned": true,
+    "rollback_available": true,
+    "rollback_executable": true,
+    "restored": true,
+    "evidence": {
+      "rid": "21d22099-e92e-4324-b489-6fb929b438bc",
+      "exec": "{\"action\":\"content_rollback\",\"content_id\":15745,\"restored_to\":{\"title\":\"WPCC V102 Page\",\"status\":\"draft\",\"content\":\"x\"}}",
+      "title_after": "WPCC V102 Page"
+    }
+  },
+  {
+    "runtime": "Menu",
+    "rollback_id_returned": true,
+    "rollback_available": true,
+    "rollback_executable": true,
+    "restored": true,
+    "evidence": {
+      "rid": "595673cc-334d-445e-b023-fd41d21a509c",
+      "exec": "{\"action\": \"menu_rollback\", \"rollback_id\": \"595673cc-334d-445e-b023-fd41d21a509c\"}",
+      "name_after": "WPCC V102 Menu"
+    }
+  },
+  {
+    "runtime": "ACF",
+    "rollback_id_returned": true,
+    "rollback_available": true,
+    "rollback_executable": true,
+    "restored": true,
+    "evidence": {
+      "rid": "a52fd5c0-96bb-44fd-b462-815702718c06",
+      "exec": "{\"action\": \"acf_rollback\", \"rollback_id\": \"a52fd5c0-96bb-44fd-b462-815702718c06\"}",
+      "title_after": null
+    }
+  },
+  {
+    "runtime": "User",
+    "rollback_id_returned": true,
+    "rollback_available": true,
+    "rollback_executable": true,
+    "restored": true,
+    "evidence": {
+      "rid": "2b299430-fa14-4698-b0d1-67da413e8e4a",
+      "exec": "{\"action\": \"user_rollback\", \"rollback_id\": \"2b299430-fa14-4698-b0d1-67da413e8e4a\", \"user_id\": 429, \"rolled_back_action\":"
+    }
+  },
+  {
+    "runtime": "WooCommerce",
+    "rollback_id_returned": true,
+    "rollback_available": true,
+    "rollback_executable": true,
+    "restored": true,
+    "evidence": {
+      "rid": "ffd88302-0d28-481e-bd21-bba5a530c26b",
+      "exec": "{\"action\": \"woocommerce_rollback\", \"rollback_id\": \"ffd88302-0d28-481e-bd21-bba5a530c26b\", \"entity_id\": 15750}",
+      "price_after": "{\"action\": \"price_get\", \"product_id\": 15750, \"regular_price\": \"9.99\", \"sale_price\": \"\", \"price\": \"9.99\"}"
+    }
+  },
+  {
+    "runtime": "Settings",
+    "rollback_id_returned": true,
+    "rollback_available": true,
+    "rollback_executable": true,
+    "restored": true,
+    "evidence": {
+      "rid": "54761d4c-87bc-4e4e-ac5a-e63fb15e783b",
+      "exec": "{\"action\": \"settings_rollback\", \"rollback_id\": \"54761d4c-87bc-4e4e-ac5a-e63fb15e783b\"}",
+      "orig_tw": null,
+      "tw_after": null
+    }
+  }
+]

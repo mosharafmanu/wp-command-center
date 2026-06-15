@@ -1,0 +1,586 @@
+[
+  {
+    "runtime": "Content",
+    "step": "create",
+    "call": "content_manage(content_create)",
+    "verdict": "PASS",
+    "detail": "page 15733 created; content_create stores NO rollback_id (create reversed by delete)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Content",
+    "step": "update",
+    "call": "content_manage(content_update)",
+    "verdict": "PASS",
+    "detail": "title->[EDITED]; rollback_id surfaced",
+    "rollback_id": "a750a8ef-7c4d-4d83-8d89-de8a6f9e7882"
+  },
+  {
+    "runtime": "Content",
+    "step": "verify-change",
+    "call": "content_manage(content_get)",
+    "verdict": "PASS",
+    "detail": "title now 'WPCC Validation Page [EDITED]'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Content",
+    "step": "rollback",
+    "call": "content_manage(content_rollback)",
+    "verdict": "FAIL",
+    "detail": "DEFECT F-1: returns {isError, code:wpcc_invalid_content_action, 'Invalid content action.'} \u2014 content_rollback is rejected by the action allow-list (ContentManager.php:24); the dispatch arm (line 56) + rollback_content() are dead code; no public rollback(); no REST route",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Content",
+    "step": "verify-restore",
+    "call": "content_manage(content_get)",
+    "verdict": "FAIL",
+    "detail": "title still '[EDITED]' \u2014 rollback never executed",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Content",
+    "step": "workaround-restore",
+    "call": "content_manage(content_update)",
+    "verdict": "PASS",
+    "detail": "title restored to original via content_update (rollback unavailable)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Content",
+    "step": "err-invalid-rollback",
+    "call": "content_manage(content_rollback bad id)",
+    "verdict": "OBSERVATION",
+    "detail": "also returns wpcc_invalid_content_action (action blocked before id is evaluated)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Option",
+    "step": "update",
+    "call": "option_manage(option_update)",
+    "verdict": "PASS",
+    "detail": "posts_per_page 15->11; rollback_id surfaced",
+    "rollback_id": "eea20106-2ec9-4f28-8c41-..."
+  },
+  {
+    "runtime": "Option",
+    "step": "verify-change",
+    "call": "option_manage(option_get)",
+    "verdict": "PASS",
+    "detail": "current_value=11",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Option",
+    "step": "rollback",
+    "call": "option_manage(option_rollback)",
+    "verdict": "PASS",
+    "detail": "restored_to=15",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Option",
+    "step": "verify-restore",
+    "call": "option_manage(option_get)",
+    "verdict": "PASS",
+    "detail": "current_value=15 (original)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Option",
+    "step": "err-duplicate-rollback",
+    "call": "option_manage(option_rollback)",
+    "verdict": "PASS",
+    "detail": "wpcc_rollback_already_applied 'Rollback has already been applied.'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "SEO",
+    "step": "update",
+    "call": "seo_manage(seo_update)",
+    "verdict": "PASS",
+    "detail": "yoast description set; rollback_id surfaced",
+    "rollback_id": "ab203a38-b6de-4ce0-bc31-ca7582015cd1"
+  },
+  {
+    "runtime": "SEO",
+    "step": "verify-change",
+    "call": "seo_manage(seo_get)",
+    "verdict": "PASS",
+    "detail": "description='WPCC validation SEO description'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "SEO",
+    "step": "rollback",
+    "call": "seo_manage(seo_restore)",
+    "verdict": "PASS",
+    "detail": "restored:true",
+    "rollback_id": null
+  },
+  {
+    "runtime": "SEO",
+    "step": "verify-restore",
+    "call": "seo_manage(seo_get)",
+    "verdict": "PASS",
+    "detail": "description back to empty (original)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Media",
+    "step": "update",
+    "call": "media_manage(media_update)",
+    "verdict": "PASS",
+    "detail": "media 15647 alt set; rollback_id surfaced",
+    "rollback_id": "1f5cb1dc-639c-4b64-9154-65afdb4c5976"
+  },
+  {
+    "runtime": "Media",
+    "step": "verify-change",
+    "call": "media_manage(media_get)",
+    "verdict": "PASS",
+    "detail": "alt='WPCC validation alt'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Media",
+    "step": "rollback",
+    "call": "REST /operations/media_manage/rollback",
+    "verdict": "PASS",
+    "detail": "action media_rollback",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Media",
+    "step": "verify-restore",
+    "call": "media_manage(media_get)",
+    "verdict": "PASS",
+    "detail": "alt='' (original)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Menu",
+    "step": "create",
+    "call": "menu_manage(menu_create)",
+    "verdict": "PASS",
+    "detail": "menu created; create returns no rollback_id (reversed by delete)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Menu",
+    "step": "update",
+    "call": "menu_manage(menu_update)",
+    "verdict": "PASS",
+    "detail": "name->RENAMED applied successfully",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Menu",
+    "step": "verify-change",
+    "call": "menu_manage(menu_get)",
+    "verdict": "PASS",
+    "detail": "name='WPCC Validation Menu RENAMED'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Menu",
+    "step": "rollback",
+    "call": "menu_manage rollback contract",
+    "verdict": "FAIL",
+    "detail": "DEFECT F-2: menu_update stores a rollback record internally but the response omits rollback_id (12 of 13 menu write paths), and there is no menu rollback_list to discover it; menu_update is also not handled in MenuRuntimeManager::rollback() switch \u2014 so the REST /menu_manage/rollback route is undriveable for menu_update",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Menu",
+    "step": "cleanup",
+    "call": "menu_manage(menu_delete)",
+    "verdict": "PASS",
+    "detail": "validation menus removed",
+    "rollback_id": null
+  },
+  {
+    "runtime": "ACF",
+    "step": "create",
+    "call": "acf_manage(acf_group_create)",
+    "verdict": "PASS",
+    "detail": "group created; create returns no rollback_id",
+    "rollback_id": null
+  },
+  {
+    "runtime": "ACF",
+    "step": "update",
+    "call": "acf_manage(acf_group_update)",
+    "verdict": "PASS",
+    "detail": "title->RENAMED applied successfully",
+    "rollback_id": null
+  },
+  {
+    "runtime": "ACF",
+    "step": "verify-change",
+    "call": "acf_manage(acf_group_get)",
+    "verdict": "PASS",
+    "detail": "title='WPCC Validation ACF RENAMED'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "ACF",
+    "step": "rollback",
+    "call": "acf_manage rollback contract",
+    "verdict": "FAIL",
+    "detail": "F-3: acf_group_update response omits rollback_id; REST /acf_manage/rollback undriveable for this action (no id surfaced, no acf rollback_list)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "ACF",
+    "step": "cleanup",
+    "call": "acf_manage(acf_group_delete)",
+    "verdict": "PASS",
+    "detail": "group removed",
+    "rollback_id": null
+  },
+  {
+    "runtime": "User",
+    "step": "create",
+    "call": "user_manage(user_create)",
+    "verdict": "PASS",
+    "detail": "user 426 created (subscriber)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "User",
+    "step": "update",
+    "call": "user_manage(user_update)",
+    "verdict": "PASS",
+    "detail": "display_name updated successfully",
+    "rollback_id": null
+  },
+  {
+    "runtime": "User",
+    "step": "rollback",
+    "call": "user_manage rollback contract",
+    "verdict": "FAIL",
+    "detail": "F-3: user_update response omits rollback_id; REST /user_manage/rollback undriveable",
+    "rollback_id": null
+  },
+  {
+    "runtime": "User",
+    "step": "cleanup-delete",
+    "call": "user_manage(user_delete)",
+    "verdict": "PASS",
+    "detail": "destructive delete via DELETE_USER handshake removed user 426",
+    "rollback_id": null
+  },
+  {
+    "runtime": "WooCommerce",
+    "step": "create",
+    "call": "woocommerce_manage(product_create)",
+    "verdict": "PASS",
+    "detail": "product 15738 created; rollback_id surfaced on create",
+    "rollback_id": "d46c0e04-0a23-4718-9bd2-f45a7c11e4e7"
+  },
+  {
+    "runtime": "WooCommerce",
+    "step": "update",
+    "call": "woocommerce_manage(price_update)",
+    "verdict": "PASS",
+    "detail": "regular_price->19.99 applied successfully",
+    "rollback_id": null
+  },
+  {
+    "runtime": "WooCommerce",
+    "step": "rollback",
+    "call": "woocommerce_manage rollback contract",
+    "verdict": "FAIL",
+    "detail": "F-3: price_update response omits rollback_id (woo surfaces it on only 7 of 23 write paths); REST /woocommerce_manage/rollback undriveable for price_update",
+    "rollback_id": null
+  },
+  {
+    "runtime": "WooCommerce",
+    "step": "cleanup-delete",
+    "call": "woocommerce_manage(product_delete)",
+    "verdict": "PASS",
+    "detail": "product 15738 removed",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Settings",
+    "step": "update",
+    "call": "settings_manage(settings_media_update)",
+    "verdict": "PASS",
+    "detail": "thumbnail_size_w changed; response {updated:true}",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Settings",
+    "step": "rollback",
+    "call": "settings_manage rollback contract",
+    "verdict": "FAIL",
+    "detail": "F-3: settings_media_update response omits rollback_id; REST /settings_manage/rollback undriveable; manually restored original value",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Settings",
+    "step": "verify-restore",
+    "call": "settings_manage(settings_media_get)",
+    "verdict": "PASS",
+    "detail": "thumbnail_size_w manually restored to original",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Snapshot",
+    "step": "create",
+    "call": "snapshot_manage(snapshot_create)",
+    "verdict": "PASS",
+    "detail": "snapshot bc78a58d created for theme file",
+    "rollback_id": "bc78a58d-ee36-4c9f-9f27-3327dcf5ae3f"
+  },
+  {
+    "runtime": "Snapshot",
+    "step": "verify",
+    "call": "snapshot_manage(snapshot_verify)",
+    "verdict": "PASS",
+    "detail": "valid:true, hash_matches:true 'Snapshot is intact.'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Snapshot",
+    "step": "details",
+    "call": "snapshot_manage(snapshot_details)",
+    "verdict": "PASS",
+    "detail": "metadata returned",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Snapshot",
+    "step": "restore",
+    "call": "snapshot_manage(snapshot_restore)",
+    "verdict": "PASS",
+    "detail": "file restored byte-for-byte (no-op restore)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Patch",
+    "step": "create",
+    "call": "patch_manage(patch_create)",
+    "verdict": "PASS",
+    "detail": "patch 0dc3312f created (low risk, pending_approval)",
+    "rollback_id": "0dc3312f-37ed-4a48-a705-27cb14cb6190"
+  },
+  {
+    "runtime": "Patch",
+    "step": "apply",
+    "call": "patch_manage(patch_apply)",
+    "verdict": "PASS",
+    "detail": "status applied; rollback_id returned",
+    "rollback_id": "0dc3312f-37ed-4a48-a705-27cb14cb6190"
+  },
+  {
+    "runtime": "Patch",
+    "step": "verify-change",
+    "call": "file_manage(file_read)",
+    "verdict": "PASS",
+    "detail": "file on disk shows 'PATCHED line.'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Rollback",
+    "step": "rollback-get",
+    "call": "rollback_manage(rollback_get)",
+    "verdict": "PASS",
+    "detail": "status applied; snapshot_ids present",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Rollback",
+    "step": "rollback-apply",
+    "call": "rollback_manage(rollback_apply)",
+    "verdict": "PASS",
+    "detail": "status rolled_back, restored:true",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Patch",
+    "step": "verify-restore",
+    "call": "file_manage(file_read)",
+    "verdict": "PASS",
+    "detail": "file on disk back to 'Original line.' (verified on filesystem too)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Rollback",
+    "step": "err-duplicate-rollback",
+    "call": "rollback_manage(rollback_apply)",
+    "verdict": "PASS",
+    "detail": "wpcc_invalid_status 'Only applied patches can be rolled back.'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Rollback",
+    "step": "err-invalid-id",
+    "call": "rollback_manage(rollback_get bad id)",
+    "verdict": "PASS",
+    "detail": "wpcc_patch_not_found 'Patch not found.'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Workflow",
+    "step": "create",
+    "call": "workflow_manage(workflow_create)",
+    "verdict": "PASS",
+    "detail": "workflow created, step_count 1",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Workflow",
+    "step": "execute",
+    "call": "workflow_manage(workflow_execute)",
+    "verdict": "PASS",
+    "detail": "status completed; execution_id + per-step timeline",
+    "rollback_id": "dd532f30-9ebd-4a65-84c4-0286d5b40360"
+  },
+  {
+    "runtime": "Workflow",
+    "step": "verify-change",
+    "call": "media_manage(media_get)",
+    "verdict": "PASS",
+    "detail": "step applied: alt='WF validation alt'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Workflow",
+    "step": "timeline/history",
+    "call": "workflow_manage(workflow_history)",
+    "verdict": "PASS",
+    "detail": "execution recorded in history with status completed",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Workflow",
+    "step": "rollback",
+    "call": "workflow_manage(workflow_rollback)",
+    "verdict": "PASS",
+    "detail": "rolled_back: per-step rollback_id reversed via unified dispatcher",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Workflow",
+    "step": "verify-restore",
+    "call": "media_manage(media_get)",
+    "verdict": "PASS",
+    "detail": "alt='' (original) after workflow rollback",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Workflow",
+    "step": "cleanup",
+    "call": "workflow_manage(workflow_delete)",
+    "verdict": "PASS",
+    "detail": "workflow removed",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "plan-generation",
+    "call": "approval_manage(request_create)",
+    "verdict": "PASS",
+    "detail": "request 48c0139f created (pending)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "request-get",
+    "call": "approval_manage(request_get)",
+    "verdict": "PASS",
+    "detail": "status pending",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "err-execute-without-approval",
+    "call": "approval_manage(queue_run before approve)",
+    "verdict": "PASS",
+    "detail": "gated: wpcc_missing_queue_id (no queue item exists until approved)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "approve",
+    "call": "approval_manage(request_approve)",
+    "verdict": "PASS",
+    "detail": "status approved; queue_item created (queue_id 9e17a300)",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "execute",
+    "call": "approval_manage(queue_run)",
+    "verdict": "PASS",
+    "detail": "queue item executed",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "results/audit",
+    "call": "approval_manage(results_list)",
+    "verdict": "PASS",
+    "detail": "result records present",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "err-duplicate-execution",
+    "call": "approval_manage(queue_run again)",
+    "verdict": "PASS",
+    "detail": "wpcc_invalid_queue_status 'Cannot run queue item in status completed.'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "err-approve-nonexistent",
+    "call": "approval_manage(request_approve bad id)",
+    "verdict": "PASS",
+    "detail": "wpcc_request_not_found 'Operation request not found.'",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Approval",
+    "step": "cleanup",
+    "call": "option_manage(option_update)",
+    "verdict": "PASS",
+    "detail": "posts_per_page restored 12->15 after approved op",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Audit",
+    "step": "audit-records",
+    "call": "report_manage(report_agent_activity)",
+    "verdict": "PASS",
+    "detail": "agent_activity.operations.started=56 in 500-entry window",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Audit",
+    "step": "patch-activity",
+    "call": "report_manage(report_patch_activity)",
+    "verdict": "PASS",
+    "detail": "patches_by_status includes rolled_back/pending_approval/applied counts",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Audit",
+    "step": "approval-activity",
+    "call": "report_manage(report_approval_activity)",
+    "verdict": "PASS",
+    "detail": "requests_by_status includes approved/pending",
+    "rollback_id": null
+  },
+  {
+    "runtime": "Timeline",
+    "step": "timeline-records",
+    "call": "GET /agent/timeline",
+    "verdict": "PASS",
+    "detail": "returns operation timeline entries with actor=mcp token, status completed",
+    "rollback_id": null
+  }
+]

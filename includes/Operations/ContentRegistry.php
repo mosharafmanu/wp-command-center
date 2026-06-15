@@ -33,6 +33,11 @@ final class ContentRegistry {
 		'content_list', 'content_get', 'content_create', 'content_update',
 		'content_delete', 'content_publish', 'content_unpublish',
 		'content_schedule', 'taxonomy_assign', 'featured_image_assign',
+		// STEP 102 (F-1): content_rollback is dispatched in ContentManager::run() and
+		// registered in OperationRegistry action_risks, but was missing from this
+		// allow-list, so the run() guard rejected it as an invalid action — making
+		// every content rollback_id unconsumable. Listing it reaches rollback_content().
+		'content_rollback',
 	];
 
 	const STATUS_DRAFT   = 'draft';
