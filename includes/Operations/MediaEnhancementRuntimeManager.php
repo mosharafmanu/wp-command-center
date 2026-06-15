@@ -51,6 +51,8 @@ final class MediaEnhancementRegistry {
 	const A_USAGE_REPORT          = 'media_usage_report';
 	const A_UNUSED_FIND           = 'unused_media_find';
 	const A_ORPHANED_FIND         = 'orphaned_media_find';
+	// STEP 100.9 — guarded, reversible cleanup (Snapshot → Trash → Verify; never force).
+	const A_UNUSED_CLEANUP        = 'unused_media_cleanup';
 
 	const ACTIONS = [
 		self::A_CAPABILITIES,
@@ -78,6 +80,7 @@ final class MediaEnhancementRegistry {
 		self::A_USAGE_REPORT,
 		self::A_UNUSED_FIND,
 		self::A_ORPHANED_FIND,
+		self::A_UNUSED_CLEANUP,
 	];
 
 	/** Reversible write actions (snapshot-backed); everything else is read-only. */
@@ -89,10 +92,14 @@ final class MediaEnhancementRegistry {
 		self::A_WEBP_GENERATE_BATCH,
 		self::A_OPTIMIZE,
 		self::A_OPTIMIZE_BATCH,
+		self::A_UNUSED_CLEANUP,
 	];
 
-	/** Per-action risk: STEP 100.3/100.4 reads = diagnostic; 100.5 regen writes = medium. */
+	/** Per-action risk: reads = diagnostic; reversible writes = medium; guarded cleanup = high. */
 	public static function get_risk( string $a ): string {
+		if ( self::A_UNUSED_CLEANUP === $a ) {
+			return 'high';
+		}
 		return in_array( $a, self::WRITE_ACTIONS, true ) ? 'medium' : 'diagnostic';
 	}
 }
@@ -172,6 +179,7 @@ final class MediaEnhancementRuntimeManager {
 			MediaEnhancementRegistry::A_USAGE_REPORT         => $this->media_usage_report( $p ),
 			MediaEnhancementRegistry::A_UNUSED_FIND          => $this->unused_media_find( $p ),
 			MediaEnhancementRegistry::A_ORPHANED_FIND        => $this->orphaned_media_find( $p ),
+			MediaEnhancementRegistry::A_UNUSED_CLEANUP       => $this->unused_media_cleanup( $p, $cx ),
 		};
 
 		if ( is_wp_error( $report ) ) {
@@ -982,36 +990,57 @@ final class MediaEnhancementRuntimeManager {
 			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
 		}
 
-		// Delete files created by the regeneration (not part of the snapshot)…
+		$media_id = (int) $record['media_id'];
+		$mode     = (string) ( $record['mode'] ?? '' );
+
+		// Delete files created by the operation (regen/webp) — not part of the snapshot…
 		foreach ( (array) ( $record['created_files'] ?? [] ) as $abs ) {
 			if ( is_string( $abs ) && is_file( $abs ) ) {
 				@unlink( $abs );
 			}
 		}
-		// …then restore the pre-regeneration bytes + metadata.
-		$restore = ( new MediaSnapshot() )->restore( (string) ( $record['snapshot_id'] ?? '' ) );
+		// …then restore the pre-operation bytes + metadata + _wp_attached_file.
+		$restore  = ( new MediaSnapshot() )->restore( (string) ( $record['snapshot_id'] ?? '' ) );
 		$verified = is_array( $restore ) && ! empty( $restore['verified'] );
+
+		// STEP 100.9 — cleanup also untrashes: restore post_status + post_parent and
+		// clear the trash meta (so the attachment returns exactly as it was, whether
+		// it was trashed by WPCC or already restored from WP Admin — idempotent).
+		if ( 'unused_media_cleanup' === $mode ) {
+			$prior_status = (string) ( $record['prior_status'] ?? 'inherit' );
+			$prior_parent = (int) ( $record['prior_parent'] ?? 0 );
+			if ( get_post( $media_id ) ) {
+				wp_update_post( [ 'ID' => $media_id, 'post_status' => $prior_status, 'post_parent' => $prior_parent ] );
+				delete_post_meta( $media_id, '_wp_trash_meta_status' );
+				delete_post_meta( $media_id, '_wp_trash_meta_time' );
+				$now      = get_post( $media_id );
+				$verified = $verified && $now && $prior_status === $now->post_status;
+			} else {
+				$verified = false;
+			}
+		}
 
 		$store[ $idx ]['rollback_applied'] = true;
 		update_option( self::ROLLBACK_STORE, $store );
 
 		$this->audit->record( 'media_enhance.rollback.applied', [
-			'rollback_id' => $rollback_id, 'media_id' => (int) $record['media_id'], 'verified' => $verified,
+			'rollback_id' => $rollback_id, 'media_id' => $media_id, 'mode' => $mode, 'verified' => $verified,
 		] );
 
 		return [
-			'action'      => 'thumbnail_regenerate_rollback',
+			'action'      => ( 'unused_media_cleanup' === $mode ) ? 'media_cleanup_rollback' : 'thumbnail_regenerate_rollback',
+			'mode'        => $mode,
 			'rollback_id' => $rollback_id,
-			'media_id'    => (int) $record['media_id'],
+			'media_id'    => $media_id,
 			'verified'    => $verified,
 		];
 	}
 
-	/** Persist a rollback record; returns its id (capped FIFO). */
-	private function store_rollback( int $media_id, string $snapshot_id, array $created_files, string $mode, array $regenerated, string $batch_id, array $context ): string {
+	/** Persist a rollback record; returns its id (capped FIFO). $extra merges extra fields (e.g. prior_status/parent for cleanup). */
+	private function store_rollback( int $media_id, string $snapshot_id, array $created_files, string $mode, array $regenerated, string $batch_id, array $context, array $extra = [] ): string {
 		$store = get_option( self::ROLLBACK_STORE, [] );
 		$id    = wp_generate_uuid4();
-		$store[] = [
+		$store[] = array_merge( [
 			'id'               => $id,
 			'media_id'         => $media_id,
 			'snapshot_id'      => $snapshot_id,
@@ -1023,7 +1052,7 @@ final class MediaEnhancementRuntimeManager {
 			'created_at'       => time(),
 			'session_id'       => $context['session_id'] ?? null,
 			'task_id'          => $context['task_id'] ?? null,
-		];
+		], $extra );
 		while ( count( $store ) > self::ROLLBACK_MAX ) {
 			array_shift( $store );
 		}
@@ -1916,6 +1945,119 @@ final class MediaEnhancementRuntimeManager {
 			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
 		}
 		return $id;
+	}
+
+	// ── STEP 100.9 — Guarded, reversible cleanup (Snapshot → Trash → Verify) ─
+
+	/**
+	 * Send a genuinely-unused attachment to the trash — never a permanent delete.
+	 * Flow: re-run the usage resolver at execution time → hard-exclude protected
+	 * categories → MediaSnapshot::capture → emulate WP trash (status='trash' +
+	 * trash meta, independent of MEDIA_TRASH) → verify → register a fully
+	 * reversible rollback. DestructiveGuard (confirm + CLEANUP_MEDIA phrase +
+	 * reason + media_id) is enforced by OperationExecutor BEFORE this runs, in
+	 * every security mode. There is NO permanent-delete path here.
+	 */
+	private function unused_media_cleanup( array $p, array $cx = [] ): array|\WP_Error {
+		$id = $this->resolve_attachment_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+
+		// (3) Re-verify usage immediately before acting — never trust stale audit input.
+		$classification = ( new MediaUsageResolver() )->classify( $id );
+
+		// (4) Hard-exclude protected categories.
+		$refused = $this->cleanup_exclusion( $id, $classification );
+		if ( null !== $refused ) {
+			return new \WP_Error( 'wpcc_media_cleanup_refused', sprintf( __( 'Cleanup refused: %s. Nothing was changed.', 'wp-command-center' ), $refused ) );
+		}
+
+		// Snapshot BEFORE any mutation — the real reversibility guarantee.
+		$snapshot = ( new MediaSnapshot() )->capture( $id, 'unused_media_cleanup' );
+		if ( is_wp_error( $snapshot ) ) {
+			return new \WP_Error( 'wpcc_media_cleanup_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before cleanup: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+		}
+		$snapshot_id = $snapshot['id'];
+
+		$post         = get_post( $id );
+		$prior_status = (string) $post->post_status;
+		$prior_parent = (int) $post->post_parent;
+
+		// Trash (recoverable) — emulate WP's own trash so WP-Admin "Restore" also
+		// works, and so behaviour is independent of the MEDIA_TRASH constant.
+		update_post_meta( $id, '_wp_trash_meta_status', $prior_status );
+		update_post_meta( $id, '_wp_trash_meta_time', time() );
+		wp_update_post( [ 'ID' => $id, 'post_status' => 'trash' ] );
+
+		// Verify the trash took; otherwise restore and report failure (no partial state).
+		$now = get_post( $id );
+		if ( ! $now || 'trash' !== $now->post_status ) {
+			( new MediaSnapshot() )->restore( $snapshot_id );
+			delete_post_meta( $id, '_wp_trash_meta_status' );
+			delete_post_meta( $id, '_wp_trash_meta_time' );
+			( new MediaSnapshot() )->delete( $snapshot_id );
+			return new \WP_Error( 'wpcc_media_cleanup_failed', __( 'Could not trash the attachment; pre-cleanup state restored.', 'wp-command-center' ) );
+		}
+		$snap_ok  = ( new MediaSnapshot() )->verify( $snapshot_id );
+		$verified = is_array( $snap_ok ) && ! empty( $snap_ok['valid'] );
+
+		$rollback_id = $this->store_rollback( $id, $snapshot_id, [], 'unused_media_cleanup', [], '', $cx, [
+			'prior_status' => $prior_status,
+			'prior_parent' => $prior_parent,
+		] );
+
+		$this->audit->record( 'media_enhance.media_cleaned', [
+			'media_id' => $id, 'prior_status' => $prior_status, 'prior_parent' => $prior_parent, 'rollback_id' => $rollback_id, 'verified' => $verified,
+		] );
+
+		return [ 'unused_media_cleanup' => [
+			'media_id'            => $id,
+			'action'              => 'trashed',
+			'reversible'          => true,
+			'permanently_deleted' => false,
+			'prior_status'        => $prior_status,
+			'prior_parent'        => $prior_parent,
+			'snapshot_id'         => $snapshot_id,
+			'rollback_id'         => $rollback_id,
+			'verified'            => $verified,
+			'classification'      => [ 'status' => $classification['status'], 'by_source' => $classification['by_source'] ],
+		] ];
+	}
+
+	/**
+	 * Hard-exclusion gate for cleanup. Returns a human-readable reason string when
+	 * the attachment must NOT be cleaned, or null when it is eligible.
+	 *
+	 * Excludes: anything still referenced (active OR indirect — covers draft-only
+	 * and revision references), WooCommerce product images (by parent), theme
+	 * assets (custom_logo / site_icon / site_logo), and anything an operator
+	 * protects via the `wpcc_media_cleanup_protected` filter (the escape hatch for
+	 * references WPCC cannot see — code/CSS/unknown storage).
+	 */
+	private function cleanup_exclusion( int $id, array $classification ): ?string {
+		if ( 'unused' !== ( $classification['status'] ?? '' ) ) {
+			return 'still referenced (' . (string) ( $classification['status'] ?? 'unknown' ) . ')';
+		}
+		$post   = get_post( $id );
+		$parent = ( $post && $post->post_parent ) ? get_post( $post->post_parent ) : null;
+		if ( $parent && in_array( $parent->post_type, [ 'product', 'product_variation' ], true ) ) {
+			return 'WooCommerce product image';
+		}
+		if ( $id === (int) get_theme_mod( 'custom_logo' ) ) {
+			return 'theme asset (custom_logo)';
+		}
+		if ( $id === (int) get_option( 'site_icon' ) ) {
+			return 'theme asset (site_icon)';
+		}
+		if ( $id === (int) get_option( 'site_logo' ) ) {
+			return 'theme asset (site_logo)';
+		}
+		/** Operator/agent escape hatch to protect IDs WPCC cannot see references for. */
+		if ( (bool) apply_filters( 'wpcc_media_cleanup_protected', false, $id, $classification ) ) {
+			return 'protected by wpcc_media_cleanup_protected filter';
+		}
+		return null;
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────

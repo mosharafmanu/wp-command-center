@@ -33,6 +33,7 @@ final class DestructiveGuard {
 	const PHRASE_THEME   = 'DELETE_THEME';
 	const PHRASE_USER    = 'DELETE_USER';
 	const PHRASE_MEDIA   = 'DELETE_MEDIA';
+	const PHRASE_CLEANUP = 'CLEANUP_MEDIA';
 	const PHRASE_CONTENT = 'DELETE_CONTENT';
 	const PHRASE_DB      = 'RUN_DESTRUCTIVE_DB';
 	const PHRASE_PATCH   = 'APPLY_PATCH';
@@ -92,6 +93,21 @@ final class DestructiveGuard {
 						'media_id',
 						false,
 						__( 'Permanently deletes the media attachment and its files, bypassing the trash.', 'wp-command-center' )
+					);
+				}
+				break;
+
+			case 'media_enhance':
+				// STEP 100.9 — usage-driven cleanup. Trash-only and reversible, but
+				// still requires explicit confirmation in EVERY mode because it acts
+				// on "unused" media inferred from a scan (false-unused is possible for
+				// references WPCC cannot see). There is no permanent-delete path.
+				if ( 'unused_media_cleanup' === $action ) {
+					return self::descriptor(
+						self::PHRASE_CLEANUP,
+						'media_id',
+						true,
+						__( 'Sends a media attachment inferred to be unused to the trash (recoverable). A byte snapshot is taken first and the action is fully reversible; it never permanently deletes.', 'wp-command-center' )
 					);
 				}
 				break;

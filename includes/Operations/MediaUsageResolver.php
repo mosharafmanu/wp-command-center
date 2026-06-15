@@ -103,6 +103,26 @@ final class MediaUsageResolver {
 			];
 		}
 
+		// 4b. Revisions — a reference that survives only in an old revision must
+		// protect the attachment (restoring that revision would break the image).
+		// Revisions are post_type 'revision' / post_status 'inherit', so the main
+		// content query (which excludes 'inherit') never sees them — scan them here.
+		// Always 'indirect': a revision is never the live document.
+		$rwhere  = [ 'p.post_content LIKE %s', 'p.post_content LIKE %s' ];
+		$rparams = [ '%wp-image-' . $id . '%', '%"id":' . $id . '%' ];
+		foreach ( $basenames as $bn ) {
+			$rwhere[]  = 'p.post_content LIKE %s';
+			$rparams[] = '%' . $wpdb->esc_like( $bn ) . '%';
+		}
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT p.ID, p.post_parent FROM {$wpdb->posts} p
+			 WHERE p.post_type = 'revision' AND ( " . implode( ' OR ', $rwhere ) . " ) LIMIT 200",
+			$rparams
+		) );
+		foreach ( (array) $rows as $r ) {
+			$refs[] = [ 'source' => 'revision', 'revision_id' => (int) $r->ID, 'parent_id' => (int) $r->post_parent, 'status' => 'indirect' ];
+		}
+
 		// 5. ACF fields — postmeta whose value is the ID (image) or a serialized
 		//    array containing it (gallery), identified by the ACF `_{key}` => field_…
 		//    companion meta. Excludes the core keys already handled above.
@@ -176,7 +196,14 @@ final class MediaUsageResolver {
 				'%' . $wpdb->esc_like( $bn ) . '%'
 			) );
 			foreach ( (array) $names as $name ) {
-				if ( in_array( $name, $seen_opts, true ) || 0 === strpos( (string) $name, '_transient' ) || 0 === strpos( (string) $name, '_site_transient' ) ) {
+				$name = (string) $name;
+				// Skip already-counted options, transients, and WPCC's OWN internal
+				// stores (snapshot/rollback options embed file basenames — counting
+				// them would make any snapshotted attachment look "referenced").
+				if ( in_array( $name, $seen_opts, true )
+					|| 0 === strpos( $name, '_transient' )
+					|| 0 === strpos( $name, '_site_transient' )
+					|| 0 === strpos( $name, 'wpcc_' ) ) {
 					continue;
 				}
 				$refs[]      = [ 'source' => 'option', 'option_name' => $name, 'status' => 'indirect', 'match' => 'url' ];
