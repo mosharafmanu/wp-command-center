@@ -41,6 +41,11 @@ final class MediaEnhancementRegistry {
 	const A_WEBP_VERIFY           = 'webp_verify';
 	const A_WEBP_GENERATE         = 'webp_generate';
 	const A_WEBP_GENERATE_BATCH   = 'webp_generate_batch';
+	// STEP 100.7 — image optimization (reversible re-encode + reads).
+	const A_OPTIMIZE_AUDIT        = 'image_optimize_audit';
+	const A_OPTIMIZE_VERIFY       = 'image_optimize_verify';
+	const A_OPTIMIZE              = 'image_optimize';
+	const A_OPTIMIZE_BATCH        = 'image_optimize_batch';
 
 	const ACTIONS = [
 		self::A_CAPABILITIES,
@@ -60,6 +65,10 @@ final class MediaEnhancementRegistry {
 		self::A_WEBP_VERIFY,
 		self::A_WEBP_GENERATE,
 		self::A_WEBP_GENERATE_BATCH,
+		self::A_OPTIMIZE_AUDIT,
+		self::A_OPTIMIZE_VERIFY,
+		self::A_OPTIMIZE,
+		self::A_OPTIMIZE_BATCH,
 	];
 
 	/** Reversible write actions (snapshot-backed); everything else is read-only. */
@@ -69,6 +78,8 @@ final class MediaEnhancementRegistry {
 		self::A_THUMB_REGENERATE_BATCH,
 		self::A_WEBP_GENERATE,
 		self::A_WEBP_GENERATE_BATCH,
+		self::A_OPTIMIZE,
+		self::A_OPTIMIZE_BATCH,
 	];
 
 	/** Per-action risk: STEP 100.3/100.4 reads = diagnostic; 100.5 regen writes = medium. */
@@ -91,6 +102,15 @@ final class MediaEnhancementRuntimeManager {
 
 	/** STEP 100.6 — source mime types we can encode to WebP (GD/Imagick); others skipped. */
 	private const WEBP_SOURCE_MIMES = [ 'image/jpeg', 'image/png' ];
+
+	/** STEP 100.7 — image optimization (re-encode at a quality target). */
+	private const OPTIMIZE_SOURCE_MIMES   = [ 'image/jpeg', 'image/png', 'image/webp' ];
+	private const OPTIMIZE_DEFAULT_QUALITY = 82;
+	private const OPTIMIZE_MIN_PERCENT     = 5;     // savings under this % are "insignificant" → skip
+	private const OPTIMIZE_MIN_BYTES       = 1024;  // …and under this many bytes
+	private const OPTIMIZE_CANDIDATE_BYTES = 51200; // audit: files ≥ 50KB are optimization candidates
+	private const OPTIMIZE_OVERSIZED_EDGE  = 2500;  // audit: originals wider/taller than this are "oversized"
+	private const OPTIMIZE_EST_FACTOR      = 0.25;  // audit: heuristic estimated savings fraction
 
 	/** STEP 100.5 — rollback record store + batch chunk bounds. */
 	private const ROLLBACK_STORE = 'wpcc_media_enhance_rollbacks';
@@ -131,6 +151,10 @@ final class MediaEnhancementRuntimeManager {
 			MediaEnhancementRegistry::A_WEBP_VERIFY          => $this->webp_verify( $p ),
 			MediaEnhancementRegistry::A_WEBP_GENERATE        => $this->webp_generate( $p, $cx ),
 			MediaEnhancementRegistry::A_WEBP_GENERATE_BATCH  => $this->webp_generate_batch( $p, $cx ),
+			MediaEnhancementRegistry::A_OPTIMIZE_AUDIT       => $this->image_optimize_audit( $p ),
+			MediaEnhancementRegistry::A_OPTIMIZE_VERIFY      => $this->image_optimize_verify( $p ),
+			MediaEnhancementRegistry::A_OPTIMIZE             => $this->image_optimize( $p, $cx ),
+			MediaEnhancementRegistry::A_OPTIMIZE_BATCH       => $this->image_optimize_batch( $p, $cx ),
 		};
 
 		if ( is_wp_error( $report ) ) {
@@ -1368,6 +1392,353 @@ final class MediaEnhancementRuntimeManager {
 			}
 		}
 		return true;
+	}
+
+	// ── STEP 100.7 — Image optimization (reversible re-encode) ───
+
+	/**
+	 * Library-wide optimization audit (read-only, heuristic — no re-encoding).
+	 * Reports supported/unsupported counts, candidates (supported files ≥ 50KB),
+	 * oversized originals, already-optimized (small) images, and an estimated
+	 * savings figure. Estimate only; actual savings come from image_optimize.
+	 */
+	private function image_optimize_audit( array $p ): array {
+		$limit = $this->scan_limit( $p );
+		$ids   = $this->image_attachment_ids( $limit + 1 );
+		$truncated = count( $ids ) > $limit;
+		if ( $truncated ) {
+			$ids = array_slice( $ids, 0, $limit );
+		}
+
+		$total = $supported = $unsupported = $candidates = $oversized = $already = 0;
+		$est_savings = 0;
+		foreach ( $ids as $id ) {
+			$total++;
+			$mime = (string) get_post_mime_type( $id );
+			if ( ! in_array( $mime, self::OPTIMIZE_SOURCE_MIMES, true ) ) {
+				$unsupported++;
+				continue;
+			}
+			$supported++;
+			$orig  = get_attached_file( $id );
+			$bytes = ( $orig && is_file( $orig ) ) ? (int) filesize( $orig ) : 0;
+			$meta  = wp_get_attachment_metadata( $id );
+			$w = is_array( $meta ) ? (int) ( $meta['width'] ?? 0 ) : 0;
+			$h = is_array( $meta ) ? (int) ( $meta['height'] ?? 0 ) : 0;
+			if ( max( $w, $h ) > self::OPTIMIZE_OVERSIZED_EDGE ) {
+				$oversized++;
+			}
+			if ( $bytes >= self::OPTIMIZE_CANDIDATE_BYTES ) {
+				$candidates++;
+				$est_savings += (int) round( $bytes * self::OPTIMIZE_EST_FACTOR );
+			} else {
+				$already++;
+			}
+		}
+
+		return [ 'image_optimize_audit' => [
+			'capability'             => [ 'optimize' => $this->optimize_available() ],
+			'scanned'                => $total,
+			'total_images'           => $total,
+			'supported'              => $supported,
+			'unsupported'            => $unsupported,
+			'optimization_candidates' => $candidates,
+			'oversized'              => $oversized,
+			'already_optimized'      => $already,
+			'estimated_savings_bytes' => $est_savings,
+			'estimate_factor_percent' => (int) round( self::OPTIMIZE_EST_FACTOR * 100 ),
+			'note'                   => 'Savings are a heuristic estimate (original file size × factor); run image_optimize for actual results.',
+			'truncated'              => $truncated,
+			'scan_limit'             => $limit,
+		] ];
+	}
+
+	/**
+	 * Per-image optimization eligibility + estimate (read-only). Reports current
+	 * size, dimensions, mime, eligibility, an estimated saving, and capability.
+	 */
+	private function image_optimize_verify( array $p ): array|\WP_Error {
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		$mime  = (string) get_post_mime_type( $id );
+		$files = $this->attachment_image_files( $id );
+		$orig  = get_attached_file( $id );
+		$orig_bytes = ( $orig && is_file( $orig ) ) ? (int) filesize( $orig ) : 0;
+		$total_bytes = 0;
+		foreach ( $files as $f ) {
+			$total_bytes += is_file( $f['file'] ) ? (int) filesize( $f['file'] ) : 0;
+		}
+		$meta = wp_get_attachment_metadata( $id );
+		$supported = in_array( $mime, self::OPTIMIZE_SOURCE_MIMES, true );
+		$cap = $this->optimize_available();
+		$est = ( $supported && $orig_bytes >= self::OPTIMIZE_CANDIDATE_BYTES ) ? (int) round( $total_bytes * self::OPTIMIZE_EST_FACTOR ) : 0;
+
+		return [ 'image_optimize_verify' => [
+			'media_id'                => $id,
+			'mime'                    => $mime,
+			'supported'               => $supported,
+			'eligible'                => $supported && $cap,
+			'dimensions'              => [ 'width' => is_array( $meta ) ? (int) ( $meta['width'] ?? 0 ) : 0, 'height' => is_array( $meta ) ? (int) ( $meta['height'] ?? 0 ) : 0 ],
+			'original_bytes'          => $orig_bytes,
+			'current_bytes'           => $total_bytes,
+			'files'                   => count( $files ),
+			'estimated_savings_bytes' => $est,
+			'capability'              => [ 'optimize' => $cap, 'mime_supported' => $supported ],
+		] ];
+	}
+
+	/**
+	 * Optimize one attachment: re-encode its image files (original + sizes) at a
+	 * quality target to reduce bytes WITHOUT changing dimensions. Capability-gated;
+	 * snapshot-backed before any original is modified; skips files whose savings
+	 * are insignificant; reversible (rollback restores original bytes + metadata).
+	 */
+	private function image_optimize( array $p, array $cx = [] ): array|\WP_Error {
+		if ( ! $this->optimize_available() ) {
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'Image optimization is not available on this server (no GD/Imagick).', 'wp-command-center' ) );
+		}
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		$quality = $this->clamp_quality( $p );
+		$res = $this->do_optimize( $id, $quality, '', $cx );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		return [ 'image_optimize' => $res ];
+	}
+
+	/**
+	 * Cursor batch optimizer with partial-success reporting. Capability checked
+	 * once up front. Each item is independently snapshot-backed and reversible;
+	 * unsupported / failed / skipped items are reported without aborting.
+	 */
+	private function image_optimize_batch( array $p, array $cx = [] ): array|\WP_Error {
+		if ( ! $this->optimize_available() ) {
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'Image optimization is not available on this server (no GD/Imagick).', 'wp-command-center' ) );
+		}
+		$quality = $this->clamp_quality( $p );
+		$limit   = max( 1, min( self::BATCH_MAX, isset( $p['limit'] ) ? (int) $p['limit'] : self::BATCH_DEFAULT ) );
+		$cursor  = max( 0, isset( $p['cursor'] ) ? (int) $p['cursor'] : 0 );
+		if ( ! empty( $p['media_ids'] ) && is_array( $p['media_ids'] ) ) {
+			$candidates = array_values( array_map( 'intval', $p['media_ids'] ) );
+		} else {
+			$candidates = $this->image_attachment_ids( self::SCAN_MAX );
+		}
+		$total = count( $candidates );
+		$chunk = array_slice( $candidates, $cursor, $limit );
+
+		$batch_id = wp_generate_uuid4();
+		$results  = [];
+		$optimized = $no_action = $unsupported = $failed = 0;
+		$bytes_saved = 0;
+		foreach ( $chunk as $id ) {
+			$post = get_post( (int) $id );
+			if ( ! $post || 'attachment' !== $post->post_type || ! wp_attachment_is_image( (int) $id ) ) {
+				$failed++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'failed', 'code' => 'wpcc_media_not_found' ];
+				continue;
+			}
+			$one = $this->do_optimize( (int) $id, $quality, $batch_id, $cx );
+			if ( is_wp_error( $one ) ) {
+				$code = $one->get_error_code();
+				if ( 'wpcc_optimize_unsupported_mime' === $code ) {
+					$unsupported++;
+					$results[] = [ 'media_id' => (int) $id, 'status' => 'unsupported', 'code' => $code ];
+				} else {
+					$failed++;
+					$results[] = [ 'media_id' => (int) $id, 'status' => 'failed', 'code' => $code ];
+				}
+			} elseif ( ! empty( $one['no_action'] ) ) {
+				$no_action++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'no_action', 'rollback_id' => null ];
+			} else {
+				$optimized++;
+				$bytes_saved += (int) $one['bytes_saved'];
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'optimized', 'bytes_saved' => $one['bytes_saved'], 'percent_saved' => $one['percent_saved'], 'rollback_id' => $one['rollback_id'] ];
+			}
+		}
+
+		$next = $cursor + $limit;
+		return [ 'image_optimize_batch' => [
+			'batch_id'    => $batch_id,
+			'quality'     => $quality,
+			'total'       => $total,
+			'cursor'      => $cursor,
+			'processed'   => count( $chunk ),
+			'optimized'   => $optimized,
+			'no_action'   => $no_action,
+			'unsupported' => $unsupported,
+			'failed'      => $failed,
+			'bytes_saved' => $bytes_saved,
+			'next_cursor' => $next < $total ? $next : null,
+			'results'     => $results,
+		] ];
+	}
+
+	/**
+	 * Core optimization for one attachment. Re-encodes each image file to a temp
+	 * first (originals untouched), commits only files with significant savings,
+	 * snapshot-backed before the first commit, and reversible. Returns the
+	 * payload, a `no_action` payload (no significant savings — no snapshot), or a
+	 * WP_Error (unsupported mime / missing files / snapshot or commit failure).
+	 *
+	 * @return array|\WP_Error
+	 */
+	private function do_optimize( int $id, int $quality, string $batch_id, array $cx ) {
+		$mime = (string) get_post_mime_type( $id );
+		if ( ! in_array( $mime, self::OPTIMIZE_SOURCE_MIMES, true ) ) {
+			return new \WP_Error( 'wpcc_optimize_unsupported_mime', sprintf( __( 'Image optimization does not support this mime type (%s); JPEG/PNG/WebP only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
+		}
+		$files    = $this->attachment_image_files( $id );
+		$original = get_attached_file( $id );
+		if ( empty( $files ) || ! $original || ! is_file( $original ) ) {
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no source files on disk to optimize.', 'wp-command-center' ) );
+		}
+
+		// Phase 1: re-encode each file to a temp; measure. Originals untouched.
+		$plan    = [];
+		$skipped = [];
+		$failed  = [];
+		foreach ( $files as $f ) {
+			$editor = wp_get_image_editor( $f['file'] );
+			if ( is_wp_error( $editor ) ) {
+				$failed[] = [ 'role' => $f['role'], 'error' => $editor->get_error_message() ];
+				continue;
+			}
+			$editor->set_quality( $quality );
+			// WP_Image_Editor::save() derives the output filename from the mime, not
+			// from the path's extension — so keep the correct extension on the temp
+			// and trust the returned path rather than the one we passed in.
+			$info = pathinfo( $f['file'] );
+			$ext  = isset( $info['extension'] ) ? $info['extension'] : 'img';
+			$tmp_in = $info['dirname'] . '/' . $info['filename'] . '.wpccopt-' . wp_generate_password( 6, false ) . '.' . $ext;
+			$saved  = $editor->save( $tmp_in, $mime );
+			if ( is_wp_error( $saved ) || empty( $saved['path'] ) || ! is_file( $saved['path'] ) ) {
+				if ( ! empty( $saved['path'] ) && is_file( $saved['path'] ) ) { @unlink( $saved['path'] ); }
+				if ( is_file( $tmp_in ) ) { @unlink( $tmp_in ); }
+				$failed[] = [ 'role' => $f['role'], 'error' => is_wp_error( $saved ) ? $saved->get_error_message() : 'not written' ];
+				continue;
+			}
+			$tmp    = (string) $saved['path'];
+			$before = (int) filesize( $f['file'] );
+			$after  = (int) filesize( $tmp );
+			$delta  = $before - $after;
+			$pct    = $before > 0 ? ( $delta / $before * 100 ) : 0;
+			if ( $delta >= self::OPTIMIZE_MIN_BYTES && $pct >= self::OPTIMIZE_MIN_PERCENT ) {
+				$plan[] = [ 'role' => $f['role'], 'file' => $f['file'], 'tmp' => $tmp, 'before' => $before, 'after' => $after, 'pct' => $pct ];
+			} else {
+				@unlink( $tmp );
+				$skipped[] = [ 'role' => $f['role'], 'before' => $before, 'after' => $after, 'reason' => 'insignificant_savings' ];
+			}
+		}
+
+		// Nothing worth committing → skip (no snapshot, no write, no rollback).
+		if ( empty( $plan ) ) {
+			return [
+				'media_id'    => $id,
+				'no_action'   => true,
+				'quality'     => $quality,
+				'optimized'   => [],
+				'skipped'     => $skipped,
+				'failed'      => $failed,
+				'bytes_saved' => 0,
+				'message'     => __( 'No significant savings; originals left unchanged.', 'wp-command-center' ),
+			];
+		}
+
+		// Snapshot BEFORE modifying any original (covers original + size files + metadata).
+		$snapshot = ( new MediaSnapshot() )->capture( $id, 'image_optimize' );
+		if ( is_wp_error( $snapshot ) ) {
+			foreach ( $plan as $p ) { if ( is_file( $p['tmp'] ) ) { @unlink( $p['tmp'] ); } }
+			return new \WP_Error( 'wpcc_optimize_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before optimization: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+		}
+		$snapshot_id = $snapshot['id'];
+
+		// Phase 2: commit — move each temp over its original.
+		$optimized   = [];
+		$before_total = 0;
+		$after_total  = 0;
+		foreach ( $plan as $p ) {
+			if ( @rename( $p['tmp'], $p['file'] ) ) {
+				$before_total += $p['before'];
+				$after_total  += $p['after'];
+				$optimized[]   = [ 'role' => $p['role'], 'before' => $p['before'], 'after' => $p['after'], 'saved' => $p['before'] - $p['after'], 'percent' => round( $p['pct'], 1 ) ];
+			} else {
+				if ( is_file( $p['tmp'] ) ) { @unlink( $p['tmp'] ); }
+				$failed[] = [ 'role' => $p['role'], 'error' => 'commit_failed' ];
+			}
+		}
+
+		if ( empty( $optimized ) ) {
+			( new MediaSnapshot() )->restore( $snapshot_id );
+			( new MediaSnapshot() )->delete( $snapshot_id );
+			return new \WP_Error( 'wpcc_optimize_failed', __( 'No files could be optimized; pre-optimization state restored.', 'wp-command-center' ) );
+		}
+
+		// Refresh recorded file sizes (rollback restores prior metadata via snapshot).
+		$this->refresh_filesize_metadata( $id );
+
+		$bytes_saved   = $before_total - $after_total;
+		$percent_saved = $before_total > 0 ? round( $bytes_saved / $before_total * 100, 1 ) : 0;
+		$rollback_id   = $this->store_rollback( $id, $snapshot_id, [], 'image_optimize', array_column( $optimized, 'role' ), $batch_id, $cx );
+
+		$this->audit->record( 'media_enhance.image_optimized', [
+			'media_id' => $id, 'quality' => $quality, 'bytes_saved' => $bytes_saved, 'files' => count( $optimized ), 'rollback_id' => $rollback_id, 'batch_id' => $batch_id ?: null,
+		] );
+
+		return [
+			'media_id'      => $id,
+			'quality'       => $quality,
+			'optimized'     => $optimized,
+			'skipped'       => $skipped,
+			'failed'        => $failed,
+			'before_bytes'  => $before_total,
+			'after_bytes'   => $after_total,
+			'bytes_saved'   => $bytes_saved,
+			'percent_saved' => $percent_saved,
+			'verified'      => true,
+			'snapshot_id'   => $snapshot_id,
+			'rollback_id'   => $rollback_id,
+			'batch_id'      => $batch_id ?: null,
+		];
+	}
+
+	/** Whether an in-PHP image editor (GD/Imagick) is available; filterable for ops/testing. */
+	private function optimize_available(): bool {
+		$gd      = extension_loaded( 'gd' );
+		$imagick = extension_loaded( 'imagick' ) && class_exists( '\Imagick' );
+		return (bool) apply_filters( 'wpcc_media_optimize_available', $gd || $imagick );
+	}
+
+	private function clamp_quality( array $p ): int {
+		$q = isset( $p['quality'] ) ? (int) $p['quality'] : self::OPTIMIZE_DEFAULT_QUALITY;
+		return max( 1, min( 100, $q ) );
+	}
+
+	/** Recompute the `filesize` fields in attachment metadata after optimization. */
+	private function refresh_filesize_metadata( int $id ): void {
+		$meta = wp_get_attachment_metadata( $id );
+		if ( ! is_array( $meta ) ) {
+			return;
+		}
+		$orig = get_attached_file( $id );
+		if ( $orig && is_file( $orig ) ) {
+			$meta['filesize'] = (int) filesize( $orig );
+		}
+		$base = $this->attachment_base_dir( $id );
+		if ( ! empty( $meta['sizes'] ) && '' !== $base ) {
+			foreach ( $meta['sizes'] as $k => $s ) {
+				$file = (string) ( $s['file'] ?? '' );
+				if ( '' !== $file && is_file( $base . '/' . $file ) && isset( $meta['sizes'][ $k ]['filesize'] ) ) {
+					$meta['sizes'][ $k ]['filesize'] = (int) filesize( $base . '/' . $file );
+				}
+			}
+		}
+		wp_update_attachment_metadata( $id, $meta );
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────
