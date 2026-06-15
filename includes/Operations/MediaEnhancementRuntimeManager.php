@@ -36,6 +36,11 @@ final class MediaEnhancementRegistry {
 	const A_THUMB_REGENERATE_ATT  = 'thumbnail_regenerate_attachment';
 	const A_THUMB_REGENERATE_BATCH = 'thumbnail_regenerate_batch';
 	const A_THUMB_VERIFY          = 'thumbnail_verify';
+	// STEP 100.6 — WebP audit + additive generation (reversible writes + reads).
+	const A_WEBP_AUDIT            = 'webp_audit';
+	const A_WEBP_VERIFY           = 'webp_verify';
+	const A_WEBP_GENERATE         = 'webp_generate';
+	const A_WEBP_GENERATE_BATCH   = 'webp_generate_batch';
 
 	const ACTIONS = [
 		self::A_CAPABILITIES,
@@ -51,6 +56,10 @@ final class MediaEnhancementRegistry {
 		self::A_THUMB_REGENERATE_ATT,
 		self::A_THUMB_REGENERATE_BATCH,
 		self::A_THUMB_VERIFY,
+		self::A_WEBP_AUDIT,
+		self::A_WEBP_VERIFY,
+		self::A_WEBP_GENERATE,
+		self::A_WEBP_GENERATE_BATCH,
 	];
 
 	/** Reversible write actions (snapshot-backed); everything else is read-only. */
@@ -58,6 +67,8 @@ final class MediaEnhancementRegistry {
 		self::A_THUMB_REGENERATE,
 		self::A_THUMB_REGENERATE_ATT,
 		self::A_THUMB_REGENERATE_BATCH,
+		self::A_WEBP_GENERATE,
+		self::A_WEBP_GENERATE_BATCH,
 	];
 
 	/** Per-action risk: STEP 100.3/100.4 reads = diagnostic; 100.5 regen writes = medium. */
@@ -77,6 +88,9 @@ final class MediaEnhancementRuntimeManager {
 
 	/** An original this many × the largest registered display size is "oversized". */
 	private const OVERSIZE_FACTOR = 1.5;
+
+	/** STEP 100.6 — source mime types we can encode to WebP (GD/Imagick); others skipped. */
+	private const WEBP_SOURCE_MIMES = [ 'image/jpeg', 'image/png' ];
 
 	/** STEP 100.5 — rollback record store + batch chunk bounds. */
 	private const ROLLBACK_STORE = 'wpcc_media_enhance_rollbacks';
@@ -113,6 +127,10 @@ final class MediaEnhancementRuntimeManager {
 			MediaEnhancementRegistry::A_THUMB_REGENERATE_ATT => $this->thumbnail_regenerate( $p, $cx ),
 			MediaEnhancementRegistry::A_THUMB_REGENERATE_BATCH => $this->thumbnail_regenerate_batch( $p, $cx ),
 			MediaEnhancementRegistry::A_THUMB_VERIFY         => $this->thumbnail_verify( $p ),
+			MediaEnhancementRegistry::A_WEBP_AUDIT           => $this->webp_audit( $p ),
+			MediaEnhancementRegistry::A_WEBP_VERIFY          => $this->webp_verify( $p ),
+			MediaEnhancementRegistry::A_WEBP_GENERATE        => $this->webp_generate( $p, $cx ),
+			MediaEnhancementRegistry::A_WEBP_GENERATE_BATCH  => $this->webp_generate_batch( $p, $cx ),
 		};
 
 		if ( is_wp_error( $report ) ) {
@@ -999,6 +1017,357 @@ final class MediaEnhancementRuntimeManager {
 
 	private function error( string $code, string $message ): array {
 		return [ 'error' => true, 'code' => $code, 'message' => $message ];
+	}
+
+	// ── STEP 100.6 — WebP audit + additive generation ────────────
+
+	/**
+	 * Library-wide WebP coverage report + capability probe. Read-only. Counts how
+	 * many image files (original + sizes) already have a `.webp` sibling.
+	 */
+	private function webp_audit( array $p ): array {
+		$cap   = $this->webp_capability();
+		$limit = $this->scan_limit( $p );
+		$ids   = $this->image_attachment_ids( $limit + 1 );
+		$truncated = count( $ids ) > $limit;
+		if ( $truncated ) {
+			$ids = array_slice( $ids, 0, $limit );
+		}
+
+		$scanned = $full = $partial = $none = 0;
+		$total_files = $webp_present = 0;
+		foreach ( $ids as $id ) {
+			$scanned++;
+			$files = $this->attachment_image_files( $id );
+			if ( empty( $files ) ) {
+				$none++;
+				continue;
+			}
+			$have = 0;
+			foreach ( $files as $f ) {
+				$total_files++;
+				if ( is_file( $f['file'] . '.webp' ) ) {
+					$have++;
+					$webp_present++;
+				}
+			}
+			if ( 0 === $have ) {
+				$none++;
+			} elseif ( $have === count( $files ) ) {
+				$full++;
+			} else {
+				$partial++;
+			}
+		}
+
+		return [ 'webp_audit' => [
+			'capability'      => $cap,
+			'scanned'         => $scanned,
+			'fully_covered'   => $full,
+			'partially_covered' => $partial,
+			'no_webp'         => $none,
+			'image_files'     => $total_files,
+			'webp_present'    => $webp_present,
+			'coverage_percent' => $total_files > 0 ? (int) round( $webp_present / $total_files * 100 ) : 0,
+			'truncated'       => $truncated,
+			'scan_limit'      => $limit,
+		] ];
+	}
+
+	/**
+	 * Per-attachment WebP verification: for each image file, whether a `.webp`
+	 * sibling exists and whether it is smaller-or-equal than its source.
+	 */
+	private function webp_verify( array $p ): array|\WP_Error {
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		$mime  = (string) get_post_mime_type( $id );
+		$files = $this->attachment_image_files( $id );
+
+		$out = [];
+		$with = 0;
+		foreach ( $files as $f ) {
+			$webp = $f['file'] . '.webp';
+			$exists = is_file( $webp );
+			$src_bytes  = is_file( $f['file'] ) ? (int) filesize( $f['file'] ) : 0;
+			$webp_bytes = $exists ? (int) filesize( $webp ) : 0;
+			if ( $exists ) {
+				$with++;
+			}
+			$out[] = [
+				'role'            => $f['role'],
+				'source'          => basename( $f['file'] ),
+				'webp'            => basename( $webp ),
+				'webp_exists'     => $exists,
+				'source_bytes'    => $src_bytes,
+				'webp_bytes'      => $webp_bytes,
+				'smaller_or_equal' => $exists && $src_bytes > 0 ? ( $webp_bytes <= $src_bytes ) : null,
+			];
+		}
+
+		return [ 'webp_verify' => [
+			'media_id'      => $id,
+			'mime'          => $mime,
+			'supported'     => in_array( $mime, self::WEBP_SOURCE_MIMES, true ),
+			'total'         => count( $files ),
+			'with_webp'     => $with,
+			'missing_webp'  => count( $files ) - $with,
+			'fully_covered' => count( $files ) > 0 && $with === count( $files ),
+			'files'         => $out,
+		] ];
+	}
+
+	/**
+	 * Generate `.webp` sidecars for one attachment's image files (original + each
+	 * size). Additive: originals are never modified, replaced, or deleted — only
+	 * new `<file>.webp` files are written. Capability-gated (fail closed); skips
+	 * files that already have a `.webp`; snapshot-backed; reversible (rollback
+	 * deletes the generated `.webp`). Returns structured generated/skipped/failed.
+	 */
+	private function webp_generate( array $p, array $cx = [] ): array|\WP_Error {
+		if ( ! $this->webp_encode_available() ) {
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'WebP encoding is not available on this server (no GD/Imagick WebP support).', 'wp-command-center' ) );
+		}
+		$id = $this->resolve_image_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		$res = $this->do_webp_generate( $id, '', $cx );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		return [ 'webp_generate' => $res ];
+	}
+
+	/**
+	 * Cursor batch WebP generation with partial-success reporting. Capability is
+	 * checked once up front (fail closed). Each item is independently snapshot-
+	 * backed and reversible; unsupported / missing-source / failed items are
+	 * counted and reported without aborting the batch.
+	 */
+	private function webp_generate_batch( array $p, array $cx = [] ): array|\WP_Error {
+		if ( ! $this->webp_encode_available() ) {
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'WebP encoding is not available on this server (no GD/Imagick WebP support).', 'wp-command-center' ) );
+		}
+
+		$limit  = max( 1, min( self::BATCH_MAX, isset( $p['limit'] ) ? (int) $p['limit'] : self::BATCH_DEFAULT ) );
+		$cursor = max( 0, isset( $p['cursor'] ) ? (int) $p['cursor'] : 0 );
+		if ( ! empty( $p['media_ids'] ) && is_array( $p['media_ids'] ) ) {
+			$candidates = array_values( array_map( 'intval', $p['media_ids'] ) );
+		} else {
+			$candidates = $this->image_attachment_ids( self::SCAN_MAX );
+		}
+		$total = count( $candidates );
+		$chunk = array_slice( $candidates, $cursor, $limit );
+
+		$batch_id = wp_generate_uuid4();
+		$results  = [];
+		$generated = $no_action = $unsupported = $failed = 0;
+		foreach ( $chunk as $id ) {
+			$post = get_post( (int) $id );
+			if ( ! $post || 'attachment' !== $post->post_type || ! wp_attachment_is_image( (int) $id ) ) {
+				$failed++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'failed', 'code' => 'wpcc_media_not_found' ];
+				continue;
+			}
+			$one = $this->do_webp_generate( (int) $id, $batch_id, $cx );
+			if ( is_wp_error( $one ) ) {
+				$code = $one->get_error_code();
+				if ( 'wpcc_webp_unsupported_mime' === $code ) {
+					$unsupported++;
+					$results[] = [ 'media_id' => (int) $id, 'status' => 'unsupported', 'code' => $code ];
+				} else {
+					$failed++;
+					$results[] = [ 'media_id' => (int) $id, 'status' => 'failed', 'code' => $code ];
+				}
+			} elseif ( ! empty( $one['no_action'] ) ) {
+				$no_action++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'no_action', 'rollback_id' => null ];
+			} else {
+				$generated++;
+				$results[] = [ 'media_id' => (int) $id, 'status' => 'generated', 'count_generated' => $one['count_generated'], 'rollback_id' => $one['rollback_id'] ];
+			}
+		}
+
+		$next = $cursor + $limit;
+		return [ 'webp_generate_batch' => [
+			'batch_id'    => $batch_id,
+			'total'       => $total,
+			'cursor'      => $cursor,
+			'processed'   => count( $chunk ),
+			'generated'   => $generated,
+			'no_action'   => $no_action,
+			'unsupported' => $unsupported,
+			'failed'      => $failed,
+			'next_cursor' => $next < $total ? $next : null,
+			'results'     => $results,
+		] ];
+	}
+
+	/**
+	 * Core additive WebP generation for one attachment. Returns the structured
+	 * payload, a `no_action` payload (all sidecars already present — no snapshot,
+	 * no write), or a WP_Error (unsupported mime / missing source / snapshot
+	 * failure / nothing-could-be-generated, after cleanup).
+	 *
+	 * @return array|\WP_Error
+	 */
+	private function do_webp_generate( int $id, string $batch_id, array $cx ) {
+		$mime = (string) get_post_mime_type( $id );
+		if ( ! in_array( $mime, self::WEBP_SOURCE_MIMES, true ) ) {
+			return new \WP_Error( 'wpcc_webp_unsupported_mime', sprintf( __( 'WebP cannot be generated from this mime type (%s); JPEG/PNG only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
+		}
+
+		$files = $this->attachment_image_files( $id );
+		$original = get_attached_file( $id );
+		if ( empty( $files ) || ! $original || ! is_file( $original ) ) {
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no source files on disk to convert.', 'wp-command-center' ) );
+		}
+
+		// Targets = image files without an existing .webp sibling (no duplicates).
+		$targets = [];
+		$existing = [];
+		foreach ( $files as $f ) {
+			if ( is_file( $f['file'] . '.webp' ) ) {
+				$existing[] = $f['role'];
+			} else {
+				$targets[] = $f;
+			}
+		}
+		if ( empty( $targets ) ) {
+			return [
+				'media_id'         => $id,
+				'no_action'        => true,
+				'generated'        => [],
+				'skipped_existing' => $existing,
+				'count_generated'  => 0,
+				'message'          => __( 'WebP already present for all image files.', 'wp-command-center' ),
+			];
+		}
+
+		// Snapshot before any write (defensive; originals are never modified).
+		$snapshot = ( new MediaSnapshot() )->capture( $id, 'webp_generate' );
+		if ( is_wp_error( $snapshot ) ) {
+			return new \WP_Error( 'wpcc_webp_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before WebP generation: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+		}
+		$snapshot_id = $snapshot['id'];
+
+		$generated = [];
+		$created   = [];
+		$failed    = [];
+		foreach ( $targets as $f ) {
+			$dest   = $f['file'] . '.webp';
+			$editor = wp_get_image_editor( $f['file'] );
+			if ( is_wp_error( $editor ) ) {
+				$failed[] = [ 'role' => $f['role'], 'error' => $editor->get_error_message() ];
+				continue;
+			}
+			$saved = $editor->save( $dest, 'image/webp' );
+			if ( is_wp_error( $saved ) || ! is_file( $dest ) ) {
+				$failed[] = [ 'role' => $f['role'], 'error' => is_wp_error( $saved ) ? $saved->get_error_message() : 'not written' ];
+				continue;
+			}
+			$generated[] = [ 'role' => $f['role'], 'webp' => basename( $dest ), 'bytes' => (int) filesize( $dest ), 'source_bytes' => (int) filesize( $f['file'] ) ];
+			$created[]   = $dest;
+		}
+
+		// If nothing could be generated, restore + clean and report failure.
+		if ( empty( $generated ) ) {
+			( new MediaSnapshot() )->restore( $snapshot_id );
+			foreach ( $created as $c ) {
+				if ( is_file( $c ) ) { @unlink( $c ); }
+			}
+			( new MediaSnapshot() )->delete( $snapshot_id );
+			return new \WP_Error( 'wpcc_webp_generate_failed', __( 'No WebP files could be generated; pre-generation state restored.', 'wp-command-center' ) );
+		}
+
+		$rollback_id = $this->store_rollback( $id, $snapshot_id, $created, 'webp_generate', array_column( $generated, 'role' ), $batch_id, $cx );
+
+		$this->audit->record( 'media_enhance.webp_generated', [
+			'media_id' => $id, 'generated' => count( $generated ), 'failed' => count( $failed ), 'rollback_id' => $rollback_id, 'batch_id' => $batch_id ?: null,
+		] );
+
+		return [
+			'media_id'         => $id,
+			'generated'        => $generated,
+			'skipped_existing' => $existing,
+			'failed'           => $failed,
+			'count_generated'  => count( $generated ),
+			'count_skipped'    => count( $existing ),
+			'count_failed'     => count( $failed ),
+			'verified'         => $this->all_files_exist( $created ),
+			'snapshot_id'      => $snapshot_id,
+			'rollback_id'      => $rollback_id,
+			'batch_id'         => $batch_id ?: null,
+		];
+	}
+
+	/** Whether WebP encoding is available (GD or Imagick), filterable for ops/testing. */
+	private function webp_encode_available(): bool {
+		$gd      = extension_loaded( 'gd' ) && function_exists( 'gd_info' );
+		$gd_info = $gd ? gd_info() : [];
+		$gd_webp = $gd && function_exists( 'imagewebp' ) && ! empty( $gd_info['WebP Support'] );
+
+		$imagick  = extension_loaded( 'imagick' ) && class_exists( '\Imagick' );
+		$im_webp  = false;
+		if ( $imagick ) {
+			try { $im_webp = in_array( 'WEBP', array_map( 'strtoupper', (array) \Imagick::queryFormats() ), true ); } catch ( \Throwable $e ) { $im_webp = false; }
+		}
+		/** Allow operators/tests to force-disable WebP encoding (fail closed). */
+		return (bool) apply_filters( 'wpcc_media_webp_encode_available', $gd_webp || $im_webp );
+	}
+
+	/** Capability detail used by webp_audit. */
+	private function webp_capability(): array {
+		$gd      = extension_loaded( 'gd' ) && function_exists( 'gd_info' );
+		$gd_info = $gd ? gd_info() : [];
+		$gd_webp = $gd && function_exists( 'imagewebp' ) && ! empty( $gd_info['WebP Support'] );
+		$imagick = extension_loaded( 'imagick' ) && class_exists( '\Imagick' );
+		$im_webp = false;
+		if ( $imagick ) {
+			try { $im_webp = in_array( 'WEBP', array_map( 'strtoupper', (array) \Imagick::queryFormats() ), true ); } catch ( \Throwable $e ) { $im_webp = false; }
+		}
+		return [
+			'gd_webp'      => $gd_webp,
+			'imagick_webp' => $im_webp,
+			'webp_encode'  => $this->webp_encode_available(),
+		];
+	}
+
+	/**
+	 * An attachment's convertible image files (original + each existing size) with
+	 * a role label.
+	 *
+	 * @return array<int,array{role:string,file:string}>
+	 */
+	private function attachment_image_files( int $id ): array {
+		$out      = [];
+		$original = get_attached_file( $id );
+		if ( $original && is_file( $original ) ) {
+			$out[] = [ 'role' => 'original', 'file' => $original ];
+		}
+		$meta = wp_get_attachment_metadata( $id );
+		$base = $this->attachment_base_dir( $id );
+		if ( is_array( $meta ) && ! empty( $meta['sizes'] ) && '' !== $base ) {
+			foreach ( $meta['sizes'] as $name => $s ) {
+				$file = (string) ( $s['file'] ?? '' );
+				if ( '' !== $file && is_file( $base . '/' . $file ) ) {
+					$out[] = [ 'role' => (string) $name, 'file' => $base . '/' . $file ];
+				}
+			}
+		}
+		return $out;
+	}
+
+	private function all_files_exist( array $paths ): bool {
+		foreach ( $paths as $pth ) {
+			if ( ! is_file( $pth ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────

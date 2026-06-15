@@ -204,6 +204,10 @@ final class RestApi {
 		'wpcc_media_no_files'               => 'The attachment has no files on disk to operate on.',
 		'wpcc_thumbnail_snapshot_failed'    => 'Could not snapshot the attachment before regeneration; the operation was aborted without changes.',
 		'wpcc_thumbnail_regenerate_failed'  => 'Thumbnail regeneration failed to produce the expected sizes; the pre-regeneration state was restored.',
+		'wpcc_image_lib_unavailable'        => 'The required image library capability (e.g. WebP encoding via GD/Imagick) is unavailable on this server.',
+		'wpcc_webp_unsupported_mime'        => 'WebP cannot be generated from this attachment\'s mime type (JPEG/PNG only).',
+		'wpcc_webp_snapshot_failed'         => 'Could not snapshot the attachment before WebP generation; the operation was aborted without changes.',
+		'wpcc_webp_generate_failed'         => 'No WebP files could be generated; the pre-generation state was restored.',
 		'wpcc_invalid_path'                 => 'The supplied path is missing or invalid.',
 		'wpcc_invalid_plan'                 => 'Plan title and objective are required.',
 		'wpcc_invalid_plan_action'          => 'Invalid plan action.',
@@ -466,7 +470,7 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/capability_manage/run', 'scope' => 'full', 'description' => 'Manage platform capabilities: { action: capability_list|capability_get|capability_assign|capability_remove|capability_validate, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/database_inspect/run', 'scope' => 'read_only', 'description' => 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.' ],
 		[ 'method' => 'POST', 'path' => '/operations/report_manage/run', 'scope' => 'read_only', 'description' => 'Read-only operational reports: { action: report_list|report_site_health|report_plugin_health|report_security|report_content|report_woocommerce|report_agent_activity|report_approval_activity|report_patch_activity, limit? }.' ],
-		[ 'method' => 'POST', 'path' => '/operations/media_enhance/run', 'scope' => 'read_only', 'description' => 'Media-enhancement runtime. Read diagnostics (read token): { action: media_enhance_capabilities|image_sizes_list|image_size_usage_audit|image_size_recommendations|image_size_verify|srcset_verify|responsive_image_audit|missing_sizes_audit|image_size_context_audit|thumbnail_verify, media_id?, limit? }. Reversible regeneration (full token): { action: thumbnail_regenerate|thumbnail_regenerate_attachment|thumbnail_regenerate_batch, media_id?, mode?, media_ids?, cursor?, limit? }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/media_enhance/run', 'scope' => 'read_only', 'description' => 'Media-enhancement runtime. Read diagnostics (read token): { action: media_enhance_capabilities|image_sizes_list|image_size_usage_audit|image_size_recommendations|image_size_verify|srcset_verify|responsive_image_audit|missing_sizes_audit|image_size_context_audit|thumbnail_verify, media_id?, limit? }. Reversible regeneration / WebP (full token): { action: thumbnail_regenerate|thumbnail_regenerate_attachment|thumbnail_regenerate_batch|webp_generate|webp_generate_batch, media_id?, mode?, media_ids?, cursor?, limit? }. WebP audits (read token): { action: webp_audit|webp_verify, media_id?, limit? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/media_enhance/rollback', 'scope' => 'full', 'description' => 'Reverse a thumbnail regeneration (delete created files + restore the pre-regeneration snapshot byte-for-byte): { rollback_id }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/content_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress content: { action: content_list|content_get|content_create|content_update|content_delete|content_publish|content_unpublish|content_schedule|taxonomy_assign|featured_image_assign, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/snapshot_manage/run', 'scope' => 'full', 'description' => 'Create, list, inspect, verify, and restore file snapshots: { action: snapshot_create|snapshot_list|snapshot_details|snapshot_restore|snapshot_verify, path?, label?, snapshot_id? }.' ],
@@ -1245,7 +1249,7 @@ final class RestApi {
 		// MediaEnhancementRegistry::WRITE_ACTIONS. Listed inline here because the
 		// registry class shares a file with the manager and isn't autoloadable on
 		// its own at permission-callback time (before the handler is resolved).
-		$write_actions = [ 'thumbnail_regenerate', 'thumbnail_regenerate_attachment', 'thumbnail_regenerate_batch' ];
+		$write_actions = [ 'thumbnail_regenerate', 'thumbnail_regenerate_attachment', 'thumbnail_regenerate_batch', 'webp_generate', 'webp_generate_batch' ];
 		if ( in_array( $action, $write_actions, true ) ) {
 			return $this->require_write( $request );
 		}
