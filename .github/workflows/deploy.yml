@@ -1,91 +1,33 @@
 name: Deploy to Production
 
-# SSH-based deploy: the runner SSHes into the host and runs git pull
-# directly. Auth is a dedicated ed25519 deploy key — public half lives in
-# the server's ~/.ssh/authorized_keys, private half is the single repo
-# secret DEPLOY_SSH_KEY_B64 (base64-encoded; decoded in the Deploy step).
+# DEPLOY MODEL CHANGED (2026-06-15): PULL-BASED, server-side cron.
+#
+# The host (Hostinger) blocks inbound SSH from GitHub-hosted runner IPs
+# ("ssh: connect to host ... port 65002: Connection timed out"), so the old
+# push-based SSH deploy can no longer reach the server. Deploys now run FROM the
+# server (outbound to GitHub is not blocked):
+#
+#   server: ~/wpcc-deploy.sh  — git fetch + reset --hard origin/main
+#           + reactivate-if-active + wp cache flush (idempotent, flock-guarded)
+#   schedule: hPanel → Advanced → Cron Jobs, every 1–2 min:
+#           /bin/bash /home/u916998506/wpcc-deploy.sh >/dev/null 2>&1
+#
+# Manual one-off (from an allowed IP): see MANUAL DEPLOY FALLBACK in the handoff.
+# This workflow is kept GREEN as a no-op so pushes don't generate red runs.
 
 on:
   push:
     branches:
       - main
 
-# Avoid overlapping deploys if pushes land close together.
-concurrency:
-  group: production-deploy
-  cancel-in-progress: false
-
 jobs:
-  deploy:
-    name: Deploy to mosharafmanu.com via SSH
+  notice:
+    name: Deploy notice (pull-based — no action)
     runs-on: ubuntu-latest
-
-    env:
-      SSH_HOST: "72.62.68.183"
-      SSH_PORT: "65002"
-      SSH_USER: "u916998506"
-
     steps:
-      - name: Deploy over SSH
-        env:
-          # Base64-encoded private key — single line survives GitHub secret
-          # storage intact (raw multi-line PEM gets whitespace-mangled and
-          # fails with "error in libcrypto").
-          DEPLOY_SSH_KEY_B64: ${{ secrets.DEPLOY_SSH_KEY_B64 }}
+      - name: Explain
         run: |
-          set -euo pipefail
-
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null  # fail fast if key is malformed
-
-          # ssh-keyscan is best-effort only: the ssh call below uses
-          # StrictHostKeyChecking=accept-new, which records the host key on first
-          # connect. A keyscan timeout returns exit 1 (no keys), and under set -e
-          # that was silently aborting the ENTIRE deploy (~5s, no output, because
-          # stderr went to /dev/null) before the real ssh/git-reset ever ran.
-          # Never let it be fatal.
-          if ! ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/tmp/keyscan.err; then
-            echo "::warning::ssh-keyscan got no host key from ${SSH_HOST}:${SSH_PORT} (host may be throttling the runner). Continuing — accept-new will record it on connect."
-            sed 's/^/  keyscan: /' /tmp/keyscan.err || true
-          fi
-
-          ssh -i ~/.ssh/deploy_key \
-              -p "$SSH_PORT" \
-              -o StrictHostKeyChecking=accept-new \
-              -o PasswordAuthentication=no \
-              -o BatchMode=yes \
-              -o ConnectTimeout=30 \
-              "$SSH_USER@$SSH_HOST" 'bash -s' <<'REMOTE'
-          set -euo pipefail
-          PLUGIN_DIR="$HOME/domains/mosharafmanu.com/public_html/wp-content/plugins/wp-command-center"
-          WP_ROOT="$HOME/domains/mosharafmanu.com/public_html"
-          WP="/usr/local/bin/wp"
-
-          cd "$PLUGIN_DIR"
-
-          # Capture active state first — the reset --hard can race-deactivate the
-          # live plugin, so we reactivate afterward if it was active.
-          if "$WP" plugin is-active wp-command-center --path="$WP_ROOT" >/dev/null 2>&1; then
-            WAS_ACTIVE=yes
-          else
-            WAS_ACTIVE=no
-          fi
-
-          git fetch origin
-          git reset --hard origin/main
-
-          if [ "$WAS_ACTIVE" = "yes" ]; then
-            "$WP" plugin activate wp-command-center --path="$WP_ROOT" >/dev/null 2>&1 || true
-          fi
-
-          "$WP" cache flush --path="$WP_ROOT" >/dev/null 2>&1 || true
-
-          echo "DEPLOYED_HEAD=$(git rev-parse HEAD)"
-          echo "PLUGIN_ACTIVE=$("$WP" plugin is-active wp-command-center --path="$WP_ROOT" >/dev/null 2>&1 && echo yes || echo no)"
-          REMOTE
-
-      - name: Done
-        run: echo "Deploy complete."
+          echo "Production deploys are PULL-BASED (server-side cron runs ~/wpcc-deploy.sh)."
+          echo "GitHub-hosted runners cannot reach the host (inbound SSH blocked), so this"
+          echo "workflow intentionally does nothing. The server pulls origin/main on its cron."
+          echo "::notice::Pushed to main — the server will pull this commit on its next cron tick."
