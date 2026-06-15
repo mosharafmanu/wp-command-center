@@ -46,6 +46,11 @@ final class MediaEnhancementRegistry {
 	const A_OPTIMIZE_VERIFY       = 'image_optimize_verify';
 	const A_OPTIMIZE              = 'image_optimize';
 	const A_OPTIMIZE_BATCH        = 'image_optimize_batch';
+	// STEP 100.8 — usage analysis / cleanup intelligence (read-only).
+	const A_USAGE_SCAN            = 'media_usage_scan';
+	const A_USAGE_REPORT          = 'media_usage_report';
+	const A_UNUSED_FIND           = 'unused_media_find';
+	const A_ORPHANED_FIND         = 'orphaned_media_find';
 
 	const ACTIONS = [
 		self::A_CAPABILITIES,
@@ -69,6 +74,10 @@ final class MediaEnhancementRegistry {
 		self::A_OPTIMIZE_VERIFY,
 		self::A_OPTIMIZE,
 		self::A_OPTIMIZE_BATCH,
+		self::A_USAGE_SCAN,
+		self::A_USAGE_REPORT,
+		self::A_UNUSED_FIND,
+		self::A_ORPHANED_FIND,
 	];
 
 	/** Reversible write actions (snapshot-backed); everything else is read-only. */
@@ -111,6 +120,10 @@ final class MediaEnhancementRuntimeManager {
 	private const OPTIMIZE_CANDIDATE_BYTES = 51200; // audit: files ≥ 50KB are optimization candidates
 	private const OPTIMIZE_OVERSIZED_EDGE  = 2500;  // audit: originals wider/taller than this are "oversized"
 	private const OPTIMIZE_EST_FACTOR      = 0.25;  // audit: heuristic estimated savings fraction
+
+	/** STEP 100.8 — usage analysis scan bounds (heavier per-item cross-source scan). */
+	private const USAGE_DEFAULT = 150;
+	private const USAGE_MAX      = 1000;
 
 	/** STEP 100.5 — rollback record store + batch chunk bounds. */
 	private const ROLLBACK_STORE = 'wpcc_media_enhance_rollbacks';
@@ -155,6 +168,10 @@ final class MediaEnhancementRuntimeManager {
 			MediaEnhancementRegistry::A_OPTIMIZE_VERIFY      => $this->image_optimize_verify( $p ),
 			MediaEnhancementRegistry::A_OPTIMIZE             => $this->image_optimize( $p, $cx ),
 			MediaEnhancementRegistry::A_OPTIMIZE_BATCH       => $this->image_optimize_batch( $p, $cx ),
+			MediaEnhancementRegistry::A_USAGE_SCAN           => $this->media_usage_scan( $p ),
+			MediaEnhancementRegistry::A_USAGE_REPORT         => $this->media_usage_report( $p ),
+			MediaEnhancementRegistry::A_UNUSED_FIND          => $this->unused_media_find( $p ),
+			MediaEnhancementRegistry::A_ORPHANED_FIND        => $this->orphaned_media_find( $p ),
 		};
 
 		if ( is_wp_error( $report ) ) {
@@ -1739,6 +1756,166 @@ final class MediaEnhancementRuntimeManager {
 			}
 		}
 		wp_update_attachment_metadata( $id, $meta );
+	}
+
+	// ── STEP 100.8 — Usage analysis (read-only cleanup intelligence) ─
+
+	/**
+	 * Where is ONE media item used? Full cross-source reference report +
+	 * classification (active / indirect / unused / orphaned / cleanup_candidate).
+	 * Works for any attachment type (images, PDFs, …), not just images.
+	 */
+	private function media_usage_scan( array $p ): array|\WP_Error {
+		$id = $this->resolve_attachment_id( $p );
+		if ( is_wp_error( $id ) ) {
+			return $id;
+		}
+		$resolver = new MediaUsageResolver();
+		$result   = $resolver->classify( $id );
+		$file     = get_attached_file( $id );
+		return [ 'media_usage_scan' => array_merge( [
+			'mime'        => (string) get_post_mime_type( $id ),
+			'url'         => wp_get_attachment_url( $id ),
+			'file_exists' => (bool) ( $file && is_file( $file ) ),
+		], $result ) ];
+	}
+
+	/**
+	 * Library-wide usage aggregate (bounded): counts of active / indirect /
+	 * unused / orphaned / cleanup candidates, with small ID samples.
+	 */
+	private function media_usage_report( array $p ): array {
+		$resolver  = new MediaUsageResolver();
+		$limit     = $this->usage_limit( $p );
+		$ids       = $resolver->attachment_ids( $limit + 1 );
+		$truncated = count( $ids ) > $limit;
+		if ( $truncated ) {
+			$ids = array_slice( $ids, 0, $limit );
+		}
+
+		$active = $indirect = $unused = $orphaned = $candidates = 0;
+		$sample_unused = $sample_orphaned = [];
+		foreach ( $ids as $id ) {
+			$c = $resolver->classify( $id );
+			if ( 'active' === $c['status'] ) { $active++; }
+			elseif ( 'indirect' === $c['status'] ) { $indirect++; }
+			else { $unused++; }
+			if ( $c['orphaned'] ) {
+				$orphaned++;
+				if ( count( $sample_orphaned ) < 25 ) { $sample_orphaned[] = $id; }
+			}
+			if ( $c['cleanup_candidate'] ) {
+				$candidates++;
+				if ( count( $sample_unused ) < 25 ) { $sample_unused[] = $id; }
+			}
+		}
+
+		return [ 'media_usage_report' => [
+			'scanned'            => count( $ids ),
+			'active'             => $active,
+			'indirect'          => $indirect,
+			'unused'            => $unused,
+			'orphaned'          => $orphaned,
+			'cleanup_candidates' => $candidates,
+			'truncated'         => $truncated,
+			'scan_limit'        => $limit,
+			'samples'           => [ 'unused' => $sample_unused, 'orphaned' => $sample_orphaned ],
+		] ];
+	}
+
+	/**
+	 * Library-wide list of cleanup candidates — attachments with NO active or
+	 * indirect reference anywhere (safe-to-trash candidates). Bounded. Read-only:
+	 * STEP 100.9 must re-verify at execution time before trashing.
+	 */
+	private function unused_media_find( array $p ): array {
+		$resolver  = new MediaUsageResolver();
+		$limit     = $this->usage_limit( $p );
+		$ids       = $resolver->attachment_ids( $limit + 1 );
+		$truncated = count( $ids ) > $limit;
+		if ( $truncated ) {
+			$ids = array_slice( $ids, 0, $limit );
+		}
+
+		$out = [];
+		foreach ( $ids as $id ) {
+			$c = $resolver->classify( $id );
+			if ( ! $c['cleanup_candidate'] ) {
+				continue;
+			}
+			if ( count( $out ) < 200 ) {
+				$file  = get_attached_file( $id );
+				$out[] = [
+					'media_id' => $id,
+					'title'    => get_the_title( $id ),
+					'mime'     => (string) get_post_mime_type( $id ),
+					'url'      => wp_get_attachment_url( $id ),
+					'orphaned' => ! ( $file && is_file( $file ) ),
+				];
+			}
+		}
+
+		return [ 'unused_media_find' => [
+			'scanned'      => count( $ids ),
+			'total_unused' => count( $out ),
+			'attachments'  => $out,
+			'truncated'    => $truncated,
+			'scan_limit'   => $limit,
+			'note'         => 'Cleanup candidates have no detected reference; STEP 100.9 re-verifies before trashing.',
+		] ];
+	}
+
+	/**
+	 * Library-wide list of orphaned attachments — DB rows whose underlying file is
+	 * missing on disk (a data-integrity problem, distinct from "unused").
+	 */
+	private function orphaned_media_find( array $p ): array {
+		$resolver  = new MediaUsageResolver();
+		$limit     = $this->usage_limit( $p );
+		$ids       = $resolver->attachment_ids( $limit + 1 );
+		$truncated = count( $ids ) > $limit;
+		if ( $truncated ) {
+			$ids = array_slice( $ids, 0, $limit );
+		}
+
+		$out = [];
+		foreach ( $ids as $id ) {
+			$file = get_attached_file( $id );
+			if ( $file && is_file( $file ) ) {
+				continue;
+			}
+			if ( count( $out ) < 200 ) {
+				$out[] = [
+					'media_id'      => $id,
+					'title'         => get_the_title( $id ),
+					'mime'          => (string) get_post_mime_type( $id ),
+					'expected_file' => $file ?: '',
+				];
+			}
+		}
+
+		return [ 'orphaned_media_find' => [
+			'scanned'        => count( $ids ),
+			'total_orphaned' => count( $out ),
+			'attachments'    => $out,
+			'truncated'      => $truncated,
+			'scan_limit'     => $limit,
+		] ];
+	}
+
+	private function usage_limit( array $p ): int {
+		$n = isset( $p['limit'] ) ? (int) $p['limit'] : self::USAGE_DEFAULT;
+		return max( 1, min( self::USAGE_MAX, $n ) );
+	}
+
+	/** Resolve + validate `media_id` as an attachment (any type — not just images). */
+	private function resolve_attachment_id( array $p ): int|\WP_Error {
+		$id   = (int) ( $p['media_id'] ?? $p['attachment_id'] ?? 0 );
+		$post = $id ? get_post( $id ) : null;
+		if ( ! $post || 'attachment' !== $post->post_type ) {
+			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+		}
+		return $id;
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────
