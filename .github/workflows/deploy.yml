@@ -40,7 +40,17 @@ jobs:
           printf '%s' "$DEPLOY_SSH_KEY_B64" | base64 -d > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keygen -y -f ~/.ssh/deploy_key >/dev/null  # fail fast if key is malformed
-          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # ssh-keyscan is best-effort only: the ssh call below uses
+          # StrictHostKeyChecking=accept-new, which records the host key on first
+          # connect. A keyscan timeout returns exit 1 (no keys), and under set -e
+          # that was silently aborting the ENTIRE deploy (~5s, no output, because
+          # stderr went to /dev/null) before the real ssh/git-reset ever ran.
+          # Never let it be fatal.
+          if ! ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/tmp/keyscan.err; then
+            echo "::warning::ssh-keyscan got no host key from ${SSH_HOST}:${SSH_PORT} (host may be throttling the runner). Continuing — accept-new will record it on connect."
+            sed 's/^/  keyscan: /' /tmp/keyscan.err || true
+          fi
 
           ssh -i ~/.ssh/deploy_key \
               -p "$SSH_PORT" \
