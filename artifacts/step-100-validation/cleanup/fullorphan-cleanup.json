@@ -1,0 +1,1 @@
+{"code":"wpcc_media_cleanup_snapshot_failed","message":"Could not snapshot the attachment before cleanup: Attachment has no files on disk to snapshot.","data":{"status":400}}

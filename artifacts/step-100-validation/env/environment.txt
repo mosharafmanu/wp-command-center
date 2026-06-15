@@ -1,0 +1,18 @@
+date: Mon Jun 15 12:17:56 +06 2026
+siteurl: http://localhost/ClientProjects/WordPress/2026/plugins-dev
+advanced-custom-fields-pro
+ai-provider-for-openai
+attribute-icon-for-woocommerce
+classic-editor
+contact-form-7
+elementor
+elementor-pro
+loremix-demo-content-generator
+plugin-check
+svg-support
+woocommerce
+wp-command-center
+wp-dummy-content-generator
+wordpress-seo
+theme: hello-elementor
+GD webp: yes; Imagick: no; webp_encode: true
