@@ -81,21 +81,22 @@ final class MediaUsageResolver {
 			$refs[] = $this->post_ref( 'elementor', $r );
 		}
 
-		// 4. Post content — classic <img class="wp-image-N"> + Gutenberg blocks + any
-		//    referenced file URL/basename. Block vs classic is disambiguated per row.
-		$where  = [ 'p.post_content LIKE %s', 'p.post_content LIKE %s' ];
-		$params = [ '%wp-image-' . $id . '%', '%"id":' . $id . '%' ];
-		foreach ( $basenames as $bn ) {
-			$where[]  = 'p.post_content LIKE %s';
-			$params[] = '%' . $wpdb->esc_like( $bn ) . '%';
-		}
+		// 4. Post content — classic <img class="wp-image-N"> + Gutenberg blocks
+		//    (including legacy `core/gallery` "ids":[…] arrays that carry no inner
+		//    image markup) + any referenced file URL/basename. The SQL is a
+		//    superset; content_references_id() confirms each row (and labels block
+		//    vs classic) so a loose array match never becomes a false reference.
+		list( $where, $params ) = $this->content_match_clauses( $id, $basenames );
 		$sql  = "SELECT p.ID, p.post_status, p.post_type, p.post_content FROM {$wpdb->posts} p
 				 WHERE p.post_status NOT IN ( 'inherit', 'auto-draft' ) AND ( " . implode( ' OR ', $where ) . " ) LIMIT 200";
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $params ) );
 		foreach ( (array) $rows as $r ) {
-			$source = $this->content_has_block_ref( (string) $r->post_content, $id ) ? 'block' : 'content';
+			$is_block = false;
+			if ( ! $this->content_references_id( (string) $r->post_content, $id, $basenames, $is_block ) ) {
+				continue;
+			}
 			$refs[] = [
-				'source'      => $source,
+				'source'      => $is_block ? 'block' : 'content',
 				'post_id'     => (int) $r->ID,
 				'post_type'   => $r->post_type,
 				'post_status' => $r->post_status,
@@ -108,18 +109,17 @@ final class MediaUsageResolver {
 		// Revisions are post_type 'revision' / post_status 'inherit', so the main
 		// content query (which excludes 'inherit') never sees them — scan them here.
 		// Always 'indirect': a revision is never the live document.
-		$rwhere  = [ 'p.post_content LIKE %s', 'p.post_content LIKE %s' ];
-		$rparams = [ '%wp-image-' . $id . '%', '%"id":' . $id . '%' ];
-		foreach ( $basenames as $bn ) {
-			$rwhere[]  = 'p.post_content LIKE %s';
-			$rparams[] = '%' . $wpdb->esc_like( $bn ) . '%';
-		}
+		list( $rwhere, $rparams ) = $this->content_match_clauses( $id, $basenames );
 		$rows = $wpdb->get_results( $wpdb->prepare(
-			"SELECT p.ID, p.post_parent FROM {$wpdb->posts} p
+			"SELECT p.ID, p.post_parent, p.post_content FROM {$wpdb->posts} p
 			 WHERE p.post_type = 'revision' AND ( " . implode( ' OR ', $rwhere ) . " ) LIMIT 200",
 			$rparams
 		) );
 		foreach ( (array) $rows as $r ) {
+			$is_block = false;
+			if ( ! $this->content_references_id( (string) $r->post_content, $id, $basenames, $is_block ) ) {
+				continue;
+			}
 			$refs[] = [ 'source' => 'revision', 'revision_id' => (int) $r->ID, 'parent_id' => (int) $r->post_parent, 'status' => 'indirect' ];
 		}
 
@@ -301,6 +301,67 @@ final class MediaUsageResolver {
 
 	private function maybe_product( string $post_type ): string {
 		return 'product' === $post_type ? 'woocommerce' : 'core';
+	}
+
+	/**
+	 * LIKE clauses + params that pre-select any post whose content could reference
+	 * this attachment: classic `wp-image-N`, a direct `"id":N` (single image block
+	 * / shortcode), a Gutenberg gallery `"ids":[…N…]` array (the legacy flat format
+	 * that carries no inner image markup, at any position in the array), or any
+	 * size-file basename. Deliberately a superset — `content_references_id()`
+	 * confirms each returned row so a loose array match never becomes a false
+	 * reference.
+	 *
+	 * @param array<int,string> $basenames
+	 * @return array{0:string[],1:array<int,string>}
+	 */
+	private function content_match_clauses( int $id, array $basenames ): array {
+		global $wpdb;
+		$where = [
+			'p.post_content LIKE %s', // classic wp-image-N
+			'p.post_content LIKE %s', // direct "id":N
+			'p.post_content LIKE %s', // gallery "ids":[N,…  (first element)
+			'p.post_content LIKE %s', // gallery "ids":[N]   (sole element)
+			'p.post_content LIKE %s', // gallery …,N,…       (middle element)
+			'p.post_content LIKE %s', // gallery …,N]        (last element)
+		];
+		$params = [
+			'%wp-image-' . $id . '%',
+			'%"id":' . $id . '%',
+			'%"ids":[' . $id . ',%',
+			'%"ids":[' . $id . ']%',
+			'%,' . $id . ',%',
+			'%,' . $id . ']%',
+		];
+		foreach ( $basenames as $bn ) {
+			$where[]  = 'p.post_content LIKE %s';
+			$params[] = '%' . $wpdb->esc_like( $bn ) . '%';
+		}
+		return [ $where, $params ];
+	}
+
+	/**
+	 * Whether a post's content genuinely references this attachment (not just a
+	 * loose SQL pre-match). Sets $is_block when a Gutenberg block attribute
+	 * (id / ids / mediaId) carries the reference; otherwise it is a classic/textual
+	 * (wp-image-N, direct "id":N, or file-basename) match.
+	 *
+	 * @param array<int,string> $basenames
+	 */
+	private function content_references_id( string $content, int $id, array $basenames, bool &$is_block ): bool {
+		$is_block = $this->content_has_block_ref( $content, $id );
+		if ( $is_block ) {
+			return true;
+		}
+		if ( false !== strpos( $content, 'wp-image-' . $id ) || false !== strpos( $content, '"id":' . $id ) ) {
+			return true;
+		}
+		foreach ( $basenames as $bn ) {
+			if ( '' !== $bn && false !== strpos( $content, $bn ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Whether a Gutenberg block in the content references this attachment ID. */
