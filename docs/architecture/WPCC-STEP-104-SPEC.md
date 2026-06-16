@@ -107,8 +107,22 @@ reuses `strip_for_storage`).
 
 **Audit-log hardening (prerequisite, in-scope):** add size-based rotation to `AuditLog`
 (rotate `audit.log` → `audit-<ts>.log` past a cap, keep N segments). This removes the
-294 MB write-drop risk and gives history a bounded, reliable secondary source. Small,
-isolated change; no contract change.
+294 MB write-drop risk and gives history a bounded, reliable secondary source. Isolated to
+`Security/AuditLog.php`; the **external `tail()` contract is preserved** (see below).
+
+Defaults and requirements (STEP 104.0):
+- **Rotate at 50 MB; keep 5 segments** (~250 MB ceiling). Oldest segments beyond N are pruned.
+- **`tail()` is rotation-aware.** It must preserve existing behavior by reading **across
+  rotated segments newest→oldest** (active `audit.log` first, then `audit-<ts>.log` segments in
+  descending timestamp order) until the requested `$limit` is satisfied. This guarantees no
+  read regression for `TimelineBuilder::tail(2000)` and the audit-backed reports in
+  `ReportingRuntimeManager` after a rotation. Without this, rotation would silently change
+  `tail()`'s effective contract to "entries since last rotation."
+- **Rotation is lock-protected and idempotent.** Rotation runs under the **same `LOCK_EX`
+  discipline** as `record()`'s append: acquire the lock, re-check size under the lock, rename,
+  release. If another process already rotated (the active file no longer exceeds the cap), the
+  rotation is a no-op. Rotation is best-effort and must never break the operation it records,
+  matching `record()`'s failure-silent philosophy.
 
 ### 3.3 MCP contract — `change_history` tool
 Registered in `OperationRegistry` (so it appears in `tools/list` with schema + compact-mode
@@ -211,6 +225,11 @@ the parallel-run issue seen previously).
 
 ## Recommended build order (sub-steps)
 - **104.0** — AuditLog rotation hardening (prerequisite; removes the unbounded-log risk).
+  Size-based rotation (**50 MB cap, keep 5 segments**); **rotation-aware `tail()`** that reads
+  across rotated segments newest→oldest until `$limit` is satisfied (preserves existing
+  contract); **lock-protected, idempotent** rotation under the same `LOCK_EX` discipline as
+  append. Ships with a dedicated `tests/test-audit-log.sh` suite and a new **`audit`**
+  regression group registered in `tests/regression-map.tsv`.
 - **104.1** — `wpcc_change_log` schema + `ChangeRecorder` at the OperationExecutor chokepoint
   + dual-write audit (record-only; no new API).
 - **104.2** — `change_history` runtime read actions (list/get/timeline/discover) + REST parity
