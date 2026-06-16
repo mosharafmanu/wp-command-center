@@ -142,6 +142,36 @@ BADDIFF=$'@@ -2,1 +2,1 @@\n-$two = NOPE;\n+$two = 0;'
 R=$(rest patch_manage "$(jq -n --arg p "$REL" --arg d "$BADDIFF" '{action:"patch_preview",files:[{path:$p,mode:"unified_diff",diff:$d}]}')")
 assert_eq "stale unified_diff → structured error" "wpcc_patch_diff_failed" "$(pj "$R" '.code // "NONE"')"
 
+echo "== 6b. unified_diff newline + CRLF edge cases (STEP 101.1A) =="
+# (A) Source file with NO final newline + diff that HAS a trailing newline.
+printf '<?php\n$one = 1;\n$two = 2;\n$three = 3;' > "$TARGET"   # deliberately no trailing \n
+assert_eq "source file has no final newline" "0" "$(tail -c1 "$TARGET" | grep -c '^$')"
+NLDIFF=$'@@ -2,3 +2,3 @@\n $one = 1;\n-$two = 2;\n+$two = 222;\n $three = 3;\n'
+R=$(rest patch_manage "$(jq -n --arg p "$REL" --arg d "$NLDIFF" '{action:"patch_preview",files:[{path:$p,mode:"unified_diff",diff:$d}]}')")
+assert_eq "no-EOF-nl source + trailing-nl diff previews cleanly" "true" "$(pj "$R" '.syntax_ok')"
+assert_eq "no-EOF-nl source + trailing-nl diff is partial" "partial" "$(pj "$R" '.files[0].patch_type')"
+STATUS=$(apply_files "$(jq -n --arg p "$REL" --arg d "$NLDIFF" '[{path:$p,mode:"unified_diff",diff:$d}]')")
+assert_eq "no-EOF-nl source + trailing-nl diff applies" "applied" "$STATUS"
+assert_eq "no-EOF-nl diff changed target line" "1" "$(grep -c '\$two = 222;' "$TARGET")"
+assert_eq "no-EOF-nl diff left neighbor intact" "1" "$(grep -c '\$three = 3;' "$TARGET")"
+assert_eq "no-EOF-nl diff did not corrupt old line" "0" "$(grep -c '\$two = 2;$' "$TARGET")"
+
+# (B) CRLF-encoded diff against an LF source file.
+printf '<?php\n$one = 1;\n$two = 2;\n$three = 3;\n' > "$TARGET"
+CRLFDIFF=$'@@ -2,3 +2,3 @@\r\n $one = 1;\r\n-$two = 2;\r\n+$two = 333;\r\n $three = 3;\r\n'
+R=$(rest patch_manage "$(jq -n --arg p "$REL" --arg d "$CRLFDIFF" '{action:"patch_preview",files:[{path:$p,mode:"unified_diff",diff:$d}]}')")
+assert_eq "CRLF diff previews cleanly" "true" "$(pj "$R" '.syntax_ok')"
+STATUS=$(apply_files "$(jq -n --arg p "$REL" --arg d "$CRLFDIFF" '[{path:$p,mode:"unified_diff",diff:$d}]')")
+assert_eq "CRLF diff applies" "applied" "$STATUS"
+assert_eq "CRLF diff changed target line" "1" "$(grep -c '\$two = 333;' "$TARGET")"
+assert_eq "CRLF diff did not leave stray carriage returns" "0" "$(grep -cU $'\r' "$TARGET")"
+
+# (C) Stale-context detection still rejects on a no-final-newline source.
+printf '<?php\n$one = 1;\n$two = 2;\n$three = 3;' > "$TARGET"   # no trailing \n
+STALEDIFF=$'@@ -2,1 +2,1 @@\n-$two = NOPE;\n+$two = 0;\n'
+R=$(rest patch_manage "$(jq -n --arg p "$REL" --arg d "$STALEDIFF" '{action:"patch_preview",files:[{path:$p,mode:"unified_diff",diff:$d}]}')")
+assert_eq "stale diff on no-EOF-nl source still rejected" "wpcc_patch_diff_failed" "$(pj "$R" '.code // "NONE"')"
+
 echo "== 7. Safety still holds: invalid mode + replace_range bounds =="
 R=$(rest patch_manage "$(jq -n --arg p "$REL" --arg m "x" '{action:"patch_preview",files:[{path:$p,mode:"frobnicate",modified:$m}]}')")
 assert_eq "invalid mode rejected" "wpcc_invalid_patch_mode" "$(pj "$R" '.code // "NONE"')"

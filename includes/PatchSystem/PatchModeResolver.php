@@ -402,7 +402,22 @@ final class PatchModeResolver {
 	 */
 	public static function apply_unified_diff( string $original, string $diff ): array|\WP_Error {
 		$orig_lines = explode( "\n", $original );
+
+		// Normalize line endings of the DIFF TEXT ONLY (the source file is left
+		// byte-for-byte intact) so a CRLF-encoded diff matches an LF source.
+		$diff       = str_replace( "\r\n", "\n", $diff );
 		$diff_lines = explode( "\n", $diff );
+
+		// A unified diff almost always ends with a newline, which explode() turns
+		// into a trailing empty element. That terminator is not a content line —
+		// dropping it prevents it from being treated as a spurious empty context
+		// line (which would falsely reject a valid patch when the source file has
+		// no final newline). A genuine trailing blank context/added line is still
+		// preserved because it is carried by its own " "/"+" marker line before
+		// this terminator.
+		if ( ! empty( $diff_lines ) && '' === $diff_lines[ count( $diff_lines ) - 1 ] ) {
+			array_pop( $diff_lines );
+		}
 
 		$result = [];
 		$cursor = 0; // 0-based index into $orig_lines.
