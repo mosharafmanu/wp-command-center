@@ -137,7 +137,7 @@ assert_eq "generate on non-attachment" "wpcc_media_not_found" "$(me "$(jq -n --a
 
 echo "== 13. Wiring: operation_map unchanged, MCP tool present =="
 MANIFEST=$(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/agent/manifest")
-assert_eq "operation_map count still 33 (no new op)" "33" "$(echo "$MANIFEST" | jq -r '.capability_management.operation_map | keys | length')"
+assert_eq "operation_map count 34 (this step adds no new op; 104.2 change_history)" "34" "$(echo "$MANIFEST" | jq -r '.capability_management.operation_map | keys | length')"
 assert_eq "media_enhance still in MCP tools/list" "true" "$(curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":9,"method":"tools/list"}' "$WPCC_BASE/mcp" | jq -r '[.result.tools[].name] | index("media_enhance") != null')"
 
 echo

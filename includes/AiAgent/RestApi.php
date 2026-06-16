@@ -485,6 +485,10 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/capability_manage/run', 'scope' => 'full', 'description' => 'Manage platform capabilities: { action: capability_list|capability_get|capability_assign|capability_remove|capability_validate, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/database_inspect/run', 'scope' => 'read_only', 'description' => 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.' ],
 		[ 'method' => 'POST', 'path' => '/operations/report_manage/run', 'scope' => 'read_only', 'description' => 'Read-only operational reports: { action: report_list|report_site_health|report_plugin_health|report_security|report_content|report_woocommerce|report_agent_activity|report_approval_activity|report_patch_activity, limit? }.' ],
+		[ 'method' => 'POST', 'path' => '/operations/change_history/run', 'scope' => 'read_only', 'description' => 'Read-only Change History over wpcc_change_log: { action: history_list|history_get|history_timeline, change_id?, runtime?, operation_id?, status?, target?, change_set_id?, session_id?, task_id?, plan_id?, reversible_only?, since?, until?, limit?, cursor? }. Returns the compact envelope (total_count/has_more/next_cursor).' ],
+		[ 'method' => 'GET', 'path' => '/changes', 'scope' => 'read_only', 'description' => 'List recorded changes (history_list). Query: runtime, operation_id, status, target, change_set_id, session_id, task_id, plan_id, reversible_only, since, until, limit, cursor.' ],
+		[ 'method' => 'GET', 'path' => '/changes/timeline', 'scope' => 'read_only', 'description' => 'Chronological change timeline (history_timeline), cursor-paginated, table-backed. Query: since, until, limit, cursor.' ],
+		[ 'method' => 'GET', 'path' => '/changes/{change_id}', 'scope' => 'read_only', 'description' => 'Get the full change record (history_get) incl. rollback linkage, change-set, actor, and result metadata.' ],
 		[ 'method' => 'POST', 'path' => '/operations/media_enhance/run', 'scope' => 'read_only', 'description' => 'Media-enhancement runtime. Read diagnostics (read token): { action: media_enhance_capabilities|image_sizes_list|image_size_usage_audit|image_size_recommendations|image_size_verify|srcset_verify|responsive_image_audit|missing_sizes_audit|image_size_context_audit|thumbnail_verify, media_id?, limit? }. Reversible regeneration / WebP / optimization (full token): { action: thumbnail_regenerate|thumbnail_regenerate_attachment|thumbnail_regenerate_batch|webp_generate|webp_generate_batch|image_optimize|image_optimize_batch, media_id?, mode?, quality?, media_ids?, cursor?, limit? }. Guarded reversible cleanup (full token, DestructiveGuard CLEANUP_MEDIA — trash only, never permanent): { action: unused_media_cleanup, media_id, confirm, confirmation_phrase, reason }. WebP/optimization audits + usage analysis (read token): { action: webp_audit|webp_verify|image_optimize_audit|image_optimize_verify|media_usage_scan|media_usage_report|unused_media_find|orphaned_media_find, media_id?, limit? }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/media_enhance/rollback', 'scope' => 'full', 'description' => 'Reverse a thumbnail regeneration (delete created files + restore the pre-regeneration snapshot byte-for-byte): { rollback_id }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/content_manage/run', 'scope' => 'full', 'description' => 'Safely inspect and manage WordPress content: { action: content_list|content_get|content_create|content_update|content_delete|content_publish|content_unpublish|content_schedule|taxonomy_assign|featured_image_assign, ... }.' ],
@@ -939,6 +943,38 @@ final class RestApi {
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_media_enhance_rollback' ],
 			'permission_callback' => [ $this, 'require_write' ],
+		] );
+
+		// STEP 104.2 — Change History runtime (read-only). Primary parity route
+		// (same OperationExecutor engine as MCP) plus GET convenience aliases.
+		register_rest_route( self::NAMESPACE, '/operations/change_history/run', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'run_change_history' ],
+			'permission_callback' => [ $this, 'require_read' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/changes', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => function ( \WP_REST_Request $request ) {
+				return $this->run_change_history_action( $request, 'history_list' );
+			},
+			'permission_callback' => [ $this, 'require_read' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/changes/timeline', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => function ( \WP_REST_Request $request ) {
+				return $this->run_change_history_action( $request, 'history_timeline' );
+			},
+			'permission_callback' => [ $this, 'require_read' ],
+		] );
+
+		register_rest_route( self::NAMESPACE, '/changes/(?P<change_id>[a-f0-9-]{36})', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => function ( \WP_REST_Request $request ) {
+				return $this->run_change_history_action( $request, 'history_get', [ 'change_id' => (string) $request->get_param( 'change_id' ) ] );
+			},
+			'permission_callback' => [ $this, 'require_read' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/content_manage/run', [
@@ -2852,6 +2888,46 @@ final class RestApi {
 		}
 		$executor = new OperationExecutor();
 		$result   = $executor->run( 'report_manage', $params, $context );
+		if ( ! $result['success'] ) {
+			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
+			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
+		}
+		return new \WP_REST_Response( $result['result'] );
+	}
+
+	/**
+	 * STEP 104.2 — POST /operations/change_history/run. Same engine as MCP.
+	 */
+	public function run_change_history( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_change_history_action( $request );
+	}
+
+	/**
+	 * Shared Change History dispatcher for the POST run route and the GET
+	 * /changes, /changes/timeline, /changes/{change_id} convenience aliases.
+	 * Query/body params become the operation payload; $forced overrides them
+	 * (e.g. the action implied by a GET route, or a path-supplied change_id).
+	 *
+	 * @param array<string,mixed> $forced
+	 */
+	private function run_change_history_action( \WP_REST_Request $request, string $action = '', array $forced = [] ): \WP_REST_Response|\WP_Error {
+		$params = $request->get_params();
+		if ( '' !== $action ) {
+			$params['action'] = $action;
+		}
+		foreach ( $forced as $k => $v ) {
+			$params[ $k ] = $v;
+		}
+
+		$context = [ 'actor' => $this->token_actor( $request ) ];
+		foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id' ] as $k ) {
+			if ( $request->get_param( $k ) ) {
+				$context[ $k ] = sanitize_text_field( (string) $request->get_param( $k ) );
+			}
+		}
+
+		$executor = new OperationExecutor();
+		$result   = $executor->run( 'change_history', $params, $context );
 		if ( ! $result['success'] ) {
 			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
 			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );

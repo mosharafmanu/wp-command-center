@@ -46,6 +46,8 @@ final class CapabilityRegistry {
 	const CAP_COMMENTS_MANAGE  = 'comments.manage';
 	const CAP_WIDGETS_MANAGE   = 'widgets.manage';
 	const CAP_CPT_MANAGE       = 'cpt.manage';
+	// STEP 104.2 — read-only Change History runtime capability.
+	const CAP_HISTORY_READ     = 'history.read';
 
 	const OPERATION_MAP = [
 		// Content
@@ -104,6 +106,8 @@ final class CapabilityRegistry {
 		'elementor_manage'    => self::CAP_CONTENT_MANAGE,
 		// STEP 100.3 — Media Enhancement runtime; gated like media.
 		'media_enhance'       => self::CAP_MEDIA_MANAGE,
+		// STEP 104.2 — read-only Change History runtime.
+		'change_history'      => self::CAP_HISTORY_READ,
 		// Seed operations are unrestricted (read-only/low-risk):
 		// 'content_seed', 'acf_seed', 'cf7_seed', 'woo_product_seed'
 		// They do not require explicit capability assignment.
@@ -114,7 +118,7 @@ final class CapabilityRegistry {
 	 * regardless of CapabilityRegistry::OPERATION_MAP mapping). Every other
 	 * operation requires a `full`-scope token, mirroring RestApi::require_write().
 	 */
-	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search' ];
+	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search', 'change_history' ];
 
 	/**
 	 * Step 79 — Capability profiles. Single source of truth for the
@@ -125,8 +129,10 @@ final class CapabilityRegistry {
 	const PROFILE_SYSTEM_ADMIN = 'system_admin';
 
 	const PROFILES = [
-		// Mirrors READ_ONLY_SCOPE_OPERATIONS exactly.
-		self::PROFILE_READ_ONLY    => [ self::CAP_DATABASE_INSPECT, self::CAP_SEARCH_MANAGE ],
+		// Covers the read-only-scope operations: database.inspect (database_inspect),
+		// search.manage (search_manage + file_manage + code_search), and STEP 104.2
+		// history.read (change_history).
+		self::PROFILE_READ_ONLY    => [ self::CAP_DATABASE_INSPECT, self::CAP_SEARCH_MANAGE, self::CAP_HISTORY_READ ],
 		// system.admin's $has_admin shortcut == unrestricted; required so
 		// approval_manage (the escape hatch when wpcc_enforce_approval=1)
 		// is always reachable by a full-scope token.
@@ -157,6 +163,7 @@ final class CapabilityRegistry {
 		self::CAP_COMMENTS_MANAGE,
 		self::CAP_WIDGETS_MANAGE,
 		self::CAP_CPT_MANAGE,
+		self::CAP_HISTORY_READ,
 	];
 
 	public function action_risk( string $action ): string {

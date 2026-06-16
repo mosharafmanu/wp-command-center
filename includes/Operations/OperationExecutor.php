@@ -450,6 +450,8 @@ final class OperationExecutor {
 				return new ReportingRuntimeManager();
 			case 'media_enhance':
 				return new MediaEnhancementRuntimeManager();
+			case 'change_history':
+				return new ChangeHistoryRuntimeManager();
 		}
 
 		return null;

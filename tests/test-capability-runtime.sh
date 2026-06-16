@@ -83,9 +83,9 @@ assert_contains "map: snapshot.manage" "$MAP" "snapshot.manage"
 assert_contains "map: wpcli.execute" "$MAP" "wpcli.execute"
 assert_contains "map: option.manage" "$MAP" "option.manage"
 
-echo "== 16. All 22 capabilities listed =="
+echo "== 16. All 23 capabilities listed =="
 CAPS=$(echo "$MANIFEST" | jq -r '.capability_management.capabilities | length')
-assert_eq "caps: 22 capabilities" "22" "$CAPS"
+assert_eq "caps: 23 capabilities (incl. 104.2 history.read)" "23" "$CAPS"
 
 echo "== 17. Risk model =="
 assert_eq "risk: list low" "low" "$(echo "$MANIFEST" | jq -r '.capability_management.risk_model.capability_list')"
@@ -122,9 +122,9 @@ MC3=$(api POST /operations/capability_manage/run '{"action":"capability_get","su
 assert_eq "cleanup: 0 caps" "0" "$(echo "$MC3" | jq -r '.capabilities | length')"
 
 echo "== 25. Manifest operation counts =="
-# STEP 87 added 4 + STEP 91 seo_manage + STEP 95 site_builder_manage + STEP 96 elementor_manage = 32; STEP 100.3 media_enhance = 33 mapped operations.
+# STEP 87 added 4 + STEP 91 seo_manage + STEP 95 site_builder_manage + STEP 96 elementor_manage = 32; STEP 100.3 media_enhance = 33; STEP 104.2 change_history = 34 mapped operations.
 MAPCOUNT=$(echo "$MANIFEST" | jq -r '.capability_management.operation_map | keys | length')
-assert_eq "manifest: 33 mapped operations" "33" "$MAPCOUNT"
+assert_eq "manifest: 34 mapped operations" "34" "$MAPCOUNT"
 
 echo "== 26. Context shows assigned capabilities =="
 assert_true "context: assigned_capabilities is array" "$(echo "$CONTEXT" | jq -r 'if (.assigned_capabilities | type) == "array" then "true" else "false" end')"

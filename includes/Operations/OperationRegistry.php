@@ -940,6 +940,40 @@ final class OperationRegistry {
 				],
 				'available'         => true,
 			],
+			[
+				// STEP 104.2 — Change History runtime (read-only). Queries the
+				// wpcc_change_log system of record (STEP 104.1). All actions are
+				// diagnostic: no approval, no destructive confirmation, no rollback
+				// routing. rollback_target arrives in 104.3.
+				'id'                => 'change_history',
+				'title'             => __( 'Change History Runtime', 'wp-command-center' ),
+				'description'       => __( 'Read-only change history over the wpcc_change_log system of record (every executed mutating operation, with rollback linkage). history_list (filter by runtime/operation_id/status/target/change_set_id/session_id/task_id/plan_id/reversible_only/since/until, cursor-paginated), history_get (full record for one change_id incl. rollback linkage, change-set, actor, result metadata), history_timeline (chronological, cursor-paginated, table-backed — replaces audit-log tailing). Returns the STEP 103.2 compact envelope (total_count/has_more/next_cursor). No writes, no rollback execution.', 'wp-command-center' ),
+				'risk_level'        => 'diagnostic',
+				'action_risks'      => [
+					'history_list'     => 'diagnostic',
+					'history_get'      => 'diagnostic',
+					'history_timeline' => 'diagnostic',
+				],
+				'requires_approval' => false,
+				'parameters'        => [
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'history_list', 'history_get', 'history_timeline' ], 'description' => 'The read action: history_list, history_get, or history_timeline.' ],
+					[ 'name' => 'change_id', 'type' => 'string', 'required' => false, 'description' => 'history_get: the change_id to retrieve.' ],
+					[ 'name' => 'runtime', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by runtime (e.g. option, content, patch).' ],
+					[ 'name' => 'operation_id', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by operation id (e.g. option_manage).' ],
+					[ 'name' => 'status', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by status (applied|failed|transactional_apply_failed|rolled_back).' ],
+					[ 'name' => 'target', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by target_key (a file path or object key, e.g. plugins/x/a.php or post:123).' ],
+					[ 'name' => 'change_set_id', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by atomic change-set id.' ],
+					[ 'name' => 'session_id', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by agent session id.' ],
+					[ 'name' => 'task_id', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by agent task id.' ],
+					[ 'name' => 'plan_id', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by agent plan id.' ],
+					[ 'name' => 'reversible_only', 'type' => 'boolean', 'required' => false, 'description' => 'history_list: only changes that are reversible.' ],
+					[ 'name' => 'since', 'type' => 'integer', 'required' => false, 'description' => 'history_list/history_timeline: only changes recorded at/after this unix timestamp.' ],
+					[ 'name' => 'until', 'type' => 'integer', 'required' => false, 'description' => 'history_list/history_timeline: only changes recorded at/before this unix timestamp.' ],
+					[ 'name' => 'limit', 'type' => 'integer', 'required' => false, 'description' => 'Page size (default 20, max 100).' ],
+					[ 'name' => 'cursor', 'type' => 'string', 'required' => false, 'description' => 'Opaque pagination cursor returned as next_cursor.' ],
+				],
+				'available'         => true,
+			],
 		];
 
 		// B6: Add optional `reason` param to any write operation so AI agents can
