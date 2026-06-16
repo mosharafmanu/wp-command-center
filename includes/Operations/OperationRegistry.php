@@ -733,7 +733,7 @@ final class OperationRegistry {
 			'patch_manage' => [
 				'id'                => 'patch_manage',
 				'title'             => __( 'Patch Engine', 'wp-command-center' ),
-				'description'       => __( 'Safely propose and apply file changes through the Patch Engine. Every apply snapshots the file first, verifies PHP syntax (php -l or tokenizer fallback), and auto-reverts on failure. Patches touching high-risk files (theme functions.php, active theme templates, plugin main files) require confirm=true and confirmation_phrase="APPLY_PATCH". Actions: patch_preview, patch_create, patch_apply, patch_verify, patch_status.', 'wp-command-center' ),
+				'description'       => __( 'Safely propose and apply file changes through the Patch Engine. Every apply snapshots the file first, verifies PHP syntax (php -l or tokenizer fallback), and auto-reverts on failure. Each files[] entry chooses how the edit is expressed via "mode" — you do NOT have to resend the whole file for a small change: whole_file (field: modified — the full new file), append (field: content), prepend (field: content), replace_text (fields: find, replace, count?), replace_range (fields: start_line, end_line, content — 1-based inclusive), unified_diff (field: diff). Omitting "mode" defaults to whole_file and then requires "modified". Unknown fields are rejected with a clear error rather than ignored. Patches touching high-risk files (theme functions.php, active theme templates, plugin main files) require confirm=true and confirmation_phrase="APPLY_PATCH". Actions: patch_preview, patch_create, patch_apply, patch_verify, patch_status.', 'wp-command-center' ),
 				'risk_level'        => 'high',
 				'action_risks'      => [
 					'patch_preview' => 'diagnostic',
@@ -745,12 +745,14 @@ final class OperationRegistry {
 				'requires_approval' => true,
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'patch_preview', 'patch_create', 'patch_apply', 'patch_verify', 'patch_status' ], 'description' => 'The patch action to perform.' ],
-					[ 'name' => 'files', 'type' => 'array', 'required' => false, 'description' => 'Array of { path, modified } objects (required for patch_preview and patch_create). path is relative to wp-content, e.g. "themes/my-theme/functions.php" (a leading "wp-content/" or absolute path is also accepted); modified is the full new file content.' ],
+					[ 'name' => 'files', 'type' => 'array', 'required' => false, 'description' => 'Array of file-edit objects (required for patch_preview and patch_create). Every entry has "path" (relative to wp-content, e.g. "themes/my-theme/functions.php"; a leading "wp-content/" or an absolute path is also accepted) and a "mode". Per-mode fields: whole_file → { path, modified } where modified is the FULL new file content; append → { path, mode:"append", content }; prepend → { path, mode:"prepend", content }; replace_text → { path, mode:"replace_text", find, replace, count? } (count optional = replace first N, default all; errors if find is absent); replace_range → { path, mode:"replace_range", start_line, end_line, content } (1-based inclusive line range); unified_diff → { path, mode:"unified_diff", diff }. If "mode" is omitted it defaults to whole_file and "modified" is required. Any field not listed for the chosen mode is rejected. Use patch_preview first — its per-file output reports mode, patch_type (partial|whole_file), lines_added/lines_removed and a unified diff so you can confirm a partial edit was not treated as a whole-file replacement.' ],
 					[ 'name' => 'patch_id', 'type' => 'string', 'required' => false, 'description' => 'Patch ID (required for patch_apply, patch_verify, patch_status).' ],
 					[ 'name' => 'explanation', 'type' => 'string', 'required' => false, 'description' => 'Why the change is being made (patch_create).' ],
-					[ 'name' => 'risk_level', 'type' => 'string', 'required' => false, 'description' => 'low | medium | high (patch_create).' ],
+					[ 'name' => 'risk_level', 'type' => 'string', 'required' => false, 'enum' => [ 'low', 'medium', 'high' ], 'description' => 'low | medium | high (patch_create).' ],
+					[ 'name' => 'source', 'type' => 'string', 'required' => false, 'description' => 'Origin of the patch (patch_create): claude | codex | manual | api. Defaults to api.' ],
 					[ 'name' => 'confirm', 'type' => 'boolean', 'required' => false, 'description' => 'Required true to apply a patch touching a high-risk file.' ],
 					[ 'name' => 'confirmation_phrase', 'type' => 'string', 'required' => false, 'description' => 'Must equal "APPLY_PATCH" to apply a patch touching a high-risk file.' ],
+					[ 'name' => 'reason', 'type' => 'string', 'required' => false, 'description' => 'Human-readable reason recorded when confirming a high-risk apply.' ],
 				],
 				'available'         => true,
 			],
