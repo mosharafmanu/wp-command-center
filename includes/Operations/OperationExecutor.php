@@ -260,6 +260,20 @@ final class OperationExecutor {
 				'actor'         => $actor ? AuditLog::resolve_actor( $actor ) : null,
 			] ) );
 
+			// STEP 104.1 — record the failed mutating execution in the change log
+			// (skipped for read/diagnostic ops by the recorder).
+			( new ChangeRecorder() )->record( [
+				'operation'    => $operation,
+				'operation_id' => $operation_id,
+				'payload'      => $payload,
+				'context'      => $context,
+				'links'        => $links,
+				'status'       => 'failed',
+				'result'       => [],
+				'result_ref'   => $res_id,
+				'counts'       => [ 0, 0, 0, 1 ],
+			] );
+
 			return $this->fail( $operation_id, $error_code, $result->get_error_message() );
 		}
 
@@ -295,6 +309,32 @@ final class OperationExecutor {
 			'result'       => $storable,
 			'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 		] ) );
+
+		// STEP 104.1 — record the executed mutating operation in the change log.
+		// `$storable` is the redaction-safe normalized result (rollback handle,
+		// ids, paths preserved; raw file `contents` stripped). A transactional
+		// change-set apply that failed atomically is still a success-shaped
+		// result; its status is taken from change_set_status.
+		$change_status = ( 'transactional_apply_failed' === ( $normalized['result']['change_set_status'] ?? '' ) )
+			? 'transactional_apply_failed'
+			: 'applied';
+
+		( new ChangeRecorder() )->record( [
+			'operation'    => $operation,
+			'operation_id' => $operation_id,
+			'payload'      => $payload,
+			'context'      => $context,
+			'links'        => $links,
+			'status'       => $change_status,
+			'result'       => $storable,
+			'result_ref'   => $res_id,
+			'counts'       => [
+				count( $normalized['created'] ),
+				count( $normalized['updated'] ),
+				count( $normalized['skipped'] ),
+				0,
+			],
+		] );
 
 		return $normalized;
 	}

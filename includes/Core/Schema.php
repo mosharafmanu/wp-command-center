@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Schema {
 
-	public const DB_VERSION = '2.2.0';
+	public const DB_VERSION = '2.3.0';
 
 	/**
 	 * Install schema changes when the active plugin code is newer than the
@@ -48,6 +48,7 @@ final class Schema {
 		$results_table    = $wpdb->prefix . 'wpcc_operation_results';
 		$recommendations_table = $wpdb->prefix . 'wpcc_recommendations';
 		$health_results_table = $wpdb->prefix . 'wpcc_health_verifications';
+		$change_log_table     = $wpdb->prefix . 'wpcc_change_log';
 
 		dbDelta( "CREATE TABLE {$patches_table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -279,6 +280,52 @@ final class Schema {
 			PRIMARY KEY  (id),
 			UNIQUE KEY verification_id (verification_id),
 			KEY status (status),
+			KEY created_at (created_at)
+		) {$charset_collate};" );
+
+		// STEP 104.1 — Change-log system of record. A queryable metadata index
+		// over every executed *mutating* operation, with rollback linkage. No
+		// content blobs: full diffs/snapshots stay in their existing stores; this
+		// table points at them (mirrors wpcc_patches / wpcc_snapshots). Additive
+		// and idempotent via dbDelta — no destructive migration.
+		dbDelta( "CREATE TABLE {$change_log_table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			change_id VARCHAR(36) NOT NULL,
+			operation_id VARCHAR(50) NOT NULL,
+			action VARCHAR(64) NULL,
+			runtime VARCHAR(40) NULL,
+			status VARCHAR(24) NOT NULL,
+			reversible TINYINT UNSIGNED NOT NULL DEFAULT 0,
+			rollback_kind VARCHAR(20) NOT NULL DEFAULT 'none',
+			rollback_id VARCHAR(36) NULL,
+			rolled_back_by_change_id VARCHAR(36) NULL,
+			change_set_id VARCHAR(36) NULL,
+			request_id VARCHAR(36) NULL,
+			session_id VARCHAR(36) NULL,
+			task_id VARCHAR(36) NULL,
+			plan_id VARCHAR(36) NULL,
+			action_id VARCHAR(36) NULL,
+			actor_json TEXT NULL,
+			risk_level VARCHAR(20) NULL,
+			source VARCHAR(20) NULL,
+			target_summary TEXT NULL,
+			target_key VARCHAR(190) NULL,
+			created_count INT UNSIGNED NOT NULL DEFAULT 0,
+			updated_count INT UNSIGNED NOT NULL DEFAULT 0,
+			skipped_count INT UNSIGNED NOT NULL DEFAULT 0,
+			error_count INT UNSIGNED NOT NULL DEFAULT 0,
+			result_ref VARCHAR(36) NULL,
+			created_at BIGINT UNSIGNED NOT NULL,
+			rolled_back_at BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY change_id (change_id),
+			KEY operation_id (operation_id),
+			KEY runtime (runtime),
+			KEY status (status),
+			KEY change_set_id (change_set_id),
+			KEY rollback_id (rollback_id),
+			KEY target_key (target_key),
+			KEY session_id (session_id),
 			KEY created_at (created_at)
 		) {$charset_collate};" );
 
