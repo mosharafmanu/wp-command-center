@@ -59,6 +59,17 @@ final class OptionManager {
 		$action    = sanitize_key( $params['action'] ?? '' );
 		$option_id = sanitize_text_field( $params['option_id'] ?? '' );
 
+		// STEP 104.3 — option_rollback is drivable by rollback_id alone (e.g. from
+		// change_history rollback_target / the unified OperationExecutor::rollback
+		// dispatcher). Resolve the option_id from the stored rollback record when
+		// the caller did not supply it; the record carries it.
+		if ( '' === $option_id && 'option_rollback' === $action ) {
+			$record = $this->get_rollback( sanitize_text_field( (string) ( $params['rollback_id'] ?? '' ) ) );
+			if ( is_array( $record ) && ! empty( $record['option_id'] ) ) {
+				$option_id = (string) $record['option_id'];
+			}
+		}
+
 		if ( '' === $option_id ) {
 			return new \WP_Error( 'wpcc_missing_option_id', __( 'option_id is required.', 'wp-command-center' ) );
 		}

@@ -69,6 +69,14 @@ final class ChangeRecorder {
 			return;
 		}
 
+		// STEP 104.3 — the change_history runtime is the index/router itself, not a
+		// recorded change. Its read actions are diagnostic (skipped below anyway);
+		// its one write action (rollback_target) records its OWN authoritative
+		// `rolled_back` row via record_rollback(), so never auto-record it here.
+		if ( 'change_history' === $operation_id ) {
+			return;
+		}
+
 		$action         = (string) ( $payload['action'] ?? '' );
 		$effective_risk = SecurityModeManager::effective_risk( $operation, $action );
 		$is_failure     = 'failed' === $status;
@@ -206,6 +214,111 @@ final class ChangeRecorder {
 			],
 			'result_ref'    => '' !== $result_ref ? $result_ref : null,
 		] ) );
+	}
+
+	/**
+	 * STEP 104.3 — record a successful rollback_target. Inserts ONE new
+	 * `rolled_back` change-log row describing the reversal, stamps the original
+	 * row (status=rolled_back, rolled_back_at, rolled_back_by_change_id), and
+	 * emits a `change.rolled_back` audit event. This is the sole writer of the
+	 * rolled_back linkage — the change_history op itself is never auto-recorded.
+	 *
+	 * @param array<string,mixed> $original Raw original wpcc_change_log row (assoc).
+	 * @param array<string,mixed> $context  Execution context (actor, source, links).
+	 * @return string The new change_id (the reverser), or '' on failure.
+	 */
+	public function record_rollback( array $original, array $context, ?string $result_ref = null ): string {
+		try {
+			global $wpdb;
+			$table = $wpdb->prefix . 'wpcc_change_log';
+
+			$original_change_id = (string) ( $original['change_id'] ?? '' );
+			if ( '' === $original_change_id ) {
+				return '';
+			}
+
+			$now       = time();
+			$new_id    = wp_generate_uuid4();
+			$links     = is_array( $context['links'] ?? null ) ? $context['links'] : $context;
+			$actor     = is_array( $context['actor'] ?? null ) ? $context['actor'] : [];
+			$actor_json = wp_json_encode( AuditLog::resolve_actor( $actor ) );
+			$source    = substr( (string) ( $context['source'] ?? 'api' ), 0, 20 );
+			$runtime   = (string) ( $original['runtime'] ?? '' );
+
+			$summary = [ 'reverts_change_id' => $original_change_id ];
+			if ( ! empty( $original['target_summary'] ) ) {
+				$decoded = json_decode( (string) $original['target_summary'], true );
+				if ( is_array( $decoded ) ) {
+					$summary = array_merge( $summary, $decoded );
+				}
+			}
+
+			// New row: the reversal event (not itself reversible).
+			$wpdb->insert(
+				$table,
+				[
+					'change_id'                => $new_id,
+					'operation_id'             => substr( (string) ( $original['operation_id'] ?? 'change_history' ), 0, 50 ),
+					'action'                   => 'rollback_target',
+					'runtime'                  => substr( $runtime, 0, 40 ),
+					'status'                   => 'rolled_back',
+					'reversible'               => 0,
+					'rollback_kind'            => 'none',
+					'rollback_id'              => null,
+					'rolled_back_by_change_id' => null,
+					'change_set_id'            => null !== ( $original['change_set_id'] ?? null ) ? (string) $original['change_set_id'] : null,
+					'request_id'               => $this->link( $links, 'request_id' ),
+					'session_id'               => $this->link( $links, 'session_id' ),
+					'task_id'                  => $this->link( $links, 'task_id' ),
+					'plan_id'                  => $this->link( $links, 'plan_id' ),
+					'action_id'                => $this->link( $links, 'action_id' ),
+					'actor_json'               => is_string( $actor_json ) ? $actor_json : null,
+					'risk_level'               => 'high',
+					'source'                   => $source,
+					'target_summary'           => wp_json_encode( $summary ),
+					'target_key'               => null !== ( $original['target_key'] ?? null ) ? substr( (string) $original['target_key'], 0, 190 ) : null,
+					'created_count'            => 0,
+					'updated_count'            => 0,
+					'skipped_count'            => 0,
+					'error_count'              => 0,
+					'result_ref'               => ( null !== $result_ref && '' !== $result_ref ) ? $result_ref : null,
+					'created_at'               => $now,
+					'rolled_back_at'           => null,
+				],
+				[
+					'%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s',
+					'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+					'%d', '%d', '%d', '%d', '%s', '%d', '%d',
+				]
+			);
+
+			// Stamp the original as reversed.
+			$wpdb->update(
+				$table,
+				[
+					'status'                   => 'rolled_back',
+					'rolled_back_at'           => $now,
+					'rolled_back_by_change_id' => $new_id,
+				],
+				[ 'change_id' => $original_change_id ],
+				[ '%s', '%d', '%s' ],
+				[ '%s' ]
+			);
+
+			( new AuditLog() )->record( 'change.rolled_back', array_merge( is_array( $links ) ? $links : [], [
+				'change_id'          => $original_change_id,
+				'rolled_back_by'     => $new_id,
+				'operation_id'       => (string) ( $original['operation_id'] ?? '' ),
+				'runtime'            => $runtime,
+				'rollback_kind'      => (string) ( $original['rollback_kind'] ?? '' ),
+				'rollback_id'        => $original['rollback_id'] ?? null,
+				'target_key'         => $original['target_key'] ?? null,
+			] ) );
+
+			return $new_id;
+		} catch ( \Throwable $e ) {
+			return '';
+		}
 	}
 
 	/**

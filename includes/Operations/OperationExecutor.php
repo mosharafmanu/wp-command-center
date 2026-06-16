@@ -340,15 +340,52 @@ final class OperationExecutor {
 	}
 
 	/**
+	 * Runtime managers whose rollback is action-based (no public `rollback()`
+	 * method): the reversal is a sub-action of the same operation. STEP 104.3
+	 * lets the unified dispatcher reach these too, so it is the single runtime
+	 * rollback entry point (option/content/seo store to `wpcc_*_rollbacks` and
+	 * reverse by re-running the operation with this action + the rollback_id).
+	 */
+	private const ACTION_ROLLBACKS = [
+		'option_manage'  => 'option_rollback',
+		'content_manage' => 'content_rollback',
+		'seo_manage'     => 'seo_restore',
+	];
+
+	/**
 	 * STEP 97 — Unified rollback dispatcher. Routes a rollback request to the
 	 * runtime manager that owns the operation by reusing the handler resolver, so
 	 * any operation whose manager exposes a public `rollback()` can be reversed by
 	 * `{ operation_id, rollback_id }` without each caller knowing the manager. Used
-	 * by the Workflow runtime to auto-reverse completed steps on failure.
+	 * by the Workflow runtime to auto-reverse completed steps on failure, and by
+	 * STEP 104.3 change_history rollback_target.
+	 *
+	 * STEP 104.3 — managers without a `rollback()` method but with an action-based
+	 * reversal (option/content/seo) are dispatched by invoking that action on the
+	 * handler directly (the rollback_target call already passed the
+	 * capability/approval/destructive gates, so the inner reversal is not re-gated
+	 * or re-recorded).
 	 */
 	public function rollback( string $operation_id, array $payload, array $context = [] ): array {
 		$handler = $this->resolve_handler( $operation_id );
+
 		if ( ! $handler || ! method_exists( $handler, 'rollback' ) ) {
+			if ( $handler && isset( self::ACTION_ROLLBACKS[ $operation_id ] ) && method_exists( $handler, 'run' ) ) {
+				$rollback_action = self::ACTION_ROLLBACKS[ $operation_id ];
+				$res             = $handler->run( array_merge( $payload, [ 'action' => $rollback_action ] ), $context );
+				$ok              = ! is_wp_error( $res ) && ( ! is_array( $res ) || empty( $res['error'] ) );
+				( new AuditLog() )->record( 'operation.rollback.dispatched', [
+					'operation_id' => $operation_id,
+					'rollback_id'  => $payload['rollback_id'] ?? null,
+					'via'          => $rollback_action,
+					'success'      => $ok,
+				] );
+				if ( is_wp_error( $res ) ) {
+					return [ 'success' => false, 'operation_id' => $operation_id, 'error' => true, 'code' => $res->get_error_code(), 'message' => $res->get_error_message() ];
+				}
+				return array_merge( [ 'success' => $ok, 'operation_id' => $operation_id ], is_array( $res ) ? $res : [] );
+			}
+
 			return [
 				'success'      => false,
 				'operation_id' => $operation_id,

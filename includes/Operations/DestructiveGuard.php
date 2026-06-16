@@ -37,6 +37,7 @@ final class DestructiveGuard {
 	const PHRASE_CONTENT = 'DELETE_CONTENT';
 	const PHRASE_DB      = 'RUN_DESTRUCTIVE_DB';
 	const PHRASE_PATCH   = 'APPLY_PATCH';
+	const PHRASE_ROLLBACK = 'ROLLBACK_CHANGE';
 
 	/** Every destructive operation is reported at the highest risk tier. */
 	const RISK_LEVEL = 'critical';
@@ -144,6 +145,27 @@ final class DestructiveGuard {
 				}
 				break;
 
+			case 'change_history':
+				// STEP 104.3 — reversing a change that re-applies a high-risk file
+				// (a patch change set touching theme functions.php, an active theme
+				// template, or a plugin main file) requires explicit confirmation in
+				// every mode, mirroring patch_apply. The rollback restores the prior
+				// snapshot, but a restore can equally take a site down, so the human
+				// must acknowledge it. Ordinary changes keep the fast path.
+				if ( 'rollback_target' === $action ) {
+					$change_id = isset( $payload['change_id'] ) ? (string) $payload['change_id'] : '';
+					$patch_id  = '' !== $change_id ? self::patch_id_for_change( $change_id ) : '';
+					if ( '' !== $patch_id && ! empty( DangerousFiles::dangerous_in_patch( $patch_id ) ) ) {
+						return self::descriptor(
+							self::PHRASE_ROLLBACK,
+							'change_id',
+							true,
+							__( 'This change reverses a patch that modified a high-risk file (theme functions.php, an active theme template, or a plugin main file). Restoring the prior snapshot can equally affect site availability; the original pre-apply snapshot is restored with hash verification.', 'wp-command-center' )
+						);
+					}
+				}
+				break;
+
 			case 'safe_search_replace':
 				// A live (non-dry-run) search-and-replace mutates rows in place.
 				// SearchReplace defaults dry_run to TRUE, so a missing dry_run is a
@@ -197,6 +219,31 @@ final class DestructiveGuard {
 		}
 
 		return $missing;
+	}
+
+	/**
+	 * STEP 104.3 — resolve the linked patch id for a change_history change_id,
+	 * but only when that change is a reversible patch change. Returns '' when
+	 * the change is not a patch, not reversible, or unknown.
+	 */
+	private static function patch_id_for_change( string $change_id ): string {
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_change_log';
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT rollback_kind, rollback_id, change_set_id, reversible, status FROM {$table} WHERE change_id = %s LIMIT 1",
+				$change_id
+			),
+			ARRAY_A
+		);
+
+		if ( ! is_array( $row ) || 'patch' !== ( $row['rollback_kind'] ?? '' ) || 1 !== (int) ( $row['reversible'] ?? 0 ) || 'rolled_back' === ( $row['status'] ?? '' ) ) {
+			return '';
+		}
+
+		$patch_id = (string) ( $row['rollback_id'] ?? '' );
+		return '' !== $patch_id ? $patch_id : (string) ( $row['change_set_id'] ?? '' );
 	}
 
 	private static function descriptor( string $phrase, string $target_key, bool $backup_capable, string $warning ): array {

@@ -24,6 +24,12 @@ final class Schema {
 		if ( self::DB_VERSION !== get_option( 'wpcc_db_version' ) ) {
 			self::install();
 		}
+
+		// STEP 104.3 — one-time historical backfill of the change log. Runs once
+		// (flag-guarded) on the first load after the feature ships, independent of
+		// the DB version gate above, so a site already at 2.3.0 (table created in
+		// 104.1) still gets seeded.
+		self::maybe_backfill_change_log();
 	}
 
 	/**
@@ -436,6 +442,209 @@ final class Schema {
 					'created_at'  => $snapshot['created_at'] ?? time(),
 				],
 				[ '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d' ]
+			);
+		}
+	}
+
+	/**
+	 * STEP 104.3 — one-time, idempotent backfill of `wpcc_change_log` from the
+	 * existing `wpcc_patches` and `wpcc_operation_results` tables so production
+	 * has change history from day one. Read-only over the source tables; never
+	 * touches any runtime. Guarded by the `wpcc_changelog_backfilled` option AND
+	 * by deterministic change_ids (so a re-run — even with the flag cleared —
+	 * inserts no duplicate rows). Historical timestamps are preserved.
+	 */
+	public static function maybe_backfill_change_log(): void {
+		if ( get_option( 'wpcc_changelog_backfilled' ) ) {
+			return;
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_change_log';
+
+		// Require the table to exist before seeding.
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
+			return;
+		}
+
+		self::backfill_from_patches( $wpdb, $table );
+		self::backfill_from_results( $wpdb, $table );
+
+		update_option( 'wpcc_changelog_backfilled', 1 );
+	}
+
+	/**
+	 * Deterministic, UUID-shaped change_id for a backfill source key, so the
+	 * UNIQUE(change_id) constraint makes re-runs idempotent.
+	 */
+	private static function backfill_change_id( string $source_key ): string {
+		$h = md5( 'wpcc-changelog-backfill:' . $source_key );
+		return substr( $h, 0, 8 ) . '-' . substr( $h, 8, 4 ) . '-' . substr( $h, 12, 4 ) . '-' . substr( $h, 16, 4 ) . '-' . substr( $h, 20, 12 );
+	}
+
+	/**
+	 * Seed change rows from applied / rolled-back patches (with snapshot
+	 * linkage). rollback_kind = patch; reversible when the patch is applied.
+	 */
+	private static function backfill_from_patches( \wpdb $wpdb, string $table ): void {
+		$patches_table = $wpdb->prefix . 'wpcc_patches';
+
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $patches_table ) ) !== $patches_table ) {
+			return;
+		}
+
+		$rows = $wpdb->get_results(
+			"SELECT patch_id, session_id, task_id, plan_id, source, risk_level, status, target_files, created_at, applied_at, rolled_back_at FROM {$patches_table} WHERE status IN ('applied','rolled_back')",
+			ARRAY_A
+		);
+
+		if ( ! is_array( $rows ) ) {
+			return;
+		}
+
+		foreach ( $rows as $patch ) {
+			$patch_id  = (string) $patch['patch_id'];
+			$change_id = self::backfill_change_id( 'patch:' . $patch_id );
+
+			// Idempotent: skip our own deterministic row, AND skip any patch that
+			// was already recorded live (a change_log row already references this
+			// change_set_id) so backfill never duplicates live history.
+			if ( $wpdb->get_var( $wpdb->prepare( "SELECT change_id FROM {$table} WHERE change_id = %s", $change_id ) )
+				|| $wpdb->get_var( $wpdb->prepare( "SELECT change_id FROM {$table} WHERE change_set_id = %s LIMIT 1", $patch_id ) ) ) {
+				continue;
+			}
+
+			$is_rolled_back = 'rolled_back' === $patch['status'];
+			$paths          = json_decode( (string) $patch['target_files'], true );
+			$paths          = is_array( $paths ) ? array_values( $paths ) : [];
+			$target_key     = ! empty( $paths ) ? substr( (string) $paths[0], 0, 190 ) : null;
+			$created_at     = (int) ( $patch['applied_at'] ?: $patch['created_at'] ?: time() );
+
+			$wpdb->insert(
+				$table,
+				[
+					'change_id'                => $change_id,
+					'operation_id'             => 'patch_manage',
+					'action'                   => 'patch_apply',
+					'runtime'                  => 'patch',
+					'status'                   => $is_rolled_back ? 'rolled_back' : 'applied',
+					'reversible'               => $is_rolled_back ? 0 : 1,
+					'rollback_kind'            => 'patch',
+					'rollback_id'              => (string) $patch['patch_id'],
+					'rolled_back_by_change_id' => null,
+					'change_set_id'            => (string) $patch['patch_id'],
+					'request_id'               => null,
+					'session_id'               => $patch['session_id'] ?: null,
+					'task_id'                  => $patch['task_id'] ?: null,
+					'plan_id'                  => $patch['plan_id'] ?: null,
+					'action_id'                => null,
+					'actor_json'               => wp_json_encode( [ 'type' => 'backfill' ] ),
+					'risk_level'               => substr( (string) ( $patch['risk_level'] ?: 'medium' ), 0, 20 ),
+					'source'                   => substr( (string) ( $patch['source'] ?: 'backfill' ), 0, 20 ),
+					'target_summary'           => wp_json_encode( array_filter( [ 'affected_paths' => $paths ?: null, 'backfilled' => true ] ) ),
+					'target_key'               => $target_key,
+					'created_count'            => 0,
+					'updated_count'            => count( $paths ),
+					'skipped_count'            => 0,
+					'error_count'              => 0,
+					'result_ref'               => null,
+					'created_at'               => $created_at,
+					'rolled_back_at'           => $is_rolled_back ? (int) ( $patch['rolled_back_at'] ?: $created_at ) : null,
+				],
+				[
+					'%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s',
+					'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+					'%d', '%d', '%d', '%d', '%s', '%d', '%d',
+				]
+			);
+		}
+	}
+
+	/**
+	 * Seed change rows from operation results of mutating operations. Patch and
+	 * rollback engines are excluded (covered by the patches table); purely
+	 * diagnostic operations are skipped. No rollback linkage (results do not
+	 * store it) — these rows are historical evidence, not reversible handles.
+	 */
+	private static function backfill_from_results( \wpdb $wpdb, string $table ): void {
+		$results_table = $wpdb->prefix . 'wpcc_operation_results';
+
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $results_table ) ) !== $results_table ) {
+			return;
+		}
+
+		// Purely diagnostic / patch-covered operations to skip.
+		$skip = [
+			'system_info', 'database_inspect', 'report_manage', 'file_manage', 'code_search',
+			'search_manage', 'media_enhance', 'change_history', 'patch_manage', 'rollback_manage',
+		];
+
+		$rows = $wpdb->get_results(
+			"SELECT result_id, operation_id, request_id, status, created_count, updated_count, skipped_count, error_count, created_at FROM {$results_table}",
+			ARRAY_A
+		);
+
+		if ( ! is_array( $rows ) ) {
+			return;
+		}
+
+		foreach ( $rows as $res ) {
+			$operation_id = (string) $res['operation_id'];
+
+			if ( in_array( $operation_id, $skip, true ) ) {
+				continue;
+			}
+
+			$result_id = (string) $res['result_id'];
+			$change_id = self::backfill_change_id( 'result:' . $result_id );
+
+			// Idempotent: skip our own deterministic row, AND skip any result that
+			// was already recorded live (a change_log row already references this
+			// result_ref) so backfill never duplicates live history.
+			if ( $wpdb->get_var( $wpdb->prepare( "SELECT change_id FROM {$table} WHERE change_id = %s", $change_id ) )
+				|| $wpdb->get_var( $wpdb->prepare( "SELECT change_id FROM {$table} WHERE result_ref = %s LIMIT 1", $result_id ) ) ) {
+				continue;
+			}
+
+			$runtime = (string) preg_replace( '/_manage$/', '', $operation_id );
+			$status  = 'failed' === $res['status'] ? 'failed' : 'applied';
+
+			$wpdb->insert(
+				$table,
+				[
+					'change_id'                => $change_id,
+					'operation_id'             => substr( $operation_id, 0, 50 ),
+					'action'                   => null,
+					'runtime'                  => substr( $runtime, 0, 40 ),
+					'status'                   => $status,
+					'reversible'               => 0,
+					'rollback_kind'            => 'none',
+					'rollback_id'              => null,
+					'rolled_back_by_change_id' => null,
+					'change_set_id'            => null,
+					'request_id'               => $res['request_id'] ?: null,
+					'session_id'               => null,
+					'task_id'                  => null,
+					'plan_id'                  => null,
+					'action_id'                => null,
+					'actor_json'               => wp_json_encode( [ 'type' => 'backfill' ] ),
+					'risk_level'               => null,
+					'source'                   => 'backfill',
+					'target_summary'           => wp_json_encode( [ 'backfilled' => true ] ),
+					'target_key'               => null,
+					'created_count'            => (int) $res['created_count'],
+					'updated_count'            => (int) $res['updated_count'],
+					'skipped_count'            => (int) $res['skipped_count'],
+					'error_count'              => (int) $res['error_count'],
+					'result_ref'               => (string) $res['result_id'],
+					'created_at'               => (int) ( $res['created_at'] ?: time() ),
+					'rolled_back_at'           => null,
+				],
+				[
+					'%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s', '%s',
+					'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',
+					'%d', '%d', '%d', '%d', '%s', '%d', '%d',
+				]
 			);
 		}
 	}

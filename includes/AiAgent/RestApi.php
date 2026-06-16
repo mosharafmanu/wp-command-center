@@ -485,7 +485,7 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/operations/capability_manage/run', 'scope' => 'full', 'description' => 'Manage platform capabilities: { action: capability_list|capability_get|capability_assign|capability_remove|capability_validate, ... }.' ],
 		[ 'method' => 'POST', 'path' => '/operations/database_inspect/run', 'scope' => 'read_only', 'description' => 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.' ],
 		[ 'method' => 'POST', 'path' => '/operations/report_manage/run', 'scope' => 'read_only', 'description' => 'Read-only operational reports: { action: report_list|report_site_health|report_plugin_health|report_security|report_content|report_woocommerce|report_agent_activity|report_approval_activity|report_patch_activity, limit? }.' ],
-		[ 'method' => 'POST', 'path' => '/operations/change_history/run', 'scope' => 'read_only', 'description' => 'Read-only Change History over wpcc_change_log: { action: history_list|history_get|history_timeline, change_id?, runtime?, operation_id?, status?, target?, change_set_id?, session_id?, task_id?, plan_id?, reversible_only?, since?, until?, limit?, cursor? }. Returns the compact envelope (total_count/has_more/next_cursor).' ],
+		[ 'method' => 'POST', 'path' => '/operations/change_history/run', 'scope' => 'read_only', 'description' => 'Change History over wpcc_change_log. Read (read token): { action: history_list|history_get|history_timeline|rollback_discover, change_id?, runtime?, operation_id?, status?, target?, change_set_id?, session_id?, task_id?, plan_id?, reversible_only?, since?, until?, limit?, cursor? }. Reverse a change (FULL token, approval-aware): { action: rollback_target, change_id, confirm?, confirmation_phrase?, reason? } — routes to the existing patch/runtime rollback engine. Returns the compact envelope (total_count/has_more/next_cursor).' ],
 		[ 'method' => 'GET', 'path' => '/changes', 'scope' => 'read_only', 'description' => 'List recorded changes (history_list). Query: runtime, operation_id, status, target, change_set_id, session_id, task_id, plan_id, reversible_only, since, until, limit, cursor.' ],
 		[ 'method' => 'GET', 'path' => '/changes/timeline', 'scope' => 'read_only', 'description' => 'Chronological change timeline (history_timeline), cursor-paginated, table-backed. Query: since, until, limit, cursor.' ],
 		[ 'method' => 'GET', 'path' => '/changes/{change_id}', 'scope' => 'read_only', 'description' => 'Get the full change record (history_get) incl. rollback linkage, change-set, actor, and result metadata.' ],
@@ -950,7 +950,7 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/change_history/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_change_history' ],
-			'permission_callback' => [ $this, 'require_read' ],
+			'permission_callback' => [ $this, 'require_change_history' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/changes', [
@@ -1294,6 +1294,18 @@ final class RestApi {
 	 * (regeneration) actions on one route. Gate per action: write actions require
 	 * a full token, read actions a read token.
 	 */
+	/**
+	 * STEP 104.3 — change_history is read-only-scope, but its one write action
+	 * (rollback_target) requires a full token. Gate per action: rollback_target
+	 * → require_write, all read actions → require_read.
+	 */
+	public function require_change_history( \WP_REST_Request $request ): bool|\WP_Error {
+		if ( 'rollback_target' === (string) $request->get_param( 'action' ) ) {
+			return $this->require_write( $request );
+		}
+		return $this->require_read( $request );
+	}
+
 	public function require_media_enhance( \WP_REST_Request $request ): bool|\WP_Error {
 		$action = (string) $request->get_param( 'action' );
 		// Write (regeneration) actions — kept in sync with
@@ -2919,7 +2931,10 @@ final class RestApi {
 			$params[ $k ] = $v;
 		}
 
-		$context = [ 'actor' => $this->token_actor( $request ) ];
+		$context = [
+			'actor'       => $this->token_actor( $request ),
+			'token_scope' => (string) ( $this->token_scope( $request ) ?? '' ),
+		];
 		foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id' ] as $k ) {
 			if ( $request->get_param( $k ) ) {
 				$context[ $k ] = sanitize_text_field( (string) $request->get_param( $k ) );

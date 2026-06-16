@@ -19,6 +19,10 @@
 
 namespace WPCommandCenter\Operations;
 
+use WPCommandCenter\Security\AuthTokens;
+use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\PatchSystem\PatchApproval;
+
 defined( 'ABSPATH' ) || exit;
 
 final class ChangeHistoryRuntimeManager {
@@ -46,10 +50,14 @@ final class ChangeHistoryRuntimeManager {
 				return $this->history_get( $p );
 			case 'history_timeline':
 				return $this->history_timeline( $p );
+			case 'rollback_discover':
+				return $this->rollback_discover( $p );
+			case 'rollback_target':
+				return $this->rollback_target( $p, $cx );
 			default:
 				return $this->err( 'wpcc_invalid_history_action', sprintf(
 					/* translators: %s: action */
-					__( 'Unknown change_history action: %s. Supported: history_list, history_get, history_timeline.', 'wp-command-center' ),
+					__( 'Unknown change_history action: %s. Supported: history_list, history_get, history_timeline, rollback_discover, rollback_target.', 'wp-command-center' ),
 					$action
 				) );
 		}
@@ -162,6 +170,151 @@ final class ChangeHistoryRuntimeManager {
 		$rows = $this->fetch_rows( $table, $where_sql, $params, 'created_at DESC, id DESC', $limit, $offset );
 
 		return $this->envelope( 'history_timeline', 'timeline', $rows, $total, $limit, $offset, $filters );
+	}
+
+	// ── rollback_discover (read) ────────────────────────────────────
+
+	/**
+	 * Find reversible changes for a target / change_set_id / change_id, each
+	 * annotated with the exact rollback_target params to call. Read-only.
+	 */
+	private function rollback_discover( array $p ): array {
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_change_log';
+
+		$where   = [ 'reversible = %d', "status <> %s" ];
+		$params  = [ 1, 'rolled_back' ];
+		$filters = [];
+
+		$has_selector = false;
+		foreach ( [ 'change_id' => 'change_id', 'change_set_id' => 'change_set_id', 'target' => 'target_key' ] as $param => $column ) {
+			if ( isset( $p[ $param ] ) && '' !== (string) $p[ $param ] ) {
+				$value             = sanitize_text_field( (string) $p[ $param ] );
+				$where[]           = "{$column} = %s";
+				$params[]          = $value;
+				$filters[ $param ] = $value;
+				$has_selector      = true;
+			}
+		}
+
+		if ( ! $has_selector ) {
+			return $this->err( 'wpcc_missing_rollback_selector', __( 'rollback_discover requires one of: target, change_set_id, or change_id.', 'wp-command-center' ) );
+		}
+
+		[ $limit, $offset ] = $this->paging( $p );
+		$where_sql          = 'WHERE ' . implode( ' AND ', $where );
+
+		$total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} {$where_sql}", $params ) );
+		$rows  = $this->fetch_rows( $table, $where_sql, $params, 'created_at DESC, id DESC', $limit, $offset );
+
+		// Annotate each row with the exact rollback_target call.
+		foreach ( $rows as &$row ) {
+			$row['rollback_target'] = [
+				'operation'  => 'change_history',
+				'action'     => 'rollback_target',
+				'parameters' => [ 'change_id' => $row['change_id'] ],
+			];
+		}
+		unset( $row );
+
+		$env = $this->envelope( 'rollback_discover', 'reversible_changes', $rows, $total, $limit, $offset, $filters );
+		return $env;
+	}
+
+	// ── rollback_target (write — routes to existing engines) ────────
+
+	/**
+	 * Reverse a recorded change by routing to the OWNING existing rollback
+	 * engine — never a new restore path. patch → PatchApproval::rollback;
+	 * runtime_option → OperationExecutor::rollback. On verified success the
+	 * original row is stamped rolled_back and a rolled_back row is recorded; a
+	 * failed/unverified rollback surfaces the engine error and stamps nothing.
+	 */
+	private function rollback_target( array $p, array $cx ): array {
+		// Write-scope enforcement (the operation is read-only-scope so the
+		// transport scope gate passes for read_only tokens — deny here).
+		if ( AuthTokens::SCOPE_READ_ONLY === (string) ( $cx['token_scope'] ?? '' ) ) {
+			return $this->err( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform rollback_target.', 'wp-command-center' ) );
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_change_log';
+
+		$change_id = sanitize_text_field( (string) ( $p['change_id'] ?? '' ) );
+		if ( '' === $change_id ) {
+			return $this->err( 'wpcc_missing_change_id', __( 'change_id is required for rollback_target.', 'wp-command-center' ) );
+		}
+
+		$cols = implode( ', ', self::COLUMNS );
+		$row  = $wpdb->get_row( $wpdb->prepare( "SELECT {$cols} FROM {$table} WHERE change_id = %s LIMIT 1", $change_id ), ARRAY_A );
+
+		if ( ! is_array( $row ) ) {
+			return $this->err( 'wpcc_change_not_found', sprintf(
+				/* translators: %s: change id */
+				__( 'No change found for change_id %s.', 'wp-command-center' ),
+				$change_id
+			) );
+		}
+
+		if ( 'rolled_back' === (string) $row['status'] ) {
+			return $this->err( 'wpcc_already_rolled_back', __( 'This change has already been rolled back.', 'wp-command-center' ) );
+		}
+
+		$kind        = (string) ( $row['rollback_kind'] ?? 'none' );
+		$reversible  = (int) ( $row['reversible'] ?? 0 );
+		$rollback_id = (string) ( $row['rollback_id'] ?? '' );
+
+		if ( 1 !== $reversible || 'none' === $kind ) {
+			return $this->err( 'wpcc_not_reversible', __( 'This change is not reversible.', 'wp-command-center' ) );
+		}
+
+		$actor      = is_array( $cx['actor'] ?? null ) ? $cx['actor'] : [];
+		$engine_res = null;
+
+		if ( 'patch' === $kind ) {
+			$patch_id = '' !== $rollback_id ? $rollback_id : (string) ( $row['change_set_id'] ?? '' );
+			if ( '' === $patch_id ) {
+				return $this->err( 'wpcc_missing_rollback_id', __( 'No patch id is linked to this change.', 'wp-command-center' ) );
+			}
+			$res = ( new PatchApproval() )->rollback( $patch_id, $actor );
+			if ( is_wp_error( $res ) ) {
+				return $this->err( $res->get_error_code(), $res->get_error_message() );
+			}
+			$engine_res = $res;
+		} elseif ( 'runtime_option' === $kind ) {
+			if ( '' === $rollback_id ) {
+				return $this->err( 'wpcc_missing_rollback_id', __( 'No rollback id is linked to this change.', 'wp-command-center' ) );
+			}
+			$res = ( new OperationExecutor() )->rollback( (string) $row['operation_id'], [ 'rollback_id' => $rollback_id ], $cx );
+			if ( empty( $res['success'] ) ) {
+				return $this->err(
+					(string) ( $res['code'] ?? 'wpcc_rollback_failed' ),
+					(string) ( $res['message'] ?? __( 'Rollback failed.', 'wp-command-center' ) )
+				);
+			}
+			$engine_res = $res;
+		} else {
+			return $this->err( 'wpcc_unsupported_rollback_kind', sprintf(
+				/* translators: %s: rollback kind */
+				__( 'Unsupported rollback kind: %s.', 'wp-command-center' ),
+				$kind
+			) );
+		}
+
+		// Verified success — record the reversal + stamp the original.
+		$new_change_id = ( new ChangeRecorder() )->record_rollback( $row, $cx, $row['result_ref'] ?? null );
+
+		return [
+			'action'              => 'rollback_target',
+			'success'             => true,
+			'change_id'           => $change_id,
+			'rolled_back_by'      => $new_change_id,
+			'rollback_kind'       => $kind,
+			'operation_id'        => (string) $row['operation_id'],
+			'runtime'             => (string) ( $row['runtime'] ?? '' ),
+			'target_key'          => $row['target_key'] ?? null,
+			'engine_result'       => is_array( $engine_res ) ? $engine_res : null,
+		];
 	}
 
 	// ── filters / paging / formatting ───────────────────────────────
