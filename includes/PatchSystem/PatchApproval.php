@@ -192,14 +192,41 @@ final class PatchApproval {
 			$snapshot_ids[ $target['path'] ] = $snapshot['id'];
 		}
 
-		// Write the new contents.
-		foreach ( $targets as $target ) {
+		// Write the new contents. The change set is transactional: if any write
+		// fails, restore every file (including the ones already written) to its
+		// pre-apply content so no file is left partially changed, then fail.
+		foreach ( $targets as $i => $target ) {
 			if ( false === file_put_contents( $target['real'], $target['file']['modified'], LOCK_EX ) ) {
-				return new \WP_Error( 'wpcc_write_failed', sprintf(
-					/* translators: %s: file path */
-					__( 'Failed to write %s.', 'wp-command-center' ),
-					$target['path']
-				) );
+				$restore = $this->restore_targets( $targets );
+
+				$result = $this->patches->update_status(
+					$id,
+					PatchManager::STATUS_FAILED,
+					[
+						'snapshot_ids' => $snapshot_ids,
+						'verification' => [
+							'passed'      => false,
+							'reason'      => 'write_failed',
+							'failed_path' => $target['path'],
+							'restored'    => $this->all_restored( $restore ),
+							'restore'     => $restore,
+						],
+					]
+				);
+
+				$this->audit_log->record(
+					'patch.transactional_failed',
+					[
+						'patch_id'    => $id,
+						'reason'      => 'write_failed',
+						'failed_path' => $target['path'],
+						'written'     => $i, // files written before the failure, now restored
+						'restore'     => $restore,
+						'actor'       => AuditLog::resolve_actor( $actor ),
+					]
+				);
+
+				return $result;
 			}
 		}
 
@@ -224,10 +251,9 @@ final class PatchApproval {
 		}
 
 		if ( ! $passed ) {
-			// Restore every file from the snapshot just taken.
-			foreach ( $targets as $target ) {
-				file_put_contents( $target['real'], $target['file']['original'], LOCK_EX );
-			}
+			// Transactional restore: revert EVERY file to its pre-apply content so a
+			// verification failure on one file leaves no file changed.
+			$restore = $this->restore_targets( $targets );
 
 			$result = $this->patches->update_status(
 				$id,
@@ -235,18 +261,23 @@ final class PatchApproval {
 				[
 					'snapshot_ids' => $snapshot_ids,
 					'verification' => [
-						'passed' => false,
-						'checks' => $checks,
+						'passed'   => false,
+						'reason'   => 'verification_failed',
+						'checks'   => $checks,
+						'restored' => $this->all_restored( $restore ),
+						'restore'  => $restore,
 					],
 				]
 			);
 
 			$this->audit_log->record(
-				'patch.failed',
+				'patch.transactional_failed',
 				[
 					'patch_id' => $id,
+					'reason'   => 'verification_failed',
 					'actor'    => AuditLog::resolve_actor( $actor ),
 					'checks'   => $checks,
+					'restore'  => $restore,
 				]
 			);
 
@@ -366,6 +397,41 @@ final class PatchApproval {
 		);
 
 		return $result;
+	}
+
+	/**
+	 * Restore every target file to its pre-apply ('original') content and verify
+	 * the on-disk bytes match. Used by the transactional apply path so a failure
+	 * anywhere leaves no file partially changed.
+	 *
+	 * @param array<int,array{path:string,real:string,file:array}> $targets
+	 *
+	 * @return array<string,array{restored:bool}> Per-path restore verification.
+	 */
+	private function restore_targets( array $targets ): array {
+		$report = [];
+
+		foreach ( $targets as $target ) {
+			$written = false !== file_put_contents( $target['real'], $target['file']['original'], LOCK_EX );
+			$matches = $written && file_get_contents( $target['real'] ) === $target['file']['original'];
+
+			$report[ $target['path'] ] = [ 'restored' => $matches ];
+		}
+
+		return $report;
+	}
+
+	/**
+	 * @param array<string,array{restored:bool}> $restore
+	 */
+	private function all_restored( array $restore ): bool {
+		foreach ( $restore as $r ) {
+			if ( empty( $r['restored'] ) ) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**

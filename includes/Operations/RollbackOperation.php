@@ -98,13 +98,25 @@ final class RollbackOperation {
 			return $result;
 		}
 
+		// STEP 103 — one combined rollback restores every file in the change set.
+		$rollback_results = $result['rollback_results'] ?? [];
+		$restored_paths   = array_keys( $rollback_results );
+		$all_verified     = true;
+		foreach ( $rollback_results as $r ) {
+			$all_verified = $all_verified && ! empty( $r['verified'] );
+		}
+
 		// PatchApproval already audits patch.rolled_back.
 		return [
 			'action'           => 'rollback_apply',
 			'patch_id'         => $patch_id,
+			'change_set_id'    => $patch_id,
 			'status'           => $result['status'],
 			'restored'         => PatchManager::STATUS_ROLLED_BACK === $result['status'],
-			'rollback_results' => $result['rollback_results'] ?? [],
+			'files_restored'   => count( $restored_paths ),
+			'affected_paths'   => $restored_paths,
+			'all_verified'     => $all_verified,
+			'rollback_results' => $rollback_results,
 		];
 	}
 

@@ -89,6 +89,7 @@ final class PatchOperation {
 		$previews  = [];
 		$all_valid = true;
 		$dangerous = [];
+		$entries   = [];
 
 		foreach ( $files as $file ) {
 			// normalize_files() has already resolved the patch mode into the full
@@ -114,7 +115,9 @@ final class PatchOperation {
 			}
 
 			$is_whole_file = PatchModeResolver::MODE_WHOLE_FILE === $file['mode'];
-			[ $added, $removed ] = $this->count_diff_lines( $diff );
+			[ $added, $removed ] = self::count_diff_lines( $diff );
+
+			$entries[] = [ 'path' => $file['path'], 'mode' => $file['mode'], 'added' => $added, 'removed' => $removed ];
 
 			$previews[] = [
 				'path'                      => $file['path'],
@@ -126,8 +129,8 @@ final class PatchOperation {
 				'is_whole_file_replacement' => $is_whole_file,
 				'summary'                   => $file['meta']['summary'] ?? '',
 				'changed'                   => '' !== $diff,
-				'original_lines'            => $this->line_count( $original ),
-				'modified_lines'            => $this->line_count( $modified ),
+				'original_lines'            => self::line_count( $original ),
+				'modified_lines'            => self::line_count( $modified ),
 				'lines_added'               => $added,
 				'lines_removed'             => $removed,
 				'diff'                      => $diff,
@@ -139,10 +142,17 @@ final class PatchOperation {
 			];
 		}
 
-		$this->audit( 'patch.preview', [ 'files' => count( $previews ), 'syntax_ok' => $all_valid ], $context );
+		// One combined change-set view over all files in this proposal. A
+		// single-file patch reports is_change_set=false but the same shape, so
+		// agents can treat single- and multi-file edits uniformly.
+		$change_set = self::summarize_entries( $entries, PatchManager::RISK_LOW, null );
+		$change_set['syntax_ok'] = $all_valid;
+
+		$this->audit( 'patch.preview', [ 'files' => count( $previews ), 'syntax_ok' => $all_valid, 'is_change_set' => $change_set['is_change_set'] ], $context );
 
 		return [
 			'action'             => 'patch_preview',
+			'change_set'         => $change_set,
 			'files'              => $previews,
 			'syntax_ok'          => $all_valid,
 			'dangerous_files'    => $dangerous,
@@ -165,10 +175,11 @@ final class PatchOperation {
 		$source      = (string) ( $params['source'] ?? PatchManager::SOURCE_API );
 		$actor       = $context['actor'] ?? [];
 
-		// Hand PatchManager the canonical { path, modified } it expects; the
-		// resolved mode/meta/original are preview-only and not persisted here.
+		// Hand PatchManager the canonical { path, modified } it expects, plus the
+		// resolved mode so the change set can be summarized later (at approval /
+		// apply / rollback) without re-resolving. meta/original stay preview-only.
 		$resolved = array_map(
-			static fn( array $f ): array => [ 'path' => $f['path'], 'modified' => $f['modified'] ],
+			static fn( array $f ): array => [ 'path' => $f['path'], 'modified' => $f['modified'], 'mode' => $f['mode'] ],
 			$files
 		);
 
@@ -187,16 +198,21 @@ final class PatchOperation {
 			return $patch;
 		}
 
+		$change_set = self::summarize_change_set_record( $patch );
+
 		// PatchManager already audits patch.created.
 		return [
-			'action'      => 'patch_create',
-			'patch_id'    => $patch['id'],
-			'status'      => $patch['status'],
-			'file_count'  => count( $patch['files'] ),
-			'risk_level'  => $patch['risk_level'] ?? $risk_level,
+			'action'        => 'patch_create',
+			'patch_id'      => $patch['id'],
+			// change_set_id is an alias of patch_id — one proposal == one change set.
+			'change_set_id' => $patch['id'],
+			'status'        => $patch['status'],
+			'file_count'    => count( $patch['files'] ),
+			'risk_level'    => $change_set['risk_level'],
+			'change_set'    => $change_set,
 			// Echo how each file's edit was interpreted so the agent can confirm a
 			// partial edit was not silently treated as a whole-file replacement.
-			'files'       => array_map(
+			'files'         => array_map(
 				static fn( array $f ): array => [
 					'path'       => $f['path'],
 					'mode'       => $f['mode'],
@@ -243,20 +259,37 @@ final class PatchOperation {
 		$snapshot_ids = $result['snapshot_ids'] ?? [];
 		$verification = $result['verification'] ?? [ 'passed' => null ];
 		$applied      = PatchManager::STATUS_APPLIED === $result['status'];
+		// On any failure the engine restores every file (all-or-nothing); the
+		// record's verification carries restored=true. Surface that as an explicit
+		// transactional status while keeping the legacy `status` field intact.
+		$restored = ! $applied && ! empty( $verification['restored'] );
+		$change_set = self::summarize_change_set_record( $patch );
 
 		$this->audit( 'patch.apply.bridge', [
-			'patch_id'     => $patch_id,
-			'status'       => $result['status'],
-			'verified'     => ! empty( $verification['passed'] ),
-			'reason'       => $context['destructive_reason'] ?? '',
+			'patch_id'      => $patch_id,
+			'status'        => $result['status'],
+			'verified'      => ! empty( $verification['passed'] ),
+			'is_change_set' => $change_set['is_change_set'],
+			'restored'      => $restored,
+			'reason'        => $context['destructive_reason'] ?? '',
 		], $context );
 
 		return [
 			'action'             => 'patch_apply',
 			'patch_id'           => $patch_id,
+			'change_set_id'      => $patch_id,
+			// Legacy field (applied|failed) — unchanged for backward compatibility.
 			'status'             => $result['status'],
+			// Explicit transactional outcome for the whole change set.
+			'change_set_status'  => $applied ? 'applied' : 'transactional_apply_failed',
+			'transactional'      => true,
 			'applied'            => $applied,
-			// rollback_id is the handle passed to rollback_manage{rollback_apply}.
+			// True when a failed apply was rolled back so no file is left changed.
+			'restored'           => $restored,
+			'affected_paths'     => $change_set['affected_paths'],
+			'file_count'         => $change_set['file_count'],
+			// rollback_id is the handle passed to rollback_manage{rollback_apply};
+			// one combined id covers every file in the change set.
 			'rollback_id'        => $applied ? $patch_id : null,
 			'snapshot_ids'       => $snapshot_ids,
 			'rollback_available' => $applied && ! empty( $snapshot_ids ),
@@ -431,7 +464,7 @@ final class PatchOperation {
 	}
 
 	/** Lines in a string (0 for empty), counting a final newline as terminator. */
-	private function line_count( string $text ): int {
+	private static function line_count( string $text ): int {
 		if ( '' === $text ) {
 			return 0;
 		}
@@ -444,7 +477,7 @@ final class PatchOperation {
 	 *
 	 * @return array{0:int,1:int} [added, removed]
 	 */
-	private function count_diff_lines( string $diff ): array {
+	private static function count_diff_lines( string $diff ): array {
 		if ( '' === $diff ) {
 			return [ 0, 0 ];
 		}
@@ -463,6 +496,114 @@ final class PatchOperation {
 		}
 
 		return [ $added, $removed ];
+	}
+
+	/**
+	 * Build the combined change-set view for a persisted patch record. Used by
+	 * patch_create / patch_apply responses, the approval gate, and rollback so
+	 * every surface describes the same atomic unit identically.
+	 *
+	 * @param array<string,mixed> $patch Full patch record (must include 'files').
+	 *
+	 * @return array<string,mixed>
+	 */
+	public static function summarize_change_set_record( array $patch ): array {
+		$entries = [];
+		foreach ( (array) ( $patch['files'] ?? [] ) as $f ) {
+			[ $added, $removed ] = self::count_diff_lines( (string) ( $f['diff'] ?? '' ) );
+			$entries[] = [
+				'path'    => (string) ( $f['path'] ?? '' ),
+				'mode'    => (string) ( $f['mode'] ?? PatchModeResolver::MODE_WHOLE_FILE ),
+				'added'   => $added,
+				'removed' => $removed,
+			];
+		}
+
+		return self::summarize_entries(
+			$entries,
+			(string) ( $patch['risk_level'] ?? PatchManager::RISK_LOW ),
+			(string) ( $patch['id'] ?? '' ) ?: null
+		);
+	}
+
+	/**
+	 * Load a patch by id and return its change-set summary, or a WP_Error if the
+	 * patch cannot be read. Lets the approval gate describe the full change set.
+	 *
+	 * @return array<string,mixed>|\WP_Error
+	 */
+	public static function summarize_change_set( string $patch_id ): array|\WP_Error {
+		$patch = ( new PatchManager() )->get( $patch_id );
+		if ( is_wp_error( $patch ) ) {
+			return $patch;
+		}
+		return self::summarize_change_set_record( $patch );
+	}
+
+	/**
+	 * Core change-set summarizer over normalized entries
+	 * ({ path, mode, added, removed }). Shared by preview (computed in-memory)
+	 * and the record-based summarizer so single- and multi-file edits get the
+	 * same shape. A single-file patch reports is_change_set=false.
+	 *
+	 * @param array<int,array{path:string,mode:string,added:int,removed:int}> $entries
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function summarize_entries( array $entries, string $base_risk, ?string $change_set_id ): array {
+		$paths     = [];
+		$modes     = [];
+		$dangerous = [];
+		$added     = 0;
+		$removed   = 0;
+
+		foreach ( $entries as $e ) {
+			$paths[] = $e['path'];
+			$modes[] = $e['mode'];
+			$added  += (int) $e['added'];
+			$removed += (int) $e['removed'];
+			if ( DangerousFiles::is_dangerous_path( $e['path'] ) ) {
+				$dangerous[] = $e['path'];
+			}
+		}
+
+		$count        = count( $entries );
+		$is_change_set = $count > 1;
+		$has_high_risk = ! empty( $dangerous );
+		// A high-risk path elevates the whole set; otherwise keep the declared risk.
+		$risk = $has_high_risk ? PatchManager::RISK_HIGH : $base_risk;
+		$umodes = array_values( array_unique( $modes ) );
+
+		$summary = sprintf(
+			/* translators: 1: "Change set"/"Single-file patch", 2: file count, 3: modes, 4: added, 5: removed, 6: risk, 7: high-risk suffix */
+			__( '%1$s: %2$d file(s) [%3$s], +%4$d/-%5$d lines, risk: %6$s%7$s.', 'wp-command-center' ),
+			$is_change_set ? __( 'Change set', 'wp-command-center' ) : __( 'Single-file patch', 'wp-command-center' ),
+			$count,
+			implode( ', ', $umodes ),
+			$added,
+			$removed,
+			$risk,
+			$has_high_risk ? sprintf(
+				/* translators: %d: number of high-risk paths */
+				__( '; %d high-risk path(s) included', 'wp-command-center' ),
+				count( $dangerous )
+			) : ''
+		);
+
+		return [
+			'change_set_id'       => $change_set_id,
+			'is_change_set'       => $is_change_set,
+			'file_count'          => $count,
+			'affected_paths'      => $paths,
+			'modes'               => $umodes,
+			'total_lines_added'   => $added,
+			'total_lines_removed' => $removed,
+			'risk_level'          => $risk,
+			'dangerous_files'     => $dangerous,
+			'has_high_risk_paths' => $has_high_risk,
+			'rollback_available'  => true,
+			'summary'             => $summary,
+		];
 	}
 
 	private function audit( string $event, array $data, array $context ): void {

@@ -240,6 +240,10 @@ final class PatchManager {
 				'original' => $original,
 				'modified' => $modified,
 				'diff'     => $diff,
+				// STEP 103 — remember how the edit was expressed (append, replace_text,
+				// …) so the change set can be summarized at approval/apply/rollback
+				// without re-resolving. Legacy callers omit it → whole_file.
+				'mode'     => isset( $file['mode'] ) ? sanitize_key( (string) $file['mode'] ) : 'whole_file',
 			];
 		}
 

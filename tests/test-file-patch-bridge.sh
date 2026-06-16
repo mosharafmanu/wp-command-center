@@ -149,10 +149,15 @@ rest rollback_manage "$(jq -n --arg id "$DPID" '{action:"rollback_apply",patch_i
 echo "== 14. Audit trail records all file operations =="
 if [ -f "$AUDIT_LOG" ]; then
   NEW=$(tail -n "+$((AUDIT_BEFORE+1))" "$AUDIT_LOG")
-  printf '%s' "$NEW" | grep -q "file.read"        && pass "audit: file.read recorded"     || fail "audit: file.read missing"
-  printf '%s' "$NEW" | grep -q "code.search"      && pass "audit: code.search recorded"   || fail "audit: code.search missing"
-  printf '%s' "$NEW" | grep -q "\"patch.applied\"" && pass "audit: patch.applied recorded" || fail "audit: patch.applied missing"
-  printf '%s' "$NEW" | grep -q "patch.rolled_back" && pass "audit: patch.rolled_back recorded" || fail "audit: patch.rolled_back missing"
+  # Pure-bash substring checks (no printf|grep pipe): under `set -o pipefail`,
+  # `printf "$NEW" | grep -q` can report a spurious miss when grep -q exits on an
+  # early match while printf is still streaming a large window — the audit window
+  # grew with multi-file change sets, which exposed that flakiness. The event is
+  # present either way; this just evaluates it reliably in-process.
+  [[ "$NEW" == *"file.read"* ]]        && pass "audit: file.read recorded"        || fail "audit: file.read missing"
+  [[ "$NEW" == *"code.search"* ]]      && pass "audit: code.search recorded"      || fail "audit: code.search missing"
+  [[ "$NEW" == *'"patch.applied"'* ]]  && pass "audit: patch.applied recorded"    || fail "audit: patch.applied missing"
+  [[ "$NEW" == *"patch.rolled_back"* ]] && pass "audit: patch.rolled_back recorded" || fail "audit: patch.rolled_back missing"
 else
   fail "audit: log file not found"
 fi

@@ -166,7 +166,21 @@ final class OperationExecutor {
 					'actor'         => $actor ? AuditLog::resolve_actor( $actor ) : null,
 				] ) );
 
-				return $this->pending_approval( $operation_id, $request, $effective_risk, $action, $destructive );
+				// STEP 103 — for a patch_apply, attach the full change-set summary so
+				// the approval (agent + admin) shows every file, the modes used, total
+				// changes, risk, high-risk paths, and rollback availability up front.
+				$extra = [];
+				if ( 'patch_manage' === $operation_id && 'patch_apply' === $action ) {
+					$pid = isset( $payload['patch_id'] ) ? (string) $payload['patch_id'] : '';
+					if ( '' !== $pid ) {
+						$summary = PatchOperation::summarize_change_set( $pid );
+						if ( is_array( $summary ) ) {
+							$extra['change_set'] = $summary;
+						}
+					}
+				}
+
+				return $this->pending_approval( $operation_id, $request, $effective_risk, $action, $destructive, $extra );
 			}
 		}
 
@@ -406,7 +420,7 @@ final class OperationExecutor {
 	 * success = true so McpServerRuntime surfaces it as a tool result (not an error),
 	 * giving the AI the request_id and polling instructions in one response.
 	 */
-	private function pending_approval( string $operation_id, array $request, string $risk_level, string $action, ?array $destructive = null ): array {
+	private function pending_approval( string $operation_id, array $request, string $risk_level, string $action, ?array $destructive = null, array $extra = [] ): array {
 		$mode = SecurityModeManager::current();
 		$result = [
 			'status'             => 'pending_approval',
@@ -426,6 +440,12 @@ final class OperationExecutor {
 			$result['warning']     = $destructive['warning'];
 		}
 
+		// STEP 103 — merge any operation-specific approval context (e.g. a patch
+		// change-set summary) so a single approval clearly covers all of it.
+		if ( ! empty( $extra ) ) {
+			$result = array_merge( $result, $extra );
+		}
+
 		$result['message'] = sprintf(
 			/* translators: 1: security mode label, 2: request ID, 3: approval URL */
 			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'wp-command-center' ),
@@ -433,6 +453,22 @@ final class OperationExecutor {
 			$request['request_id'],
 			admin_url( 'admin.php?page=wpcc-approvals' )
 		);
+
+		// One approval covers the entire change set — spell out what it touches.
+		if ( ! empty( $extra['change_set'] ) && is_array( $extra['change_set'] ) ) {
+			$cs = $extra['change_set'];
+			$result['message'] .= ' ' . sprintf(
+				/* translators: 1: file count, 2: paths, 3: modes, 4: added, 5: removed, 6: risk, 7: high-risk suffix */
+				__( 'This single approval applies a change set of %1$d file(s) atomically: %2$s | modes: %3$s | +%4$d/-%5$d lines | risk: %6$s%7$s. All files apply together or none do; one combined rollback is available.', 'wp-command-center' ),
+				(int) $cs['file_count'],
+				implode( ', ', (array) $cs['affected_paths'] ),
+				implode( ', ', (array) $cs['modes'] ),
+				(int) $cs['total_lines_added'],
+				(int) $cs['total_lines_removed'],
+				(string) $cs['risk_level'],
+				! empty( $cs['has_high_risk_paths'] ) ? __( ' (HIGH-RISK paths included)', 'wp-command-center' ) : ''
+			);
+		}
 
 		return [
 			'operation_id' => $operation_id,
