@@ -40,7 +40,7 @@ has "operation result links exist" 'View result' "$DASHBOARD"
 has "selected result detail exists" 'Selected Result' "$DASHBOARD"
 
 echo "== 5. Scope Guard =="
-has "schema remains Step 33 version" "DB_VERSION = '2.2.0'" "$SCHEMA"
+has "schema is at the current expected version" "DB_VERSION = '2.3.0'" "$SCHEMA"
 
 echo
 echo "== Summary =="
