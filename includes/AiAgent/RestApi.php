@@ -443,8 +443,8 @@ final class RestApi {
 		[ 'method' => 'POST', 'path' => '/recommendations/{id}/create-plan', 'scope' => 'full', 'description' => 'Create a pending-review plan for a recommendation that has been converted to an action.' ],
 		[ 'method' => 'GET', 'path' => '/files', 'scope' => 'read_only', 'description' => 'List files and directories under themes, plugins, or mu-plugins. Use ?path=. Blocked paths (.env, vendor/, .git/, keys, etc.) are omitted.' ],
 		[ 'method' => 'GET', 'path' => '/files/meta', 'scope' => 'read_only', 'description' => 'Metadata (size, modified, hash, writable) for a single file. Use ?path=. Blocked paths return wpcc_file_blocked.' ],
-		[ 'method' => 'GET', 'path' => '/files/content', 'scope' => 'read_only', 'description' => 'Read a file\'s contents (capped at 1 MB). Use ?path=. Blocked paths return wpcc_file_blocked; secrets are redacted as [REDACTED_SECRET].' ],
-		[ 'method' => 'GET', 'path' => '/search', 'scope' => 'read_only', 'description' => 'Search code by text, function, class, or hook name. Use ?q=&path=&type=text|function|class|hook. Blocked files are skipped and secrets in matches are redacted as [REDACTED_SECRET].' ],
+		[ 'method' => 'GET', 'path' => '/files/content', 'scope' => 'read_only', 'description' => 'Read a file\'s contents. Use ?path=. Paginate large files with ?line_start=&line_count= (1-based lines, optional &context_before=&context_after=) or ?byte_offset=&byte_limit= (1 MB max per request). Response includes total_bytes, total_lines (when known), returned_lines, truncated, and next_line_start / next_byte_offset cursors. Blocked paths return wpcc_file_blocked; secrets are redacted as [REDACTED_SECRET].' ],
+		[ 'method' => 'GET', 'path' => '/search', 'scope' => 'read_only', 'description' => 'Search code by text, function, class, or hook name. Use ?q=&path=&type=text|function|class|hook. Searches large files (up to 8 MB); skips are never silent — response reports files_searched, files_skipped, skipped[] (reason+size_bytes), and complete. Each match has line_number and a read_hint for files/content. Secrets in matches are redacted as [REDACTED_SECRET].' ],
 		[ 'method' => 'POST', 'path' => '/agent/sessions', 'scope' => 'full', 'description' => 'Create an agent session: { source, label, expires_at? }. Sessions expire after 24 hours by default.' ],
 		[ 'method' => 'GET', 'path' => '/agent/sessions', 'scope' => 'read_only', 'description' => 'List agent sessions, newest first.' ],
 		[ 'method' => 'GET', 'path' => '/agent/sessions/{id}', 'scope' => 'read_only', 'description' => 'Get an agent session by UUID.' ],
@@ -2983,7 +2983,17 @@ final class RestApi {
 			return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'wp-command-center' ) ) );
 		}
 
-		$result = ( new FileAccessApi() )->read( $path );
+		// STEP 103.0A — paginated reads (line/byte range) so large live files can
+		// be inspected in chunks via REST, mirroring the file_manage MCP tool.
+		$opts = [];
+		foreach ( [ 'line_start', 'line_count', 'byte_offset', 'byte_limit', 'context_before', 'context_after' ] as $k ) {
+			$v = $request->get_param( $k );
+			if ( null !== $v && '' !== $v ) {
+				$opts[ $k ] = (int) $v;
+			}
+		}
+
+		$result = ( new FileAccessApi() )->read( $path, $opts );
 
 		if ( is_wp_error( $result ) ) {
 			if ( 'wpcc_file_blocked' === $result->get_error_code() ) {

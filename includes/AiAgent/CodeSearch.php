@@ -17,9 +17,18 @@ final class CodeSearch {
 		'html', 'htm', 'twig', 'json', 'txt', 'md', 'xml', 'yml', 'yaml',
 	];
 
-	private const MAX_FILE_BYTES    = 2 * MB_IN_BYTES;
+	// STEP 103.0A — raised so large CSS/JS/PHP (well past 250 KB) are searched,
+	// not silently skipped. Files still larger than this are reported as skipped
+	// with a structured reason rather than vanishing from the results.
+	private const MAX_FILE_BYTES    = 8 * MB_IN_BYTES;
 	private const MAX_FILES_SCANNED = 5000;
 	private const DEFAULT_MAX_RESULTS = 100;
+
+	/** Lines of context suggested around each match for the search-to-read bridge. */
+	private const READ_HINT_CONTEXT = 5;
+
+	/** Cap how many skipped-file records are returned (the count is always exact). */
+	private const MAX_SKIPPED_REPORTED = 100;
 
 	/**
 	 * Supported values for the `type` argument. `text` is a plain
@@ -61,38 +70,99 @@ final class CodeSearch {
 
 		$pattern = $this->build_pattern( $type, $query );
 
-		$matches       = [];
-		$files_scanned = 0;
-		$truncated     = false;
+		$matches        = [];
+		$files_searched = 0;
+		$skipped        = [];
+		$per_file_count = [];
+		$truncated      = false;
 
 		foreach ( $roots as $root ) {
 			foreach ( $this->iterate_files( $root ) as $file ) {
-				if ( $files_scanned >= self::MAX_FILES_SCANNED || count( $matches ) >= $max_results ) {
+				if ( ( $files_searched + count( $skipped ) ) >= self::MAX_FILES_SCANNED || count( $matches ) >= $max_results ) {
 					$truncated = true;
 					break 2;
 				}
 
-				++$files_scanned;
+				$rel  = $this->relative_of( $file->getPathname() );
+				$size = (int) $file->getSize();
 
-				foreach ( $this->search_file( $file, $query, $pattern ) as $match ) {
+				// Report — never silently drop — files we can't search.
+				$reason = $this->skip_reason( $file, $size );
+				if ( null !== $reason ) {
+					if ( count( $skipped ) < self::MAX_SKIPPED_REPORTED ) {
+						$skipped[] = [ 'file' => $rel, 'reason' => $reason, 'size_bytes' => $size ];
+					} else {
+						$skipped[] = [ 'file' => $rel, 'reason' => $reason, 'size_bytes' => $size, '_overflow' => true ];
+					}
+					continue;
+				}
+
+				++$files_searched;
+
+				foreach ( $this->search_file( $file, $rel, $size, $query, $pattern ) as $match ) {
 					$matches[] = $match;
+					$per_file_count[ $rel ] = ( $per_file_count[ $rel ] ?? 0 ) + 1;
 
 					if ( count( $matches ) >= $max_results ) {
+						$truncated = true;
 						break;
 					}
 				}
 			}
 		}
 
+		// Trim the reported skip list to the cap (count stays exact below).
+		$skipped_total    = count( $skipped );
+		$skipped_reported = array_slice( $skipped, 0, self::MAX_SKIPPED_REPORTED );
+
+		$matched_files = [];
+		foreach ( $per_file_count as $f => $c ) {
+			$matched_files[] = [ 'file' => $f, 'match_count' => $c ];
+		}
+
 		return [
-			'query'         => $query,
-			'path'          => $relative_path,
-			'type'          => $type,
-			'matches'       => $matches,
-			'match_count'   => count( $matches ),
-			'files_scanned' => $files_scanned,
-			'truncated'     => $truncated,
+			'query'          => $query,
+			'path'           => $relative_path,
+			'type'           => $type,
+			'matches'        => $matches,
+			'match_count'    => count( $matches ),
+			'matched_files'  => $matched_files,
+			'files_searched' => $files_searched,
+			'files_skipped'  => $skipped_total,
+			'skipped'        => $skipped_reported,
+			// True only when every candidate file was searched and no result cap hit,
+			// so an empty result is trustworthy rather than possibly-incomplete.
+			'complete'       => 0 === $skipped_total && ! $truncated,
+			'truncated'      => $truncated,
+			// Back-compat alias for the previous field name.
+			'files_scanned'  => $files_searched,
 		];
+	}
+
+	/**
+	 * Why a candidate file can't be searched, or null if it can. Makes size /
+	 * binary / permission skips visible instead of silently returning 0 matches.
+	 */
+	private function skip_reason( \SplFileInfo $file, int $size ): ?string {
+		if ( $size > self::MAX_FILE_BYTES ) {
+			return 'too_large';
+		}
+		if ( ! $file->isReadable() ) {
+			return 'unreadable';
+		}
+		if ( $this->is_binary( $file->getPathname() ) ) {
+			return 'binary';
+		}
+		return null;
+	}
+
+	private function is_binary( string $path ): bool {
+		$sample = file_get_contents( $path, false, null, 0, 8192 );
+		return false !== $sample && str_contains( $sample, "\0" );
+	}
+
+	private function relative_of( string $pathname ): string {
+		return ltrim( str_replace( trailingslashit( wp_normalize_path( WP_CONTENT_DIR ) ), '', wp_normalize_path( $pathname ) ), '/' );
 	}
 
 	/**
@@ -207,18 +277,16 @@ final class CodeSearch {
 				continue;
 			}
 
-			if ( $file->getSize() > self::MAX_FILE_BYTES ) {
-				continue;
-			}
-
+			// Note: size / binary / readability are NOT filtered here anymore — they
+			// are evaluated in search() so every skip is reported, not silent.
 			yield $file;
 		}
 	}
 
 	/**
-	 * @return array<int, array{file: string, line: int, text: string}>
+	 * @return array<int, array{file: string, line: int, line_number: int, text: string, file_size_bytes: int, read_hint: array{path: string, line_start: int, line_count: int}}>
 	 */
-	private function search_file( \SplFileInfo $file, string $query, ?string $pattern ): array {
+	private function search_file( \SplFileInfo $file, string $relative, int $size, string $query, ?string $pattern ): array {
 		$matches = [];
 		$handle  = fopen( $file->getPathname(), 'rb' );
 
@@ -226,8 +294,7 @@ final class CodeSearch {
 			return $matches;
 		}
 
-		$relative = ltrim( str_replace( trailingslashit( wp_normalize_path( WP_CONTENT_DIR ) ), '', wp_normalize_path( $file->getPathname() ) ), '/' );
-		$line_no  = 0;
+		$line_no = 0;
 
 		while ( false !== ( $line = fgets( $handle ) ) ) {
 			++$line_no;
@@ -238,9 +305,18 @@ final class CodeSearch {
 
 			if ( $found ) {
 				$matches[] = [
-					'file' => $relative,
-					'line' => $line_no,
-					'text' => trim( $line ),
+					'file'            => $relative,
+					'line'            => $line_no,
+					'line_number'     => $line_no,
+					'text'            => trim( $line ),
+					'file_size_bytes' => $size,
+					// Search-to-read bridge: feed these straight into file_read to
+					// inspect the match with surrounding context.
+					'read_hint'       => [
+						'path'       => $relative,
+						'line_start' => max( 1, $line_no - self::READ_HINT_CONTEXT ),
+						'line_count' => ( self::READ_HINT_CONTEXT * 2 ) + 1,
+					],
 				];
 			}
 		}

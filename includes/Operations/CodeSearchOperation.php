@@ -73,6 +73,7 @@ final class CodeSearchOperation {
 	private function search_symbol( CodeSearch $search, string $query, array $args ): array|\WP_Error {
 		$merged   = [];
 		$scanned  = 0;
+		$skipped  = [];
 		$truncate = false;
 
 		foreach ( [ 'function', 'class', 'hook' ] as $type ) {
@@ -87,18 +88,27 @@ final class CodeSearchOperation {
 				$merged[ $key ] = $m + [ 'symbol_type' => $type ];
 			}
 
-			$scanned  = max( $scanned, $res['files_scanned'] ?? 0 );
+			$scanned  = max( $scanned, $res['files_searched'] ?? $res['files_scanned'] ?? 0 );
 			$truncate = $truncate || ! empty( $res['truncated'] );
+			foreach ( (array) ( $res['skipped'] ?? [] ) as $s ) {
+				$skipped[ $s['file'] ?? '' ] = $s; // de-dup across the 3 passes
+			}
 		}
 
+		$skipped = array_values( $skipped );
+
 		return [
-			'query'         => $query,
-			'path'          => $args['path'] ?? '',
-			'type'          => 'symbol',
-			'matches'       => array_values( $merged ),
-			'match_count'   => count( $merged ),
-			'files_scanned' => $scanned,
-			'truncated'     => $truncate,
+			'query'          => $query,
+			'path'           => $args['path'] ?? '',
+			'type'           => 'symbol',
+			'matches'        => array_values( $merged ),
+			'match_count'    => count( $merged ),
+			'files_searched' => $scanned,
+			'files_skipped'  => count( $skipped ),
+			'skipped'        => $skipped,
+			'complete'       => 0 === count( $skipped ) && ! $truncate,
+			'truncated'      => $truncate,
+			'files_scanned'  => $scanned,
 		];
 	}
 

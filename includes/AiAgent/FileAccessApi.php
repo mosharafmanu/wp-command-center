@@ -15,6 +15,12 @@ final class FileAccessApi {
 
 	private const MAX_READ_BYTES = MB_IN_BYTES;
 
+	/** Above this size, total_lines is not computed (would require scanning a huge file). */
+	private const MAX_LINE_COUNT_BYTES = 16 * MB_IN_BYTES;
+
+	/** Default number of lines returned in line mode when line_count is omitted. */
+	private const DEFAULT_LINE_COUNT = 500;
+
 	private PathGuard $path_guard;
 
 	public function __construct() {
@@ -22,11 +28,20 @@ final class FileAccessApi {
 	}
 
 	/**
-	 * Read a file's contents (capped at 1 MB, with a truncated flag).
+	 * Read a file's contents. Supports paginated reads so agents can inspect
+	 * large live files reliably (STEP 103.0A):
+	 *   - line mode: opts = { line_start, line_count, context_before, context_after }
+	 *   - byte mode: opts = { byte_offset, byte_limit }
+	 *   - default : first chunk (capped at 1 MB) — backward compatible.
+	 * Every response carries total_bytes, total_lines (when known), returned_*,
+	 * truncated, and next_line_start / next_byte_offset cursors for continuation.
 	 *
-	 * @return array{path: string, size: int, modified: int, extension: string, writable: bool, truncated: bool, contents: string}|\WP_Error
+	 * Path restrictions and binary-file protection are preserved in all modes.
+	 *
+	 * @param array<string,mixed> $opts
+	 * @return array<string,mixed>|\WP_Error
 	 */
-	public function read( string $relative_path ): array|\WP_Error {
+	public function read( string $relative_path, array $opts = [] ): array|\WP_Error {
 		$real = $this->path_guard->resolve( $relative_path );
 
 		if ( is_wp_error( $real ) ) {
@@ -45,18 +60,207 @@ final class FileAccessApi {
 			return new \WP_Error( 'wpcc_binary_file', __( 'Binary files cannot be previewed.', 'wp-command-center' ) );
 		}
 
-		$size       = filesize( $real );
-		$read_bytes = min( $size, self::MAX_READ_BYTES );
+		$total_bytes = (int) filesize( $real );
+
+		$base = [
+			'path'        => $this->to_relative_path( $real ),
+			'size'        => $total_bytes, // kept for backward compatibility
+			'total_bytes' => $total_bytes,
+			'total_lines' => $this->count_lines_capped( $real, $total_bytes ),
+			'modified'    => filemtime( $real ),
+			'extension'   => strtolower( pathinfo( $real, PATHINFO_EXTENSION ) ),
+			'writable'    => is_writable( $real ),
+		];
+
+		$has_line = isset( $opts['line_start'] ) || isset( $opts['line_count'] )
+			|| isset( $opts['context_before'] ) || isset( $opts['context_after'] );
+		$has_byte = isset( $opts['byte_offset'] ) || isset( $opts['byte_limit'] );
+
+		if ( $has_line ) {
+			return $base + $this->read_lines( $real, $total_bytes, $opts );
+		}
+		if ( $has_byte ) {
+			return $base + $this->read_byte_range( $real, $total_bytes, $opts );
+		}
+
+		return $base + $this->read_default_chunk( $real, $total_bytes );
+	}
+
+	/**
+	 * Default first-chunk read (capped at 1 MB), with continuation cursor.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function read_default_chunk( string $real, int $total_bytes ): array {
+		$read_bytes = min( $total_bytes, self::MAX_READ_BYTES );
+		$contents   = $read_bytes > 0 ? (string) file_get_contents( $real, false, null, 0, $read_bytes ) : '';
+		$truncated  = $read_bytes < $total_bytes;
 
 		return [
-			'path'      => $this->to_relative_path( $real ),
-			'size'      => $size,
-			'modified'  => filemtime( $real ),
-			'extension' => strtolower( pathinfo( $real, PATHINFO_EXTENSION ) ),
-			'writable'  => is_writable( $real ),
-			'truncated' => $read_bytes < $size,
-			'contents'  => $read_bytes > 0 ? (string) file_get_contents( $real, false, null, 0, $read_bytes ) : '',
+			'mode'             => 'default',
+			'truncated'        => $truncated,
+			'returned_bytes'   => strlen( $contents ),
+			'returned_lines'   => $this->line_count( $contents ),
+			'next_byte_offset' => $truncated ? $read_bytes : null,
+			'next_line_start'  => null,
+			'contents'         => $contents,
 		];
+	}
+
+	/**
+	 * Byte-range read: opts { byte_offset, byte_limit }. The slice may begin or
+	 * end mid-line; use line mode for line-aligned reads.
+	 *
+	 * @param array<string,mixed> $opts
+	 * @return array<string,mixed>
+	 */
+	private function read_byte_range( string $real, int $total_bytes, array $opts ): array {
+		$offset = max( 0, (int) ( $opts['byte_offset'] ?? 0 ) );
+		$limit  = isset( $opts['byte_limit'] ) ? (int) $opts['byte_limit'] : self::MAX_READ_BYTES;
+		$limit  = max( 1, min( $limit, self::MAX_READ_BYTES ) );
+
+		$contents = ( $total_bytes > 0 && $offset < $total_bytes )
+			? (string) file_get_contents( $real, false, null, $offset, $limit )
+			: '';
+		$returned  = strlen( $contents );
+		$end       = $offset + $returned;
+		$truncated = $end < $total_bytes;
+
+		return [
+			'mode'             => 'byte',
+			'byte_offset'      => $offset,
+			'returned_bytes'   => $returned,
+			'returned_lines'   => $this->line_count( $contents ),
+			'truncated'        => $truncated,
+			'next_byte_offset' => $truncated ? $end : null,
+			'next_line_start'  => null,
+			'contents'         => $contents,
+		];
+	}
+
+	/**
+	 * Line-range read: opts { line_start (1-based), line_count, context_before,
+	 * context_after }. Returns line-aligned content with a per-request byte
+	 * budget (1 MB) so a file with very long lines can never exhaust memory.
+	 *
+	 * @param array<string,mixed> $opts
+	 * @return array<string,mixed>
+	 */
+	private function read_lines( string $real, int $total_bytes, array $opts ): array {
+		$ctx_before = max( 0, (int) ( $opts['context_before'] ?? 0 ) );
+		$ctx_after  = max( 0, (int) ( $opts['context_after'] ?? 0 ) );
+		$req_start  = max( 1, (int) ( $opts['line_start'] ?? 1 ) );
+		$req_count  = isset( $opts['line_count'] ) ? max( 1, (int) $opts['line_count'] ) : self::DEFAULT_LINE_COUNT;
+
+		$eff_start = max( 1, $req_start - $ctx_before );
+		$eff_count = $req_count + $ctx_before + $ctx_after;
+		$end_line  = $eff_start + $eff_count - 1;
+
+		$handle = fopen( $real, 'rb' );
+		if ( false === $handle ) {
+			return [
+				'mode'            => 'line',
+				'line_start'      => $eff_start,
+				'returned_lines'  => 0,
+				'truncated'       => false,
+				'next_line_start' => null,
+				'next_byte_offset' => null,
+				'contents'        => '',
+			];
+		}
+
+		$line_no    = 0;
+		$collected  = [];
+		$bytes      = 0;
+		$truncated  = false;
+
+		while ( false !== ( $line = fgets( $handle ) ) ) {
+			++$line_no;
+
+			if ( $line_no < $eff_start ) {
+				continue;
+			}
+			if ( $line_no > $end_line ) {
+				$truncated = true; // more lines exist past the requested window
+				break;
+			}
+
+			$bytes += strlen( $line );
+			if ( $bytes > self::MAX_READ_BYTES && ! empty( $collected ) ) {
+				$truncated = true; // byte budget hit before the window ended
+				break;
+			}
+
+			$collected[] = $line;
+		}
+
+		fclose( $handle );
+
+		$returned_lines = count( $collected );
+		$next_line_start = $truncated ? ( $eff_start + $returned_lines ) : null;
+
+		return [
+			'mode'             => 'line',
+			'line_start'       => $eff_start,
+			'requested_line_start' => $req_start,
+			'line_count'       => $req_count,
+			'context_before'   => $ctx_before,
+			'context_after'    => $ctx_after,
+			'returned_lines'   => $returned_lines,
+			'returned_bytes'   => $bytes,
+			'truncated'        => $truncated,
+			'next_line_start'  => $next_line_start,
+			'next_byte_offset' => null,
+			'contents'         => implode( '', $collected ),
+		];
+	}
+
+	/** Lines in a string: 0 for empty, +1 for a final line without a trailing newline. */
+	private function line_count( string $text ): int {
+		if ( '' === $text ) {
+			return 0;
+		}
+		$count = substr_count( $text, "\n" );
+		if ( "\n" !== substr( $text, -1 ) ) {
+			++$count;
+		}
+		return $count;
+	}
+
+	/**
+	 * Count total lines without loading the whole file, skipping files large
+	 * enough that the scan isn't worth it (returns null = unknown).
+	 */
+	private function count_lines_capped( string $real, int $total_bytes ): ?int {
+		if ( 0 === $total_bytes ) {
+			return 0;
+		}
+		if ( $total_bytes > self::MAX_LINE_COUNT_BYTES ) {
+			return null;
+		}
+
+		$handle = fopen( $real, 'rb' );
+		if ( false === $handle ) {
+			return null;
+		}
+
+		$count = 0;
+		$last  = "\n";
+		while ( ! feof( $handle ) ) {
+			$chunk = fread( $handle, 1 << 16 );
+			if ( false === $chunk || '' === $chunk ) {
+				break;
+			}
+			$count += substr_count( $chunk, "\n" );
+			$last   = substr( $chunk, -1 );
+		}
+		fclose( $handle );
+
+		if ( "\n" !== $last ) {
+			++$count; // final line without a trailing newline
+		}
+
+		return $count;
 	}
 
 	/**

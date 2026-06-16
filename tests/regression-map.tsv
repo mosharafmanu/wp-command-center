@@ -25,6 +25,7 @@ plugin	PluginManager|\bplugin_manage\b	test-plugin-runtime.sh	test-plugin-runtim
 theme	ThemeManager|\btheme_manage\b	test-theme-runtime.sh	test-theme-runtime.sh
 updates	SafeUpdates|\bsafe_updates\b	test-safe-updates-hardening.sh	test-safe-updates.sh,test-safe-updates-hardening.sh,test-plugin-active-after-update.sh
 patch	PatchOperation|RollbackOperation|PatchSystem/|PatchModeResolver|PatchApproval|\bpatch_manage\b|\brollback_manage\b	test-patch-lifecycle.sh	test-file-patch-bridge.sh,test-patch-lifecycle.sh,test-patch-header-guard.sh,test-patch-modes.sh,test-patch-changesets.sh
+files	FileAccessApi|CodeSearch|FileManager|CodeSearchOperation|\bfile_manage\b|\bcode_search\b	test-file-read-search.sh	test-file-read-search.sh,test-file-patch-bridge.sh
 snapshot	SnapshotManager|\bsnapshot_manage\b	test-snapshot-runtime.sh	test-snapshot-runtime.sh
 search	SearchRuntimeManager|SearchReplace|\bsearch_manage\b|\bsafe_search_replace\b	test-search-runtime.sh	test-search-runtime.sh,test-safe-search-replace.sh
 bulk	BulkRuntimeManager|\bbulk_manage\b	test-bulk-runtime.sh	test-bulk-runtime.sh

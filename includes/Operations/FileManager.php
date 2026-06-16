@@ -34,18 +34,27 @@ final class FileManager {
 		$api  = new FileAccessApi();
 
 		return match ( $action ) {
-			'file_read'     => $this->file_read( $api, $path, $context ),
+			'file_read'     => $this->file_read( $api, $path, $context, $params ),
 			'file_tree'     => $this->file_tree( $api, $path, $context ),
 			'file_metadata' => $this->file_metadata( $api, $path, $context ),
 		};
 	}
 
-	private function file_read( FileAccessApi $api, string $path, array $context ): array|\WP_Error {
+	private function file_read( FileAccessApi $api, string $path, array $context, array $params = [] ): array|\WP_Error {
 		if ( '' === $path ) {
 			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'wp-command-center' ) );
 		}
 
-		$result = $api->read( $path );
+		// STEP 103.0A — paginated reads so large live files can be inspected in
+		// chunks. Only forward the keys the caller actually supplied.
+		$opts = [];
+		foreach ( [ 'line_start', 'line_count', 'byte_offset', 'byte_limit', 'context_before', 'context_after' ] as $k ) {
+			if ( isset( $params[ $k ] ) && '' !== $params[ $k ] ) {
+				$opts[ $k ] = (int) $params[ $k ];
+			}
+		}
+
+		$result = $api->read( $path, $opts );
 
 		if ( is_wp_error( $result ) ) {
 			return $result;
