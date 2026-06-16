@@ -720,7 +720,7 @@ final class OperationRegistry {
 			'code_search' => [
 				'id'                => 'code_search',
 				'title'             => __( 'Code Search', 'wp-command-center' ),
-				'description'       => __( 'Search code under themes, plugins, and mu-plugins. Read-only. Searches large text files (CSS/JS/PHP up to 8 MB). A skip is NEVER silent: the response reports files_searched, files_skipped, and a skipped[] list with a structured reason (too_large, binary, unreadable) and size_bytes, plus complete=true only when results are exhaustive — so an empty result is trustworthy. Each match includes line_number, the line text, file_size_bytes, and a read_hint { path, line_start, line_count } you can pass straight to file_manage/file_read to inspect the match with context. Secrets in matches are redacted. Actions: search_text, search_symbol (function/class/hook), search_file (by name).', 'wp-command-center' ),
+				'description'       => __( 'Search code under themes, plugins, and mu-plugins. Read-only. "path" may be a SINGLE FILE (e.g. "themes/my-theme/style.css") to search just that file without scanning a directory, OR a directory, OR omitted to search all roots. Searches large text files (CSS/JS/PHP up to 8 MB). A skip is NEVER silent: the response reports files_searched, files_skipped, and a skipped[] list with a structured reason (too_large, binary, unreadable) and size_bytes, plus complete=true only when results are exhaustive — so an empty result is trustworthy. Use the top-level match_count for the true total. Each match includes line_number, the line text, file_size_bytes, and a read_hint { path, line_start, line_count } you can pass straight to file_manage/file_read to inspect the match with context. In compact context_mode a long list is returned as a self-describing envelope { truncated, has_more, total_count, returned, items[] } — read total_count for the real size; switch to context_mode "standard" for the full list. Secrets in matches are redacted. Actions: search_text, search_symbol (function/class/hook), search_file (by name).', 'wp-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'search_text'   => 'diagnostic',
@@ -731,8 +731,8 @@ final class OperationRegistry {
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'search_text', 'search_symbol', 'search_file' ], 'description' => 'The search action to perform.' ],
 					[ 'name' => 'query', 'type' => 'string', 'required' => true, 'description' => 'The search term.' ],
-					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Limit the search to a directory relative to wp-content, e.g. "themes/my-theme" (a leading "wp-content/" or absolute path is also accepted). Omit to search all of themes/plugins/mu-plugins.' ],
-					[ 'name' => 'max_results', 'type' => 'integer', 'required' => false, 'description' => 'Maximum number of matches to return.' ],
+					[ 'name' => 'path', 'type' => 'string', 'required' => false, 'description' => 'Scope the search to a single FILE (e.g. "themes/my-theme/style.css") or a directory (e.g. "themes/my-theme"), relative to wp-content (a leading "wp-content/" or absolute path is also accepted). Omit to search all of themes/plugins/mu-plugins. A single-file path searches only that file — no directory scan.' ],
+					[ 'name' => 'max_results', 'type' => 'integer', 'required' => false, 'description' => 'Maximum number of matches to return (default 100). The top-level match_count reflects how many were returned; raise this to get more.' ],
 				],
 				'available'         => true,
 			],

@@ -52,10 +52,21 @@ final class ContextModeOptimizer {
 				return $preview;
 			}
 
+			// STEP 103.2 — a truncated list is wrapped in a uniform, self-describing
+			// envelope so an agent can NEVER mistake a preview for the full set:
+			// total_count is the real length, has_more/truncated flag the cutoff,
+			// returned says how many items are present, and items[] is always a
+			// JSON array. `count`/`preview` are kept as backward-compatible aliases
+			// of the previous compact shape.
 			return [
-				'count'     => $count,
-				'preview'   => $preview,
-				'truncated' => true,
+				'_compact_preview' => true,
+				'truncated'        => true,
+				'has_more'         => true,
+				'total_count'      => $count,
+				'returned'         => count( $preview ),
+				'items'            => $preview,
+				'count'            => $count,   // back-compat alias of total_count
+				'preview'          => $preview, // back-compat alias of items
 			];
 		}
 

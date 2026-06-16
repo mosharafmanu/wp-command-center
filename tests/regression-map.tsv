@@ -25,7 +25,7 @@ plugin	PluginManager|\bplugin_manage\b	test-plugin-runtime.sh	test-plugin-runtim
 theme	ThemeManager|\btheme_manage\b	test-theme-runtime.sh	test-theme-runtime.sh
 updates	SafeUpdates|\bsafe_updates\b	test-safe-updates-hardening.sh	test-safe-updates.sh,test-safe-updates-hardening.sh,test-plugin-active-after-update.sh
 patch	PatchOperation|RollbackOperation|PatchSystem/|PatchModeResolver|PatchApproval|\bpatch_manage\b|\brollback_manage\b	test-patch-lifecycle.sh	test-file-patch-bridge.sh,test-patch-lifecycle.sh,test-patch-header-guard.sh,test-patch-modes.sh,test-patch-changesets.sh
-files	FileAccessApi|CodeSearch|FileManager|CodeSearchOperation|\bfile_manage\b|\bcode_search\b	test-file-read-search.sh	test-file-read-search.sh,test-file-patch-bridge.sh
+files	FileAccessApi|CodeSearch|FileManager|CodeSearchOperation|\bfile_manage\b|\bcode_search\b	test-file-read-search.sh	test-file-read-search.sh,test-file-patch-bridge.sh,test-agent-search-ux.sh
 snapshot	SnapshotManager|\bsnapshot_manage\b	test-snapshot-runtime.sh	test-snapshot-runtime.sh
 search	SearchRuntimeManager|SearchReplace|\bsearch_manage\b|\bsafe_search_replace\b	test-search-runtime.sh	test-search-runtime.sh,test-safe-search-replace.sh
 bulk	BulkRuntimeManager|\bbulk_manage\b	test-bulk-runtime.sh	test-bulk-runtime.sh
@@ -35,5 +35,5 @@ system	SystemInfoRuntime|WpCliBridge|\bsystem_info\b|\bwp_cli_bridge\b	test-syst
 security	SecurityModeManager|ApprovalRuntimeManager|DestructiveGuard|OperationManager|Security/	test-security-modes.sh	test-security-modes.sh,test-security-mode-validation.sh,test-approval-enforcement.sh,test-mcp-approval-runtime.sh,test-destructive-guardrails.sh,test-mcp-scope-enforcement.sh
 capability	CapabilityRegistry|CapabilityManager|\bcapability_manage\b	test-capability-runtime.sh	test-capability-runtime.sh,test-capability-bootstrap.sh
 recommendations	Recommend	test-recommendations.sh	test-recommendations.sh,test-recommendation-workflow.sh
-mcp	McpServerRuntime|McpServer|McpRestApi|Mcp/|/mcp	test-mcp-timeout-budget-f22.sh	test-mcp-runtime.sh,test-mcp-error-surface.sh,test-mcp-tool-schema-compliance.sh,test-mcp-scope-enforcement.sh,test-mcp-timeout-budget-f22.sh
+mcp	McpServerRuntime|McpServer|McpRestApi|ContextModeOptimizer|Mcp/|/mcp	test-mcp-timeout-budget-f22.sh	test-mcp-runtime.sh,test-mcp-error-surface.sh,test-mcp-tool-schema-compliance.sh,test-mcp-scope-enforcement.sh,test-mcp-timeout-budget-f22.sh,test-agent-search-ux.sh
 core	OperationExecutor|OperationRegistry|AiAgent/RestApi	test-operations-registry.sh	test-operations-registry.sh,test-operation-requests.sh,test-operation-retry.sh,test-operation-worker.sh,test-agent-manifest.sh,test-agent-actions.sh

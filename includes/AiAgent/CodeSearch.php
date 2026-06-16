@@ -62,10 +62,12 @@ final class CodeSearch {
 			return new \WP_Error( 'wpcc_invalid_type', __( 'Invalid search type. Use text, function, class, or hook.', 'wp-command-center' ) );
 		}
 
-		$roots = $this->resolve_search_roots( $relative_path );
+		// STEP 103.2 — scope can be a single FILE or a directory. resolve() enforces
+		// the allow-list, deny-list, and traversal guards for both.
+		$scope = $this->resolve_scope( $relative_path );
 
-		if ( is_wp_error( $roots ) ) {
-			return $roots;
+		if ( is_wp_error( $scope ) ) {
+			return $scope;
 		}
 
 		$pattern = $this->build_pattern( $type, $query );
@@ -76,37 +78,35 @@ final class CodeSearch {
 		$per_file_count = [];
 		$truncated      = false;
 
-		foreach ( $roots as $root ) {
-			foreach ( $this->iterate_files( $root ) as $file ) {
-				if ( ( $files_searched + count( $skipped ) ) >= self::MAX_FILES_SCANNED || count( $matches ) >= $max_results ) {
+		foreach ( $this->iterate_scope( $scope ) as $file ) {
+			if ( ( $files_searched + count( $skipped ) ) >= self::MAX_FILES_SCANNED || count( $matches ) >= $max_results ) {
+				$truncated = true;
+				break;
+			}
+
+			$rel  = $this->relative_of( $file->getPathname() );
+			$size = (int) $file->getSize();
+
+			// Report — never silently drop — files we can't search.
+			$reason = $this->skip_reason( $file, $size );
+			if ( null !== $reason ) {
+				if ( count( $skipped ) < self::MAX_SKIPPED_REPORTED ) {
+					$skipped[] = [ 'file' => $rel, 'reason' => $reason, 'size_bytes' => $size ];
+				} else {
+					$skipped[] = [ 'file' => $rel, 'reason' => $reason, 'size_bytes' => $size, '_overflow' => true ];
+				}
+				continue;
+			}
+
+			++$files_searched;
+
+			foreach ( $this->search_file( $file, $rel, $size, $query, $pattern ) as $match ) {
+				$matches[] = $match;
+				$per_file_count[ $rel ] = ( $per_file_count[ $rel ] ?? 0 ) + 1;
+
+				if ( count( $matches ) >= $max_results ) {
 					$truncated = true;
-					break 2;
-				}
-
-				$rel  = $this->relative_of( $file->getPathname() );
-				$size = (int) $file->getSize();
-
-				// Report — never silently drop — files we can't search.
-				$reason = $this->skip_reason( $file, $size );
-				if ( null !== $reason ) {
-					if ( count( $skipped ) < self::MAX_SKIPPED_REPORTED ) {
-						$skipped[] = [ 'file' => $rel, 'reason' => $reason, 'size_bytes' => $size ];
-					} else {
-						$skipped[] = [ 'file' => $rel, 'reason' => $reason, 'size_bytes' => $size, '_overflow' => true ];
-					}
-					continue;
-				}
-
-				++$files_searched;
-
-				foreach ( $this->search_file( $file, $rel, $size, $query, $pattern ) as $match ) {
-					$matches[] = $match;
-					$per_file_count[ $rel ] = ( $per_file_count[ $rel ] ?? 0 ) + 1;
-
-					if ( count( $matches ) >= $max_results ) {
-						$truncated = true;
-						break;
-					}
+					break;
 				}
 			}
 		}
@@ -123,6 +123,7 @@ final class CodeSearch {
 		return [
 			'query'          => $query,
 			'path'           => $relative_path,
+			'scope'          => $scope['mode'], // file | directory | roots
 			'type'           => $type,
 			'matches'        => $matches,
 			'match_count'    => count( $matches ),
@@ -254,6 +255,58 @@ final class CodeSearch {
 		}
 
 		return [ $real ];
+	}
+
+	/**
+	 * STEP 103.2 — resolve a content-search scope that may be a single file OR a
+	 * directory (empty = all allowed roots). resolve() enforces the allow-list,
+	 * deny-list, and traversal guards in every case.
+	 *
+	 * @return array{mode:string,roots?:array<int,string>,files?:array<int,string>}|\WP_Error
+	 */
+	private function resolve_scope( string $relative_path ): array|\WP_Error {
+		if ( '' === $relative_path ) {
+			return [ 'mode' => 'roots', 'roots' => $this->path_guard->get_allowed_root_paths() ];
+		}
+
+		$real = $this->path_guard->resolve( $relative_path );
+
+		if ( is_wp_error( $real ) ) {
+			return $real;
+		}
+
+		if ( is_dir( $real ) ) {
+			return [ 'mode' => 'directory', 'roots' => [ $real ] ];
+		}
+
+		if ( is_file( $real ) ) {
+			return [ 'mode' => 'file', 'files' => [ $real ] ];
+		}
+
+		return new \WP_Error( 'wpcc_not_found', __( 'The search path does not exist.', 'wp-command-center' ) );
+	}
+
+	/**
+	 * Yield the candidate files for a resolved scope. Directory scopes use the
+	 * recursive, extension-filtered iterator; an explicit single file is yielded
+	 * directly (the agent chose it, so the directory extension allow-list is not
+	 * applied) — size/binary/permission checks still run via skip_reason() so a
+	 * skip is always reported, never silent.
+	 *
+	 * @param array{mode:string,roots?:array<int,string>,files?:array<int,string>} $scope
+	 * @return \Generator<\SplFileInfo>
+	 */
+	private function iterate_scope( array $scope ): \Generator {
+		if ( 'file' === $scope['mode'] ) {
+			foreach ( $scope['files'] as $real ) {
+				yield new \SplFileInfo( $real );
+			}
+			return;
+		}
+
+		foreach ( $scope['roots'] as $root ) {
+			yield from $this->iterate_files( $root );
+		}
 	}
 
 	/**
