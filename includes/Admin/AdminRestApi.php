@@ -17,6 +17,7 @@ use WPCommandCenter\Operations\OperationRegistry;
 use WPCommandCenter\Operations\SecurityModeManager;
 use WPCommandCenter\Operations\DestructiveGuard;
 use WPCommandCenter\Operations\ChangeHistoryRuntimeManager;
+use WPCommandCenter\Operations\OperationExecutor;
 use WPCommandCenter\PatchSystem\PatchManager;
 use WPCommandCenter\Security\AuditLog;
 
@@ -81,6 +82,17 @@ final class AdminRestApi {
 		register_rest_route( self::NS, '/admin/history/(?P<change_id>[A-Za-z0-9\-]{1,64})/diff', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'history_diff' ],
+			'permission_callback' => [ $this, 'check_permission' ],
+		] );
+
+		// STEP 105.3 — reverse one change from wp-admin. The ONLY write route in
+		// the Change History admin surface. It does NOT roll back itself: it
+		// routes change_history/rollback_target through OperationExecutor::run,
+		// inheriting capability, DestructiveGuard (ROLLBACK_CHANGE handshake),
+		// security-mode approval, AuditLog, and ChangeRecorder — no bypass.
+		register_rest_route( self::NS, '/admin/history/(?P<change_id>[A-Za-z0-9\-]{1,64})/rollback', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'history_rollback' ],
 			'permission_callback' => [ $this, 'check_permission' ],
 		] );
 
@@ -306,6 +318,56 @@ final class AdminRestApi {
 			'html'      => $html,
 			'note'      => $note,
 		], 200 );
+	}
+
+	/**
+	 * POST /admin/history/{change_id}/rollback — reverse one change.
+	 *
+	 * Pure reuse: builds the rollback_target payload + an admin actor context
+	 * and hands off to OperationExecutor::run( 'change_history', … ). That is the
+	 * same chokepoint the token/MCP path uses, so capability, DestructiveGuard
+	 * (the ROLLBACK_CHANGE handshake on high-risk-file patch reversals),
+	 * security-mode approval, AuditLog and ChangeRecorder all apply unchanged.
+	 *
+	 * No token_scope/token_id is set: this is a cookie + manage_options request,
+	 * the route is the gate, and omitting token_scope keeps the engine's
+	 * read-only-token guard inapplicable (it is not a read-only token).
+	 *
+	 * The structured result is returned verbatim (HTTP 200) so the UI can branch
+	 * on result.status — success | pending_approval | confirmation_required —
+	 * exactly like the agent-facing surfaces.
+	 */
+	public function history_rollback( \WP_REST_Request $request ): \WP_REST_Response {
+		$change_id = sanitize_text_field( (string) $request->get_param( 'change_id' ) );
+
+		$payload = [ 'action' => 'rollback_target', 'change_id' => $change_id ];
+
+		if ( null !== $request->get_param( 'confirm' ) ) {
+			$payload['confirm'] = rest_sanitize_boolean( $request->get_param( 'confirm' ) );
+		}
+		$phrase = (string) $request->get_param( 'confirmation_phrase' );
+		if ( '' !== $phrase ) {
+			$payload['confirmation_phrase'] = sanitize_text_field( $phrase );
+		}
+		$reason = (string) $request->get_param( 'reason' );
+		if ( '' !== $reason ) {
+			$payload['reason'] = sanitize_textarea_field( $reason );
+		}
+
+		$user    = wp_get_current_user();
+		$context = [
+			'actor'  => AuditLog::resolve_actor( [
+				'type'       => 'admin',
+				'wp_user_id' => get_current_user_id(),
+				'user_login' => $user ? $user->user_login : '',
+				'source'     => 'admin_ui',
+			] ),
+			'source' => 'admin_ui',
+		];
+
+		$result = ( new OperationExecutor() )->run( 'change_history', $payload, $context );
+
+		return new \WP_REST_Response( $result, 200 );
 	}
 
 	/**

@@ -44,6 +44,7 @@ fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq()  { local d="$1" e="$2" a="$3"; [ "$e" = "$a" ] && pass "$d" || fail "$d (expected '$e', got '$a')"; }
 assert_true(){ local d="$1" a="$2"; [ "$a" = "true" ] && pass "$d" || fail "$d (got '$a')"; }
 assert_ge()  { local d="$1" a="$2" b="$3"; [ "$a" -ge "$b" ] 2>/dev/null && pass "$d" || fail "$d ($a < $b)"; }
+assert_nonempty() { local d="$1" a="$2"; { [ -n "$a" ] && [ "$a" != "null" ]; } && pass "$d" || fail "$d (empty/null)"; }
 has()  { if rg -q "$2" "$3"; then pass "$1"; else fail "$1"; fi; }
 lacks(){ if rg -q "$2" "$3"; then fail "$1"; else pass "$1"; fi; }
 lint() { if php -l "$2" >/dev/null 2>&1; then pass "$1"; else fail "$1"; fi; }
@@ -77,9 +78,9 @@ echo
 echo "== 3. Reads delegate to STEP 104 backend (no new read logic) =="
 has "list/timeline/get delegate to runtime manager" "ChangeHistoryRuntimeManager" "$RESTAPI"
 has "sessions uses presentation aggregation"        "ChangeHistoryAdminQuery"     "$RESTAPI"
-# No write/rollback surface introduced in this step.
-lacks "no rollback_target route in admin REST"      "rollback_target"             "$RESTAPI"
-lacks "no rollback execution in the view"           "rollback_target"             "$VIEW"
+# The view never executes rollback itself — it only POSTs to the admin endpoint,
+# which routes through OperationExecutor (asserted in section 12).
+lacks "view does not reference the engine action directly" "rollback_target" "$VIEW"
 
 echo
 echo "== 4. Aggregation is presentation-layer only =="
@@ -89,10 +90,14 @@ has "query is read-only (no INSERT/UPDATE/DELETE)" "GROUP BY session_id"     "$Q
 lacks "query performs no writes"          "INSERT INTO|UPDATE .* SET|DELETE FROM" "$QUERY"
 
 echo
-echo "== 5. Menu: Change History added, Rollback retained (105.3 swap) =="
+echo "== 5. Menu: Change History present; legacy Rollback merged (105.3 swap) =="
 has "menu: Change History submenu"  "wpcc-change-history" "$MENU"
 has "menu: render_change_history"   "render_change_history" "$MENU"
-has "menu: Rollback retained (deferred removal)" "wpcc-rollback" "$MENU"
+lacks "menu: Rollback submenu removed" "add_submenu_page.*wpcc-rollback" "$MENU"
+lacks "menu: render_rollback removed"  "function render_rollback" "$MENU"
+has "menu: legacy rollback redirect present" "redirect_legacy_rollback" "$MENU"
+has "menu: redirect targets Change History"  "page=wpcc-change-history" "$MENU"
+[ -f "$PLUGIN_DIR/includes/Admin/views/rollback.php" ] && fail "legacy rollback view deleted" || pass "legacy rollback view deleted"
 
 echo
 echo "== 6. View structure: tabs, drill, detail, escaping =="
@@ -105,8 +110,7 @@ has "view: uses nonce"              "wp_create_nonce" "$VIEW"
 has "view: sends X-WP-Nonce"        "X-WP-Nonce"     "$VIEW"
 has "view: HTML escaper present"    "function escHtml" "$VIEW"
 has "view: empty state"             "wpcc-empty"     "$VIEW"
-has "view: reversible shown read-only (no Restore button)" "wpcc-badge-rev" "$VIEW"
-lacks "view: no Restore control yet" 'value="Restore"|>Restore<|wpcc-restore|data-action="rollback"' "$VIEW"
+has "view: reversible badge present" "wpcc-badge-rev" "$VIEW"
 
 echo
 echo "== 7. Functional: seed a session and aggregate it =="
@@ -230,6 +234,102 @@ echo wp_json_encode( [ 'status' => \$r->get_status(), 'success' => \$r->get_data
 ")
 assert_eq   "diff: unknown change_id -> 404" "404" "$(pj "$NF" '.status')"
 assert_eq   "diff: unknown change_id -> success=false" "false" "$(pj "$NF" '.success')"
+
+echo
+echo "== 12. STEP 105.3: rollback endpoint (engine reuse, no bypass) =="
+has  "route: POST /admin/history/{id}/rollback" "change_id>.*\)/rollback'" "$RESTAPI"
+has  "rollback route is CREATABLE"              "CREATABLE"                  "$RESTAPI"
+has  "rollback routes THROUGH OperationExecutor" "OperationExecutor.*->run\( 'change_history'" "$RESTAPI"
+has  "rollback builds rollback_target payload"  "'action' => 'rollback_target'" "$RESTAPI"
+lacks "rollback does NOT call the manager directly (no bypass)" 'ChangeHistoryRuntimeManager\(\)\s*\)->rollback_target' "$RESTAPI"
+lacks "rollback does NOT assign a token_scope in context" "'token_scope' =>" "$RESTAPI"
+has  "view: Restore control present"            "wpcc-restore-link"          "$VIEW"
+has  "view: confirmation modal present"         "wpcc-restore-modal"         "$VIEW"
+has  "view: high-risk phrase flow wired"        "confirmation_required"      "$VIEW"
+has  "view: pending_approval handled"           "pending_approval"           "$VIEW"
+has  "view: required phrase constant"           "ROLLBACK_CHANGE"            "$VIEW"
+
+echo
+echo "== 13. STEP 105.3 functional: developer-mode restore round-trip (via the endpoint) =="
+SAVED_BLOG="$(wpe 'echo get_option("blogname");')"
+RB_SESSION="wpcc-105-3-$(date +%s)"
+rest option_manage "{\"action\":\"option_update\",\"option_id\":\"site_title\",\"value\":\"WPCC-105-3-ROLLBACK\",\"session_id\":\"$RB_SESSION\"}" >/dev/null
+assert_eq "seed: blogname changed" "WPCC-105-3-ROLLBACK" "$(wpe 'echo get_option("blogname");')"
+
+RB=$(wpe "
+global \$wpdb; \$t = \$wpdb->prefix . 'wpcc_change_log';
+\$cid = \$wpdb->get_var( \$wpdb->prepare( \"SELECT change_id FROM {\$t} WHERE session_id = %s ORDER BY id DESC LIMIT 1\", '$RB_SESSION' ) );
+\$req = new WP_REST_Request( 'POST', '/' );
+\$req->set_param( 'change_id', \$cid );
+\$d = ( new \WPCommandCenter\Admin\AdminRestApi() )->history_rollback( \$req )->get_data();
+\$rev_rows = (int) \$wpdb->get_var( \$wpdb->prepare( \"SELECT COUNT(*) FROM {\$t} WHERE rolled_back_by_change_id IS NOT NULL AND change_id = %s\", \$cid ) );
+\$orig_status = \$wpdb->get_var( \$wpdb->prepare( \"SELECT status FROM {\$t} WHERE change_id = %s\", \$cid ) );
+echo wp_json_encode( [
+	'success'      => \$d['success'] ?? null,
+	'result_ok'    => ( \$d['result']['success'] ?? null ),
+	'rolled_back_by' => \$d['result']['rolled_back_by'] ?? '',
+	'orig_status'  => \$orig_status,
+	'blogname'     => get_option('blogname'),
+] );
+")
+assert_true "restore: endpoint success"               "$(pj "$RB" '.success')"
+assert_true "restore: engine reported success"        "$(pj "$RB" '.result_ok')"
+assert_nonempty "restore: reversal change_id recorded" "$(pj "$RB" '.rolled_back_by')"
+assert_eq   "restore: original row stamped rolled_back" "rolled_back" "$(pj "$RB" '.orig_status')"
+assert_eq   "restore: value reverted to pre-change"    "$SAVED_BLOG" "$(pj "$RB" '.blogname')"
+
+# Idempotency guard: rolling back an already-rolled-back change is refused with
+# an in-band wpcc_already_rolled_back error (the engine never re-runs it).
+DUP=$(wpe "
+global \$wpdb; \$t = \$wpdb->prefix . 'wpcc_change_log';
+\$cid = \$wpdb->get_var( \$wpdb->prepare( \"SELECT change_id FROM {\$t} WHERE session_id = %s AND status = 'rolled_back' ORDER BY id DESC LIMIT 1\", '$RB_SESSION' ) );
+\$req = new WP_REST_Request( 'POST', '/' );
+\$req->set_param( 'change_id', \$cid );
+\$d = ( new \WPCommandCenter\Admin\AdminRestApi() )->history_rollback( \$req )->get_data();
+echo wp_json_encode( [ 'code' => \$d['result']['code'] ?? '', 'is_error' => ( \$d['result']['error'] ?? false ) ] );
+")
+assert_eq "restore: double-rollback refused (wpcc_already_rolled_back)" "wpcc_already_rolled_back" "$(pj "$DUP" '.code')"
+
+echo
+echo "== 14. STEP 105.3 security: non-developer mode routes rollback to approval (no execution) =="
+# Seed in DEVELOPER mode (so the seed applies), THEN switch to client and attempt
+# the rollback — only the rollback should be gated.
+rest option_manage "{\"action\":\"option_update\",\"option_id\":\"site_title\",\"value\":\"WPCC-105-3-CLIENT\",\"session_id\":\"r33c\"}" >/dev/null
+APPR=$(wpe "
+global \$wpdb; \$t = \$wpdb->prefix . 'wpcc_change_log';
+\$cid = \$wpdb->get_var( \"SELECT change_id FROM {\$t} WHERE session_id = 'r33c' ORDER BY id DESC LIMIT 1\" );
+\$orig_mode = get_option( 'wpcc_security_mode', '' );
+update_option( 'wpcc_security_mode', 'client' );
+\$req = new WP_REST_Request( 'POST', '/' );
+\$req->set_param( 'change_id', \$cid );
+\$d = ( new \WPCommandCenter\Admin\AdminRestApi() )->history_rollback( \$req )->get_data();
+\$status = \$d['result']['status'] ?? '(none)';
+\$rid = \$d['result']['request_id'] ?? '';
+\$value_after_attempt = get_option('blogname');
+\$orig_status = \$wpdb->get_var( \$wpdb->prepare( \"SELECT status FROM {\$t} WHERE change_id = %s\", \$cid ) );
+// Cleanup: reject the queued request, restore mode + blogname.
+if ( \$rid ) { ( new \WPCommandCenter\Operations\OperationManager() )->reject_request( \$rid ); }
+update_option( 'wpcc_security_mode', \$orig_mode === '' ? 'developer' : \$orig_mode );
+update_option( 'blogname', '$SAVED_BLOG' );
+echo wp_json_encode( [
+	'status'        => \$status,
+	'has_request'   => \$rid !== '',
+	'not_executed'  => ( \$value_after_attempt === 'WPCC-105-3-CLIENT' && \$orig_status !== 'rolled_back' ),
+	'mode_after'    => get_option('wpcc_security_mode'),
+] );
+")
+assert_eq   "approval: client mode returns pending_approval"        "pending_approval" "$(pj "$APPR" '.status')"
+assert_true "approval: an approval request was created"             "$(pj "$APPR" '.has_request')"
+assert_true "approval: rollback did NOT execute (value + status unchanged)" "$(pj "$APPR" '.not_executed')"
+assert_eq   "approval: security mode restored to developer"         "developer" "$(pj "$APPR" '.mode_after')"
+
+echo
+echo "== 15. STEP 105.3 DestructiveGuard: ordinary (non-high-risk) reversal takes the fast path =="
+GUARD=$(wpe "
+\$d = \WPCommandCenter\Operations\DestructiveGuard::classify( 'change_history', [ 'action' => 'rollback_target', 'change_id' => 'whatever-not-a-patch' ] );
+echo wp_json_encode( [ 'is_null' => ( null === \$d ) ] );
+")
+assert_true "guard: non-high-risk rollback_target needs no ROLLBACK_CHANGE phrase" "$(pj "$GUARD" '.is_null')"
 
 echo
 echo "== Summary =="

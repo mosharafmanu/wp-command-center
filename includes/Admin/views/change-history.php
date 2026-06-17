@@ -100,7 +100,38 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	<?php endif; ?>
 </div>
 
+<div id="wpcc-restore-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-restore-title">
+	<div class="wpcc-modal-box" role="document">
+		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Restore change', 'wp-command-center' ); ?></h2>
+		<p id="wpcc-restore-msg"></p>
+		<div id="wpcc-restore-highrisk" style="display:none;">
+			<div class="wpcc-restore-warning" id="wpcc-restore-warning"></div>
+			<p><label for="wpcc-restore-reason" id="wpcc-restore-reason-label"></label>
+				<textarea id="wpcc-restore-reason" rows="2" class="large-text"></textarea></p>
+			<p><label for="wpcc-restore-phrase" id="wpcc-restore-phrase-label"></label>
+				<input type="text" id="wpcc-restore-phrase" class="regular-text" autocomplete="off" spellcheck="false" /></p>
+		</div>
+		<div id="wpcc-restore-result" class="wpcc-restore-result" style="display:none;"></div>
+		<p class="wpcc-modal-actions">
+			<button type="button" class="button button-primary" id="wpcc-restore-confirm"></button>
+			<button type="button" class="button" id="wpcc-restore-cancel"></button>
+		</p>
+	</div>
+</div>
+
 <style>
+.wpcc-modal { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center; }
+.wpcc-modal-box { background:#fff;border-radius:6px;padding:20px 24px;max-width:560px;width:92%;box-shadow:0 6px 30px rgba(0,0,0,.3); }
+.wpcc-modal-box h2 { margin-top:0; }
+.wpcc-modal-actions { margin:16px 0 0;text-align:right; }
+.wpcc-modal-actions .button { margin-left:8px; }
+.wpcc-restore-warning { background:#fcf0f1;border:1px solid #d63638;color:#8a1f1f;border-radius:3px;padding:10px 12px;margin:6px 0 12px;font-size:13px; }
+.wpcc-restore-result { padding:8px 12px;border-radius:3px;font-size:13px;margin:8px 0; }
+.wpcc-restore-result.success { background:#edfaef;border:1px solid #00a32a; }
+.wpcc-restore-result.error   { background:#fce9e9;border:1px solid #d63638; }
+.wpcc-restore-result.info    { background:#f0f6fc;border:1px solid #72aee6; }
+.wpcc-restore-link { color:#b32d2e; }
+.wpcc-detail-restore { margin-top:14px; }
 .wpcc-history .wpcc-spin { float:none;margin:0 6px 0 0;vertical-align:middle; }
 .wpcc-history-filters { display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:14px 0; }
 .wpcc-history-filters label { display:flex;flex-direction:column;font-size:12px;font-weight:600;color:#50575e;gap:4px; }
@@ -167,17 +198,36 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		changeSets:  <?php echo wp_json_encode( __( 'change-sets', 'wp-command-center' ) ); ?>,
 		allChanges:  <?php echo wp_json_encode( __( 'all changes', 'wp-command-center' ) ); ?>,
 		view:        <?php echo wp_json_encode( __( 'View', 'wp-command-center' ) ); ?>,
-		actor:       <?php echo wp_json_encode( __( 'Actor', 'wp-command-center' ) ); ?>
+		actor:       <?php echo wp_json_encode( __( 'Actor', 'wp-command-center' ) ); ?>,
+		restore:     <?php echo wp_json_encode( __( 'Restore', 'wp-command-center' ) ); ?>,
+		restoreQ:    <?php echo wp_json_encode( __( 'Revert this change? It will be reversed through the same approval and safety pipeline as the agent API — destructive and high-risk reversals require extra confirmation.', 'wp-command-center' ) ); ?>,
+		restoreOk:   <?php echo wp_json_encode( __( 'Change reversed. Reloading…', 'wp-command-center' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This restore needs administrator approval and has been sent to Pending Approvals.', 'wp-command-center' ) ); ?>,
+		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'wp-command-center' ) ); ?>,
+		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'wp-command-center' ) ); ?>,
+		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'wp-command-center' ) ); ?>,
+		genericFail: <?php echo wp_json_encode( __( 'Restore failed.', 'wp-command-center' ) ); ?>,
+		openApprove: <?php echo wp_json_encode( __( 'Open Pending Approvals', 'wp-command-center' ) ); ?>,
+		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'wp-command-center' ) ); ?>,
+		close:       <?php echo wp_json_encode( __( 'Close', 'wp-command-center' ) ); ?>
 	};
+	var REQUIRED_PHRASE = 'ROLLBACK_CHANGE';
+	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-approvals' ) ); ?>;
 
 	function escHtml( s ) {
 		var d = document.createElement('div');
 		d.appendChild( document.createTextNode( String( s === null || s === undefined ? '' : s ) ) );
 		return d.innerHTML;
 	}
-	function apiFetch( path ) {
-		return fetch( apiBase + path, { headers: { 'X-WP-Nonce': nonce } } ).then( function(r) {
-			return r.json().then( function(j) { return { ok: r.ok, body: j }; } );
+	function apiFetch( path, opts ) {
+		opts = opts || {};
+		var headers = { 'X-WP-Nonce': nonce };
+		if ( opts.body ) { headers['Content-Type'] = 'application/json'; }
+		return fetch( apiBase + path, Object.assign( { headers: headers }, opts ) ).then( function(r) {
+			return r.json().then(
+				function(j) { return { ok: r.ok, status: r.status, body: j }; },
+				function()  { return { ok: r.ok, status: r.status, body: {} }; }
+			);
 		} );
 	}
 	function qs( params ) {
@@ -251,6 +301,11 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			chips += '<span class="wpcc-chip">change-set ' + escHtml( String(rev.change_set_id).substring(0,8) ) + '&#8230;</span>';
 		}
 
+		// Restore is secondary and only offered when actually reversible.
+		var restore = ( rev.reversible && ! rev.rolled_back )
+			? '<button type="button" class="button-link wpcc-restore-link" data-change-id="' + escHtml(c.change_id) + '">' + escHtml(i18n.restore) + '</button>'
+			: '';
+
 		return '<div class="wpcc-change-row st-' + escHtml(status) + '">' +
 			'<div class="wpcc-change-top">' +
 				'<p class="wpcc-change-title"><a href="' + escHtml( detailUrl( c.change_id ) ) + '">' + title + '</a></p>' +
@@ -259,7 +314,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			'<div class="wpcc-change-meta">' +
 				( target ? '<span>' + target + '</span>' : '' ) +
 				( actor ? '<span>' + escHtml(i18n.actor) + ': ' + escHtml(actor) + '</span>' : '' ) +
-				revBadge + chips +
+				revBadge + chips + restore +
 			'</div>' +
 		'</div>';
 	}
@@ -381,6 +436,11 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		var html = '<table class="widefat wpcc-detail-table"><tbody>';
 		rows.forEach( function(r) { html += '<tr><th>' + escHtml(r[0]) + '</th><td>' + escHtml(r[1]) + '</td></tr>'; } );
 		html += '</tbody></table>';
+
+		// Secondary Restore action — same endpoint/path as the Timeline control.
+		if ( rev.reversible && ! rev.rolled_back ) {
+			html += '<p class="wpcc-detail-restore"><button type="button" class="button wpcc-restore-link" data-change-id="' + escHtml(change.change_id) + '">' + escHtml(i18n.restore) + '</button></p>';
+		}
 		box.innerHTML = html;
 	}
 	function loadDetail() {
@@ -407,14 +467,126 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		} ).catch( function(){ /* leave the metadata panel intact on diff failure */ } );
 	}
 
+	// ── Restore (rollback) modal ──
+	// Every restore opens a confirmation dialog. Low-risk: confirm and POST.
+	// High-risk-file patch reversals: the backend replies confirmation_required
+	// (DestructiveGuard), and the modal escalates to require the ROLLBACK_CHANGE
+	// phrase + a reason before re-POSTing. All execution is server-side via
+	// OperationExecutor — the UI never rolls back anything itself.
+	var restoreState = { changeId: null, highRisk: false };
+
+	function el( id ) { return document.getElementById( id ); }
+
+	function openRestoreModal( changeId ) {
+		restoreState = { changeId: changeId, highRisk: false };
+		el('wpcc-restore-msg').textContent = i18n.restoreQ;
+		el('wpcc-restore-highrisk').style.display = 'none';
+		el('wpcc-restore-warning').textContent = '';
+		el('wpcc-restore-phrase').value = '';
+		el('wpcc-restore-reason').value = '';
+		el('wpcc-restore-phrase-label').textContent = i18n.phraseLabel;
+		el('wpcc-restore-reason-label').textContent = i18n.reasonLabel;
+		var result = el('wpcc-restore-result');
+		result.style.display = 'none'; result.className = 'wpcc-restore-result';
+		var confirm = el('wpcc-restore-confirm');
+		confirm.textContent = i18n.restore; confirm.disabled = false; confirm.dataset.mode = 'submit';
+		el('wpcc-restore-cancel').textContent = i18n.cancel;
+		el('wpcc-restore-modal').style.display = 'flex';
+		el('wpcc-restore-confirm').focus();
+	}
+
+	function closeRestoreModal() { el('wpcc-restore-modal').style.display = 'none'; }
+
+	function showRestoreResult( cls, text, html ) {
+		var r = el('wpcc-restore-result');
+		r.className = 'wpcc-restore-result ' + cls;
+		if ( html ) { r.innerHTML = html; } else { r.textContent = text; }
+		r.style.display = 'block';
+	}
+
+	function submitRestore() {
+		var confirmBtn = el('wpcc-restore-confirm');
+		var body = { confirm: true };
+		if ( restoreState.highRisk ) {
+			var phrase = el('wpcc-restore-phrase').value.trim();
+			var reason = el('wpcc-restore-reason').value.trim();
+			if ( phrase !== REQUIRED_PHRASE || reason === '' ) {
+				showRestoreResult( 'error', i18n.phraseLabel + ' — ' + i18n.reasonLabel );
+				return;
+			}
+			body.confirmation_phrase = phrase;
+			body.reason = reason;
+		}
+		confirmBtn.disabled = true;
+		apiFetch( '/history/' + encodeURIComponent( restoreState.changeId ) + '/rollback', {
+			method: 'POST',
+			body: JSON.stringify( body )
+		} ).then( function( res ) {
+			if ( res.status === 403 ) { showRestoreResult( 'error', i18n.nonceFail ); return; }
+			var data   = res.body || {};
+			var result = data.result || {};
+
+			if ( result.status === 'confirmation_required' ) {
+				// Escalate to the high-risk phrase + reason flow.
+				restoreState.highRisk = true;
+				el('wpcc-restore-highrisk').style.display = 'block';
+				el('wpcc-restore-warning').textContent = result.warning || '';
+				el('wpcc-restore-msg').textContent = result.message || i18n.restoreQ;
+				confirmBtn.disabled = false;
+				el('wpcc-restore-reason').focus();
+				return;
+			}
+			if ( result.status === 'pending_approval' ) {
+				var url = result.approval_url || approvalsUrl;
+				showRestoreResult( 'info', '', escHtml(i18n.sentApprove) + ' <a href="' + escHtml(url) + '">' + escHtml(i18n.openApprove) + '</a>' );
+				confirmBtn.style.display = 'none';
+				el('wpcc-restore-cancel').textContent = i18n.close;
+				return;
+			}
+			if ( data.success && ! ( result.error ) && ( result.success !== false ) ) {
+				showRestoreResult( 'success', i18n.restoreOk );
+				setTimeout( function() {
+					closeRestoreModal();
+					if ( state.viewId ) { loadDetail(); loadDiff(); }
+					else if ( state.tab === 'sessions' ) { loadSessions(); }
+					else { loadTimeline( null ); }
+				}, 900 );
+				return;
+			}
+			// Failure: surface the engine/manager message.
+			var msg = result.message || ( ( data.errors && data.errors[0] && data.errors[0].message ) ) || result.error || i18n.genericFail;
+			showRestoreResult( 'error', msg );
+			confirmBtn.disabled = false;
+		} ).catch( function() {
+			showRestoreResult( 'error', i18n.genericFail );
+			confirmBtn.disabled = false;
+		} );
+	}
+
 	// ── boot ──
 	document.addEventListener( 'DOMContentLoaded', function() {
-		if ( state.viewId ) { loadDetail(); loadDiff(); return; }
-		if ( state.sessionId ) { loadSessionSummary(); }
-		if ( state.tab === 'sessions' ) { loadSessions(); }
-		else { loadTimeline( null ); }
-		var moreBtn = document.getElementById('wpcc-history-more-btn');
-		if ( moreBtn ) { moreBtn.addEventListener( 'click', function(){ if ( moreCursor ) loadTimeline( moreCursor ); } ); }
+		if ( state.viewId ) { loadDetail(); loadDiff(); }
+		else {
+			if ( state.sessionId ) { loadSessionSummary(); }
+			if ( state.tab === 'sessions' ) { loadSessions(); }
+			else { loadTimeline( null ); }
+			var moreBtn = document.getElementById('wpcc-history-more-btn');
+			if ( moreBtn ) { moreBtn.addEventListener( 'click', function(){ if ( moreCursor ) loadTimeline( moreCursor ); } ); }
+		}
+
+		// Delegated Restore triggers (Timeline rows + Detail view).
+		document.addEventListener( 'click', function( e ) {
+			var btn = e.target.closest ? e.target.closest( '.wpcc-restore-link' ) : null;
+			if ( btn && btn.dataset.changeId ) { e.preventDefault(); openRestoreModal( btn.dataset.changeId ); }
+		} );
+		el('wpcc-restore-confirm').addEventListener( 'click', submitRestore );
+		el('wpcc-restore-cancel').addEventListener( 'click', closeRestoreModal );
+		el('wpcc-restore-modal').addEventListener( 'click', function( e ) {
+			if ( e.target === el('wpcc-restore-modal') ) { closeRestoreModal(); }
+		} );
+		document.addEventListener( 'keydown', function( e ) {
+			if ( e.key === 'Escape' && el('wpcc-restore-modal').style.display === 'flex' ) { closeRestoreModal(); }
+		} );
 	} );
 })();
 </script>

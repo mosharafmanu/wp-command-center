@@ -10,6 +10,24 @@ final class AdminMenu {
 	public function init(): void {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
 		add_action( 'admin_bar_menu', [ $this, 'admin_bar_badge' ], 100 );
+		// STEP 105.3 — the legacy Rollback page is merged into Change History.
+		add_action( 'admin_init', [ $this, 'redirect_legacy_rollback' ] );
+	}
+
+	/**
+	 * STEP 105.3 — keep old bookmarks/links working after the Rollback submenu
+	 * was merged into Change History. Restore now lives on the Change History
+	 * Timeline / Detail views (routed through OperationExecutor).
+	 */
+	public function redirect_legacy_rollback(): void {
+		if ( ! is_admin() || ! current_user_can( self::CAPABILITY ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only page nav, no state change.
+		if ( isset( $_GET['page'] ) && 'wpcc-rollback' === sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=wpcc-change-history' ) );
+			exit;
+		}
 	}
 
 	public function register_menu(): void {
@@ -29,7 +47,6 @@ final class AdminMenu {
 		add_submenu_page( 'wp-command-center', __( 'Diagnostics', 'wp-command-center' ), __( 'Diagnostics', 'wp-command-center' ), self::CAPABILITY, 'wpcc-diagnostics', [ $this, 'render_diagnostics' ] );
 		add_submenu_page( 'wp-command-center', __( 'File Access', 'wp-command-center' ), __( 'File Access', 'wp-command-center' ), self::CAPABILITY, 'wpcc-file-access', [ $this, 'render_file_access' ] );
 		add_submenu_page( 'wp-command-center', __( 'Patches', 'wp-command-center' ), __( 'Patches', 'wp-command-center' ), self::CAPABILITY, 'wpcc-patches', [ $this, 'render_patches' ] );
-		add_submenu_page( 'wp-command-center', __( 'Rollback', 'wp-command-center' ), __( 'Rollback', 'wp-command-center' ), self::CAPABILITY, 'wpcc-rollback', [ $this, 'render_rollback' ] );
 		add_submenu_page( 'wp-command-center', __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, 'wpcc-settings', [ $this, 'render_settings' ] );
 		add_submenu_page( 'wp-command-center', __( 'AI Integrations', 'wp-command-center' ), __( 'AI Integrations', 'wp-command-center' ), self::CAPABILITY, 'wpcc-ai-integrations', [ $this, 'render_ai_integrations' ] );
 		add_submenu_page( 'wp-command-center', __( 'Pending Approvals', 'wp-command-center' ), __( 'Pending Approvals', 'wp-command-center' ), self::CAPABILITY, 'wpcc-approvals', [ $this, 'render_approvals' ] );
@@ -88,10 +105,6 @@ final class AdminMenu {
 
 	public function render_patches(): void {
 		$this->render_view( 'patches' );
-	}
-
-	public function render_rollback(): void {
-		$this->render_view( 'rollback' );
 	}
 
 	public function render_settings(): void {
