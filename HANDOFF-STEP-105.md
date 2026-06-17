@@ -11,10 +11,11 @@ STEP 105 surfaces that backend in wp-admin. This handoff covers **STEP 105.1**
 
 - **STEP 105.1 — Change History read-only admin UI: COMPLETE locally** (`1742ca8`;
   handoff `c8747dd`).
-- **STEP 105.2 — Detail view + shared diff viewer: COMPLETE locally** (`ac85221`).
+- **STEP 105.2 — Detail view + shared diff viewer: COMPLETE locally** (`ac85221`;
+  handoff `5cf9f9b`).
+- **STEP 105.3 — Rollback action UI + menu merge: COMPLETE locally** (`634803b`).
 - **All on `main`, NOT pushed, NOT deployed** (deploy is pull-cron from
-  origin/main, so local commits are inert until pushed). `main` is ahead of
-  origin by the 105.1 + 105.2 commits.
+  origin/main, so local commits are inert until pushed).
 - STEP 104 backend remains live and prod-verified at `v0.104.0` (`5abea8f`).
 
 ## B. What 105.1 Shipped (commit `1742ca8`)
@@ -77,21 +78,54 @@ rollback/restore (105.3), no MCP, no new persistence.**
   renderer counts/escaping/truncation, diff endpoint metadata + not-found, and
   a no-forked-renderer guard).
 
+## B3. What 105.3 Shipped (rollback action — first write surface)
+
+The **only** write/mutating surface in STEP 105. Pure engine reuse — **no bypass,
+no parallel rollback, no new storage, no capability change, no MCP**.
+
+- **`includes/Admin/AdminRestApi.php` (MOD)** — `POST /admin/history/{id}/rollback`
+  (CREATABLE, `manage_options` + nonce). Builds the `rollback_target` payload +
+  an admin actor context (`source: admin_ui`, **no token_scope/token_id**) and
+  calls **`OperationExecutor::run('change_history', …)`** — inheriting capability,
+  DestructiveGuard (`ROLLBACK_CHANGE` handshake on high-risk-file patch reversals),
+  security-mode approval, AuditLog, ChangeRecorder. Returns the structured result
+  verbatim (HTTP 200) so the UI branches on `result.status` (success |
+  pending_approval | confirmation_required). It never calls
+  `ChangeHistoryRuntimeManager::rollback_target()` directly.
+- **`includes/Admin/views/change-history.php` (MOD)** — secondary **Restore**
+  control on Timeline rows **and** Detail view (only when reversible & not
+  rolled-back). A confirmation modal opens for **every** restore; low-risk →
+  confirm + POST; high-risk → backend replies `confirmation_required` and the
+  modal **escalates** to require the `ROLLBACK_CHANGE` phrase + a reason before
+  re-POSTing. `pending_approval` → "sent to Pending Approvals" link. 403 → nonce
+  re-auth notice. No client-side rollback logic.
+- **`includes/Admin/AdminMenu.php` (MOD)** — **menu swap (final sub-step):**
+  removed the `wpcc-rollback` submenu + `render_rollback`; added an `admin_init`
+  redirect `page=wpcc-rollback → page=wpcc-change-history` (bookmarks survive).
+- **`includes/Admin/views/rollback.php` (DELETED)** — the legacy patch-only page
+  that called `PatchApproval::rollback()` **directly** (a guard bypass). Restore
+  now goes through OperationExecutor; the bypass is gone.
+- **`tests/test-change-history-admin.sh` (MOD)** — now **93/93** (+ rollback
+  endpoint reuse/no-bypass, developer-mode round-trip incl. value reverted +
+  original stamped + reversal recorded + double-rollback refused, client-mode →
+  pending_approval w/o execution, DestructiveGuard fast-path, menu-swap +
+  deleted-view assertions).
+
+**Invariants unchanged:** operation_map 34, capabilities 23, no MCP tool.
+
 ## C. Test Gates (all green)
 
-- 105.1 admin suite: 44/0. 105.2 admin suite: **68/0** (stable across reruns).
-- `run.sh --changed` **T0: 59/0, net-new 0**.
-- `run.sh --changed` **T1 (105.1: 15 suites 493/0)**.
-- `run.sh --changed --runtime patch` **T1 (105.2: 14 suites 665/0, net-new 0)**
-  — patch group included to confirm the patches.php refactor caused no engine
-  regression.
+- 105.1 admin suite 44/0 → 105.2 68/0 → **105.3 admin suite 93/0** (stable across reruns).
+- `run.sh --changed` T0: 59/0, net-new 0.
+- 105.2: `run.sh --changed --runtime patch` T1 (14 suites) 665/0, net-new 0.
+- **105.3: `run.sh --changed --runtime patch` T1 (27 suites) 1081/0, net-new 0.**
 - php -l clean on all touched PHP files.
 
 ## D. Repository State
 
-- Branch `main`; local HEAD = `ac85221` (105.2). Commits ahead of origin (NOT
-  pushed): `1742ca8` (105.1 feature), `c8747dd` (105.1 handoff), `ac85221`
-  (105.2 feature) + this handoff update.
+- Branch `main`; local HEAD = `634803b` (105.3 feature) + a handoff commit.
+  Commits ahead of origin (NOT pushed): `1742ca8`/`c8747dd` (105.1),
+  `ac85221`/`5cf9f9b` (105.2), `634803b` + this handoff (105.3).
 - Working tree otherwise clean. `v0.104.0` tag unchanged (→ `5abea8f`).
 
 ## E. Approved Decisions Baked In
@@ -103,15 +137,18 @@ rollback/restore (105.3), no MCP, no new persistence.**
 - Audit-first / read-first; restore visually deferred.
 - `actor_summary` included in the sessions response (cheap, no extra runtime API).
 
-## F. Remaining STEP 105 Phases (NOT started)
+## F. Remaining STEP 105 Phases
 
 - **105.2 — Detail view + diff viewer. ✅ DONE (`ac85221`).**
-- **105.3 — Rollback action.** `POST /admin/history/{id}/rollback` routed THROUGH
-  `OperationExecutor` (preserves DestructiveGuard `ROLLBACK_CHANGE` handshake +
-  security-mode approval routing). Then **swap the menu**: remove/redirect
-  `wpcc-rollback` → `wpcc-change-history`. Individual + change-set restore only.
+- **105.3 — Rollback action + menu merge. ✅ DONE (`634803b`).**
 - **105.4 — Pro seam (single ungated `feature_gate()` at render+REST), a11y/i18n,
   error/empty polish, full SERIAL T2 net-new 0, deploy on explicit direction.**
+
+### Behavioral note for release (105.3)
+Admin restores now honor approval/DestructiveGuard/security-mode. In
+client/enterprise mode a restore that the old Rollback page executed instantly
+will now route to **Pending Approvals** — intended hardening; call out in
+release notes.
 
 ## G. Next-Chat Starting Point
 
