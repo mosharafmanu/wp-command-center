@@ -27,6 +27,9 @@ COMPLETE, deployed, prod-verified. STEP 105 surfaced it in wp-admin and is now
 - **STEP 105.5 — Actor attribution hardening: RELEASED & PROD-VERIFIED**
   (feature `f4bc6cf` + handoff `14edea2`; tag **`v0.105.1`** → `14edea2`).
   Eliminates new "Actor: unknown" rows.
+- **STEP 105.6 — PHP verification & agent ergonomics hardening: COMPLETE locally,
+  VALIDATED, NOT pushed/deployed/tagged** (feature `e660329`). Triggered by
+  real-world patching validation. See §B6.
 - STEP 104 backend remains live and prod-verified at `v0.104.0` (`5abea8f`).
 
 ## A2. Release & Production Verification (deployed commit `14edea2` / `v0.105.1`)
@@ -194,6 +197,47 @@ WP user → `resolve_actor()` → `{type:unknown}`, surfaced by 105 as
 - **`tests/test-actor-attribution.sh` (NEW, 34/0)** + registered in
   `regression-map.tsv` (new `attribution` group + `audit`/`history`).
 - **Forward-only:** the 6 pre-existing `unknown` rows are left as-is.
+
+## B6. What 105.6 Shipped (PHP verification & agent ergonomics — `e660329`)
+
+Post-release hardening from real-world patching: a `functions.php` patch failed
+because `php -l` invoked a nonexistent `/usr/sbin/php8.4` and the missing-binary
+error was **misclassified as a syntax verification failure**. **No schema /
+storage / capability / operation_map changes.** Committed locally; NOT
+pushed/deployed/tagged.
+
+- **`includes/PatchSystem/PhpBinary.php` (NEW)** — PHP CLI discovery + validation
+  + bounded exec: `WPCC_PHP_BINARY` const/option → `PHP_BINARY` (executable, CLI,
+  non-fpm) → `PHP_BINDIR` → `command -v` (php, php8.x). Each candidate is
+  `is_executable` + `-v`-probed; `proc_open` with a deadline (no hangs).
+- **`PatchApproval::verify_file()` (MOD)** — returns `{passed,message,method,code,
+  reason,binary}`. Codes: `ok` | `syntax_error` | `tokenizer_fallback_used`;
+  reasons: `php_cli_not_found` | `php_cli_not_executable` | `verification_timeout`.
+  **Tooling failure ≠ syntax failure** — degrades to the tokenizer; only a real
+  ParseError blocks. New `summarize_verification()` aggregator.
+- **`PatchOperation` (MOD)** — `patch_create`/`patch_preview` return the
+  confirmation contract up front (`confirmation_phrase=APPLY_PATCH` + params +
+  hint) for high-risk files; preview exposes its verification method; apply/verify
+  surface `verification_summary` (method/code/reason/warning).
+- **`OperationRegistry` + `McpServerRuntime` (MOD)** — `patch_manage.files` now has
+  a machine-readable JSON-Schema `items` (mode enum + per-mode `oneOf` required +
+  property docs) and worked `examples`, exposed through the real MCP `inputSchema`
+  (generator passes through `items`/`examples`). Limitation: `oneOf` is the
+  strongest portable expression of per-mode conditionals; `normalize_files()`
+  stays authoritative.
+- **`Rollback/SnapshotManager::create()` (MOD)** — `WPCC_SNAPSHOT_MAX_BYTES`
+  large-file guard (`wpcc_snapshot_too_large`), read time budget
+  (`wpcc_snapshot_timeout`), and a **non-blocking** temp-file + atomic `rename`
+  write (replaces the blocking `LOCK_EX` that could hang minutes). Hash fidelity
+  preserved.
+- **Tests:** `test-php-verification.sh` (39/0) + `test-patch-ergonomics.sh` (14/0),
+  registered in the `patch` regression group.
+- **Gates:** `--changed` T0 238/0, T1 (28 suites) 924/0, **pristine serial T2
+  (108 suites) 4089/24, net-new 0** (24 = chronic baseline). Invariants held:
+  operation_map 34, capabilities 23, DB_VERSION 2.3.0, MCP tools 40.
+- **New optional config (defaults preserve current behavior):**
+  `WPCC_PHP_BINARY` / `wpcc_php_binary`, `WPCC_PHP_LINT_TIMEOUT` (5s),
+  `WPCC_SNAPSHOT_MAX_BYTES` (10MB), `WPCC_SNAPSHOT_TIMEOUT` (10s).
 
 ## C. Test Gates (all green)
 
