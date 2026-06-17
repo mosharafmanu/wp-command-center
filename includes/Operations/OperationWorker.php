@@ -85,7 +85,9 @@ final class OperationWorker {
 	 * Run by the WP-Cron hook.
 	 */
 	public function handle_cron(): void {
-		$this->process( 5, [ 'actor' => null ] );
+		// STEP 105.5 — cron-executed queue items have no human/token actor; tag
+		// them so the change log records "System (Cron)" instead of "unknown".
+		$this->process( 5, [ 'actor' => null, 'system_via' => 'cron' ] );
 	}
 
 	/**

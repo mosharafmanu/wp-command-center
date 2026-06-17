@@ -92,6 +92,10 @@ final class WorkflowRuntimeManager {
 		$steps=array_values((array)($w[$id]['steps']??[]));
 		$on_failure=in_array(($p['on_failure']??'stop'),self::ON_FAILURE,true)?(string)$p['on_failure']:'stop';
 		$cx['within_workflow']=true; // single approval: plan approved as a unit
+		// STEP 105.5 — each step inherits the workflow's initiating actor. If the
+		// workflow was started with no human/token actor, tag steps so the change
+		// log records "System (Workflow)" instead of "unknown".
+		if(empty($cx['actor'])&&empty($cx['system_via']))$cx['system_via']='workflow';
 		$executor=new OperationExecutor();
 		$exec_id=wp_generate_uuid4();
 		$started=microtime(true);

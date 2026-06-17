@@ -145,7 +145,7 @@ final class ChangeRecorder {
 
 		$actor      = $context['actor'] ?? [];
 		$actor      = is_array( $actor ) ? $actor : [];
-		$actor_json = wp_json_encode( AuditLog::resolve_actor( $actor ) );
+		$actor_json = wp_json_encode( $this->resolve_change_actor( $actor, $context ) );
 		$source     = substr( (string) ( $context['source'] ?? ( $payload['source'] ?? 'api' ) ), 0, 20 );
 
 		$change_id = wp_generate_uuid4();
@@ -241,7 +241,7 @@ final class ChangeRecorder {
 			$new_id    = wp_generate_uuid4();
 			$links     = is_array( $context['links'] ?? null ) ? $context['links'] : $context;
 			$actor     = is_array( $context['actor'] ?? null ) ? $context['actor'] : [];
-			$actor_json = wp_json_encode( AuditLog::resolve_actor( $actor ) );
+			$actor_json = wp_json_encode( $this->resolve_change_actor( $actor, $context ) );
 			$source    = substr( (string) ( $context['source'] ?? 'api' ), 0, 20 );
 			$runtime   = (string) ( $original['runtime'] ?? '' );
 
@@ -319,6 +319,34 @@ final class ChangeRecorder {
 		} catch ( \Throwable $e ) {
 			return '';
 		}
+	}
+
+	/**
+	 * STEP 105.5 — actor for a change-log row, with a backstop that GUARANTEES no
+	 * row is ever recorded as "unknown". For interactive callers (token/mcp/admin)
+	 * resolve_actor returns their real actor and is used as-is. When there is no
+	 * actor and no logged-in user (cron / queue worker / workflow / headless
+	 * request), resolve_actor falls back to {type:unknown}; here we replace that
+	 * with a descriptive system actor, labelled by the caller's `system_via` hint.
+	 *
+	 * Scoped to the change log only — AuditLog::resolve_actor() and the JSONL
+	 * audit semantics are unchanged. Never modifies historical rows.
+	 *
+	 * @param array<string,mixed> $actor   Raw actor from the execution context.
+	 * @param array<string,mixed> $context Execution context (may carry system_via).
+	 * @return array<string,mixed>
+	 */
+	private function resolve_change_actor( array $actor, array $context ): array {
+		$resolved = AuditLog::resolve_actor( $actor );
+
+		if ( empty( $resolved ) || 'unknown' === ( $resolved['type'] ?? '' ) ) {
+			$via = isset( $context['system_via'] ) && is_string( $context['system_via'] ) && '' !== $context['system_via']
+				? $context['system_via']
+				: 'system';
+			return AuditLog::system_actor( $via );
+		}
+
+		return $resolved;
 	}
 
 	/**

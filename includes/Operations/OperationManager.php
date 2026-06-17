@@ -121,6 +121,16 @@ final class OperationManager {
 			'request_id' => $request_id,
 		];
 
+		// STEP 105.5 — carry the approver/executor actor into the execution
+		// context so the change log attributes it correctly (an admin approval
+		// passes the admin actor). When executed with no actor (headless), tag it
+		// so the change log records "System (Headless Request)" instead of "unknown".
+		if ( ! empty( $actor ) ) {
+			$context['actor'] = $actor;
+		} else {
+			$context['system_via'] = 'request';
+		}
+
 		$executor = new OperationExecutor();
 		if ( ! empty( $request['plan_id'] ) ) {
 			( new RecommendationEngine() )->sync_plan_status( $request['plan_id'], 'executing', $actor );

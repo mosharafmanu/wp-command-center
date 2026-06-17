@@ -206,6 +206,28 @@ final class AuditLog {
 	}
 
 	/**
+	 * STEP 105.5 — a descriptive actor for non-interactive executions (cron,
+	 * queue worker, workflow, headless request) where there is no human/token
+	 * actor. Carries a human label so the Change History UI renders e.g.
+	 * "System (Cron)" without any UI change. This is attribution metadata only.
+	 *
+	 * @param string $via One of: cron|queue|workflow|request (others accepted).
+	 * @return array{type:string, via:string, label:string}
+	 */
+	public static function system_actor( string $via = 'system' ): array {
+		$labels = [
+			'cron'     => 'System (Cron)',
+			'queue'    => 'System (Queue)',
+			'workflow' => 'System (Workflow)',
+			'request'  => 'System (Headless Request)',
+		];
+		$via   = '' !== $via ? $via : 'system';
+		$label = $labels[ $via ] ?? ( 'system' === $via ? 'System' : 'System (' . ucfirst( $via ) . ')' );
+
+		return [ 'type' => 'system', 'via' => $via, 'label' => $label ];
+	}
+
+	/**
 	 * Absolute path of the audit log directory, creating it (and its
 	 * protective files) on first use.
 	 */

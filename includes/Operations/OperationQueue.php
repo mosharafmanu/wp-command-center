@@ -126,6 +126,15 @@ final class OperationQueue {
 			'action_id'  => $request['action_id'] ?? null,
 			'plan_id'    => $request['plan_id'] ?? null,
 		] );
+
+		// STEP 105.5 — queued items run with no human/token actor. Tag the
+		// execution so the change log records a descriptive system actor (a cron
+		// run already set system_via='cron'; a direct run defaults to 'queue')
+		// rather than "unknown".
+		if ( empty( $context['actor'] ) && empty( $context['system_via'] ) ) {
+			$context['system_via'] = 'queue';
+		}
+
 		if ( ! empty( $request['plan_id'] ) ) {
 			( new RecommendationEngine() )->sync_plan_status( $request['plan_id'], 'executing', $context['actor'] ?? [] );
 		}
