@@ -1,13 +1,13 @@
 # PROJECT HANDOFF — STEP 105: Change History Admin UI
 
-**Written:** 2026-06-17 (updated post-105.5-deploy). Supersedes
+**Written:** 2026-06-17 (updated post-105.6-deploy). Supersedes
 `HANDOFF-STEP-104.md` for current state. STEP 104 (Change History backend) is
 COMPLETE, deployed, prod-verified. STEP 105 surfaced it in wp-admin and is now
-**COMPLETE (105.1–105.5), RELEASED, and PRODUCTION-VERIFIED.**
+**COMPLETE (105.1–105.6), RELEASED, and PRODUCTION-VERIFIED.**
 
-- **Production runs `14edea2` (tag `v0.105.1`); origin/main == local HEAD == `14edea2`; working tree clean.**
-- See **§A2 Release & Production Verification** for the deployed-commit / route /
-  actor-attribution proofs.
+- **Production runs `8f5d830` (tag `v0.105.2`); origin/main == local HEAD == `8f5d830`; working tree clean.**
+- See **§A2** (105.5 release proofs) and **§A3** (105.6 release & production
+  verification) for the deployed-commit / route / verifier proofs.
 
 ---
 
@@ -27,9 +27,9 @@ COMPLETE, deployed, prod-verified. STEP 105 surfaced it in wp-admin and is now
 - **STEP 105.5 — Actor attribution hardening: RELEASED & PROD-VERIFIED**
   (feature `f4bc6cf` + handoff `14edea2`; tag **`v0.105.1`** → `14edea2`).
   Eliminates new "Actor: unknown" rows.
-- **STEP 105.6 — PHP verification & agent ergonomics hardening: COMPLETE locally,
-  VALIDATED, NOT pushed/deployed/tagged** (feature `e660329`). Triggered by
-  real-world patching validation. See §B6.
+- **STEP 105.6 — PHP verification & agent ergonomics hardening: RELEASED &
+  PROD-VERIFIED** (feature `e660329` + handoff `8f5d830`; tag **`v0.105.2`** →
+  `8f5d830`). Triggered by real-world patching validation. See §B6 + §A3.
 - STEP 104 backend remains live and prod-verified at `v0.104.0` (`5abea8f`).
 
 ## A2. Release & Production Verification (deployed commit `14edea2` / `v0.105.1`)
@@ -49,6 +49,33 @@ COMPLETE, deployed, prod-verified. STEP 105 surfaced it in wp-admin and is now
   (Headless Request)** correct; backstop: empty→`system`, unknown+cron→
   `System (Cron)`, token **preserved**. **Production `change_log`: 0 `unknown`
   rows (of 272 total)** — and the backstop guarantees it stays 0.
+
+## A3. Release & Production Verification — STEP 105.6 (deployed `8f5d830` / `v0.105.2`)
+
+**Current production release.** STEP 105.6 (PHP verification & agent ergonomics
+hardening) is live and verified.
+
+- **Pushed:** `3465df9..8f5d830  main -> main` (commits `e660329` feature +
+  `8f5d830` handoff). **Deployed commit of record: `8f5d830`.**
+- **Tag `v0.105.2`** (annotated) → `8f5d830`, pushed to origin (obj `4214693`).
+- **Deployed-commit proof (SSH):** server `git rev-parse HEAD` = `8f5d830`,
+  `git describe` = `v0.105.2`; deploy log:
+  `2026-06-17T12:26:07Z DEPLOYED 3465df9 -> 8f5d830 active=yes`.
+- **Route/health (anonymous HTTP):** homepage 200; namespace index 200;
+  `patch_manage`/`rollback_manage`/`change_history` ops 401 (live, auth-gated);
+  `/admin/history` 401; admin page 302 (login); **no 500s.**
+- **Invariants (read from deployed code via SSH):** operation_map **34**,
+  capabilities **23**, MCP tools **40**, DB_VERSION **2.3.0** — unchanged.
+- **105.6 verifier improvements ACTIVE (read-only functional check on deployed
+  code, no prod data mutated):** `PhpBinary` present; resolver `reason=ok`,
+  resolved path executable; `verify_file` → clean=`ok`/passed, broken=
+  `syntax_error`/blocked (tooling≠syntax taxonomy live); machine-readable
+  `patch_manage.files` schema present (mode enum 6, `oneOf` 6, examples 6);
+  snapshot timeout/atomic-write guard deployed.
+- **Rollback + STEP 105 / 105.5 intact:** rollback engine live; admin Change
+  History UI live; actor-attribution code byte-identical since `14edea2`.
+- **Anomaly:** none affecting the release. Verification was reflection + reads +
+  server-tmp temp files (deleted); production data was not modified.
 
 ## B. What 105.1 Shipped (commit `1742ca8`)
 
@@ -203,8 +230,8 @@ WP user → `resolve_actor()` → `{type:unknown}`, surfaced by 105 as
 Post-release hardening from real-world patching: a `functions.php` patch failed
 because `php -l` invoked a nonexistent `/usr/sbin/php8.4` and the missing-binary
 error was **misclassified as a syntax verification failure**. **No schema /
-storage / capability / operation_map changes.** Committed locally; NOT
-pushed/deployed/tagged.
+storage / capability / operation_map changes.** RELEASED & prod-verified
+(deployed `8f5d830`, tag `v0.105.2` — see §A3).
 
 - **`includes/PatchSystem/PhpBinary.php` (NEW)** — PHP CLI discovery + validation
   + bounded exec: `WPCC_PHP_BINARY` const/option → `PHP_BINARY` (executable, CLI,
@@ -265,15 +292,16 @@ pushed/deployed/tagged.
 
 ## D. Repository State (current)
 
-- Branch `main`; **local HEAD == origin/main == `14edea2`** (0 ahead / 0 behind);
-  **working tree clean.**
-- Tags: `v0.104.0` (→ `5abea8f`), `v0.105.0` (→ `07aa951`), **`v0.105.1`
-  (→ `14edea2`, the deployed STEP 105.5 commit)** — all local + remote.
+- Branch `main`; **local HEAD == origin/main == `8f5d830`** (0 ahead / 0 behind);
+  **working tree clean.** Production server HEAD == `8f5d830` (tag `v0.105.2`).
+- Tags (all local + remote): `v0.104.0` (→ `5abea8f`), `v0.105.0` (→ `07aa951`),
+  `v0.105.1` (→ `14edea2`, STEP 105.5), **`v0.105.2` (→ `8f5d830`, the current
+  deployed STEP 105.6 release)**.
 - `wpcc-env.sh` exists locally but is **git-ignored** (local full-scope dev token,
   not tracked, not the prod token) — never appears in `git status`.
-- The local working copy was **re-cloned** mid-session after a local filesystem
-  anomaly removed it; nothing was lost (origin + prod authoritative). Re-clone is
-  at `14edea2`, clean.
+- The local working copy was **re-cloned** earlier after a local filesystem
+  anomaly removed it; nothing was lost (origin + prod authoritative). Now at
+  `8f5d830`, clean.
 
 ## E. Approved Decisions Baked In
 
@@ -291,9 +319,21 @@ pushed/deployed/tagged.
 - **105.3 — Rollback action + menu merge. ✅ DONE (`634803b`).**
 - **105.4 — Feature-gate seam + a11y + i18n + polish + validation. ✅ DONE (`30ccaf2`).**
 - **105.5 — Actor attribution hardening. ✅ DONE + DEPLOYED (`f4bc6cf`; `v0.105.1`).**
+- **105.6 — PHP verification & agent ergonomics hardening. ✅ DONE + DEPLOYED (`e660329`; `v0.105.2`).**
 
 **STEP 105 is complete, released, and production-verified.** **Next milestone:
 STEP 106 — Approval Center.**
+
+## F2. Roadmap (post-105)
+
+**Phase A — Finish the Platform**
+- **STEP 106 — Approval Center** ← next milestone
+- **STEP 107 — Token & Capability Manager**
+- **STEP 108 — Operations Explorer**
+- **STEP 109 — Dashboard**
+
+**Phase B — Product Hardening**
+- **STEP 110 — Platform Hardening & Certification**
 
 ### Behavioral note (105.3, now live)
 Admin restores honor approval/DestructiveGuard/security-mode. In client/enterprise
@@ -321,10 +361,10 @@ mode a restore that the old Rollback page executed instantly now routes to
 
 ## G. Next-Chat Starting Point — STEP 106 (Approval Center)
 
-- **Current state:** STEP 105 complete + released; production = `14edea2`
-  (`v0.105.1`); origin == local == `14edea2`; tree clean; `wpcc-env.sh` present
-  (git-ignored). STEP 104 + 105 backends/UI all live and verified. Security
-  mode on prod = developer.
+- **Current state:** STEP 105 complete + released (105.1–105.6); production =
+  `8f5d830` (`v0.105.2`); origin == local == `8f5d830`; tree clean; `wpcc-env.sh`
+  present (git-ignored). STEP 104 + 105 backends/UI all live and verified.
+  Security mode on prod = developer.
 - **Do NOT push/deploy without explicit direction** (pull-cron: `git push origin
   main` = live in ~1 min). Confirm scope before writing code.
 - **STEP 106 = Approval Center** — the next admin surface. Likely scope (to be
