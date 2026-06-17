@@ -9,9 +9,12 @@ STEP 105 surfaces that backend in wp-admin. This handoff covers **STEP 105.1**
 
 ## A. Status
 
-- **STEP 105.1 — Change History read-only admin UI: COMPLETE locally.**
-- **Committed:** `1742ca8` on `main`. **NOT pushed, NOT deployed** (deploy is
-  pull-cron from origin/main, so a local commit is inert until pushed).
+- **STEP 105.1 — Change History read-only admin UI: COMPLETE locally** (`1742ca8`;
+  handoff `c8747dd`).
+- **STEP 105.2 — Detail view + shared diff viewer: COMPLETE locally** (`ac85221`).
+- **All on `main`, NOT pushed, NOT deployed** (deploy is pull-cron from
+  origin/main, so local commits are inert until pushed). `main` is ahead of
+  origin by the 105.1 + 105.2 commits.
 - STEP 104 backend remains live and prod-verified at `v0.104.0` (`5abea8f`).
 
 ## B. What 105.1 Shipped (commit `1742ca8`)
@@ -48,20 +51,48 @@ execution, no diff viewer, no MCP, no new storage.**
 **Invariants held:** operation_map = 34, capabilities = 23 (no runtime op, MCP
 tool, or capability added).
 
+## B2. What 105.2 Shipped (commit `ac85221`)
+
+Change-detail diff viewer over the STEP 104 backend. **Still read-only — no
+rollback/restore (105.3), no MCP, no new persistence.**
+
+- **`includes/Admin/DiffRenderer.php` (NEW)** — the single shared unified-diff
+  renderer. `summarize()` (files changed / additions / deletions / per-file
+  list), `render_summary()` (compact header), `render_file_diff()` (escaped
+  `<pre>`, truncates >600 lines with a notice), `render_accordion()` (per-file
+  collapsible `<details>`). Escaped HTML only; file content is untrusted.
+- **`includes/Admin/views/patches.php` (MOD)** — dropped the inline
+  `$render_diff` closure; renders via `DiffRenderer::render_accordion(files,
+  open=true)`. **Patches and Change History share ONE renderer — no fork.**
+- **`includes/Admin/AdminRestApi.php` (MOD)** — `GET /admin/history/{id}/diff`
+  (read-only). kind via `history_get` → **patch** (real unified diff + summary)
+  | **patch_unavailable** (snapshot rotated → graceful metadata degrade) |
+  **metadata** (runtime/option → "what changed" from `target_summary` + counts,
+  no synthesized diff) | **none**. Returns `{diff_kind, available, summary,
+  html, note}`. Registered before the bare `/{change_id}` route.
+- **`includes/Admin/views/change-history.php` (MOD)** — detail panel fetches
+  `/diff` and **injects the server-rendered, escaped HTML only** — no
+  client-side diff parsing.
+- **`tests/test-change-history-admin.sh` (MOD)** — now **68/68** (+24:
+  renderer counts/escaping/truncation, diff endpoint metadata + not-found, and
+  a no-forked-renderer guard).
+
 ## C. Test Gates (all green)
 
-- Standalone admin suite: **44 passed / 0 failed** (incl. functional aggregation:
-  session counts match the table exactly; session-less rows excluded from
-  Sessions yet present in Timeline; invariants; route/menu/escaping structure).
+- 105.1 admin suite: 44/0. 105.2 admin suite: **68/0** (stable across reruns).
 - `run.sh --changed` **T0: 59/0, net-new 0**.
-- `run.sh --changed` **T1 (15 suites incl. the new admin suite): 493/0, net-new 0**.
-- php -l clean on all four PHP files.
+- `run.sh --changed` **T1 (105.1: 15 suites 493/0)**.
+- `run.sh --changed --runtime patch` **T1 (105.2: 14 suites 665/0, net-new 0)**
+  — patch group included to confirm the patches.php refactor caused no engine
+  regression.
+- php -l clean on all touched PHP files.
 
 ## D. Repository State
 
-- Branch `main`; local HEAD = `1742ca8` (105.1). **Local is AHEAD of origin by
-  this commit — NOT pushed.** Working tree otherwise clean.
-- `v0.104.0` tag unchanged (→ `5abea8f`).
+- Branch `main`; local HEAD = `ac85221` (105.2). Commits ahead of origin (NOT
+  pushed): `1742ca8` (105.1 feature), `c8747dd` (105.1 handoff), `ac85221`
+  (105.2 feature) + this handoff update.
+- Working tree otherwise clean. `v0.104.0` tag unchanged (→ `5abea8f`).
 
 ## E. Approved Decisions Baked In
 
@@ -74,10 +105,7 @@ tool, or capability added).
 
 ## F. Remaining STEP 105 Phases (NOT started)
 
-- **105.2 — Detail view + diff viewer.** Patch changes → real unified diff via a
-  **shared** `DiffGenerator` partial (no forked renderer); runtime/option → metadata
-  "what changed" summary (no fake diff); `kind=none` → metadata card; **degrade
-  gracefully if the patch snapshot is missing.** Still read-only.
+- **105.2 — Detail view + diff viewer. ✅ DONE (`ac85221`).**
 - **105.3 — Rollback action.** `POST /admin/history/{id}/rollback` routed THROUGH
   `OperationExecutor` (preserves DestructiveGuard `ROLLBACK_CHANGE` handshake +
   security-mode approval routing). Then **swap the menu**: remove/redirect
