@@ -150,14 +150,53 @@ final class PatchOperation {
 
 		$this->audit( 'patch.preview', [ 'files' => count( $previews ), 'syntax_ok' => $all_valid, 'is_change_set' => $change_set['is_change_set'] ], $context );
 
-		return [
+		return array_merge( [
 			'action'             => 'patch_preview',
 			'change_set'         => $change_set,
 			'files'              => $previews,
 			'syntax_ok'          => $all_valid,
+			// STEP 105.6 — preview verifies the proposed content in-memory with the
+			// tokenizer (the file is not written yet); patch_apply re-verifies the
+			// written file with `php -l` when a PHP CLI is available. Method is
+			// surfaced so agents understand the two passes can differ.
+			'verification'       => [
+				'method' => 'tokenizer',
+				'stage'  => 'preview-in-memory',
+				'note'   => __( 'Preview uses an in-memory tokenizer check; apply re-verifies the written file with php -l when available.', 'wp-command-center' ),
+			],
 			'dangerous_files'    => $dangerous,
-			'requires_confirmation' => ! empty( $dangerous ),
 			'persisted'          => false,
+		], $this->confirmation_contract( $dangerous ) );
+	}
+
+	/**
+	 * STEP 105.6 — proactively expose the confirmation contract for a proposal
+	 * touching high-risk files, so an agent learns the required phrase from
+	 * patch_preview / patch_create rather than discovering it only after a
+	 * confirmation_required failure on patch_apply.
+	 *
+	 * @param array<int,string> $dangerous
+	 * @return array<string,mixed>
+	 */
+	private function confirmation_contract( array $dangerous ): array {
+		if ( empty( $dangerous ) ) {
+			return [ 'requires_confirmation' => false ];
+		}
+
+		return [
+			'requires_confirmation' => true,
+			'confirmation_phrase'   => DestructiveGuard::PHRASE_PATCH,
+			'confirmation_params'   => [
+				'confirm'             => true,
+				'confirmation_phrase' => DestructiveGuard::PHRASE_PATCH,
+				'reason'              => __( 'a human-readable reason for applying this high-risk change', 'wp-command-center' ),
+			],
+			'confirmation_hint'     => sprintf(
+				/* translators: 1: comma-separated high-risk paths, 2: required phrase */
+				__( 'This change touches high-risk file(s): %1$s. To apply, call patch_apply with confirm=true, confirmation_phrase="%2$s", and a reason.', 'wp-command-center' ),
+				implode( ', ', $dangerous ),
+				DestructiveGuard::PHRASE_PATCH
+			),
 		];
 	}
 
@@ -200,8 +239,17 @@ final class PatchOperation {
 
 		$change_set = self::summarize_change_set_record( $patch );
 
+		// STEP 105.6 — surface the confirmation contract up front so the agent
+		// knows the required phrase before calling patch_apply (high-risk files).
+		$dangerous = [];
+		foreach ( $files as $f ) {
+			if ( DangerousFiles::is_dangerous_path( $f['path'] ) ) {
+				$dangerous[] = $f['path'];
+			}
+		}
+
 		// PatchManager already audits patch.created.
-		return [
+		return array_merge( [
 			'action'        => 'patch_create',
 			'patch_id'      => $patch['id'],
 			// change_set_id is an alias of patch_id — one proposal == one change set.
@@ -221,7 +269,7 @@ final class PatchOperation {
 				],
 				$files
 			),
-		];
+		], $this->confirmation_contract( $dangerous ) );
 	}
 
 	// ── Apply (snapshot + write + verify + auto-revert) ──────────
@@ -294,6 +342,12 @@ final class PatchOperation {
 			'snapshot_ids'       => $snapshot_ids,
 			'rollback_available' => $applied && ! empty( $snapshot_ids ),
 			'verification'       => $verification,
+			// STEP 105.6 — machine-readable verification summary + parity warning.
+			// Preview verifies in-memory with the tokenizer; apply re-verifies the
+			// written file with `php -l` when available. This surfaces the method
+			// actually used, the outcome code, and whether a tokenizer fallback
+			// was relied on (and why) so the agent is never silently downgraded.
+			'verification_summary' => PatchApproval::summarize_verification( $verification['checks'] ?? [] ),
 		];
 	}
 
@@ -342,6 +396,9 @@ final class PatchOperation {
 			'status'    => $patch['status'],
 			'syntax_ok' => $all_ok,
 			'checks'    => $checks,
+			'verification_summary' => PatchApproval::summarize_verification(
+				array_map( static fn( array $c ): array => $c['syntax'], $checks )
+			),
 		];
 	}
 

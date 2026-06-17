@@ -307,6 +307,16 @@ final class McpServerRuntime {
 				if ( isset( $p['default'] ) ) {
 					$props[ $p['name'] ]['default'] = $p['default'];
 				}
+				// STEP 105.6 — pass through richer JSON Schema when a parameter
+				// declares it (e.g. patch_manage `files`: per-item object schema with
+				// a mode enum, per-mode required via oneOf, and worked examples), so
+				// the contract is machine-readable, not just descriptive text.
+				if ( isset( $p['items'] ) && is_array( $p['items'] ) ) {
+					$props[ $p['name'] ]['items'] = $p['items'];
+				}
+				if ( isset( $p['examples'] ) && ContextModeOptimizer::COMPACT !== $mode ) {
+					$props[ $p['name'] ]['examples'] = $p['examples'];
+				}
 				if ( ContextModeOptimizer::COMPACT !== $mode ) {
 					$props[ $p['name'] ]['description'] = $p['description'] ?? $p['name'];
 				}

@@ -448,34 +448,63 @@ final class PatchApproval {
 				'passed'  => true,
 				'message' => __( 'Not a PHP file — syntax check skipped.', 'wp-command-center' ),
 				'method'  => 'none',
+				'code'    => 'ok',
+				'reason'  => 'none',
+				'binary'  => null,
 			];
 		}
 
-		// Preferred: real `php -l` via shell.
-		if ( $this->can_shell_exec() ) {
-			foreach ( $this->lint_binaries() as $binary ) {
-				$output = shell_exec( escapeshellarg( $binary ) . ' -l ' . escapeshellarg( $real_path ) . ' 2>&1' );
+		// Preferred: real `php -l` via a validated, timeout-bounded PHP CLI.
+		$lint = PhpBinary::lint( $real_path );
 
-				if ( ! is_string( $output ) ) {
-					continue;
-				}
-
-				if ( str_contains( $output, 'No syntax errors detected' ) ) {
-					return [ 'passed' => true, 'message' => trim( $output ), 'method' => 'php -l' ];
-				}
-
-				if ( str_starts_with( trim( $output ), 'Usage:' ) ) {
-					// This binary doesn't support -l (e.g. PHP_BINARY points at
-					// php-fpm on FPM-based hosts); try the next candidate.
-					continue;
-				}
-
-				return [ 'passed' => false, 'message' => trim( $output ), 'method' => 'php -l' ];
+		if ( $lint['ran'] ) {
+			if ( $lint['passed'] ) {
+				return [
+					'passed'  => true,
+					'message' => trim( $lint['output'] ) ?: __( 'No syntax errors detected.', 'wp-command-center' ),
+					'method'  => 'php -l',
+					'code'    => 'ok',
+					'reason'  => 'none',
+					'binary'  => $lint['binary'],
+				];
 			}
+			// php -l found a REAL syntax error → block (safety guarantee).
+			return [
+				'passed'  => false,
+				'message' => trim( $lint['output'] ),
+				'method'  => 'php -l',
+				'code'    => 'syntax_error',
+				'reason'  => 'none',
+				'binary'  => $lint['binary'],
+			];
 		}
 
-		// Fallback: tokenizer/parser validation (no shell required).
-		return $this->tokenizer_check( (string) file_get_contents( $real_path ) );
+		// php -l could NOT run (binary missing/not-executable/timeout). This is a
+		// TOOLING failure, NOT a syntax failure — fall back to the tokenizer, which
+		// still catches real syntax errors without a shell. The tooling reason is
+		// surfaced so callers/agents see why php -l was skipped.
+		$tok = $this->tokenizer_check( (string) file_get_contents( $real_path ) );
+
+		if ( ! $tok['passed'] ) {
+			// Tokenizer found a real syntax error → still block.
+			return [
+				'passed'  => false,
+				'message' => $tok['message'],
+				'method'  => 'tokenizer',
+				'code'    => 'syntax_error',
+				'reason'  => $lint['reason'],
+				'binary'  => null,
+			];
+		}
+
+		return [
+			'passed'  => true,
+			'message' => $tok['message'],
+			'method'  => $tok['method'], // 'tokenizer' or 'none' (tokenizer unavailable)
+			'code'    => 'tokenizer_fallback_used',
+			'reason'  => $lint['reason'], // php_cli_not_found | php_cli_not_executable | verification_timeout
+			'binary'  => null,
+		];
 	}
 
 	/**
@@ -509,32 +538,62 @@ final class PatchApproval {
 	}
 
 	/**
-	 * Candidate PHP CLI binaries to try for `-l` syntax checking, in order
-	 * of preference. On FPM-based hosts PHP_BINARY points at php-fpm, which
-	 * doesn't support -l (it prints a usage message), so a sibling CLI
-	 * binary and the PATH-resolved `php` are tried as fallbacks.
+	 * STEP 105.6 — aggregate per-file verification checks into one machine-readable
+	 * summary for the agent-facing response: the dominant method, the worst
+	 * outcome code, whether a tokenizer fallback was used (and why), and a
+	 * human warning when verification was best-effort.
 	 *
-	 * @return list<string>
+	 * @param array<string,array<string,mixed>> $checks path => verify_file() result
+	 * @return array{passed:bool,method:string,code:string,reason:string,tokenizer_fallback_used:bool,warning:?string}
 	 */
-	private function lint_binaries(): array {
-		$binaries = [ PHP_BINARY ];
-		$base     = basename( PHP_BINARY );
+	public static function summarize_verification( array $checks ): array {
+		$methods  = [];
+		$reason   = 'none';
+		$fallback = false;
+		$passed   = true;
+		$code     = 'ok';
 
-		if ( str_contains( $base, 'fpm' ) ) {
-			$binaries[] = trailingslashit( dirname( PHP_BINARY ) ) . str_replace( '-fpm', '', $base );
-			$binaries[] = 'php';
+		foreach ( $checks as $c ) {
+			$passed     = $passed && ! empty( $c['passed'] );
+			$methods[]  = (string) ( $c['method'] ?? 'none' );
+			$c_code     = (string) ( $c['code'] ?? 'ok' );
+			$c_reason   = (string) ( $c['reason'] ?? 'none' );
+
+			if ( 'syntax_error' === $c_code ) {
+				$code = 'syntax_error';
+			} elseif ( 'tokenizer_fallback_used' === $c_code && 'syntax_error' !== $code ) {
+				$code     = 'tokenizer_fallback_used';
+				$fallback = true;
+				if ( 'none' === $reason && 'none' !== $c_reason ) {
+					$reason = $c_reason;
+				}
+			}
 		}
 
-		return $binaries;
-	}
+		$methods = array_values( array_unique( array_filter( $methods, static fn( $m ) => 'none' !== $m ) ) );
+		$method  = count( $methods ) > 1 ? 'mixed' : ( $methods[0] ?? 'none' );
 
-	private function can_shell_exec(): bool {
-		if ( ! function_exists( 'shell_exec' ) || ! defined( 'PHP_BINARY' ) || '' === PHP_BINARY ) {
-			return false;
+		$warning = null;
+		if ( $fallback ) {
+			$why = [
+				'php_cli_not_found'      => __( 'no PHP CLI binary was found', 'wp-command-center' ),
+				'php_cli_not_executable' => __( 'the configured PHP binary is not an executable CLI', 'wp-command-center' ),
+				'verification_timeout'   => __( 'php -l exceeded the time budget', 'wp-command-center' ),
+			];
+			$warning = sprintf(
+				/* translators: %s: reason php -l was unavailable */
+				__( 'Syntax verified with the tokenizer fallback because %s. Set the WPCC_PHP_BINARY constant/option to a PHP CLI path for full `php -l` verification.', 'wp-command-center' ),
+				$why[ $reason ] ?? __( 'php -l was unavailable', 'wp-command-center' )
+			);
 		}
 
-		$disabled = array_map( 'trim', explode( ',', (string) ini_get( 'disable_functions' ) ) );
-
-		return ! in_array( 'shell_exec', $disabled, true );
+		return [
+			'passed'                  => $passed,
+			'method'                  => $method,
+			'code'                    => $code,
+			'reason'                  => $reason,
+			'tokenizer_fallback_used' => $fallback,
+			'warning'                 => $warning,
+		];
 	}
 }

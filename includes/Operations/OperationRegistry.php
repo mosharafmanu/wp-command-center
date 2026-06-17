@@ -751,7 +751,53 @@ final class OperationRegistry {
 				'requires_approval' => true,
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'patch_preview', 'patch_create', 'patch_apply', 'patch_verify', 'patch_status' ], 'description' => 'The patch action to perform.' ],
-					[ 'name' => 'files', 'type' => 'array', 'required' => false, 'description' => 'Array of file-edit objects (required for patch_preview and patch_create). Every entry has "path" (relative to wp-content, e.g. "themes/my-theme/functions.php"; a leading "wp-content/" or an absolute path is also accepted) and a "mode". Per-mode fields: whole_file → { path, modified } where modified is the FULL new file content; append → { path, mode:"append", content }; prepend → { path, mode:"prepend", content }; replace_text → { path, mode:"replace_text", find, replace, count? } (count optional = replace first N, default all; errors if find is absent); replace_range → { path, mode:"replace_range", start_line, end_line, content } (1-based inclusive line range); unified_diff → { path, mode:"unified_diff", diff }. If "mode" is omitted it defaults to whole_file and "modified" is required. Any field not listed for the chosen mode is rejected. Use patch_preview first — its per-file output reports mode, patch_type (partial|whole_file), lines_added/lines_removed and a unified diff so you can confirm a partial edit was not treated as a whole-file replacement.' ],
+					[
+						'name'        => 'files',
+						'type'        => 'array',
+						'required'    => false,
+						'description' => 'Array of file-edit objects (required for patch_preview and patch_create). Each entry has "path" (relative to wp-content, e.g. "themes/my-theme/functions.php"; a leading "wp-content/" or an absolute path is also accepted) and a "mode" choosing how the edit is expressed. Omitting "mode" defaults to whole_file (then "modified" is required). Per-mode required fields are enforced by the items.oneOf schema below; any field not listed for the chosen mode is rejected server-side. Use patch_preview first — its per-file output reports mode, patch_type (partial|whole_file), lines_added/lines_removed and a unified diff.',
+						// STEP 105.6 — machine-readable per-item contract (JSON Schema).
+						// The mode enum + per-mode required fields are expressed via
+						// items.oneOf; whole_file is the branch that allows mode to be
+						// omitted. NOTE/limitation: MCP inputSchema is JSON Schema, so
+						// conditional per-mode requirements use `oneOf` (the strongest
+						// portable expression). Clients that validate JSON Schema will
+						// enforce it; clients that do not still receive the mode enum,
+						// property docs, and examples, and the server's normalize_files()
+						// remains the authoritative validator.
+						'items'       => [
+							'type'       => 'object',
+							'properties' => [
+								'path'       => [ 'type' => 'string', 'description' => 'Target file path (relative to wp-content, or absolute).' ],
+								'mode'       => [ 'type' => 'string', 'enum' => [ 'whole_file', 'append', 'prepend', 'replace_text', 'replace_range', 'unified_diff' ], 'description' => 'How the edit is expressed. Omit to default to whole_file.' ],
+								'modified'   => [ 'type' => 'string', 'description' => 'whole_file: the FULL new file content.' ],
+								'content'    => [ 'type' => 'string', 'description' => 'append/prepend: text to add. replace_range: replacement text for the line range.' ],
+								'find'       => [ 'type' => 'string', 'description' => 'replace_text: the substring to find.' ],
+								'replace'    => [ 'type' => 'string', 'description' => 'replace_text: the replacement text.' ],
+								'count'      => [ 'type' => 'number', 'description' => 'replace_text (optional): replace only the first N matches (default: all).' ],
+								'start_line' => [ 'type' => 'number', 'description' => 'replace_range: 1-based inclusive start line.' ],
+								'end_line'   => [ 'type' => 'number', 'description' => 'replace_range: 1-based inclusive end line.' ],
+								'diff'       => [ 'type' => 'string', 'description' => 'unified_diff: a unified diff to apply.' ],
+							],
+							'required'   => [ 'path' ],
+							'oneOf'      => [
+								[ 'title' => 'whole_file (default)', 'required' => [ 'modified' ] ],
+								[ 'title' => 'append', 'properties' => [ 'mode' => [ 'const' => 'append' ] ], 'required' => [ 'mode', 'content' ] ],
+								[ 'title' => 'prepend', 'properties' => [ 'mode' => [ 'const' => 'prepend' ] ], 'required' => [ 'mode', 'content' ] ],
+								[ 'title' => 'replace_text', 'properties' => [ 'mode' => [ 'const' => 'replace_text' ] ], 'required' => [ 'mode', 'find', 'replace' ] ],
+								[ 'title' => 'replace_range', 'properties' => [ 'mode' => [ 'const' => 'replace_range' ] ], 'required' => [ 'mode', 'start_line', 'end_line', 'content' ] ],
+								[ 'title' => 'unified_diff', 'properties' => [ 'mode' => [ 'const' => 'unified_diff' ] ], 'required' => [ 'mode', 'diff' ] ],
+							],
+						],
+						'examples'    => [
+							[ 'path' => 'themes/my-theme/functions.php', 'mode' => 'append', 'content' => "\nadd_filter( 'example', '__return_true' );\n" ],
+							[ 'path' => 'themes/my-theme/header.php', 'mode' => 'prepend', 'content' => "<?php /* injected top */ ?>\n" ],
+							[ 'path' => 'plugins/acme/acme.php', 'mode' => 'replace_text', 'find' => "version' => '1.0", 'replace' => "version' => '1.1", 'count' => 1 ],
+							[ 'path' => 'plugins/acme/inc/util.php', 'mode' => 'replace_range', 'start_line' => 10, 'end_line' => 12, 'content' => "// replaced lines 10-12\n" ],
+							[ 'path' => 'plugins/acme/acme.php', 'mode' => 'unified_diff', 'diff' => "--- a/acme.php\n+++ b/acme.php\n@@ -1 +1 @@\n-old\n+new\n" ],
+							[ 'path' => 'themes/my-theme/style.css', 'mode' => 'whole_file', 'modified' => "/* full new file content */\n" ],
+						],
+					],
 					[ 'name' => 'patch_id', 'type' => 'string', 'required' => false, 'description' => 'Patch ID (required for patch_apply, patch_verify, patch_status).' ],
 					[ 'name' => 'explanation', 'type' => 'string', 'required' => false, 'description' => 'Why the change is being made (patch_create).' ],
 					[ 'name' => 'risk_level', 'type' => 'string', 'required' => false, 'enum' => [ 'low', 'medium', 'high' ], 'description' => 'low | medium | high (patch_create).' ],

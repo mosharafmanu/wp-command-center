@@ -17,10 +17,32 @@ final class SnapshotManager {
 
 	private const DIR_NAME = 'wpcc-snapshots';
 
+	/** STEP 105.6 — default large-file cap (bytes) and read time budget (seconds). */
+	private const DEFAULT_MAX_BYTES = 10485760; // 10 MB
+	private const DEFAULT_TIMEOUT   = 10;
+
 	private PathGuard $path_guard;
 
 	public function __construct() {
 		$this->path_guard = new PathGuard();
+	}
+
+	/** Configurable max snapshot size in bytes (WPCC_SNAPSHOT_MAX_BYTES const/option). */
+	private static function max_bytes(): int {
+		if ( defined( 'WPCC_SNAPSHOT_MAX_BYTES' ) && (int) WPCC_SNAPSHOT_MAX_BYTES > 0 ) {
+			return (int) WPCC_SNAPSHOT_MAX_BYTES;
+		}
+		$opt = (int) get_option( 'wpcc_snapshot_max_bytes', 0 );
+		return $opt > 0 ? $opt : self::DEFAULT_MAX_BYTES;
+	}
+
+	/** Configurable snapshot read time budget in seconds. */
+	private static function timeout(): int {
+		if ( defined( 'WPCC_SNAPSHOT_TIMEOUT' ) && (int) WPCC_SNAPSHOT_TIMEOUT > 0 ) {
+			return (int) WPCC_SNAPSHOT_TIMEOUT;
+		}
+		$opt = (int) get_option( 'wpcc_snapshot_timeout', 0 );
+		return $opt > 0 ? $opt : self::DEFAULT_TIMEOUT;
 	}
 
 	/**
@@ -39,10 +61,34 @@ final class SnapshotManager {
 			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'wp-command-center' ) );
 		}
 
+		// STEP 105.6 — large-file protection: cap the snapshot size up front so a
+		// huge file can never stall the read or exhaust memory. Patch targets are
+		// source files; a multi-MB cap is generous. Returns a clear, classified
+		// error instead of hanging.
+		$max   = self::max_bytes();
+		$fsize = (int) @filesize( $real );
+		if ( $fsize > $max ) {
+			return new \WP_Error(
+				'wpcc_snapshot_too_large',
+				sprintf(
+					/* translators: 1: file size, 2: limit */
+					__( 'File is too large to snapshot (%1$d bytes > %2$d limit). Set WPCC_SNAPSHOT_MAX_BYTES to raise the cap.', 'wp-command-center' ),
+					$fsize,
+					$max
+				)
+			);
+		}
+
+		// Bounded read: guard wall-clock so a slow/locked filesystem surfaces a
+		// classified timeout rather than an unbounded hang.
+		$deadline = microtime( true ) + self::timeout();
 		$contents = file_get_contents( $real );
 
 		if ( false === $contents ) {
 			return new \WP_Error( 'wpcc_read_failed', __( 'Failed to read the file.', 'wp-command-center' ) );
+		}
+		if ( microtime( true ) > $deadline ) {
+			return new \WP_Error( 'wpcc_snapshot_timeout', __( 'Snapshot read exceeded the time budget.', 'wp-command-center' ) );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -53,9 +99,20 @@ final class SnapshotManager {
 
 		$id          = wp_generate_uuid4();
 		$backup_path = $id . '.snapshot';
+		$dest        = trailingslashit( $dir ) . $backup_path;
 
-		if ( false === file_put_contents( trailingslashit( $dir ) . $backup_path, $contents, LOCK_EX ) ) {
+		// STEP 105.6 — NON-BLOCKING write: write to a unique temp file then
+		// atomically rename into place. This avoids the previous blocking LOCK_EX,
+		// which could wait minutes on a contended/NFS lock. The temp name is
+		// unique per snapshot (UUID), so there is no lock to contend for, and
+		// rename() is atomic on the same filesystem.
+		$tmp = $dest . '.' . wp_generate_password( 8, false ) . '.tmp';
+		if ( false === file_put_contents( $tmp, $contents ) ) {
 			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to store the snapshot.', 'wp-command-center' ) );
+		}
+		if ( ! @rename( $tmp, $dest ) ) {
+			@unlink( $tmp );
+			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to finalize the snapshot.', 'wp-command-center' ) );
 		}
 
 		$record = [
