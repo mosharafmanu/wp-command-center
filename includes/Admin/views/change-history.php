@@ -52,6 +52,8 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		<div id="wpcc-history-detail" data-change-id="<?php echo esc_attr( $view_id ); ?>">
 			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'wp-command-center' ); ?></p>
 		</div>
+		<h2 id="wpcc-diff-heading" style="display:none;"><?php esc_html_e( 'What changed', 'wp-command-center' ); ?></h2>
+		<div id="wpcc-history-diff"></div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
 			<a href="<?php echo $tab_url( 'timeline' ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Timeline', 'wp-command-center' ); ?></a>
@@ -125,6 +127,16 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 .wpcc-detail-table th { text-align:left;width:180px;color:#50575e; }
 .wpcc-detail-table td,.wpcc-detail-table th { padding:6px 12px;border-bottom:1px solid #f0f0f1;vertical-align:top; }
 .wpcc-empty { background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:18px;max-width:900px;color:#50575e; }
+.wpcc-diff-summary { background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:10px 14px;margin:10px 0;max-width:980px;font-size:13px; }
+.wpcc-diff-stat { font-weight:600;margin-right:10px; }
+.wpcc-diff-add { color:#0a7c2f; }
+.wpcc-diff-del { color:#b32d2e; }
+.wpcc-diff-filelist { margin:8px 0 0;padding-left:0;list-style:none; }
+.wpcc-diff-filelist li { font-size:12px;padding:2px 0; }
+.wpcc-diff-file { max-width:980px;margin:8px 0;border:1px solid #e0e0e0;border-radius:4px;background:#fff; }
+.wpcc-diff-file > summary { cursor:pointer;padding:8px 12px;font-size:13px;user-select:none; }
+.wpcc-diff-truncated { color:#646970;font-style:italic; }
+.wpcc-change-meta-summary { max-width:980px; }
 </style>
 
 <script>
@@ -379,9 +391,25 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		} ).catch( function(){ renderDetail( null ); } );
 	}
 
+	// Diff / "what changed" panel. The endpoint returns server-rendered, escaped
+	// HTML (diff_kind: patch | patch_unavailable | metadata | none); JS only
+	// injects it — no client-side diff parsing.
+	function loadDiff() {
+		var box  = document.getElementById('wpcc-history-detail');
+		var diff = document.getElementById('wpcc-history-diff');
+		var head = document.getElementById('wpcc-diff-heading');
+		if ( ! box || ! diff ) return;
+		apiFetch( '/history/' + encodeURIComponent( box.dataset.changeId ) + '/diff' ).then( function(res) {
+			if ( ! res.ok ) { return; }
+			var data = res.body || {};
+			if ( head ) { head.style.display = 'block'; }
+			diff.innerHTML = data.html || '';
+		} ).catch( function(){ /* leave the metadata panel intact on diff failure */ } );
+	}
+
 	// ── boot ──
 	document.addEventListener( 'DOMContentLoaded', function() {
-		if ( state.viewId ) { loadDetail(); return; }
+		if ( state.viewId ) { loadDetail(); loadDiff(); return; }
 		if ( state.sessionId ) { loadSessionSummary(); }
 		if ( state.tab === 'sessions' ) { loadSessions(); }
 		else { loadTimeline( null ); }

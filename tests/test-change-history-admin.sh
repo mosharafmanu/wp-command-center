@@ -35,6 +35,8 @@ VIEW="$PLUGIN_DIR/includes/Admin/views/change-history.php"
 RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Admin/ChangeHistoryAdminQuery.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
+DIFFR="$PLUGIN_DIR/includes/Admin/DiffRenderer.php"
+PATCHES="$PLUGIN_DIR/includes/Admin/views/patches.php"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -159,6 +161,75 @@ echo "== 9. Invariants: no runtime/MCP/capability additions =="
 MANIFEST=$(api GET /agent/manifest)
 assert_eq "operation_map stays 34" "34" "$(pj "$MANIFEST" '.capability_management.operation_map | keys | length')"
 assert_eq "capabilities stay 23"   "23" "$(pj "$MANIFEST" '.capability_management.capabilities | length')"
+
+echo
+echo "== 10. STEP 105.2: shared DiffRenderer (one renderer, no fork) =="
+lint "DiffRenderer lints"                "$DIFFR"
+has  "DiffRenderer in Admin namespace"   "namespace WPCommandCenter.Admin" "$DIFFR"
+has  "patches view uses shared renderer" "DiffRenderer::render_accordion"  "$PATCHES"
+lacks "patches view has no forked diff closure" 'render_diff = static function' "$PATCHES"
+lacks "no inline <pre class=.wpcc-diff. building outside the renderer" 'echo .<pre class="wpcc-diff"' "$PATCHES"
+
+DR=$(wpe "
+\$files = [ [ 'path' => 'a.php', 'diff' => \"--- a/a.php\n+++ b/a.php\n@@ -1,2 +1,2 @@\n-old line\n+new line\n+<script>x</script>\" ] ];
+\$sum  = \WPCommandCenter\Admin\DiffRenderer::summarize( \$files );
+\$html = \WPCommandCenter\Admin\DiffRenderer::render_accordion( \$files, false );
+\$big  = implode( \"\n\", array_map( function( \$i ){ return '+line' . \$i; }, range( 1, 700 ) ) );
+\$bightml = \WPCommandCenter\Admin\DiffRenderer::render_file_diff( \$big );
+echo wp_json_encode( [
+	'add'          => \$sum['additions'],
+	'del'          => \$sum['deletions'],
+	'fc'           => \$sum['files_changed'],
+	'has_summary'  => str_contains( \$html, 'wpcc-diff-summary' ),
+	'has_details'  => str_contains( \$html, '<details' ),
+	'escaped'      => ( ! str_contains( \$html, '<script>x</script>' ) && str_contains( \$html, '&lt;script&gt;' ) ),
+	'truncated'    => ( str_contains( \$bightml, 'not shown' ) ),
+] );
+")
+assert_eq   "renderer: additions counted (headers excluded)" "2" "$(pj "$DR" '.add')"
+assert_eq   "renderer: deletions counted (headers excluded)" "1" "$(pj "$DR" '.del')"
+assert_eq   "renderer: files_changed"                        "1" "$(pj "$DR" '.fc')"
+assert_true "renderer: summary header present"               "$(pj "$DR" '.has_summary')"
+assert_true "renderer: per-file accordion present"           "$(pj "$DR" '.has_details')"
+assert_true "renderer: untrusted diff content escaped"       "$(pj "$DR" '.escaped')"
+assert_true "renderer: large diff truncated with notice"     "$(pj "$DR" '.truncated')"
+
+echo
+echo "== 11. STEP 105.2: diff endpoint (read-only, server-rendered) =="
+has  "route: /admin/history/{id}/diff" "change_id>.*\)/diff'" "$RESTAPI"
+has  "diff endpoint delegates to history_get" "history_get" "$RESTAPI"
+has  "diff endpoint reuses shared renderer"   "DiffRenderer::render_accordion" "$RESTAPI"
+lacks "view does not parse diffs client-side"  "diff_kind ===|parseDiff|splitDiff" "$VIEW"
+has  "view injects server html only"           "data.html"  "$VIEW"
+
+# Metadata path: a seeded runtime_option change yields a "what changed" summary
+# (no synthesized before/after diff), available=false.
+# Resolve the fixture change_id straight from the table (deterministic — avoids
+# any intermittent REST/jq response noise in this lookup).
+CID=$(wpe "global \$wpdb; echo (string) \$wpdb->get_var( \$wpdb->prepare( \"SELECT change_id FROM {\$wpdb->prefix}wpcc_change_log WHERE session_id = %s ORDER BY id DESC LIMIT 1\", '$SEED' ) );")
+assert_true "diff: resolved a seeded change_id" "$([ -n "$CID" ] && [ "$CID" != 'null' ] && echo true || echo false)"
+
+DIFF=$(wpe "
+\$req = new WP_REST_Request( 'GET', '/' );
+\$req->set_param( 'change_id', '$CID' );
+\$r = ( new \WPCommandCenter\Admin\AdminRestApi() )->history_diff( \$req );
+\$d = \$r->get_data();
+echo wp_json_encode( [ 'kind' => \$d['diff_kind'] ?? '', 'available' => \$d['available'] ?? null, 'html_len' => strlen( \$d['html'] ?? '' ), 'status' => \$r->get_status() ] );
+")
+assert_eq   "diff: runtime_option change -> metadata kind"   "metadata" "$(pj "$DIFF" '.kind')"
+assert_eq   "diff: metadata is not a textual diff (available=false)" "false" "$(pj "$DIFF" '.available')"
+assert_ge   "diff: server-rendered html present"            "$(pj "$DIFF" '.html_len')" "1"
+assert_eq   "diff: metadata path returns 200"               "200" "$(pj "$DIFF" '.status')"
+
+# Unknown change -> 404, never a diff.
+NF=$(wpe "
+\$req = new WP_REST_Request( 'GET', '/' );
+\$req->set_param( 'change_id', 'nonexistent-change-xyz' );
+\$r = ( new \WPCommandCenter\Admin\AdminRestApi() )->history_diff( \$req );
+echo wp_json_encode( [ 'status' => \$r->get_status(), 'success' => \$r->get_data()['success'] ?? null ] );
+")
+assert_eq   "diff: unknown change_id -> 404" "404" "$(pj "$NF" '.status')"
+assert_eq   "diff: unknown change_id -> success=false" "false" "$(pj "$NF" '.success')"
 
 echo
 echo "== Summary =="

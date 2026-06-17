@@ -2,6 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use WPCommandCenter\AiAgent\FileAccessApi;
+use WPCommandCenter\Admin\DiffRenderer;
 use WPCommandCenter\PatchSystem\PatchApproval;
 use WPCommandCenter\PatchSystem\PatchManager;
 
@@ -83,33 +84,6 @@ $risk_labels = [
 	PatchManager::RISK_MEDIUM => PatchManager::risk_label( PatchManager::RISK_MEDIUM ),
 	PatchManager::RISK_HIGH   => PatchManager::risk_label( PatchManager::RISK_HIGH ),
 ];
-
-$render_diff = static function ( string $diff ): void {
-	if ( '' === $diff ) {
-		echo '<p class="description">' . esc_html__( 'No textual changes.', 'wp-command-center' ) . '</p>';
-		return;
-	}
-
-	echo '<pre class="wpcc-diff">';
-
-	foreach ( explode( "\n", $diff ) as $line ) {
-		$class = 'wpcc-diff-line';
-
-		if ( str_starts_with( $line, '+++' ) || str_starts_with( $line, '---' ) ) {
-			$class .= ' wpcc-diff-line--header';
-		} elseif ( str_starts_with( $line, '@@' ) ) {
-			$class .= ' wpcc-diff-line--hunk';
-		} elseif ( str_starts_with( $line, '+' ) ) {
-			$class .= ' wpcc-diff-line--add';
-		} elseif ( str_starts_with( $line, '-' ) ) {
-			$class .= ' wpcc-diff-line--del';
-		}
-
-		printf( "<span class=\"%s\">%s</span>\n", esc_attr( $class ), esc_html( $line ) );
-	}
-
-	echo '</pre>';
-};
 
 $view_id      = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view'] ) ) : '';
 $prefill_path = isset( $_GET['path'] ) ? trim( wp_unslash( $_GET['path'] ), '/' ) : '';
@@ -193,10 +167,11 @@ $patches = $patch_manager->list();
 			<?php endif; ?>
 
 			<h2><?php esc_html_e( 'Diff Preview', 'wp-command-center' ); ?></h2>
-			<?php foreach ( $patch['files'] as $file ) : ?>
-				<h3><code><?php echo esc_html( $file['path'] ); ?></code></h3>
-				<?php $render_diff( $file['diff'] ); ?>
-			<?php endforeach; ?>
+			<?php
+			// Shared renderer (also used by Change History). Patches default to
+			// expanded so the review diff is visible without an extra click.
+			echo DiffRenderer::render_accordion( $patch['files'], true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderer escapes all content.
+			?>
 
 			<h2><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></h2>
 			<p class="wpcc-actions">

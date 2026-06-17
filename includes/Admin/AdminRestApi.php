@@ -17,6 +17,7 @@ use WPCommandCenter\Operations\OperationRegistry;
 use WPCommandCenter\Operations\SecurityModeManager;
 use WPCommandCenter\Operations\DestructiveGuard;
 use WPCommandCenter\Operations\ChangeHistoryRuntimeManager;
+use WPCommandCenter\PatchSystem\PatchManager;
 use WPCommandCenter\Security\AuditLog;
 
 defined( 'ABSPATH' ) || exit;
@@ -72,6 +73,14 @@ final class AdminRestApi {
 		register_rest_route( self::NS, '/admin/history/sessions', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'history_sessions' ],
+			'permission_callback' => [ $this, 'check_permission' ],
+		] );
+
+		// STEP 105.2 — server-rendered diff for one change (read-only). Registered
+		// before the bare /{change_id} route so the /diff suffix matches first.
+		register_rest_route( self::NS, '/admin/history/(?P<change_id>[A-Za-z0-9\-]{1,64})/diff', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'history_diff' ],
 			'permission_callback' => [ $this, 'check_permission' ],
 		] );
 
@@ -184,6 +193,119 @@ final class AdminRestApi {
 			'action'    => 'history_get',
 			'change_id' => sanitize_text_field( (string) $request->get_param( 'change_id' ) ),
 		] );
+	}
+
+	/**
+	 * GET /admin/history/{change_id}/diff — server-rendered, escaped diff/what-
+	 * changed HTML for one change. Read-only. Strategy is honest about the data
+	 * we actually store:
+	 *   - patch            → real unified diff via the shared DiffRenderer;
+	 *   - patch_unavailable → snapshot rotated/missing → metadata note (degrade);
+	 *   - metadata          → runtime/option change → "what changed" summary
+	 *                          (no synthesized before/after diff);
+	 *   - none              → not reversible / no diff.
+	 */
+	public function history_diff( \WP_REST_Request $request ): \WP_REST_Response {
+		$change_id = sanitize_text_field( (string) $request->get_param( 'change_id' ) );
+
+		$got = ( new ChangeHistoryRuntimeManager() )->run( [ 'action' => 'history_get', 'change_id' => $change_id ] );
+		if ( is_array( $got ) && ! empty( $got['error'] ) ) {
+			return new \WP_REST_Response(
+				[ 'success' => false, 'code' => (string) ( $got['code'] ?? 'wpcc_change_not_found' ), 'message' => (string) ( $got['message'] ?? '' ) ],
+				'wpcc_change_not_found' === ( $got['code'] ?? '' ) ? 404 : 400
+			);
+		}
+
+		$change   = is_array( $got['change'] ?? null ) ? $got['change'] : [];
+		$rollback = is_array( $change['rollback'] ?? null ) ? $change['rollback'] : [];
+		$kind     = (string) ( $rollback['kind'] ?? 'none' );
+
+		if ( 'patch' === $kind ) {
+			$patch_id = (string) ( $rollback['rollback_id'] ?? '' );
+			if ( '' === $patch_id ) {
+				$patch_id = (string) ( $rollback['change_set_id'] ?? '' );
+			}
+
+			$patch = '' !== $patch_id ? ( new PatchManager() )->get( $patch_id ) : new \WP_Error( 'wpcc_no_patch', '' );
+			if ( is_wp_error( $patch ) || empty( $patch['files'] ) ) {
+				// Snapshot rotated/cleaned or no file records — degrade, never error.
+				return $this->diff_payload( $change_id, 'patch_unavailable', false, null,
+					'<p class="description">' . esc_html__( 'The diff for this change is no longer available (its snapshot has been cleaned up). The change metadata is shown above.', 'wp-command-center' ) . '</p>',
+					__( 'Diff snapshot unavailable.', 'wp-command-center' )
+				);
+			}
+
+			$files   = array_map(
+				static fn( $f ): array => [ 'path' => (string) ( $f['path'] ?? '' ), 'diff' => (string) ( $f['diff'] ?? '' ) ],
+				$patch['files']
+			);
+			$summary = DiffRenderer::summarize( $files );
+			$html    = DiffRenderer::render_accordion( $files, false );
+
+			return $this->diff_payload( $change_id, 'patch', true, $summary, $html, '' );
+		}
+
+		if ( 'none' === $kind ) {
+			return $this->diff_payload( $change_id, 'none', false, null,
+				'<p class="description">' . esc_html__( 'This change is not reversible and has no recorded diff.', 'wp-command-center' ) . '</p>',
+				__( 'No diff for this change.', 'wp-command-center' )
+			);
+		}
+
+		// runtime_option (and any other reversible non-patch kind): we do not store
+		// before/after content, so present a structured "what changed" summary
+		// rather than a synthesized diff.
+		return $this->diff_payload( $change_id, 'metadata', false, null, $this->render_change_metadata( $change ),
+			__( 'Field-level change — previous value is restorable, but no textual diff is stored.', 'wp-command-center' )
+		);
+	}
+
+	/**
+	 * Build the "what changed" HTML for a non-patch change from its stored
+	 * target summary + counts. All values are escaped.
+	 *
+	 * @param array<string,mixed> $change
+	 */
+	private function render_change_metadata( array $change ): string {
+		$html   = '<div class="wpcc-change-meta-summary">';
+		$counts = is_array( $change['counts'] ?? null ) ? $change['counts'] : [];
+		$html  .= '<p>' . esc_html( sprintf(
+			/* translators: 1: created, 2: updated, 3: skipped, 4: errors */
+			__( 'Created %1$d · Updated %2$d · Skipped %3$d · Errors %4$d', 'wp-command-center' ),
+			(int) ( $counts['created'] ?? 0 ),
+			(int) ( $counts['updated'] ?? 0 ),
+			(int) ( $counts['skipped'] ?? 0 ),
+			(int) ( $counts['error'] ?? 0 )
+		) ) . '</p>';
+
+		$summary = $change['target_summary'] ?? null;
+		if ( is_array( $summary ) && ! empty( $summary ) ) {
+			$html .= '<table class="widefat striped"><tbody>';
+			foreach ( $summary as $key => $value ) {
+				$rendered = is_scalar( $value ) ? (string) $value : (string) wp_json_encode( $value );
+				$html    .= '<tr><th>' . esc_html( (string) $key ) . '</th><td>' . esc_html( $rendered ) . '</td></tr>';
+			}
+			$html .= '</tbody></table>';
+		} else {
+			$html .= '<p class="description">' . esc_html__( 'No field-level detail was recorded for this change.', 'wp-command-center' ) . '</p>';
+		}
+
+		$html .= '</div>';
+		return $html;
+	}
+
+	/**
+	 * @param array<string,mixed>|null $summary
+	 */
+	private function diff_payload( string $change_id, string $diff_kind, bool $available, ?array $summary, string $html, string $note ): \WP_REST_Response {
+		return new \WP_REST_Response( [
+			'change_id' => $change_id,
+			'diff_kind' => $diff_kind,
+			'available' => $available,
+			'summary'   => $summary,
+			'html'      => $html,
+			'note'      => $note,
+		], 200 );
 	}
 
 	/**
