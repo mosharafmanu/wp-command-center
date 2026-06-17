@@ -17,8 +17,11 @@ locally (105.1–105.4); NOT pushed, NOT deployed.**
   handoff `2f1b098`).
 - **STEP 105.4 — Feature-gate seam + a11y + i18n + polish + validation: COMPLETE
   locally** (`30ccaf2`).
-- **All on `main`, NOT pushed, NOT deployed** (deploy is pull-cron from
-  origin/main, so local commits are inert until pushed).
+- **STEP 105 RELEASED to production** — pushed `4d9c727..07aa951`, deployed via
+  pull-cron, tag **`v0.105.0`** (→ `07aa951`). Prod verified: 404→401 transition
+  captured, all 6 admin routes registered, no fatals.
+- **STEP 105.5 — Actor attribution hardening: COMPLETE locally** (`f4bc6cf`;
+  post-release fix, **NOT yet pushed**). Eliminates new "Actor: unknown" rows.
 - STEP 104 backend remains live and prod-verified at `v0.104.0` (`5abea8f`).
 
 ## B. What 105.1 Shipped (commit `1742ca8`)
@@ -145,6 +148,29 @@ behavior change, no MCP, no new storage, no capability change**.
   coverage).
 
 **Invariants unchanged:** operation_map 34, capabilities 23, no MCP tool.
+
+## B5. What 105.5 Shipped (actor attribution hardening — `f4bc6cf`)
+
+Post-release audit fix. Non-interactive executions (cron queue worker, workflow
+steps, headless `execute_request`) reached `ChangeRecorder` with no actor + no
+WP user → `resolve_actor()` → `{type:unknown}`, surfaced by 105 as
+"Actor: unknown". **No schema change, no historical-row edits, no MCP.**
+
+- **`AuditLog::system_actor($via)`** — descriptive non-interactive actor; labels
+  **System (Cron) / (Queue) / (Workflow) / (Headless Request)** + plain "System".
+  Carries `label` so the admin UI renders it unchanged.
+- **`ChangeRecorder` backstop** (`resolve_change_actor()`, used by `record()` +
+  `record_rollback()`): when the resolved actor is empty/`unknown`, substitute
+  `system_actor(context.system_via ?? 'system')`. **Change-log only** —
+  `AuditLog::resolve_actor()` and JSONL audit unchanged. Single chokepoint ⇒
+  **guarantees no future "unknown"**.
+- **Descriptive `via` at each call site** (admin/token/mcp still win when
+  present): `OperationWorker::handle_cron`→`cron`; `OperationQueue::run_item`→
+  `queue` default; `OperationManager::execute_request`→carries approver actor,
+  else `request`; `WorkflowRuntimeManager`→step actor inherited, else `workflow`.
+- **`tests/test-actor-attribution.sh` (NEW, 34/0)** + registered in
+  `regression-map.tsv` (new `attribution` group + `audit`/`history`).
+- **Forward-only:** the 6 pre-existing `unknown` rows are left as-is.
 
 ## C. Test Gates (all green)
 
