@@ -6,3 +6,7 @@ wpcc-env.sh
 wpcc-env-*.sh
 .env
 .env.local
+
+# Claude Code harness runtime/lock files (never track transient harness state)
+.claude/scheduled_tasks.lock
+.claude/*.lock

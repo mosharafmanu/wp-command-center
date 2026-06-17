@@ -1,0 +1,8 @@
+{
+  "1_mcp_discovery": "39 tools",
+  "2_readonly_system_info": "OK",
+  "3_write_rollback": "id=True avail=True restored=True",
+  "4_approval_gating": "OK (blocked pre-approval)",
+  "5_audit": "OK",
+  "6_timeline": "OK"
+}
