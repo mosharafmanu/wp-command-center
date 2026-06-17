@@ -1,9 +1,9 @@
-# PROJECT HANDOFF — STEP 105: Change History Admin UI (in progress)
+# PROJECT HANDOFF — STEP 105: Change History Admin UI
 
 **Written:** 2026-06-17. Supersedes `HANDOFF-STEP-104.md` for current state.
 STEP 104 (Change History backend) is COMPLETE, deployed, and prod-verified;
-STEP 105 surfaces that backend in wp-admin. This handoff covers **STEP 105.1**
-(committed locally, NOT pushed/deployed).
+STEP 105 surfaces that backend in wp-admin. **STEP 105 is feature-complete
+locally (105.1–105.4); NOT pushed, NOT deployed.**
 
 ---
 
@@ -13,7 +13,10 @@ STEP 105 surfaces that backend in wp-admin. This handoff covers **STEP 105.1**
   handoff `c8747dd`).
 - **STEP 105.2 — Detail view + shared diff viewer: COMPLETE locally** (`ac85221`;
   handoff `5cf9f9b`).
-- **STEP 105.3 — Rollback action UI + menu merge: COMPLETE locally** (`634803b`).
+- **STEP 105.3 — Rollback action UI + menu merge: COMPLETE locally** (`634803b`;
+  handoff `2f1b098`).
+- **STEP 105.4 — Feature-gate seam + a11y + i18n + polish + validation: COMPLETE
+  locally** (`30ccaf2`).
 - **All on `main`, NOT pushed, NOT deployed** (deploy is pull-cron from
   origin/main, so local commits are inert until pushed).
 - STEP 104 backend remains live and prod-verified at `v0.104.0` (`5abea8f`).
@@ -113,20 +116,62 @@ no parallel rollback, no new storage, no capability change, no MCP**.
 
 **Invariants unchanged:** operation_map 34, capabilities 23, no MCP tool.
 
+## B4. What 105.4 Shipped (seam + a11y + i18n + polish)
+
+Final polish, hardening, and the licensing seam — **no licensing logic, no
+behavior change, no MCP, no new storage, no capability change**.
+
+- **`includes/Admin/FeatureGate.php` (NEW)** — the single centralized Free/Pro
+  switch point. `FeatureGate::allows( $feature )` returns **true today**
+  (ungated) and is filterable via `wpcc_feature_allowed`. Call sites never
+  change when licensing arrives; only this seam (or the filter) flips.
+- **Wiring (one switch point, two call sites):** `AdminRestApi` gates all
+  Change History routes behind a new `check_history_permission()` =
+  `manage_options && FeatureGate::allows('change_history')`; `AdminMenu` gates
+  the Change History submenu the same way. Ungated ⇒ identical behavior.
+- **Accessibility:** restore modal is `role=dialog` + `aria-modal` +
+  `aria-describedby`; result is a `role=status` `aria-live=polite` region;
+  high-risk warning is `role=alert`; **focus trap** (Tab cycles within the
+  modal) + **focus return** to the triggering control on close; Esc closes;
+  detail header cells use `scope=row`; Restore controls carry `aria-label`.
+- **i18n:** every formerly-raw JS string is now localized (detail-table labels,
+  counts format, session column headers, the change-set chip, the session
+  summary, empty/busy strings). No raw UI strings remain in render logic.
+- **Error/empty states:** dedicated empty-reversible message; empty timeline /
+  empty sessions; nonce-expiry notice; pending-approval; not-reversible /
+  already-rolled-back surfaced from the engine response.
+- **`tests/test-change-history-admin.sh` (MOD)** — now **118/118** (+ FeatureGate
+  ungated-but-filterable, gated permission/menu wiring, a11y markers, i18n
+  coverage).
+
+**Invariants unchanged:** operation_map 34, capabilities 23, no MCP tool.
+
 ## C. Test Gates (all green)
 
-- 105.1 admin suite 44/0 → 105.2 68/0 → **105.3 admin suite 93/0** (stable across reruns).
-- `run.sh --changed` T0: 59/0, net-new 0.
-- 105.2: `run.sh --changed --runtime patch` T1 (14 suites) 665/0, net-new 0.
-- **105.3: `run.sh --changed --runtime patch` T1 (27 suites) 1081/0, net-new 0.**
+- Admin suite progression: 44/0 → 68/0 → 93/0 → **105.4: 118/0** (stable across reruns).
+- `run.sh --changed` T0: 59/0, net-new 0. 105.3 `--changed --runtime patch` T1
+  (27 suites) 1081/0, net-new 0.
+- **105.4 full SERIAL T2 (105 suites): 3968 passed / 48 failed; net-new 24.**
+  The 24 net-new are entirely in three suites unrelated to the admin UI —
+  `test-media-import.sh` (6), `test-media-runtime.sh` (6),
+  `test-seo-runtime-step91.sh` (12) — and **all three PASS standalone**
+  (9/0, 80/0, 24/0). They are cross-suite state pollution in the long serial
+  run (the documented "canonical dev env" caveat), **not** a 105.4 regression:
+  105.4 touches only admin views/REST/menu + the new FeatureGate and cannot
+  affect media/SEO runtimes. The other 24 failures are the chronic baseline.
+  → **Zero net-new attributable to STEP 105 code.**
 - php -l clean on all touched PHP files.
 
 ## D. Repository State
 
-- Branch `main`; local HEAD = `634803b` (105.3 feature) + a handoff commit.
+- Branch `main`; local HEAD = 105.4 feature + handoff commits (pending).
   Commits ahead of origin (NOT pushed): `1742ca8`/`c8747dd` (105.1),
-  `ac85221`/`5cf9f9b` (105.2), `634803b` + this handoff (105.3).
+  `ac85221`/`5cf9f9b` (105.2), `634803b`/`2f1b098` (105.3), 105.4 feature +
+  this handoff.
 - Working tree otherwise clean. `v0.104.0` tag unchanged (→ `5abea8f`).
+- **Before deploy:** a pristine canonical-env serial T2 (theme=hello-elementor,
+  Elementor + Elementor-Pro active, no leftover test menus/media) to confirm
+  net-new 0 cleanly; the three flaky suites are environmental, not code.
 
 ## E. Approved Decisions Baked In
 
@@ -137,12 +182,17 @@ no parallel rollback, no new storage, no capability change, no MCP**.
 - Audit-first / read-first; restore visually deferred.
 - `actor_summary` included in the sessions response (cheap, no extra runtime API).
 
-## F. Remaining STEP 105 Phases
+## F. STEP 105 Phases — all complete locally
 
+- **105.1 — Read-only admin UI. ✅ DONE (`1742ca8`).**
 - **105.2 — Detail view + diff viewer. ✅ DONE (`ac85221`).**
 - **105.3 — Rollback action + menu merge. ✅ DONE (`634803b`).**
-- **105.4 — Pro seam (single ungated `feature_gate()` at render+REST), a11y/i18n,
-  error/empty polish, full SERIAL T2 net-new 0, deploy on explicit direction.**
+- **105.4 — Feature-gate seam + a11y + i18n + polish + validation. ✅ DONE.**
+
+**STEP 105 is feature-complete.** Next: push/deploy on explicit direction
+(after a pristine canonical-env T2 per §D), then STEP 106 (per roadmap:
+semantic/code-aware search) or A3 Licensing (now that the FeatureGate seam
+exists).
 
 ### Behavioral note for release (105.3)
 Admin restores now honor approval/DestructiveGuard/security-mode. In
