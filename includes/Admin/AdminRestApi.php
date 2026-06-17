@@ -16,6 +16,7 @@ use WPCommandCenter\Operations\OperationManager;
 use WPCommandCenter\Operations\OperationRegistry;
 use WPCommandCenter\Operations\SecurityModeManager;
 use WPCommandCenter\Operations\DestructiveGuard;
+use WPCommandCenter\Operations\ChangeHistoryRuntimeManager;
 use WPCommandCenter\Security\AuditLog;
 
 defined( 'ABSPATH' ) || exit;
@@ -50,6 +51,35 @@ final class AdminRestApi {
 				'permission_callback' => [ $this, 'check_permission' ],
 			] );
 		}
+
+		// STEP 105.1 — Change History admin read surface (cookie + nonce only).
+		// All read-only. List/timeline/get delegate to the STEP 104 runtime
+		// manager (identical envelope as token REST/MCP); sessions is a thin
+		// presentation-layer aggregation. No write/rollback routes here — the
+		// Restore action lands in STEP 105.3.
+		register_rest_route( self::NS, '/admin/history', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'history_list' ],
+			'permission_callback' => [ $this, 'check_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/history/timeline', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'history_timeline' ],
+			'permission_callback' => [ $this, 'check_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/history/sessions', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'history_sessions' ],
+			'permission_callback' => [ $this, 'check_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/history/(?P<change_id>[A-Za-z0-9\-]{1,64})', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'history_get' ],
+			'permission_callback' => [ $this, 'check_permission' ],
+		] );
 	}
 
 	public function check_permission(): bool {
@@ -130,6 +160,118 @@ final class AdminRestApi {
 		] );
 
 		return new \WP_REST_Response( [ 'success' => true, 'rejected' => true ], 200 );
+	}
+
+	// ── STEP 105.1 — Change History read handlers ───────────────────────
+
+	/** GET /admin/history — flat, filtered, cursor-paginated change list. */
+	public function history_list( \WP_REST_Request $request ): \WP_REST_Response {
+		$params           = $this->history_filters( $request );
+		$params['action'] = 'history_list';
+		return $this->history_response( $params );
+	}
+
+	/** GET /admin/history/timeline — chronological, time-windowed. */
+	public function history_timeline( \WP_REST_Request $request ): \WP_REST_Response {
+		$params           = $this->history_filters( $request );
+		$params['action'] = 'history_timeline';
+		return $this->history_response( $params );
+	}
+
+	/** GET /admin/history/{change_id} — single change (metadata; diff arrives in 105.2). */
+	public function history_get( \WP_REST_Request $request ): \WP_REST_Response {
+		return $this->history_response( [
+			'action'    => 'history_get',
+			'change_id' => sanitize_text_field( (string) $request->get_param( 'change_id' ) ),
+		] );
+	}
+
+	/**
+	 * GET /admin/history/sessions — session-grouped roll-up. Presentation-layer
+	 * aggregation only (ChangeHistoryAdminQuery); not a runtime/MCP surface.
+	 */
+	public function history_sessions( \WP_REST_Request $request ): \WP_REST_Response {
+		$filters = [
+			'runtime' => sanitize_text_field( (string) $request->get_param( 'runtime' ) ),
+			'status'  => sanitize_text_field( (string) $request->get_param( 'status' ) ),
+			'since'   => $request->get_param( 'since' ),
+			'until'   => $request->get_param( 'until' ),
+		];
+
+		[ $limit, $offset ] = $this->history_paging( $request );
+
+		$result = ( new ChangeHistoryAdminQuery() )->sessions( $filters, $limit, $offset );
+
+		return new \WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * Collect the supported read filters from the request, dropping empties so
+	 * the runtime manager only applies what was actually sent.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function history_filters( \WP_REST_Request $request ): array {
+		$out = [];
+
+		foreach ( [ 'runtime', 'operation_id', 'status', 'target', 'change_set_id', 'session_id', 'task_id', 'plan_id', 'cursor' ] as $key ) {
+			$value = (string) $request->get_param( $key );
+			if ( '' !== $value ) {
+				$out[ $key ] = sanitize_text_field( $value );
+			}
+		}
+
+		foreach ( [ 'since', 'until', 'limit' ] as $key ) {
+			$value = $request->get_param( $key );
+			if ( null !== $value && '' !== (string) $value ) {
+				$out[ $key ] = (int) $value;
+			}
+		}
+
+		if ( null !== $request->get_param( 'reversible_only' ) && '' !== (string) $request->get_param( 'reversible_only' ) ) {
+			$out['reversible_only'] = rest_sanitize_boolean( $request->get_param( 'reversible_only' ) );
+		}
+
+		return $out;
+	}
+
+	/**
+	 * @return array{0:int,1:int} [limit, offset]
+	 */
+	private function history_paging( \WP_REST_Request $request ): array {
+		$limit  = (int) ( $request->get_param( 'limit' ) ?: 20 );
+		$offset = 0;
+
+		$cursor = (string) $request->get_param( 'cursor' );
+		if ( '' !== $cursor ) {
+			$decoded = json_decode( (string) base64_decode( $cursor, true ), true );
+			if ( is_array( $decoded ) && isset( $decoded['offset'] ) ) {
+				$offset = max( 0, (int) $decoded['offset'] );
+			}
+		}
+
+		return [ $limit, $offset ];
+	}
+
+	/**
+	 * Run a read action on the STEP 104 runtime manager and map its in-band
+	 * { error: true, code, message } shape to an HTTP status.
+	 *
+	 * @param array<string,mixed> $params
+	 */
+	private function history_response( array $params ): \WP_REST_Response {
+		$result = ( new ChangeHistoryRuntimeManager() )->run( $params );
+
+		if ( is_array( $result ) && ! empty( $result['error'] ) ) {
+			$code   = (string) ( $result['code'] ?? 'wpcc_history_error' );
+			$status = str_contains( $code, 'not_found' ) ? 404 : 400;
+			return new \WP_REST_Response(
+				[ 'success' => false, 'code' => $code, 'message' => (string) ( $result['message'] ?? '' ) ],
+				$status
+			);
+		}
+
+		return new \WP_REST_Response( $result, 200 );
 	}
 
 	private function format_request( array $r, OperationRegistry $registry ): array {
