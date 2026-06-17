@@ -42,7 +42,10 @@ final class AdminMenu {
 		);
 
 		add_submenu_page( 'wp-command-center', __( 'Dashboard', 'wp-command-center' ), __( 'Dashboard', 'wp-command-center' ), self::CAPABILITY, 'wp-command-center', [ $this, 'render_dashboard' ] );
-		add_submenu_page( 'wp-command-center', __( 'Change History', 'wp-command-center' ), __( 'Change History', 'wp-command-center' ), self::CAPABILITY, 'wpcc-change-history', [ $this, 'render_change_history' ] );
+		// STEP 105.4 — single feature seam (ungated today; future Free/Pro switch).
+		if ( FeatureGate::allows( 'change_history' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'Change History', 'wp-command-center' ), __( 'Change History', 'wp-command-center' ), self::CAPABILITY, 'wpcc-change-history', [ $this, 'render_change_history' ] );
+		}
 		add_submenu_page( 'wp-command-center', __( 'Site Intelligence', 'wp-command-center' ), __( 'Site Intelligence', 'wp-command-center' ), self::CAPABILITY, 'wpcc-site-intelligence', [ $this, 'render_site_intelligence' ] );
 		add_submenu_page( 'wp-command-center', __( 'Diagnostics', 'wp-command-center' ), __( 'Diagnostics', 'wp-command-center' ), self::CAPABILITY, 'wpcc-diagnostics', [ $this, 'render_diagnostics' ] );
 		add_submenu_page( 'wp-command-center', __( 'File Access', 'wp-command-center' ), __( 'File Access', 'wp-command-center' ), self::CAPABILITY, 'wpcc-file-access', [ $this, 'render_file_access' ] );

@@ -62,19 +62,19 @@ final class AdminRestApi {
 		register_rest_route( self::NS, '/admin/history', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'history_list' ],
-			'permission_callback' => [ $this, 'check_permission' ],
+			'permission_callback' => [ $this, 'check_history_permission' ],
 		] );
 
 		register_rest_route( self::NS, '/admin/history/timeline', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'history_timeline' ],
-			'permission_callback' => [ $this, 'check_permission' ],
+			'permission_callback' => [ $this, 'check_history_permission' ],
 		] );
 
 		register_rest_route( self::NS, '/admin/history/sessions', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'history_sessions' ],
-			'permission_callback' => [ $this, 'check_permission' ],
+			'permission_callback' => [ $this, 'check_history_permission' ],
 		] );
 
 		// STEP 105.2 — server-rendered diff for one change (read-only). Registered
@@ -82,7 +82,7 @@ final class AdminRestApi {
 		register_rest_route( self::NS, '/admin/history/(?P<change_id>[A-Za-z0-9\-]{1,64})/diff', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'history_diff' ],
-			'permission_callback' => [ $this, 'check_permission' ],
+			'permission_callback' => [ $this, 'check_history_permission' ],
 		] );
 
 		// STEP 105.3 — reverse one change from wp-admin. The ONLY write route in
@@ -93,18 +93,27 @@ final class AdminRestApi {
 		register_rest_route( self::NS, '/admin/history/(?P<change_id>[A-Za-z0-9\-]{1,64})/rollback', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'history_rollback' ],
-			'permission_callback' => [ $this, 'check_permission' ],
+			'permission_callback' => [ $this, 'check_history_permission' ],
 		] );
 
 		register_rest_route( self::NS, '/admin/history/(?P<change_id>[A-Za-z0-9\-]{1,64})', [
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => [ $this, 'history_get' ],
-			'permission_callback' => [ $this, 'check_permission' ],
+			'permission_callback' => [ $this, 'check_history_permission' ],
 		] );
 	}
 
 	public function check_permission(): bool {
 		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * STEP 105.4 — permission gate for the Change History admin surface:
+	 * manage_options AND the (currently ungated) feature seam. This is the single
+	 * REST switch point a future Free/Pro layer flips via FeatureGate.
+	 */
+	public function check_history_permission(): bool {
+		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'change_history' );
 	}
 
 	public function list_pending( \WP_REST_Request $request ): \WP_REST_Response {

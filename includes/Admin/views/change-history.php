@@ -100,18 +100,18 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	<?php endif; ?>
 </div>
 
-<div id="wpcc-restore-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-restore-title">
+<div id="wpcc-restore-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-restore-title" aria-describedby="wpcc-restore-msg">
 	<div class="wpcc-modal-box" role="document">
 		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Restore change', 'wp-command-center' ); ?></h2>
 		<p id="wpcc-restore-msg"></p>
 		<div id="wpcc-restore-highrisk" style="display:none;">
-			<div class="wpcc-restore-warning" id="wpcc-restore-warning"></div>
+			<div class="wpcc-restore-warning" id="wpcc-restore-warning" role="alert"></div>
 			<p><label for="wpcc-restore-reason" id="wpcc-restore-reason-label"></label>
 				<textarea id="wpcc-restore-reason" rows="2" class="large-text"></textarea></p>
 			<p><label for="wpcc-restore-phrase" id="wpcc-restore-phrase-label"></label>
 				<input type="text" id="wpcc-restore-phrase" class="regular-text" autocomplete="off" spellcheck="false" /></p>
 		</div>
-		<div id="wpcc-restore-result" class="wpcc-restore-result" style="display:none;"></div>
+		<div id="wpcc-restore-result" class="wpcc-restore-result" style="display:none;" role="status" aria-live="polite"></div>
 		<p class="wpcc-modal-actions">
 			<button type="button" class="button button-primary" id="wpcc-restore-confirm"></button>
 			<button type="button" class="button" id="wpcc-restore-cancel"></button>
@@ -209,7 +209,27 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		genericFail: <?php echo wp_json_encode( __( 'Restore failed.', 'wp-command-center' ) ); ?>,
 		openApprove: <?php echo wp_json_encode( __( 'Open Pending Approvals', 'wp-command-center' ) ); ?>,
 		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'wp-command-center' ) ); ?>,
-		close:       <?php echo wp_json_encode( __( 'Close', 'wp-command-center' ) ); ?>
+		close:       <?php echo wp_json_encode( __( 'Close', 'wp-command-center' ) ); ?>,
+		emptyRev:    <?php echo wp_json_encode( __( 'No reversible changes. Changes that can be rolled back will appear here.', 'wp-command-center' ) ); ?>,
+		restoreOne:  <?php echo wp_json_encode( __( 'Restore this change', 'wp-command-center' ) ); ?>,
+		colRuntimes: <?php echo wp_json_encode( __( 'Runtimes', 'wp-command-center' ) ); ?>,
+		colLastAct:  <?php echo wp_json_encode( __( 'Last activity', 'wp-command-center' ) ); ?>,
+		dRuntimes:   <?php echo wp_json_encode( __( 'runtimes', 'wp-command-center' ) ); ?>,
+		lChangeId:   <?php echo wp_json_encode( __( 'Change ID', 'wp-command-center' ) ); ?>,
+		lOperation:  <?php echo wp_json_encode( __( 'Operation', 'wp-command-center' ) ); ?>,
+		lRuntime:    <?php echo wp_json_encode( __( 'Runtime', 'wp-command-center' ) ); ?>,
+		lStatus:     <?php echo wp_json_encode( __( 'Status', 'wp-command-center' ) ); ?>,
+		lRisk:       <?php echo wp_json_encode( __( 'Risk level', 'wp-command-center' ) ); ?>,
+		lSource:     <?php echo wp_json_encode( __( 'Source', 'wp-command-center' ) ); ?>,
+		lTarget:     <?php echo wp_json_encode( __( 'Target', 'wp-command-center' ) ); ?>,
+		lReversible: <?php echo wp_json_encode( __( 'Reversible', 'wp-command-center' ) ); ?>,
+		lKind:       <?php echo wp_json_encode( __( 'Rollback kind', 'wp-command-center' ) ); ?>,
+		lChangeSet:  <?php echo wp_json_encode( __( 'Change-set', 'wp-command-center' ) ); ?>,
+		lWhen:       <?php echo wp_json_encode( __( 'When', 'wp-command-center' ) ); ?>,
+		lCounts:     <?php echo wp_json_encode( __( 'Counts', 'wp-command-center' ) ); ?>,
+		/* translators: %1$d created, %2$d updated, %3$d skipped, %4$d errors */
+		countsFmt:   <?php echo wp_json_encode( __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'wp-command-center' ) ); ?>,
+		restoreBusy: <?php echo wp_json_encode( __( 'Restoring…', 'wp-command-center' ) ); ?>
 	};
 	var REQUIRED_PHRASE = 'ROLLBACK_CHANGE';
 	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-approvals' ) ); ?>;
@@ -298,12 +318,12 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 				escHtml(i18n.session) + ' ' + escHtml( String(links.session_id).substring(0,8) ) + '&#8230;</a>';
 		}
 		if ( rev.change_set_id ) {
-			chips += '<span class="wpcc-chip">change-set ' + escHtml( String(rev.change_set_id).substring(0,8) ) + '&#8230;</span>';
+			chips += '<span class="wpcc-chip">' + escHtml(i18n.lChangeSet) + ' ' + escHtml( String(rev.change_set_id).substring(0,8) ) + '&#8230;</span>';
 		}
 
 		// Restore is secondary and only offered when actually reversible.
 		var restore = ( rev.reversible && ! rev.rolled_back )
-			? '<button type="button" class="button-link wpcc-restore-link" data-change-id="' + escHtml(c.change_id) + '">' + escHtml(i18n.restore) + '</button>'
+			? '<button type="button" class="button-link wpcc-restore-link" data-change-id="' + escHtml(c.change_id) + '" aria-label="' + escHtml(i18n.restoreOne) + '">' + escHtml(i18n.restore) + '</button>'
 			: '';
 
 		return '<div class="wpcc-change-row st-' + escHtml(status) + '">' +
@@ -324,7 +344,8 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		if ( ! list ) return;
 		if ( ! append ) { list.innerHTML = ''; lastDay = null; }
 		if ( ( ! rows || ! rows.length ) && ! append ) {
-			list.innerHTML = '<div class="wpcc-empty">' + escHtml( i18n.empty ) + '</div>';
+			var emptyMsg = ( state.tab === 'reversible' ) ? i18n.emptyRev : i18n.empty;
+			list.innerHTML = '<div class="wpcc-empty">' + escHtml( emptyMsg ) + '</div>';
 			return;
 		}
 		var html = '';
@@ -369,7 +390,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		var head = '<table class="widefat striped wpcc-sessions-table"><thead><tr>' +
 			'<th>' + escHtml(i18n.session) + '</th><th>' + escHtml(i18n.changes) + '</th>' +
 			'<th>' + escHtml(i18n.reversible) + '</th><th>' + escHtml(i18n.changeSets) + '</th>' +
-			'<th>' + escHtml(i18n.actor) + '</th><th>Runtimes</th><th>Last activity</th>' +
+			'<th>' + escHtml(i18n.actor) + '</th><th>' + escHtml(i18n.colRuntimes) + '</th><th>' + escHtml(i18n.colLastAct) + '</th>' +
 			'</tr></thead><tbody>';
 		var body = rows.map( function(s) {
 			return '<tr>' +
@@ -404,7 +425,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 				'<strong>' + escHtml(i18n.session) + ' ' + escHtml(s.session_id) + '</strong> &middot; ' +
 				escHtml(s.change_count) + ' ' + escHtml(i18n.changes) + ' &middot; ' +
 				escHtml(s.reversible_count) + ' ' + escHtml(i18n.reversible.toLowerCase()) + ' &middot; ' +
-				'runtimes: ' + escHtml( (s.runtimes||[]).join(', ') || '—' ) + ' &middot; ' +
+				escHtml(i18n.dRuntimes) + ': ' + escHtml( (s.runtimes||[]).join(', ') || '—' ) + ' &middot; ' +
 				escHtml(i18n.actor) + ': ' + escHtml(s.actor_summary || '') +
 				' &nbsp; <a href="' + escHtml( state.pageUrl + qs({ page: state.page, tab:'timeline' }) ) + '">&larr; ' + escHtml(i18n.allChanges) + '</a>';
 		} ).catch( function(){ box.style.display = 'none'; } );
@@ -416,30 +437,33 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		if ( ! box ) return;
 		if ( ! change ) { box.innerHTML = '<div class="notice notice-error inline"><p>' + escHtml(i18n.loadFail) + '</p></div>'; return; }
 		var rev = change.rollback || {};
-		var rows = [
-			[ 'Change ID', change.change_id ],
-			[ 'Operation', ( change.operation_id || '' ) + ( change.action ? ' · ' + change.action : '' ) ],
-			[ 'Runtime', change.runtime || '—' ],
-			[ 'Status', change.status || '—' ],
-			[ 'Risk level', change.risk_level || '—' ],
-			[ i18n.actor, ( change.actor && ( change.actor.label || change.actor.user_login || change.actor.type ) ) || '—' ],
-			[ 'Source', change.source || '—' ],
-			[ 'Target', change.target_key || '—' ],
-			[ 'Reversible', rev.reversible ? ( rev.rolled_back ? i18n.rolledBack : i18n.reversible ) : i18n.notRev ],
-			[ 'Rollback kind', rev.kind || 'none' ],
-			[ 'Change-set', rev.change_set_id || '—' ],
-			[ 'When', fmtTime( change.created_at ) ]
-		];
 		var counts = change.counts || {};
-		rows.push( [ 'Counts', 'created ' + (counts.created||0) + ', updated ' + (counts.updated||0) + ', skipped ' + (counts.skipped||0) + ', error ' + (counts.error||0) ] );
+		var countsStr = i18n.countsFmt
+			.replace( '%1$d', counts.created || 0 ).replace( '%2$d', counts.updated || 0 )
+			.replace( '%3$d', counts.skipped || 0 ).replace( '%4$d', counts.error || 0 );
+		var rows = [
+			[ i18n.lChangeId,   change.change_id ],
+			[ i18n.lOperation,  ( change.operation_id || '' ) + ( change.action ? ' · ' + change.action : '' ) ],
+			[ i18n.lRuntime,    change.runtime || '—' ],
+			[ i18n.lStatus,     change.status || '—' ],
+			[ i18n.lRisk,       change.risk_level || '—' ],
+			[ i18n.actor,       ( change.actor && ( change.actor.label || change.actor.user_login || change.actor.type ) ) || '—' ],
+			[ i18n.lSource,     change.source || '—' ],
+			[ i18n.lTarget,     change.target_key || '—' ],
+			[ i18n.lReversible, rev.reversible ? ( rev.rolled_back ? i18n.rolledBack : i18n.reversible ) : i18n.notRev ],
+			[ i18n.lKind,       rev.kind || 'none' ],
+			[ i18n.lChangeSet,  rev.change_set_id || '—' ],
+			[ i18n.lWhen,       fmtTime( change.created_at ) ],
+			[ i18n.lCounts,     countsStr ]
+		];
 
 		var html = '<table class="widefat wpcc-detail-table"><tbody>';
-		rows.forEach( function(r) { html += '<tr><th>' + escHtml(r[0]) + '</th><td>' + escHtml(r[1]) + '</td></tr>'; } );
+		rows.forEach( function(r) { html += '<tr><th scope="row">' + escHtml(r[0]) + '</th><td>' + escHtml(r[1]) + '</td></tr>'; } );
 		html += '</tbody></table>';
 
 		// Secondary Restore action — same endpoint/path as the Timeline control.
 		if ( rev.reversible && ! rev.rolled_back ) {
-			html += '<p class="wpcc-detail-restore"><button type="button" class="button wpcc-restore-link" data-change-id="' + escHtml(change.change_id) + '">' + escHtml(i18n.restore) + '</button></p>';
+			html += '<p class="wpcc-detail-restore"><button type="button" class="button wpcc-restore-link" data-change-id="' + escHtml(change.change_id) + '" aria-label="' + escHtml(i18n.restoreOne) + '">' + escHtml(i18n.restore) + '</button></p>';
 		}
 		box.innerHTML = html;
 	}
@@ -474,11 +498,19 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	// phrase + a reason before re-POSTing. All execution is server-side via
 	// OperationExecutor — the UI never rolls back anything itself.
 	var restoreState = { changeId: null, highRisk: false };
+	var restoreTrigger = null; // element to return focus to on close
 
 	function el( id ) { return document.getElementById( id ); }
 
+	function focusableIn( container ) {
+		return Array.prototype.slice.call( container.querySelectorAll(
+			'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+		) ).filter( function( n ) { return n.offsetParent !== null; } );
+	}
+
 	function openRestoreModal( changeId ) {
 		restoreState = { changeId: changeId, highRisk: false };
+		restoreTrigger = document.activeElement;
 		el('wpcc-restore-msg').textContent = i18n.restoreQ;
 		el('wpcc-restore-highrisk').style.display = 'none';
 		el('wpcc-restore-warning').textContent = '';
@@ -489,13 +521,29 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		var result = el('wpcc-restore-result');
 		result.style.display = 'none'; result.className = 'wpcc-restore-result';
 		var confirm = el('wpcc-restore-confirm');
-		confirm.textContent = i18n.restore; confirm.disabled = false; confirm.dataset.mode = 'submit';
+		confirm.textContent = i18n.restore; confirm.disabled = false; confirm.style.display = '';
 		el('wpcc-restore-cancel').textContent = i18n.cancel;
 		el('wpcc-restore-modal').style.display = 'flex';
-		el('wpcc-restore-confirm').focus();
+		confirm.focus();
 	}
 
-	function closeRestoreModal() { el('wpcc-restore-modal').style.display = 'none'; }
+	function closeRestoreModal() {
+		el('wpcc-restore-modal').style.display = 'none';
+		// Return focus to the control that opened the dialog (a11y).
+		if ( restoreTrigger && typeof restoreTrigger.focus === 'function' ) { restoreTrigger.focus(); }
+		restoreTrigger = null;
+	}
+
+	// Trap Tab within the open modal.
+	function trapRestoreFocus( e ) {
+		var modal = el('wpcc-restore-modal');
+		if ( e.key !== 'Tab' || modal.style.display !== 'flex' ) { return; }
+		var f = focusableIn( modal );
+		if ( ! f.length ) { return; }
+		var first = f[0], last = f[ f.length - 1 ];
+		if ( e.shiftKey && document.activeElement === first ) { e.preventDefault(); last.focus(); }
+		else if ( ! e.shiftKey && document.activeElement === last ) { e.preventDefault(); first.focus(); }
+	}
 
 	function showRestoreResult( cls, text, html ) {
 		var r = el('wpcc-restore-result');
@@ -518,11 +566,13 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			body.reason = reason;
 		}
 		confirmBtn.disabled = true;
+		confirmBtn.textContent = i18n.restoreBusy;
 		apiFetch( '/history/' + encodeURIComponent( restoreState.changeId ) + '/rollback', {
 			method: 'POST',
 			body: JSON.stringify( body )
 		} ).then( function( res ) {
-			if ( res.status === 403 ) { showRestoreResult( 'error', i18n.nonceFail ); return; }
+			confirmBtn.textContent = i18n.restore;
+			if ( res.status === 403 ) { showRestoreResult( 'error', i18n.nonceFail ); confirmBtn.disabled = false; return; }
 			var data   = res.body || {};
 			var result = data.result || {};
 
@@ -558,6 +608,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			showRestoreResult( 'error', msg );
 			confirmBtn.disabled = false;
 		} ).catch( function() {
+			confirmBtn.textContent = i18n.restore;
 			showRestoreResult( 'error', i18n.genericFail );
 			confirmBtn.disabled = false;
 		} );
@@ -585,7 +636,8 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			if ( e.target === el('wpcc-restore-modal') ) { closeRestoreModal(); }
 		} );
 		document.addEventListener( 'keydown', function( e ) {
-			if ( e.key === 'Escape' && el('wpcc-restore-modal').style.display === 'flex' ) { closeRestoreModal(); }
+			if ( e.key === 'Escape' && el('wpcc-restore-modal').style.display === 'flex' ) { closeRestoreModal(); return; }
+			trapRestoreFocus( e );
 		} );
 	} );
 })();

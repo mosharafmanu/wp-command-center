@@ -332,6 +332,52 @@ echo wp_json_encode( [ 'is_null' => ( null === \$d ) ] );
 assert_true "guard: non-high-risk rollback_target needs no ROLLBACK_CHANGE phrase" "$(pj "$GUARD" '.is_null')"
 
 echo
+echo "== 16. STEP 105.4: feature-gate seam (ungated; single switch point) =="
+GATE="$PLUGIN_DIR/includes/Admin/FeatureGate.php"
+lint "FeatureGate lints"                 "$GATE"
+has  "FeatureGate in Admin namespace"    "namespace WPCommandCenter.Admin" "$GATE"
+has  "FeatureGate exposes wpcc_feature_allowed filter" "wpcc_feature_allowed" "$GATE"
+has  "REST history routes use the feature-gated permission" "check_history_permission" "$RESTAPI"
+has  "history permission combines manage_options + FeatureGate" "FeatureGate::allows\( 'change_history' \)" "$RESTAPI"
+has  "menu gates Change History via FeatureGate" "FeatureGate::allows\( 'change_history' \)" "$MENU"
+
+GATEFN=$(wpe "
+\$on  = \WPCommandCenter\Admin\FeatureGate::allows( 'change_history' );
+\$cb  = function(){ return false; };
+add_filter( 'wpcc_feature_allowed', \$cb );
+\$off = \WPCommandCenter\Admin\FeatureGate::allows( 'change_history' );
+remove_filter( 'wpcc_feature_allowed', \$cb );
+echo wp_json_encode( [ 'ungated' => \$on, 'filterable' => ( \$off === false ) ] );
+")
+assert_true "gate: ungated today (allows -> true)"       "$(pj "$GATEFN" '.ungated')"
+assert_true "gate: future switch works (filter can flip)" "$(pj "$GATEFN" '.filterable')"
+
+echo
+echo "== 17. STEP 105.4: accessibility markers =="
+has "a11y: modal is role=dialog + aria-modal" "role=\"dialog\" aria-modal=\"true\"" "$VIEW"
+has "a11y: modal aria-describedby"            "aria-describedby=\"wpcc-restore-msg\"" "$VIEW"
+has "a11y: result is a live region"           "role=\"status\" aria-live=\"polite\"" "$VIEW"
+has "a11y: high-risk warning is role=alert"   "role=\"alert\"" "$VIEW"
+has "a11y: focus trap implemented"            "trapRestoreFocus" "$VIEW"
+has "a11y: focus returns to trigger on close" "restoreTrigger" "$VIEW"
+has "a11y: detail header cells use scope=row" 'scope="row"' "$VIEW"
+has "a11y: restore controls carry aria-label" "aria-label=" "$VIEW"
+
+echo
+echo "== 18. STEP 105.4: i18n coverage (formerly-raw strings now localized) =="
+has "i18n: detail labels localized"   "lChangeId:" "$VIEW"
+has "i18n: counts format localized"   "countsFmt:" "$VIEW"
+has "i18n: session columns localized" "colRuntimes:" "$VIEW"
+has "i18n: empty-reversible message"  "emptyRev:" "$VIEW"
+# Render sites must use the localized keys, not bare literals (the English source
+# text legitimately appears once inside each __() definition).
+has   "i18n: detail render uses localized label"   "i18n.lChangeId" "$VIEW"
+has   "i18n: sessions header uses localized label" "i18n.colLastAct" "$VIEW"
+lacks "i18n: detail label not a raw JS literal"    "'Change ID', change" "$VIEW"
+lacks "i18n: session header not a raw JS literal"  "Last activity</th>" "$VIEW"
+lacks "i18n: no raw Runtimes <th> literal"         "<th>Runtimes</th>" "$VIEW"
+
+echo
 echo "== Summary =="
 echo "  $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
