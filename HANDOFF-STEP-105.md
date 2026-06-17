@@ -1,9 +1,13 @@
 # PROJECT HANDOFF — STEP 105: Change History Admin UI
 
-**Written:** 2026-06-17. Supersedes `HANDOFF-STEP-104.md` for current state.
-STEP 104 (Change History backend) is COMPLETE, deployed, and prod-verified;
-STEP 105 surfaces that backend in wp-admin. **STEP 105 is feature-complete
-locally (105.1–105.4); NOT pushed, NOT deployed.**
+**Written:** 2026-06-17 (updated post-105.5-deploy). Supersedes
+`HANDOFF-STEP-104.md` for current state. STEP 104 (Change History backend) is
+COMPLETE, deployed, prod-verified. STEP 105 surfaced it in wp-admin and is now
+**COMPLETE (105.1–105.5), RELEASED, and PRODUCTION-VERIFIED.**
+
+- **Production runs `14edea2` (tag `v0.105.1`); origin/main == local HEAD == `14edea2`; working tree clean.**
+- See **§A2 Release & Production Verification** for the deployed-commit / route /
+  actor-attribution proofs.
 
 ---
 
@@ -17,12 +21,31 @@ locally (105.1–105.4); NOT pushed, NOT deployed.**
   handoff `2f1b098`).
 - **STEP 105.4 — Feature-gate seam + a11y + i18n + polish + validation: COMPLETE
   locally** (`30ccaf2`).
-- **STEP 105 RELEASED to production** — pushed `4d9c727..07aa951`, deployed via
-  pull-cron, tag **`v0.105.0`** (→ `07aa951`). Prod verified: 404→401 transition
-  captured, all 6 admin routes registered, no fatals.
-- **STEP 105.5 — Actor attribution hardening: COMPLETE locally** (`f4bc6cf`;
-  post-release fix, **NOT yet pushed**). Eliminates new "Actor: unknown" rows.
+- **STEP 105.1–105.4 RELEASED to production** — pushed `4d9c727..07aa951`,
+  deployed via pull-cron, tag **`v0.105.0`** (→ `07aa951`). Prod verified:
+  404→401 transition captured, all 6 admin routes registered, no fatals.
+- **STEP 105.5 — Actor attribution hardening: RELEASED & PROD-VERIFIED**
+  (feature `f4bc6cf` + handoff `14edea2`; tag **`v0.105.1`** → `14edea2`).
+  Eliminates new "Actor: unknown" rows.
 - STEP 104 backend remains live and prod-verified at `v0.104.0` (`5abea8f`).
+
+## A2. Release & Production Verification (deployed commit `14edea2` / `v0.105.1`)
+
+- **Pushed:** `07aa951..14edea2  main -> main` (commits `f4bc6cf` feature +
+  `14edea2` handoff). **Deployed commit of record: `14edea2`.**
+- **Tag `v0.105.1`** (annotated) → `14edea2`, pushed to origin (obj `2f023b5`).
+- **Deployed-commit proof (SSH, this Mac is an allowlisted IP):** server
+  `git rev-parse HEAD` = `14edea2`, `git describe` = `v0.105.1`; deploy log:
+  `2026-06-17T09:48:07Z DEPLOYED 07aa951 -> 14edea2 active=yes`.
+- **Route/health (anonymous HTTP):** homepage 200; namespace index 200; all 6
+  admin routes registered (401 auth-gated, not 404); `POST .../rollback` 401
+  (live); `change_history` runtime 401 (STEP 104 intact); admin page 302
+  (login); **no 500s.**
+- **Actor attribution (read-only via wp-cli over SSH — no prod data mutated):**
+  `AuditLog::system_actor` present; labels **System (Cron)/(Queue)/(Workflow)/
+  (Headless Request)** correct; backstop: empty→`system`, unknown+cron→
+  `System (Cron)`, token **preserved**. **Production `change_log`: 0 `unknown`
+  rows (of 272 total)** — and the backstop guarantees it stays 0.
 
 ## B. What 105.1 Shipped (commit `1742ca8`)
 
@@ -187,17 +210,26 @@ WP user → `resolve_actor()` → `{type:unknown}`, surfaced by 105 as
   affect media/SEO runtimes. The other 24 failures are the chronic baseline.
   → **Zero net-new attributable to STEP 105 code.**
 - php -l clean on all touched PHP files.
+- **105 pristine canonical-env serial T2 (pre-105.0 deploy): 4002/24, net-new 0**
+  — after cleaning leftover test fixtures + runtime queue; the 24 are the chronic
+  baseline. Confirmed the earlier "net-new 24" was purely environmental.
+- **105.5 admin/attribution suites:** `test-actor-attribution.sh` 34/0;
+  changed-surface tally 200/0; `--changed` T1 (27 suites) 932/0 net-new 0.
+- **105.5 pristine serial T2: 4035/25, net-new 1** = `test-health-verification.sh`,
+  an environmental back-to-back flake that **passes standalone (22/0)** and
+  references no 105.5 code → zero net-new attributable to 105.5.
 
-## D. Repository State
+## D. Repository State (current)
 
-- Branch `main`; local HEAD = 105.4 feature + handoff commits (pending).
-  Commits ahead of origin (NOT pushed): `1742ca8`/`c8747dd` (105.1),
-  `ac85221`/`5cf9f9b` (105.2), `634803b`/`2f1b098` (105.3), 105.4 feature +
-  this handoff.
-- Working tree otherwise clean. `v0.104.0` tag unchanged (→ `5abea8f`).
-- **Before deploy:** a pristine canonical-env serial T2 (theme=hello-elementor,
-  Elementor + Elementor-Pro active, no leftover test menus/media) to confirm
-  net-new 0 cleanly; the three flaky suites are environmental, not code.
+- Branch `main`; **local HEAD == origin/main == `14edea2`** (0 ahead / 0 behind);
+  **working tree clean.**
+- Tags: `v0.104.0` (→ `5abea8f`), `v0.105.0` (→ `07aa951`), **`v0.105.1`
+  (→ `14edea2`, the deployed STEP 105.5 commit)** — all local + remote.
+- `wpcc-env.sh` exists locally but is **git-ignored** (local full-scope dev token,
+  not tracked, not the prod token) — never appears in `git status`.
+- The local working copy was **re-cloned** mid-session after a local filesystem
+  anomaly removed it; nothing was lost (origin + prod authoritative). Re-clone is
+  at `14edea2`, clean.
 
 ## E. Approved Decisions Baked In
 
@@ -208,26 +240,59 @@ WP user → `resolve_actor()` → `{type:unknown}`, surfaced by 105 as
 - Audit-first / read-first; restore visually deferred.
 - `actor_summary` included in the sessions response (cheap, no extra runtime API).
 
-## F. STEP 105 Phases — all complete locally
+## F. STEP 105 Phases — all complete & released
 
 - **105.1 — Read-only admin UI. ✅ DONE (`1742ca8`).**
 - **105.2 — Detail view + diff viewer. ✅ DONE (`ac85221`).**
 - **105.3 — Rollback action + menu merge. ✅ DONE (`634803b`).**
-- **105.4 — Feature-gate seam + a11y + i18n + polish + validation. ✅ DONE.**
+- **105.4 — Feature-gate seam + a11y + i18n + polish + validation. ✅ DONE (`30ccaf2`).**
+- **105.5 — Actor attribution hardening. ✅ DONE + DEPLOYED (`f4bc6cf`; `v0.105.1`).**
 
-**STEP 105 is feature-complete.** Next: push/deploy on explicit direction
-(after a pristine canonical-env T2 per §D), then STEP 106 (per roadmap:
-semantic/code-aware search) or A3 Licensing (now that the FeatureGate seam
-exists).
+**STEP 105 is complete, released, and production-verified.** **Next milestone:
+STEP 106 — Approval Center.**
 
-### Behavioral note for release (105.3)
-Admin restores now honor approval/DestructiveGuard/security-mode. In
-client/enterprise mode a restore that the old Rollback page executed instantly
-will now route to **Pending Approvals** — intended hardening; call out in
-release notes.
+### Behavioral note (105.3, now live)
+Admin restores honor approval/DestructiveGuard/security-mode. In client/enterprise
+mode a restore that the old Rollback page executed instantly now routes to
+**Pending Approvals** — intended hardening.
 
-## G. Next-Chat Starting Point
+## E2. Known Non-Blocking Notes (carry forward)
 
-- Commit/push 105.1 only on explicit direction (push = live in ~1 min via cron).
-- Otherwise proceed to **STEP 105.2 planning → implementation** (diff viewer +
-  detail view), keeping every surface read-only until 105.3.
+- **Read-only prod tokens predating STEP 104** still need `history.read`
+  re-provisioned to query change-history via token (self-heal only bootstraps
+  EMPTY assignments). New tokens get it automatically. The admin UI is unaffected
+  (cookie-authed).
+- **`test-health-verification.sh` / `final-validation`** flake when run
+  back-to-back in a full serial T2 (cross-suite state). They pass standalone;
+  it is environmental, not code. Net-new vs `regression-baseline.tsv` (24 chronic)
+  is the real signal.
+- **Pristine full-T2 net-new 0** requires the canonical dev env: theme
+  `hello-elementor`, Elementor + Elementor-Pro active, and clearing leftover test
+  fixtures + the `wpcc_operation_requests`/`_queue` runtime state first.
+- **Local `wpcc-env.sh`** holds a **new local-only full-scope token** (the prior
+  secret was in the deleted untracked file and is unrecoverable); recreate it per
+  machine. Not related to production.
+- **6 historical `unknown` actor rows exist on DEV only** (from a workflow-via-CLI
+  test); production has 0. Left as-is by design (105.5 is forward-only).
+
+## G. Next-Chat Starting Point — STEP 106 (Approval Center)
+
+- **Current state:** STEP 105 complete + released; production = `14edea2`
+  (`v0.105.1`); origin == local == `14edea2`; tree clean; `wpcc-env.sh` present
+  (git-ignored). STEP 104 + 105 backends/UI all live and verified. Security
+  mode on prod = developer.
+- **Do NOT push/deploy without explicit direction** (pull-cron: `git push origin
+  main` = live in ~1 min). Confirm scope before writing code.
+- **STEP 106 = Approval Center** — the next admin surface. Likely scope (to be
+  planned report-first, like 105): a dedicated wp-admin Approval Center over the
+  existing approval workflow (`OperationManager` pending requests, `AdminRestApi`
+  approve/reject, `SecurityModeManager`, pending-approval/`confirmation_required`
+  results). Reuse the existing approval engine — no parallel approval logic, no
+  new storage, capability-scoped, audited. The "Pending Approvals" page +
+  `/admin/approvals` REST already exist (STEP 80) and are the foundation to build
+  on; STEP 105.3 rollbacks in client/enterprise mode already route there.
+- **Discipline (unchanged):** every new surface stays capability-scoped,
+  approval-aware, reversible; report-first planning → phased build → `--changed`
+  T0/T1 net-new 0 → pristine serial T2 → deploy on explicit direction.
+- **Testing:** `source wpcc-env.sh`; `tests/run.sh --tier T0|T1 --changed`;
+  full T2 SERIAL only. "net-new" vs `tests/regression-baseline.tsv` is the signal.
