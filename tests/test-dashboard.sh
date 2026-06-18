@@ -271,6 +271,47 @@ else
 	assert_eq "gating is per-key (operations_explorer unaffected)" "yes" "$FG_OTHER"
 
 	echo
+	echo "== 6c. Phase B / W2 — aggregator re-checks each sub-surface FeatureGate (no leak) =="
+	# A wp-cli helper that closes exactly ONE sub-surface gate via the wpcc_feature_allowed
+	# filter, builds the overview, and prints a probe expression.
+	w2() { local key="$1" expr="$2"; wpe 'add_filter("wpcc_feature_allowed", function($a,$f){ return ("'"$key"'"===$f) ? false : $a; }, 10, 2); $r = ( new \WPCommandCenter\Admin\DashboardAdminQuery() )->overview(); '"$expr"; }
+
+	# (a) All gates open (default) — every block carries data, NO gated marker present.
+	ALL_OPEN="$(wpe '$r = ( new \WPCommandCenter\Admin\DashboardAdminQuery() )->overview(); echo ( empty($r["approvals"]["gated"]) && empty($r["operations"]["gated"]) && empty($r["tokens"]["gated"]) && empty($r["change_history"]["gated"]) && isset($r["approvals"]["pending"]) && isset($r["operations"]["total"]) && isset($r["tokens"]["total"]) && isset($r["change_history"]["sessions"]) ) ? "ok" : "bad";')"
+	assert_eq "all gates open -> every block has data, no gated marker" "ok" "$ALL_OPEN"
+
+	# (b) Approval Center gated off -> approvals block is gated, leaks no counts;
+	#     OTHER blocks still carry data (per-key isolation); invariants unchanged.
+	assert_eq "approval_center off -> approvals gated, no count leaked" "ok" \
+		"$(w2 approval_center 'echo ( !empty($r["approvals"]["gated"]) && !isset($r["approvals"]["pending"]) && !isset($r["approvals"]["resolved"]) ) ? "ok" : "leak";')"
+	assert_eq "approval_center off -> tokens block still has data (isolation)" "ok" \
+		"$(w2 approval_center 'echo ( empty($r["tokens"]["gated"]) && isset($r["tokens"]["total"]) ) ? "ok" : "bad";')"
+
+	# (c) Tokens & Capabilities gated off -> tokens block gated, leaks no token/cap counts.
+	assert_eq "token_capability_manager off -> tokens gated, no count leaked" "ok" \
+		"$(w2 token_capability_manager 'echo ( !empty($r["tokens"]["gated"]) && !isset($r["tokens"]["total"]) && !isset($r["tokens"]["capabilities"]) ) ? "ok" : "leak";')"
+
+	# (d) Operations Explorer gated off -> operations block gated, BUT the invariant
+	#     strip (platform metadata, not sub-surface data) still reports 34/40/40.
+	assert_eq "operations_explorer off -> operations gated, no count leaked" "ok" \
+		"$(w2 operations_explorer 'echo ( !empty($r["operations"]["gated"]) && !isset($r["operations"]["total"]) && !isset($r["operations"]["by_risk"]) ) ? "ok" : "leak";')"
+	assert_eq "operations_explorer off -> invariants strip still accurate (34/40/40)" "ok" \
+		"$(w2 operations_explorer 'echo ( (int)$r["invariants"]["operation_map"]===34 && (int)$r["invariants"]["catalogue"]===40 && (int)$r["invariants"]["mcp_tools"]===40 ) ? "ok" : "drift";')"
+
+	# (e) Change History gated off -> change_history block gated AND the activity feed
+	#     is an empty list (no session data leaked through recent_activity).
+	assert_eq "change_history off -> change_history gated, no session count leaked" "ok" \
+		"$(w2 change_history 'echo ( !empty($r["change_history"]["gated"]) && !isset($r["change_history"]["sessions"]) ) ? "ok" : "leak";')"
+	assert_eq "change_history off -> recent_activity is empty list (no leak)" "ok" \
+		"$(w2 change_history 'echo ( is_array($r["recent_activity"]) && count($r["recent_activity"])===0 ) ? "ok" : "leak";')"
+
+	# (f) No unrelated surface changed: the OWNING query is gate-agnostic. With
+	#     approval_center gated, ApprovalAdminQuery::summary() (its own surface) still
+	#     returns full data — proving the gating lives ONLY in the dashboard aggregator.
+	assert_eq "owning ApprovalAdminQuery unaffected by aggregator gating" "ok" \
+		"$(wpe 'add_filter("wpcc_feature_allowed", function($a,$f){ return ("approval_center"===$f) ? false : $a; }, 10, 2); $s = ( new \WPCommandCenter\Admin\ApprovalAdminQuery() )->summary(); echo isset($s["pending"]) ? "ok" : "bad";')"
+
+	echo
 	echo "== 7. Invariants unchanged (34 ops mapped / 23 caps / 40 catalogue / 40 MCP / 2.4.0) =="
 	OPMAP="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
 	assert_eq "OPERATION_MAP stays 34" "34" "$OPMAP"

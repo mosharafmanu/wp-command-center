@@ -48,11 +48,37 @@ final class DashboardAdminQuery {
 	private const RECENT_LIMIT = 5;
 
 	/**
+	 * Phase B / W2 — the FeatureGate key that owns each surfaced sub-surface block.
+	 *
+	 * The Dashboard Overview re-checks the OWNING surface's gate before composing
+	 * its block, so a sub-surface disabled by a future Free/Pro edition (or via the
+	 * `wpcc_feature_allowed` filter) is never leaked through this aggregator. Keys
+	 * mirror the per-surface REST gates in AdminRestApi exactly. Ungated today — when
+	 * every gate is open the envelope is byte-identical to the pre-W2 behavior.
+	 */
+	private const FEATURE_KEYS = [
+		'approvals'      => 'approval_center',
+		'operations'     => 'operations_explorer',
+		'tokens'         => 'token_capability_manager',
+		'change_history' => 'change_history',
+	];
+
+	/** Marker returned in place of a sub-surface block whose own FeatureGate is closed. */
+	private const GATED = [ 'gated' => true ];
+
+	/**
 	 * The Dashboard Overview envelope: the live security posture, the platform
 	 * invariants, a compact summary of each existing subsystem (approvals,
 	 * operations, tokens & capabilities, change history), and a recent change
 	 * activity feed. Every number is derived from the subsystem that owns it —
 	 * this method adds no policy and no new source of truth. Read-only.
+	 *
+	 * Phase B / W2: every sub-surface block is composed only after its OWNING
+	 * surface's FeatureGate is re-checked (see FEATURE_KEYS). A gated-off sub-surface
+	 * yields a {gated:true} marker (or an empty list for the activity feed) instead of
+	 * its data, so the aggregator can never leak a feature the current edition has
+	 * disabled. The security posture and the invariants strip are platform metadata
+	 * (not sub-surface data) and are therefore never gated.
 	 *
 	 * @return array<string,mixed> {
 	 *     action, security, invariants, approvals, operations, tokens,
@@ -60,23 +86,39 @@ final class DashboardAdminQuery {
 	 * }
 	 */
 	public function overview(): array {
-		$operations = ( new OperationExplorerAdminQuery() )->summary();
+		$operations_open = $this->allows( 'operations' );
+		$history_open    = $this->allows( 'change_history' );
+
+		// Only query a sub-surface whose own gate is open; otherwise we neither
+		// compute nor surface its data. The catalogue count for the invariant strip
+		// is derived independently of the (gateable) Operations Explorer summary.
+		$operations = $operations_open ? ( new OperationExplorerAdminQuery() )->summary() : null;
 
 		// STEP 109.2 — a single bounded session roll-up feeds BOTH the change
 		// history headline count (total_count) and the recent activity feed (the
 		// returned rows). One call, reused — no second query, no new source of truth.
-		$sessions = ( new ChangeHistoryAdminQuery() )->sessions( [], self::RECENT_LIMIT, 0 );
+		$sessions = $history_open ? ( new ChangeHistoryAdminQuery() )->sessions( [], self::RECENT_LIMIT, 0 ) : null;
 
 		return [
 			'action'          => 'dashboard_overview',
 			'security'        => $this->security(),
 			'invariants'      => $this->invariants( $operations ),
-			'approvals'       => $this->approvals(),
-			'operations'      => $this->operations( $operations ),
-			'tokens'          => $this->tokens(),
-			'change_history'  => $this->change_history( $sessions ),
-			'recent_activity' => $this->recent_activity( $sessions ),
+			'approvals'       => $this->allows( 'approvals' ) ? $this->approvals() : self::GATED,
+			'operations'      => $operations_open ? $this->operations( $operations ) : self::GATED,
+			'tokens'          => $this->allows( 'tokens' ) ? $this->tokens() : self::GATED,
+			'change_history'  => $history_open ? $this->change_history( $sessions ) : self::GATED,
+			'recent_activity' => $history_open ? $this->recent_activity( $sessions ) : [],
 		];
+	}
+
+	/**
+	 * Phase B / W2 — whether a surfaced sub-surface block's owning FeatureGate is
+	 * open. Unknown block keys default to allowed (only the FEATURE_KEYS blocks are
+	 * gated; the security posture and invariants are platform metadata).
+	 */
+	private function allows( string $block ): bool {
+		$key = self::FEATURE_KEYS[ $block ] ?? '';
+		return '' === $key ? true : FeatureGate::allows( $key );
 	}
 
 	/** Current security posture (mode key + human label) for the header. */
@@ -94,11 +136,17 @@ final class DashboardAdminQuery {
 	 * build); mcp_tools equals the catalogue count by construction (one MCP tool
 	 * per operation — see class docblock); db_version is the schema constant.
 	 *
-	 * @param array<string,mixed> $operations The OperationExplorerAdminQuery summary.
+	 * Platform metadata, never gated: when the Operations Explorer summary is
+	 * unavailable because that surface's gate is closed ($operations === null), the
+	 * catalogue count is read directly from the registry so the strip stays accurate.
+	 *
+	 * @param array<string,mixed>|null $operations The OperationExplorerAdminQuery summary, or null when gated off.
 	 * @return array<string,mixed>
 	 */
-	private function invariants( array $operations ): array {
-		$catalogue = (int) ( $operations['total'] ?? count( ( new OperationRegistry() )->get_operations() ) );
+	private function invariants( ?array $operations ): array {
+		$catalogue = is_array( $operations ) && isset( $operations['total'] )
+			? (int) $operations['total']
+			: count( ( new OperationRegistry() )->get_operations() );
 
 		return [
 			'operation_map' => count( CapabilityRegistry::OPERATION_MAP ),
