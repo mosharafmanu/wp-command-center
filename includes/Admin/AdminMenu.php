@@ -126,6 +126,13 @@ final class AdminMenu {
 		if ( FeatureGate::allows( 'approval_center' ) ) {
 			add_submenu_page( 'wp-command-center', __( 'Approval Center', 'wp-command-center' ), __( 'Approval Center', 'wp-command-center' ), self::CAPABILITY, 'wpcc-approval-center', [ $this, 'render_approval_center' ] );
 		}
+		// STEP 108.1 — Operations Explorer: a read-only browser over the operation
+		// catalogue (risk, required capability, availability). Gated by the same
+		// FeatureGate seam as the other surfaces (ungated today; future Free/Pro
+		// switch). Discovery only — it never executes an operation.
+		if ( FeatureGate::allows( 'operations_explorer' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'Operations Explorer', 'wp-command-center' ), __( 'Operations Explorer', 'wp-command-center' ), self::CAPABILITY, 'wpcc-operations', [ $this, 'render_operations_explorer' ] );
+		}
 	}
 
 	public function admin_bar_badge( \WP_Admin_Bar $wp_admin_bar ): void {
@@ -202,6 +209,12 @@ final class AdminMenu {
 		// STEP 106 — Approval Center (Pending / History / Queue), the surface that
 		// replaced the thin "Pending Approvals" page.
 		$this->render_view( 'approval-center' );
+	}
+
+	public function render_operations_explorer(): void {
+		// STEP 108.1 — Operations Explorer (catalogue list), read-only discovery
+		// surface over the operation registry. Never executes an operation.
+		$this->render_view( 'operations-explorer' );
 	}
 
 	private function render_view( string $view ): void {

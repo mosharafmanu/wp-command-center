@@ -225,6 +225,34 @@ final class AdminRestApi {
 				'permission_callback' => [ $this, 'check_tokens_permission' ],
 			],
 		] );
+
+		// STEP 108.1 — Operations Explorer read surface (cookie + nonce only).
+		// All READABLE, presentation-layer aggregation over the operation catalogue
+		// + capability map (OperationExplorerAdminQuery). NO write routes — this
+		// surface NEVER executes an operation (execution is out of scope by design).
+		// The /summary literal segment is registered before the bare /operations/{id}
+		// detail route (which arrives in STEP 108.2) so it matches first.
+		register_rest_route( self::NS, '/admin/operations', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'operations_list' ],
+			'permission_callback' => [ $this, 'check_operations_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/operations/summary', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'operations_summary' ],
+			'permission_callback' => [ $this, 'check_operations_permission' ],
+		] );
+
+		// STEP 108.2 — single-operation detail (read-only). Registered AFTER the
+		// /summary literal so that segment matches first; operation ids are
+		// [a-z0-9_]. Still READABLE only — the detail surface describes an operation,
+		// it never runs it.
+		register_rest_route( self::NS, '/admin/operations/(?P<id>[a-z0-9_]{1,64})', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'operation_detail' ],
+			'permission_callback' => [ $this, 'check_operations_permission' ],
+		] );
 	}
 
 	public function check_permission(): bool {
@@ -258,6 +286,16 @@ final class AdminRestApi {
 	 */
 	public function check_tokens_permission(): bool {
 		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'token_capability_manager' );
+	}
+
+	/**
+	 * STEP 108.1 — permission gate for the Operations Explorer surface:
+	 * manage_options AND the (currently ungated) feature seam. Single REST switch
+	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
+	 * History / Approval Center / Token & Capability gates.
+	 */
+	public function check_operations_permission(): bool {
+		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'operations_explorer' );
 	}
 
 	public function list_pending( \WP_REST_Request $request ): \WP_REST_Response {
@@ -905,6 +943,33 @@ final class AdminRestApi {
 	/** GET /admin/operations-map — the 34-entry operation→capability map. */
 	public function operations_map(): \WP_REST_Response {
 		return new \WP_REST_Response( ( new TokenCapabilityAdminQuery() )->operations_map(), 200 );
+	}
+
+	// ── STEP 108.1 — Operations Explorer reads (read-only) ─────────────────────
+	// Both handlers delegate to the thin OperationExplorerAdminQuery aggregation
+	// over the operation catalogue + capability map. No writes, no execution, no
+	// engine dispatch, no new source of truth.
+
+	/** GET /admin/operations — the operation catalogue (risk, capability, availability). */
+	public function operations_list(): \WP_REST_Response {
+		return new \WP_REST_Response( ( new OperationExplorerAdminQuery() )->operations(), 200 );
+	}
+
+	/** GET /admin/operations/summary — catalogue header counts (availability / risk / approval). */
+	public function operations_summary(): \WP_REST_Response {
+		return new \WP_REST_Response( ( new OperationExplorerAdminQuery() )->summary(), 200 );
+	}
+
+	/** GET /admin/operations/{id} — one operation's full detail (parameters / per-action risk / authorization). */
+	public function operation_detail( \WP_REST_Request $request ): \WP_REST_Response {
+		$id     = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$detail = ( new OperationExplorerAdminQuery() )->operation( $id );
+
+		if ( null === $detail ) {
+			return new \WP_REST_Response( [ 'success' => false, 'error' => 'operation_not_found' ], 404 );
+		}
+
+		return new \WP_REST_Response( $detail, 200 );
 	}
 
 	// ── STEP 107.3 — capability write actions (engine reuse, no bypass) ────────
