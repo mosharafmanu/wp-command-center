@@ -71,7 +71,7 @@ final class OperationManager {
 	 * Approve a pending request and automatically queue it.
 	 */
 	public function approve_request( string $request_id, array $context = [] ): bool|\WP_Error {
-		$approved = $this->update_status( $request_id, self::STATUS_APPROVED, 'approved_at' );
+		$approved = $this->update_status( $request_id, self::STATUS_APPROVED, 'approved_at', $this->attribution_columns( $context ) );
 		if ( is_wp_error( $approved ) || ! $approved ) {
 			return $approved;
 		}
@@ -86,15 +86,84 @@ final class OperationManager {
 	/**
 	 * Reject a pending request.
 	 */
-	public function reject_request( string $request_id ): bool|\WP_Error {
-		return $this->update_status( $request_id, self::STATUS_REJECTED, 'rejected_at' );
+	public function reject_request( string $request_id, array $context = [] ): bool|\WP_Error {
+		return $this->update_status( $request_id, self::STATUS_REJECTED, 'rejected_at', $this->attribution_columns( $context ) );
 	}
 
 	/**
 	 * Cancel a request.
 	 */
-	public function cancel_request( string $request_id ): bool|\WP_Error {
-		return $this->update_status( $request_id, self::STATUS_CANCELLED );
+	public function cancel_request( string $request_id, array $context = [] ): bool|\WP_Error {
+		return $this->update_status( $request_id, self::STATUS_CANCELLED, 'cancelled_at', $this->attribution_columns( $context ) );
+	}
+
+	/**
+	 * STEP 106.1 — derive the forward-only approver-attribution columns from the
+	 * resolver's context. The same actor an admin approval (WP_User) or an MCP
+	 * approval (token) already carries is recorded onto the request row so the
+	 * Approval Center History can answer "who resolved this?" without scanning the
+	 * audit JSONL. Returns an empty array when no actor is present (the columns
+	 * stay NULL — forward-only, no synthetic attribution).
+	 *
+	 * @param array<string,mixed> $context Resolver context; reads $context['actor'].
+	 * @return array<string,mixed> Subset of { resolved_by_label, resolved_by_type, resolved_by_user_id }.
+	 */
+	private function attribution_columns( array $context ): array {
+		$actor = isset( $context['actor'] ) && is_array( $context['actor'] ) ? $context['actor'] : [];
+		if ( empty( $actor ) ) {
+			return [];
+		}
+
+		// User id (admin actors carry wp_user_id; resolved/system actors use user_id).
+		$user_id = 0;
+		foreach ( [ 'wp_user_id', 'user_id' ] as $key ) {
+			if ( ! empty( $actor[ $key ] ) ) {
+				$user_id = (int) $actor[ $key ];
+				break;
+			}
+		}
+
+		$raw_type = isset( $actor['type'] ) && is_string( $actor['type'] ) ? $actor['type'] : '';
+		if ( $user_id > 0 || 'admin' === $raw_type ) {
+			$type = 'wp_user';
+		} elseif ( 'system' === $raw_type ) {
+			$type = 'system';
+		} elseif ( in_array( $raw_type, [ 'mcp', 'token' ], true ) || ! empty( $actor['token_id'] ) ) {
+			$type = 'token';
+		} else {
+			$type = $raw_type;
+		}
+
+		// Human label, mirroring the Change History admin precedence.
+		$label = '';
+		foreach ( [ 'label', 'user_login', 'name', 'agent' ] as $key ) {
+			if ( ! empty( $actor[ $key ] ) && is_string( $actor[ $key ] ) ) {
+				$label = $actor[ $key ];
+				break;
+			}
+		}
+		if ( '' === $label ) {
+			if ( $user_id > 0 ) {
+				$label = 'Admin #' . $user_id;
+			} elseif ( ! empty( $actor['token_id'] ) ) {
+				$label = 'Token ' . substr( (string) $actor['token_id'], 0, 8 );
+			} elseif ( '' !== $type ) {
+				$label = $type;
+			}
+		}
+
+		$columns = [];
+		if ( '' !== $label ) {
+			$columns['resolved_by_label'] = substr( $label, 0, 191 );
+		}
+		if ( '' !== $type ) {
+			$columns['resolved_by_type'] = substr( $type, 0, 20 );
+		}
+		if ( $user_id > 0 ) {
+			$columns['resolved_by_user_id'] = $user_id;
+		}
+
+		return $columns;
 	}
 
 	/**
@@ -201,19 +270,29 @@ final class OperationManager {
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
 	}
 
-	private function update_status( string $request_id, string $status, ?string $timestamp_field = null ): bool|\WP_Error {
+	private function update_status( string $request_id, string $status, ?string $timestamp_field = null, array $extra = [] ): bool|\WP_Error {
 		global $wpdb;
 
-		$data = [ 'status' => $status ];
+		$data    = [ 'status' => $status ];
+		$formats = [ '%s' ];
+
 		if ( $timestamp_field ) {
 			$data[ $timestamp_field ] = time();
+			$formats[]                = '%d';
+		}
+
+		// STEP 106.1 — forward-only approver-attribution columns (and any other
+		// caller-supplied row fields). Integers use %d; everything else %s.
+		foreach ( $extra as $column => $value ) {
+			$data[ $column ] = $value;
+			$formats[]       = is_int( $value ) ? '%d' : '%s';
 		}
 
 		$updated = $wpdb->update(
 			$wpdb->prefix . 'wpcc_operation_requests',
 			$data,
 			[ 'request_id' => $request_id, 'status' => self::STATUS_PENDING_REVIEW ],
-			[ '%s', '%d' ],
+			$formats,
 			[ '%s', '%s' ]
 		);
 

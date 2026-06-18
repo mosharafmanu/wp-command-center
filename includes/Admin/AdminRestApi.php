@@ -54,6 +54,52 @@ final class AdminRestApi {
 			] );
 		}
 
+		// STEP 106.1 — Approval Center read surface (cookie + nonce only). All
+		// READABLE, presentation-layer aggregation over the existing approval
+		// tables (ApprovalAdminQuery). No write/approval routes are added here —
+		// approve/reject stay on the existing routes above; queue retry lands in
+		// STEP 106.3. Literal segments are registered before the bare /{id}
+		// detail route so they match first.
+		register_rest_route( self::NS, '/admin/approvals/history', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'approvals_history' ],
+			'permission_callback' => [ $this, 'check_approval_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/approvals/summary', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'approvals_summary' ],
+			'permission_callback' => [ $this, 'check_approval_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/approvals/queue', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'approvals_queue' ],
+			'permission_callback' => [ $this, 'check_approval_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/approvals/results/(?P<id>[a-f0-9-]{36})', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'approval_result' ],
+			'permission_callback' => [ $this, 'check_approval_permission' ],
+		] );
+
+		// STEP 106.3 — re-queue a FAILED queue item. The only new write route in
+		// the Approval Center. It does NOT retry inline: it routes queue_retry
+		// through ApprovalRuntimeManager, inheriting the STEP 80 human-approver
+		// guard + AuditLog — no bypass.
+		register_rest_route( self::NS, '/admin/approvals/queue/(?P<id>[a-f0-9-]{36})/retry', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'approval_retry' ],
+			'permission_callback' => [ $this, 'check_approval_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/approvals/(?P<id>[a-f0-9-]{36})', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'approval_detail' ],
+			'permission_callback' => [ $this, 'check_approval_permission' ],
+		] );
+
 		// STEP 105.1 — Change History admin read surface (cookie + nonce only).
 		// All read-only. List/timeline/get delegate to the STEP 104 runtime
 		// manager (identical envelope as token REST/MCP); sessions is a thin
@@ -116,6 +162,16 @@ final class AdminRestApi {
 		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'change_history' );
 	}
 
+	/**
+	 * STEP 106.1 — permission gate for the Approval Center read surface:
+	 * manage_options AND the (currently ungated) feature seam. Single REST switch
+	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
+	 * History gate.
+	 */
+	public function check_approval_permission(): bool {
+		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'approval_center' );
+	}
+
 	public function list_pending( \WP_REST_Request $request ): \WP_REST_Response {
 		$manager  = new OperationManager();
 		$requests = $manager->list_requests( [
@@ -149,6 +205,47 @@ final class AdminRestApi {
 		];
 
 		if ( 'approve' === $action ) {
+			// STEP 106.3 — destructive escalation parity with the 105.3 restore
+			// modal. Approving a destructive request requires the admin to type the
+			// DestructiveGuard phrase + a reason FIRST; until then we return
+			// confirmation_required and DO NOT approve/execute (no state change).
+			$row     = $manager->get_request( $request_id );
+			$payload = $row ? ( json_decode( (string) ( $row['payload'] ?? '{}' ), true ) ?: [] ) : [];
+			$destructive = $row ? DestructiveGuard::classify( (string) $row['operation_id'], $payload ) : null;
+
+			if ( null !== $destructive ) {
+				$confirm = rest_sanitize_boolean( $request->get_param( 'confirm' ) );
+				$phrase  = (string) $request->get_param( 'confirmation_phrase' );
+				$reason  = trim( (string) $request->get_param( 'reason' ) );
+
+				if ( ! $confirm || ! hash_equals( (string) $destructive['phrase'], $phrase ) || '' === $reason ) {
+					return new \WP_REST_Response( [
+						'success'               => true,
+						'status'                => 'confirmation_required',
+						'confirmation_required' => true,
+						'destructive'           => true,
+						'confirmation_phrase'   => $destructive['phrase'],
+						'target_parameter'      => $destructive['target_key'],
+						'warning'               => $destructive['warning'],
+						'message'               => sprintf(
+							/* translators: %s: confirmation phrase */
+							__( 'This is a destructive approval. Type the phrase "%s" and a reason to confirm.', 'wp-command-center' ),
+							$destructive['phrase']
+						),
+					], 200 );
+				}
+
+				// Confirmed — fold the admin confirmation into the stored payload so
+				// the engine's DestructiveGuard passes at execution, and carry the
+				// reason into the audit context.
+				$this->merge_request_payload( $request_id, [
+					'confirm'             => true,
+					'confirmation_phrase' => (string) $destructive['phrase'],
+					'reason'              => $reason,
+				] );
+				$actor['confirmation_reason'] = $reason;
+			}
+
 			$approved = $manager->approve_request( $request_id, [ 'actor' => $actor ] );
 			if ( is_wp_error( $approved ) ) {
 				return new \WP_REST_Response( [ 'success' => false, 'error' => $approved->get_error_message() ], 400 );
@@ -156,6 +253,7 @@ final class AdminRestApi {
 
 			( new AuditLog() )->record( 'admin.approval.approved', [
 				'request_id' => $request_id,
+				'destructive' => null !== $destructive,
 				'actor'      => AuditLog::resolve_actor( $actor ),
 			] );
 
@@ -179,7 +277,7 @@ final class AdminRestApi {
 		}
 
 		// reject
-		$rejected = $manager->reject_request( $request_id );
+		$rejected = $manager->reject_request( $request_id, [ 'actor' => $actor ] );
 		if ( is_wp_error( $rejected ) ) {
 			return new \WP_REST_Response( [ 'success' => false, 'error' => $rejected->get_error_message() ], 400 );
 		}
@@ -190,6 +288,200 @@ final class AdminRestApi {
 		] );
 
 		return new \WP_REST_Response( [ 'success' => true, 'rejected' => true ], 200 );
+	}
+
+	// ── STEP 106.1 — Approval Center read handlers ──────────────────────
+
+	/** GET /admin/approvals/summary — header counts. */
+	public function approvals_summary(): \WP_REST_Response {
+		return new \WP_REST_Response(
+			[ 'success' => true, 'summary' => ( new ApprovalAdminQuery() )->summary() ],
+			200
+		);
+	}
+
+	/** GET /admin/approvals/history — all-status, filtered, paginated requests. */
+	public function approvals_history( \WP_REST_Request $request ): \WP_REST_Response {
+		$filters = [];
+
+		$status = $request->get_param( 'status' );
+		if ( is_array( $status ) ) {
+			$filters['status'] = array_map( 'sanitize_text_field', $status );
+		} elseif ( null !== $status && '' !== (string) $status ) {
+			$filters['status'] = sanitize_text_field( (string) $status );
+		}
+
+		foreach ( [ 'risk', 'operation_id', 'actor' ] as $key ) {
+			$value = (string) $request->get_param( $key );
+			if ( '' !== $value ) {
+				$filters[ $key ] = sanitize_text_field( $value );
+			}
+		}
+
+		foreach ( [ 'from', 'to' ] as $key ) {
+			$value = $request->get_param( $key );
+			if ( null !== $value && '' !== (string) $value ) {
+				$filters[ $key ] = (int) $value;
+			}
+		}
+
+		[ $limit, $offset ] = $this->history_paging( $request );
+
+		return new \WP_REST_Response(
+			( new ApprovalAdminQuery() )->history( $filters, $limit, $offset ),
+			200
+		);
+	}
+
+	/** GET /admin/approvals/queue — queued/running/failed items (read-only). */
+	public function approvals_queue( \WP_REST_Request $request ): \WP_REST_Response {
+		$filters = [];
+		foreach ( [ 'status', 'operation_id', 'request_id' ] as $key ) {
+			$value = (string) $request->get_param( $key );
+			if ( '' !== $value ) {
+				$filters[ $key ] = sanitize_text_field( $value );
+			}
+		}
+
+		[ $limit, $offset ] = $this->history_paging( $request );
+
+		return new \WP_REST_Response(
+			( new ApprovalAdminQuery() )->queue( $filters, $limit, $offset ),
+			200
+		);
+	}
+
+	/** GET /admin/approvals/{id} — full detail for one request. */
+	public function approval_detail( \WP_REST_Request $request ): \WP_REST_Response {
+		$id     = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$detail = ( new ApprovalAdminQuery() )->detail( $id );
+
+		if ( null === $detail ) {
+			return new \WP_REST_Response(
+				[ 'success' => false, 'code' => 'wpcc_request_not_found', 'message' => __( 'Operation request not found.', 'wp-command-center' ) ],
+				404
+			);
+		}
+
+		// STEP 106.2 — when the request is a patch_apply, attach the server-
+		// rendered, escaped unified diff via the SHARED DiffRenderer (no fork,
+		// same component the Patches + Change History views use). The view injects
+		// this HTML only; it never parses diffs client-side.
+		$detail['diff'] = $this->approval_diff( $detail );
+
+		return new \WP_REST_Response( array_merge( [ 'success' => true ], $detail ), 200 );
+	}
+
+	/**
+	 * Build the escaped diff payload for an approval detail. Honest about stored
+	 * data: real unified diff when the patch + its file records still exist,
+	 * a graceful "unavailable" note when the snapshot was cleaned, or none for
+	 * non-patch requests.
+	 *
+	 * @param array<string,mixed> $detail
+	 * @return array<string,mixed> { diff_kind, available, summary, html }
+	 */
+	private function approval_diff( array $detail ): array {
+		$payload = is_array( $detail['payload'] ?? null ) ? $detail['payload'] : [];
+		$request = is_array( $detail['request'] ?? null ) ? $detail['request'] : [];
+
+		$is_patch = 'patch_manage' === ( $request['operation_id'] ?? '' ) && 'patch_apply' === ( $payload['action'] ?? '' );
+		if ( ! $is_patch ) {
+			return [ 'diff_kind' => 'none', 'available' => false, 'summary' => null, 'html' => '' ];
+		}
+
+		$patch_id = isset( $payload['patch_id'] ) ? (string) $payload['patch_id'] : '';
+		$patch    = '' !== $patch_id ? ( new PatchManager() )->get( $patch_id ) : new \WP_Error( 'wpcc_no_patch', '' );
+
+		if ( is_wp_error( $patch ) || empty( $patch['files'] ) ) {
+			return [
+				'diff_kind' => 'patch_unavailable',
+				'available' => false,
+				'summary'   => null,
+				'html'      => '<p class="description">' . esc_html__( 'The diff for this patch is no longer available (its snapshot has been cleaned up).', 'wp-command-center' ) . '</p>',
+			];
+		}
+
+		$files = array_map(
+			static fn( $f ): array => [ 'path' => (string) ( $f['path'] ?? '' ), 'diff' => (string) ( $f['diff'] ?? '' ) ],
+			$patch['files']
+		);
+
+		return [
+			'diff_kind' => 'patch',
+			'available' => true,
+			'summary'   => DiffRenderer::summarize( $files ),
+			'html'      => DiffRenderer::render_accordion( $files, false ),
+		];
+	}
+
+	/**
+	 * POST /admin/approvals/queue/{id}/retry — re-queue a FAILED item.
+	 *
+	 * Pure reuse: routes queue_retry through ApprovalRuntimeManager (the same
+	 * control plane the MCP path uses), inheriting the STEP 80 human-approver
+	 * guard and AuditLog. The cookie + manage_options route is the gate; the
+	 * admin is a WP_User actor, so the human-approver requirement is satisfied.
+	 */
+	public function approval_retry( \WP_REST_Request $request ): \WP_REST_Response {
+		$queue_id = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$actor    = [
+			'wp_user_id' => get_current_user_id(),
+			'user_login' => wp_get_current_user()->user_login,
+			'source'     => 'admin_ui',
+		];
+
+		$result = ( new \WPCommandCenter\Operations\ApprovalRuntimeManager() )->run(
+			[ 'action' => 'queue_retry', 'queue_id' => $queue_id ],
+			[ 'actor' => $actor ]
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return new \WP_REST_Response(
+				[ 'success' => false, 'code' => $result->get_error_code(), 'error' => $result->get_error_message() ],
+				400
+			);
+		}
+
+		return new \WP_REST_Response( [ 'success' => true, 'item' => $result['item'] ?? null ], 200 );
+	}
+
+	/**
+	 * Merge fields into a request's stored payload (used to fold an admin
+	 * destructive confirmation into the request before execution).
+	 *
+	 * @param array<string,mixed> $add
+	 */
+	private function merge_request_payload( string $request_id, array $add ): void {
+		global $wpdb;
+		$row = ( new OperationManager() )->get_request( $request_id );
+		if ( ! $row ) {
+			return;
+		}
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true ) ?: [];
+		$payload = array_merge( $payload, $add );
+		$wpdb->update(
+			$wpdb->prefix . 'wpcc_operation_requests',
+			[ 'payload' => wp_json_encode( $payload ) ],
+			[ 'request_id' => $request_id ],
+			[ '%s' ],
+			[ '%s' ]
+		);
+	}
+
+	/** GET /admin/approvals/results/{id} — one execution result. */
+	public function approval_result( \WP_REST_Request $request ): \WP_REST_Response {
+		$id  = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$row = ( new \WPCommandCenter\Operations\OperationResults() )->get_result( $id );
+
+		if ( ! $row ) {
+			return new \WP_REST_Response(
+				[ 'success' => false, 'code' => 'wpcc_result_not_found', 'message' => __( 'Operation result not found.', 'wp-command-center' ) ],
+				404
+			);
+		}
+
+		return new \WP_REST_Response( [ 'success' => true, 'result' => $row ], 200 );
 	}
 
 	// ── STEP 105.1 — Change History read handlers ───────────────────────

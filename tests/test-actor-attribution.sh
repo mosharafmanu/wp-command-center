@@ -126,7 +126,10 @@ echo "== 7. Invariants: no schema/runtime/capability change =="
 MANIFEST=$(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/agent/manifest")
 assert_eq "operation_map stays 34" "34" "$(pj "$MANIFEST" '.capability_management.operation_map | keys | length')"
 assert_eq "capabilities stay 23"   "23" "$(pj "$MANIFEST" '.capability_management.capabilities | length')"
-assert_eq "DB_VERSION unchanged 2.3.0" "2.3.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+# STEP 106.1 bumped DB_VERSION to 2.4.0 (forward-only approver-attribution
+# columns on wpcc_operation_requests). The actor-attribution code this suite
+# guards is unchanged; only the schema baseline moved.
+assert_eq "DB_VERSION baseline 2.4.0" "2.4.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 
 echo
 echo "== Summary =="

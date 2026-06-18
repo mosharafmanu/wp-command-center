@@ -159,7 +159,7 @@ final class ApprovalRuntimeManager {
 			return $row;
 		}
 
-		$result = ( new OperationManager() )->reject_request( $id );
+		$result = ( new OperationManager() )->reject_request( $id, [ 'actor' => $actor ] );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
@@ -180,7 +180,7 @@ final class ApprovalRuntimeManager {
 			return $row;
 		}
 
-		$result = ( new OperationManager() )->cancel_request( $id );
+		$result = ( new OperationManager() )->cancel_request( $id, [ 'actor' => $actor ] );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}

@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Schema {
 
-	public const DB_VERSION = '2.3.0';
+	public const DB_VERSION = '2.4.0';
 
 	/**
 	 * Install schema changes when the active plugin code is newer than the
@@ -96,6 +96,10 @@ final class Schema {
 			rejected_at BIGINT UNSIGNED NULL,
 			executed_at BIGINT UNSIGNED NULL,
 			failed_at BIGINT UNSIGNED NULL,
+			cancelled_at BIGINT UNSIGNED NULL,
+			resolved_by_label VARCHAR(191) NULL,
+			resolved_by_type VARCHAR(20) NULL,
+			resolved_by_user_id BIGINT UNSIGNED NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY request_id (request_id),
 			KEY operation_id (operation_id),

@@ -12,6 +12,8 @@ final class AdminMenu {
 		add_action( 'admin_bar_menu', [ $this, 'admin_bar_badge' ], 100 );
 		// STEP 105.3 — the legacy Rollback page is merged into Change History.
 		add_action( 'admin_init', [ $this, 'redirect_legacy_rollback' ] );
+		// STEP 106.4 — the "Pending Approvals" page becomes the Approval Center.
+		add_action( 'admin_init', [ $this, 'redirect_legacy_approvals' ] );
 	}
 
 	/**
@@ -28,6 +30,35 @@ final class AdminMenu {
 			wp_safe_redirect( admin_url( 'admin.php?page=wpcc-change-history' ) );
 			exit;
 		}
+	}
+
+	/**
+	 * STEP 106.4 — keep old "Pending Approvals" bookmarks/links (and the
+	 * pending_approval URLs the engine emits) working after the page was renamed
+	 * to the Approval Center under the `wpcc-approval-center` slug. The tab/view
+	 * deep-link args are preserved so a bookmarked detail/queue link still lands
+	 * in the right place.
+	 */
+	public function redirect_legacy_approvals(): void {
+		if ( ! is_admin() || ! current_user_can( self::CAPABILITY ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only page nav, no state change.
+		if ( ! isset( $_GET['page'] ) || 'wpcc-approvals' !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
+			return;
+		}
+
+		$args = [ 'page' => 'wpcc-approval-center' ];
+		foreach ( [ 'tab', 'view', 'session_id', 'status' ] as $key ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only page nav.
+			if ( isset( $_GET[ $key ] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$args[ $key ] = sanitize_text_field( wp_unslash( $_GET[ $key ] ) );
+			}
+		}
+
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
+		exit;
 	}
 
 	public function register_menu(): void {
@@ -52,7 +83,13 @@ final class AdminMenu {
 		add_submenu_page( 'wp-command-center', __( 'Patches', 'wp-command-center' ), __( 'Patches', 'wp-command-center' ), self::CAPABILITY, 'wpcc-patches', [ $this, 'render_patches' ] );
 		add_submenu_page( 'wp-command-center', __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, 'wpcc-settings', [ $this, 'render_settings' ] );
 		add_submenu_page( 'wp-command-center', __( 'AI Integrations', 'wp-command-center' ), __( 'AI Integrations', 'wp-command-center' ), self::CAPABILITY, 'wpcc-ai-integrations', [ $this, 'render_ai_integrations' ] );
-		add_submenu_page( 'wp-command-center', __( 'Pending Approvals', 'wp-command-center' ), __( 'Pending Approvals', 'wp-command-center' ), self::CAPABILITY, 'wpcc-approvals', [ $this, 'render_approvals' ] );
+		// STEP 106.4 — "Pending Approvals" becomes the Approval Center (Pending /
+		// History / Queue). Gated by the same FeatureGate seam as Change History
+		// (ungated today; future Free/Pro switch). Old slug redirects in via
+		// redirect_legacy_approvals().
+		if ( FeatureGate::allows( 'approval_center' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'Approval Center', 'wp-command-center' ), __( 'Approval Center', 'wp-command-center' ), self::CAPABILITY, 'wpcc-approval-center', [ $this, 'render_approval_center' ] );
+		}
 	}
 
 	public function admin_bar_badge( \WP_Admin_Bar $wp_admin_bar ): void {
@@ -82,7 +119,7 @@ final class AdminMenu {
 				esc_html__( 'AI Requests', 'wp-command-center' ),
 				$count
 			),
-			'href'  => admin_url( 'admin.php?page=wpcc-approvals' ),
+			'href'  => admin_url( 'admin.php?page=wpcc-approval-center' ),
 		] );
 	}
 
@@ -118,8 +155,10 @@ final class AdminMenu {
 		$this->render_view( 'ai-integrations' );
 	}
 
-	public function render_approvals(): void {
-		$this->render_view( 'approvals' );
+	public function render_approval_center(): void {
+		// STEP 106 — Approval Center (Pending / History / Queue), the surface that
+		// replaced the thin "Pending Approvals" page.
+		$this->render_view( 'approval-center' );
 	}
 
 	private function render_view( string $view ): void {

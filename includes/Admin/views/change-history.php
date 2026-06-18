@@ -202,12 +202,12 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		restore:     <?php echo wp_json_encode( __( 'Restore', 'wp-command-center' ) ); ?>,
 		restoreQ:    <?php echo wp_json_encode( __( 'Revert this change? It will be reversed through the same approval and safety pipeline as the agent API — destructive and high-risk reversals require extra confirmation.', 'wp-command-center' ) ); ?>,
 		restoreOk:   <?php echo wp_json_encode( __( 'Change reversed. Reloading…', 'wp-command-center' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This restore needs administrator approval and has been sent to Pending Approvals.', 'wp-command-center' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This restore needs administrator approval and has been sent to the Approval Center.', 'wp-command-center' ) ); ?>,
 		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'wp-command-center' ) ); ?>,
 		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'wp-command-center' ) ); ?>,
 		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'wp-command-center' ) ); ?>,
 		genericFail: <?php echo wp_json_encode( __( 'Restore failed.', 'wp-command-center' ) ); ?>,
-		openApprove: <?php echo wp_json_encode( __( 'Open Pending Approvals', 'wp-command-center' ) ); ?>,
+		openApprove: <?php echo wp_json_encode( __( 'Open Approval Center', 'wp-command-center' ) ); ?>,
 		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'wp-command-center' ) ); ?>,
 		close:       <?php echo wp_json_encode( __( 'Close', 'wp-command-center' ) ); ?>,
 		emptyRev:    <?php echo wp_json_encode( __( 'No reversible changes. Changes that can be rolled back will appear here.', 'wp-command-center' ) ); ?>,
@@ -232,7 +232,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		restoreBusy: <?php echo wp_json_encode( __( 'Restoring…', 'wp-command-center' ) ); ?>
 	};
 	var REQUIRED_PHRASE = 'ROLLBACK_CHANGE';
-	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-approvals' ) ); ?>;
+	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-approval-center' ) ); ?>;
 
 	function escHtml( s ) {
 		var d = document.createElement('div');
