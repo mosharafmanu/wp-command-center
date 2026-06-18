@@ -1,12 +1,20 @@
 <?php
+/**
+ * Settings view.
+ *
+ * STEP 107.4 — API token management (create / revoke / delete + per-token
+ * capabilities) moved to the dedicated "Tokens & Capabilities" manager
+ * (page `wpcc-tokens`). This page now owns only Security Mode and the read-only
+ * AI-agent connection reference. No AuthTokens calls remain here; old deep-links
+ * into the former token section redirect to the new manager
+ * (AdminMenu::redirect_legacy_tokens).
+ */
+
 defined( 'ABSPATH' ) || exit;
 
-use WPCommandCenter\Security\AuthTokens;
 use WPCommandCenter\Operations\SecurityModeManager;
 
-$auth_tokens = new AuthTokens();
-$notice      = null;
-$new_token   = null;
+$notice = null;
 
 if ( isset( $_POST['wpcc_action'] ) ) {
 	check_admin_referer( 'wpcc_settings' );
@@ -28,64 +36,19 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 		} else {
 			$notice = [ 'type' => 'error', 'message' => __( 'Invalid security mode.', 'wp-command-center' ) ];
 		}
-	} elseif ( 'create_token' === $action ) {
-		$label   = isset( $_POST['label'] ) ? sanitize_text_field( wp_unslash( $_POST['label'] ) ) : '';
-		$scope   = isset( $_POST['scope'] ) ? sanitize_key( wp_unslash( $_POST['scope'] ) ) : AuthTokens::SCOPE_READ_ONLY;
-		$expires = isset( $_POST['expires'] ) ? sanitize_key( wp_unslash( $_POST['expires'] ) ) : 'never';
-
-		$expires_at = match ( $expires ) {
-			'30d' => time() + 30 * DAY_IN_SECONDS,
-			'90d' => time() + 90 * DAY_IN_SECONDS,
-			'1y'  => time() + YEAR_IN_SECONDS,
-			default => null,
-		};
-
-		$result = $auth_tokens->create( $label, $scope, $expires_at, get_current_user_id() );
-
-		if ( is_wp_error( $result ) ) {
-			$notice = [ 'type' => 'error', 'message' => $result->get_error_message() ];
-		} else {
-			$new_token = $result['token'];
-			$notice    = [ 'type' => 'success', 'message' => __( 'API token created. Copy it now — it will not be shown again.', 'wp-command-center' ) ];
-		}
-	} elseif ( in_array( $action, [ 'revoke_token', 'delete_token' ], true ) ) {
-		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
-
-		$result = 'revoke_token' === $action ? $auth_tokens->revoke( $id ) : $auth_tokens->delete( $id );
-
-		if ( is_wp_error( $result ) ) {
-			$notice = [ 'type' => 'error', 'message' => $result->get_error_message() ];
-		} else {
-			$messages = [
-				'revoke_token' => __( 'Token revoked.', 'wp-command-center' ),
-				'delete_token' => __( 'Token deleted.', 'wp-command-center' ),
-			];
-
-			$notice = [ 'type' => 'success', 'message' => $messages[ $action ] ];
-		}
 	}
 }
 
 $current_mode = SecurityModeManager::current();
-$tokens       = $auth_tokens->list();
-$rest_base      = rest_url( 'wp-command-center/v1' );
-$expiry_options = [
-	'never' => __( 'Never', 'wp-command-center' ),
-	'30d'   => __( '30 days', 'wp-command-center' ),
-	'90d'   => __( '90 days', 'wp-command-center' ),
-	'1y'    => __( '1 year', 'wp-command-center' ),
-];
-$scope_options  = [
-	AuthTokens::SCOPE_READ_ONLY => AuthTokens::scope_label( AuthTokens::SCOPE_READ_ONLY ),
-	AuthTokens::SCOPE_FULL      => AuthTokens::scope_label( AuthTokens::SCOPE_FULL ),
-];
+$rest_base    = rest_url( 'wp-command-center/v1' );
+$tokens_url   = admin_url( 'admin.php?page=wpcc-tokens' );
 
-$format_date = static function ( ?int $timestamp ): string {
-	if ( null === $timestamp ) {
-		return __( 'Never', 'wp-command-center' );
-	}
-
-	return esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $timestamp ) );
+// Read-only scope labels for the connection reference. Kept local so this view
+// no longer depends on AuthTokens (STEP 107.4 migration).
+$scope_label = static function ( string $scope ): string {
+	return 'full' === $scope
+		? __( 'Full access', 'wp-command-center' )
+		: __( 'Read-only', 'wp-command-center' );
 };
 
 $endpoints = [
@@ -106,17 +69,10 @@ $endpoints = [
 ?>
 <div class="wrap wpcc-wrap">
 	<h1><?php esc_html_e( 'Settings', 'wp-command-center' ); ?></h1>
-	<p><?php esc_html_e( 'API tokens, AI agent connections, and access control.', 'wp-command-center' ); ?></p>
+	<p><?php esc_html_e( 'Security mode and AI agent connection reference.', 'wp-command-center' ); ?></p>
 
 	<?php if ( $notice ) : ?>
 		<div class="notice notice-<?php echo esc_attr( $notice['type'] ); ?>"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
-	<?php endif; ?>
-
-	<?php if ( null !== $new_token ) : ?>
-		<div class="notice notice-warning">
-			<p><strong><?php esc_html_e( 'Your new API token (copy it now — it will not be shown again):', 'wp-command-center' ); ?></strong></p>
-			<p><input type="text" readonly="readonly" class="large-text code" value="<?php echo esc_attr( $new_token ); ?>" onclick="this.select();" /></p>
-		</div>
 	<?php endif; ?>
 
 	<h2><?php esc_html_e( 'Security Mode', 'wp-command-center' ); ?></h2>
@@ -156,91 +112,12 @@ $endpoints = [
 	</form>
 
 	<h2><?php esc_html_e( 'API Tokens', 'wp-command-center' ); ?></h2>
-	<p><?php esc_html_e( 'AI agents (Claude, Codex, custom integrations) authenticate to the REST API using a bearer token. Read-only tokens can query Site Intelligence, Diagnostics, File Access, and Patches; full-access tokens can additionally create, approve, apply, and roll back patches.', 'wp-command-center' ); ?></p>
-
-	<table class="widefat striped wpcc-table">
-		<thead>
-			<tr>
-				<th><?php esc_html_e( 'Label', 'wp-command-center' ); ?></th>
-				<th><?php esc_html_e( 'Token', 'wp-command-center' ); ?></th>
-				<th><?php esc_html_e( 'Scope', 'wp-command-center' ); ?></th>
-				<th><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th>
-				<th><?php esc_html_e( 'Created', 'wp-command-center' ); ?></th>
-				<th><?php esc_html_e( 'Expires', 'wp-command-center' ); ?></th>
-				<th><?php esc_html_e( 'Last Used', 'wp-command-center' ); ?></th>
-				<th><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th>
-			</tr>
-		</thead>
-		<tbody>
-		<?php if ( empty( $tokens ) ) : ?>
-			<tr>
-				<td colspan="8"><?php esc_html_e( 'No API tokens yet. Create one below to connect an AI agent.', 'wp-command-center' ); ?></td>
-			</tr>
-		<?php endif; ?>
-		<?php foreach ( $tokens as $token ) : ?>
-			<tr>
-				<td><?php echo esc_html( $token['label'] ); ?></td>
-				<td><code><?php echo esc_html( $token['token_preview'] ); ?>…</code></td>
-				<td><?php echo esc_html( AuthTokens::scope_label( $token['scope'] ) ); ?></td>
-				<td><?php echo AuthTokens::status_badge( $token ); ?></td>
-				<td><?php echo $format_date( $token['created_at'] ); ?></td>
-				<td><?php echo $format_date( $token['expires_at'] ); ?></td>
-				<td><?php echo $format_date( $token['last_used_at'] ); ?></td>
-				<td class="wpcc-actions">
-					<?php if ( AuthTokens::STATUS_ACTIVE === $token['status'] ) : ?>
-						<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Revoke this token? Any AI agent using it will immediately lose access.', 'wp-command-center' ) ); ?>');">
-							<?php wp_nonce_field( 'wpcc_settings' ); ?>
-							<input type="hidden" name="wpcc_action" value="revoke_token" />
-							<input type="hidden" name="id" value="<?php echo esc_attr( $token['id'] ); ?>" />
-							<?php submit_button( __( 'Revoke', 'wp-command-center' ), 'small', '', false ); ?>
-						</form>
-					<?php else : ?>
-						<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Permanently delete this token?', 'wp-command-center' ) ); ?>');">
-							<?php wp_nonce_field( 'wpcc_settings' ); ?>
-							<input type="hidden" name="wpcc_action" value="delete_token" />
-							<input type="hidden" name="id" value="<?php echo esc_attr( $token['id'] ); ?>" />
-							<?php submit_button( __( 'Delete', 'wp-command-center' ), 'small', '', false ); ?>
-						</form>
-					<?php endif; ?>
-				</td>
-			</tr>
-		<?php endforeach; ?>
-		</tbody>
-	</table>
-
-	<h3><?php esc_html_e( 'Create New Token', 'wp-command-center' ); ?></h3>
-	<form method="post">
-		<?php wp_nonce_field( 'wpcc_settings' ); ?>
-		<input type="hidden" name="wpcc_action" value="create_token" />
-		<table class="form-table" role="presentation">
-			<tr>
-				<th scope="row"><label for="wpcc-token-label"><?php esc_html_e( 'Label', 'wp-command-center' ); ?></label></th>
-				<td><input type="text" id="wpcc-token-label" name="label" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. Claude Desktop', 'wp-command-center' ); ?>" required="required" /></td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="wpcc-token-scope"><?php esc_html_e( 'Scope', 'wp-command-center' ); ?></label></th>
-				<td>
-					<select name="scope" id="wpcc-token-scope">
-						<?php foreach ( $scope_options as $value => $label ) : ?>
-							<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
-						<?php endforeach; ?>
-					</select>
-					<p class="description"><?php esc_html_e( 'Full access allows creating, approving, applying, and rolling back patches via the API.', 'wp-command-center' ); ?></p>
-				</td>
-			</tr>
-			<tr>
-				<th scope="row"><label for="wpcc-token-expires"><?php esc_html_e( 'Expires', 'wp-command-center' ); ?></label></th>
-				<td>
-					<select name="expires" id="wpcc-token-expires">
-						<?php foreach ( $expiry_options as $value => $label ) : ?>
-							<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
-						<?php endforeach; ?>
-					</select>
-				</td>
-			</tr>
-		</table>
-		<?php submit_button( __( 'Create Token', 'wp-command-center' ) ); ?>
-	</form>
+	<p>
+		<?php esc_html_e( 'API tokens and per-token capabilities are now managed in the Tokens & Capabilities screen.', 'wp-command-center' ); ?>
+	</p>
+	<p>
+		<a class="button button-primary" href="<?php echo esc_url( $tokens_url ); ?>"><?php esc_html_e( 'Open Tokens & Capabilities', 'wp-command-center' ); ?></a>
+	</p>
 
 	<h2><?php esc_html_e( 'AI Agent Connections', 'wp-command-center' ); ?></h2>
 	<p>
@@ -252,7 +129,7 @@ $endpoints = [
 		);
 		?>
 	</p>
-	<p><?php esc_html_e( 'Authenticate every request with the bearer token created above:', 'wp-command-center' ); ?></p>
+	<p><?php esc_html_e( 'Authenticate every request with a bearer token created on the Tokens & Capabilities screen:', 'wp-command-center' ); ?></p>
 	<pre class="wpcc-file-viewer">curl -H "Authorization: Bearer wpcc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
   <?php echo esc_html( trailingslashit( $rest_base ) . 'patches' ); ?></pre>
 
@@ -270,7 +147,7 @@ $endpoints = [
 			<tr>
 				<td><code><?php echo esc_html( $method ); ?></code></td>
 				<td><code><?php echo esc_html( $path ); ?></code></td>
-				<td><?php echo esc_html( AuthTokens::scope_label( $scope ) ); ?></td>
+				<td><?php echo esc_html( $scope_label( $scope ) ); ?></td>
 				<td><?php echo esc_html( $description ); ?></td>
 			</tr>
 		<?php endforeach; ?>

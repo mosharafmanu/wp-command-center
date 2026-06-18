@@ -20,6 +20,7 @@ use WPCommandCenter\Operations\ChangeHistoryRuntimeManager;
 use WPCommandCenter\Operations\OperationExecutor;
 use WPCommandCenter\PatchSystem\PatchManager;
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Security\AuthTokens;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -147,6 +148,83 @@ final class AdminRestApi {
 			'callback'            => [ $this, 'history_get' ],
 			'permission_callback' => [ $this, 'check_history_permission' ],
 		] );
+
+		// STEP 107.1 — Token & Capability Manager read surface (cookie + nonce
+		// only). All READABLE, presentation-layer aggregation over the existing
+		// token manifest + capability assignments (TokenCapabilityAdminQuery). No
+		// write routes here — token lifecycle (create/revoke/delete) and capability
+		// assign/remove land in STEP 107.3 / 107.4. Literal segments are registered
+		// before the bare /tokens/{id} detail route so they match first.
+		// STEP 107.4 — /admin/tokens carries the list read AND the create write.
+		// Create reuses AuthTokens::create() verbatim (no reimplementation); the
+		// route's manage_options + nonce is the gate. The raw token is returned
+		// ONCE and the token_hash is never surfaced.
+		register_rest_route( self::NS, '/admin/tokens', [
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'tokens_list' ],
+				'permission_callback' => [ $this, 'check_tokens_permission' ],
+			],
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'token_create' ],
+				'permission_callback' => [ $this, 'check_tokens_permission' ],
+			],
+		] );
+
+		register_rest_route( self::NS, '/admin/capabilities', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'capabilities_catalogue' ],
+			'permission_callback' => [ $this, 'check_tokens_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/operations-map', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'operations_map' ],
+			'permission_callback' => [ $this, 'check_tokens_permission' ],
+		] );
+
+		// STEP 107.3 — capability write actions (assign / remove). These are the
+		// ONLY write routes in the Token & Capability Manager. They do NOT mutate
+		// capabilities themselves: each routes 'capability_manage' THROUGH
+		// OperationExecutor::run, inheriting the capability.admin gate, AuditLog,
+		// security-mode approval, and the system.admin refusal guard — no bypass.
+		// Registered before the bare /tokens/{id} read route so the more specific
+		// /capabilities segments match first.
+		register_rest_route( self::NS, '/admin/tokens/(?P<id>[a-f0-9-]{36})/capabilities', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'token_assign_capability' ],
+			'permission_callback' => [ $this, 'check_tokens_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/tokens/(?P<id>[a-f0-9-]{36})/capabilities/(?P<cap>[a-z0-9_.]{1,64})', [
+			'methods'             => \WP_REST_Server::DELETABLE,
+			'callback'            => [ $this, 'token_remove_capability' ],
+			'permission_callback' => [ $this, 'check_tokens_permission' ],
+		] );
+
+		// STEP 107.4 — revoke (reuses AuthTokens::revoke()). Registered before the
+		// bare /tokens/{id} route so the /revoke suffix matches first.
+		register_rest_route( self::NS, '/admin/tokens/(?P<id>[a-f0-9-]{36})/revoke', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'token_revoke' ],
+			'permission_callback' => [ $this, 'check_tokens_permission' ],
+		] );
+
+		// STEP 107.4 — /admin/tokens/{id} carries the detail read AND the delete
+		// write. Delete reuses AuthTokens::delete() verbatim.
+		register_rest_route( self::NS, '/admin/tokens/(?P<id>[a-f0-9-]{36})', [
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'token_detail' ],
+				'permission_callback' => [ $this, 'check_tokens_permission' ],
+			],
+			[
+				'methods'             => \WP_REST_Server::DELETABLE,
+				'callback'            => [ $this, 'token_delete' ],
+				'permission_callback' => [ $this, 'check_tokens_permission' ],
+			],
+		] );
 	}
 
 	public function check_permission(): bool {
@@ -170,6 +248,16 @@ final class AdminRestApi {
 	 */
 	public function check_approval_permission(): bool {
 		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'approval_center' );
+	}
+
+	/**
+	 * STEP 107.1 — permission gate for the Token & Capability Manager surface:
+	 * manage_options AND the (currently ungated) feature seam. Single REST switch
+	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
+	 * History and Approval Center gates.
+	 */
+	public function check_tokens_permission(): bool {
+		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'token_capability_manager' );
 	}
 
 	public function list_pending( \WP_REST_Request $request ): \WP_REST_Response {
@@ -785,5 +873,202 @@ final class AdminRestApi {
 			'created_at'   => (int) $r['created_at'],
 			'created_ago'  => human_time_diff( (int) $r['created_at'], time() ) . ' ago',
 		];
+	}
+
+	// ── STEP 107.1 — Token & Capability Manager reads (read-only) ──────────────
+	// All four handlers delegate to the thin TokenCapabilityAdminQuery aggregation
+	// over the existing token manifest + capability assignments. No writes, no
+	// engine calls, no new source of truth.
+
+	/** GET /admin/tokens — enriched token list (no secrets; preview only). */
+	public function tokens_list(): \WP_REST_Response {
+		return new \WP_REST_Response( ( new TokenCapabilityAdminQuery() )->tokens(), 200 );
+	}
+
+	/** GET /admin/tokens/{id} — one token + its 34-operation access matrix. */
+	public function token_detail( \WP_REST_Request $request ): \WP_REST_Response {
+		$id     = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$detail = ( new TokenCapabilityAdminQuery() )->token( $id );
+
+		if ( null === $detail ) {
+			return new \WP_REST_Response( [ 'success' => false, 'error' => 'token_not_found' ], 404 );
+		}
+
+		return new \WP_REST_Response( $detail, 200 );
+	}
+
+	/** GET /admin/capabilities — the 23-capability catalogue + unlocked operations. */
+	public function capabilities_catalogue(): \WP_REST_Response {
+		return new \WP_REST_Response( ( new TokenCapabilityAdminQuery() )->capabilities(), 200 );
+	}
+
+	/** GET /admin/operations-map — the 34-entry operation→capability map. */
+	public function operations_map(): \WP_REST_Response {
+		return new \WP_REST_Response( ( new TokenCapabilityAdminQuery() )->operations_map(), 200 );
+	}
+
+	// ── STEP 107.3 — capability write actions (engine reuse, no bypass) ────────
+	// Both delegate to capability_write(), which routes capability_manage THROUGH
+	// OperationExecutor::run. They never call CapabilityRegistry::assign()/remove()
+	// directly.
+
+	/** POST /admin/tokens/{id}/capabilities — assign one capability to a token. */
+	public function token_assign_capability( \WP_REST_Request $request ): \WP_REST_Response {
+		return $this->capability_write(
+			$request,
+			'capability_assign',
+			sanitize_text_field( (string) $request->get_param( 'capability' ) )
+		);
+	}
+
+	/** DELETE /admin/tokens/{id}/capabilities/{cap} — remove one capability. */
+	public function token_remove_capability( \WP_REST_Request $request ): \WP_REST_Response {
+		return $this->capability_write(
+			$request,
+			'capability_remove',
+			sanitize_text_field( (string) $request->get_param( 'cap' ) )
+		);
+	}
+
+	/**
+	 * STEP 107.3 — shared capability write path. Builds the capability_manage
+	 * payload + a token-LESS admin actor (source: admin_ui, no token_id/token_scope)
+	 * and routes it THROUGH OperationExecutor::run('capability_manage', …). Because
+	 * the admin actor carries no token_id, the engine's token-capability check is
+	 * skipped and manage_options (enforced by the route) is the gate; the
+	 * capability.admin classification, AuditLog, security-mode approval, and the
+	 * CapabilityRegistry system.admin refusal guard all still apply. The structured
+	 * executor result is returned verbatim (HTTP 200) so the UI branches on
+	 * success / pending_approval / errors. No bypass: CapabilityRegistry is never
+	 * touched from here.
+	 */
+	private function capability_write( \WP_REST_Request $request, string $action, string $capability ): \WP_REST_Response {
+		$id = sanitize_text_field( (string) $request->get_param( 'id' ) );
+
+		// Read-only existence check (no mutation) so an unknown token 404s rather
+		// than creating a stray assignment.
+		if ( null === ( new TokenCapabilityAdminQuery() )->token( $id ) ) {
+			return new \WP_REST_Response( [ 'success' => false, 'error' => 'token_not_found' ], 404 );
+		}
+
+		$payload = [
+			'action'     => $action,
+			'subject'    => 'token',
+			'subject_id' => $id,
+			'capability' => $capability,
+		];
+
+		$context = [
+			'actor' => [
+				'wp_user_id' => get_current_user_id(),
+				'user_login' => wp_get_current_user()->user_login,
+				'source'     => 'admin_ui',
+			],
+		];
+
+		$result = ( new OperationExecutor() )->run( 'capability_manage', $payload, $context );
+
+		return new \WP_REST_Response( $result, 200 );
+	}
+
+	// ── STEP 107.4 — token lifecycle (create / revoke / delete) ───────────────
+	// Pure reuse of AuthTokens (STEP 10). Nothing is reimplemented: create()
+	// auto-bootstraps the token's capability assignment, revoke()/delete()
+	// auto-deprovision it. The route's manage_options + nonce is the gate. Each
+	// action records an admin.token.* audit event (mirroring the admin.approval.*
+	// precedent) so the lifecycle is auditable from the admin surface.
+
+	/** POST /admin/tokens — create a token; returns the raw secret ONCE. */
+	public function token_create( \WP_REST_Request $request ): \WP_REST_Response {
+		$label   = sanitize_text_field( (string) $request->get_param( 'label' ) );
+		$scope   = sanitize_key( (string) $request->get_param( 'scope' ) );
+		$expires = sanitize_key( (string) $request->get_param( 'expires' ) );
+
+		$expires_at = match ( $expires ) {
+			'30d'   => time() + 30 * DAY_IN_SECONDS,
+			'90d'   => time() + 90 * DAY_IN_SECONDS,
+			'1y'    => time() + YEAR_IN_SECONDS,
+			default => null,
+		};
+
+		$result = ( new AuthTokens() )->create( $label, $scope, $expires_at, get_current_user_id() );
+
+		if ( is_wp_error( $result ) ) {
+			return new \WP_REST_Response( [
+				'success' => false,
+				'errors'  => [ [ 'code' => $result->get_error_code(), 'message' => $result->get_error_message() ] ],
+			], 400 );
+		}
+
+		$record = $result['record'];
+
+		( new AuditLog() )->record( 'admin.token.created', [
+			'token_id' => $record['id'],
+			'label'    => $record['label'],
+			'scope'    => $record['scope'],
+			'actor'    => AuditLog::resolve_actor( $this->admin_actor() ),
+		] );
+
+		return new \WP_REST_Response( [
+			'success' => true,
+			'token'   => $result['token'], // raw secret — shown once, never stored in clear.
+			'record'  => $this->safe_token_record( $record ),
+		], 201 );
+	}
+
+	/** POST /admin/tokens/{id}/revoke — revoke a token (reuses AuthTokens::revoke). */
+	public function token_revoke( \WP_REST_Request $request ): \WP_REST_Response {
+		return $this->token_lifecycle( $request, 'revoke' );
+	}
+
+	/** DELETE /admin/tokens/{id} — delete a token (reuses AuthTokens::delete). */
+	public function token_delete( \WP_REST_Request $request ): \WP_REST_Response {
+		return $this->token_lifecycle( $request, 'delete' );
+	}
+
+	/**
+	 * Shared revoke/delete path. Reuses the AuthTokens method of the same name
+	 * (which also deprovisions the token's capability assignment) and records an
+	 * admin.token.{revoked|deleted} audit event. Never reimplements token storage.
+	 */
+	private function token_lifecycle( \WP_REST_Request $request, string $op ): \WP_REST_Response {
+		$id     = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$tokens = new AuthTokens();
+
+		$result = 'revoke' === $op ? $tokens->revoke( $id ) : $tokens->delete( $id );
+
+		if ( is_wp_error( $result ) ) {
+			$status = 'wpcc_token_not_found' === $result->get_error_code() ? 404 : 400;
+			return new \WP_REST_Response( [
+				'success' => false,
+				'errors'  => [ [ 'code' => $result->get_error_code(), 'message' => $result->get_error_message() ] ],
+			], $status );
+		}
+
+		( new AuditLog() )->record( 'revoke' === $op ? 'admin.token.revoked' : 'admin.token.deleted', [
+			'token_id' => $id,
+			'actor'    => AuditLog::resolve_actor( $this->admin_actor() ),
+		] );
+
+		return new \WP_REST_Response( [
+			'success'  => true,
+			'token_id' => $id,
+			'status'   => 'revoke' === $op ? 'revoked' : 'deleted',
+		], 200 );
+	}
+
+	/** The cookie-authed admin actor descriptor (no token_id/token_scope). */
+	private function admin_actor(): array {
+		return [
+			'wp_user_id' => get_current_user_id(),
+			'user_login' => wp_get_current_user()->user_login,
+			'source'     => 'admin_ui',
+		];
+	}
+
+	/** A display-safe token record: the stored token_hash is dropped entirely. */
+	private function safe_token_record( array $record ): array {
+		unset( $record['token_hash'] );
+		return $record;
 	}
 }

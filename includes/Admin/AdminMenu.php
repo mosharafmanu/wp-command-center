@@ -14,6 +14,35 @@ final class AdminMenu {
 		add_action( 'admin_init', [ $this, 'redirect_legacy_rollback' ] );
 		// STEP 106.4 — the "Pending Approvals" page becomes the Approval Center.
 		add_action( 'admin_init', [ $this, 'redirect_legacy_approvals' ] );
+		// STEP 107.4 — token management moved off the Settings page into the
+		// Tokens & Capabilities manager; keep old token deep-links working.
+		add_action( 'admin_init', [ $this, 'redirect_legacy_tokens' ] );
+	}
+
+	/**
+	 * STEP 107.4 — token create/revoke/delete moved out of the Settings page into
+	 * the dedicated "Tokens & Capabilities" manager (slug `wpcc-tokens`). Old
+	 * deep-links into the Settings token section (e.g. `?page=wpcc-settings&
+	 * section=api-tokens` or `&tab=tokens`) now land on the new manager. The
+	 * Settings page itself remains for Security Mode + the connection reference.
+	 */
+	public function redirect_legacy_tokens(): void {
+		if ( ! is_admin() || ! current_user_can( self::CAPABILITY ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only page nav, no state change.
+		if ( ! isset( $_GET['page'] ) || 'wpcc-settings' !== sanitize_key( wp_unslash( $_GET['page'] ) ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$section = isset( $_GET['section'] ) ? sanitize_key( wp_unslash( $_GET['section'] ) )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			: ( isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '' );
+
+		if ( in_array( $section, [ 'tokens', 'api-tokens', 'api_tokens' ], true ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=wpcc-tokens' ) );
+			exit;
+		}
 	}
 
 	/**
@@ -81,6 +110,13 @@ final class AdminMenu {
 		add_submenu_page( 'wp-command-center', __( 'Diagnostics', 'wp-command-center' ), __( 'Diagnostics', 'wp-command-center' ), self::CAPABILITY, 'wpcc-diagnostics', [ $this, 'render_diagnostics' ] );
 		add_submenu_page( 'wp-command-center', __( 'File Access', 'wp-command-center' ), __( 'File Access', 'wp-command-center' ), self::CAPABILITY, 'wpcc-file-access', [ $this, 'render_file_access' ] );
 		add_submenu_page( 'wp-command-center', __( 'Patches', 'wp-command-center' ), __( 'Patches', 'wp-command-center' ), self::CAPABILITY, 'wpcc-patches', [ $this, 'render_patches' ] );
+		// STEP 107.1 — Token & Capability Manager (read surface). Gated by the same
+		// FeatureGate seam as Change History / Approval Center (ungated today;
+		// future Free/Pro switch). Token + capability management migrates here off
+		// the Settings page in STEP 107.4.
+		if ( FeatureGate::allows( 'token_capability_manager' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'Tokens & Capabilities', 'wp-command-center' ), __( 'Tokens & Capabilities', 'wp-command-center' ), self::CAPABILITY, 'wpcc-tokens', [ $this, 'render_token_capability_manager' ] );
+		}
 		add_submenu_page( 'wp-command-center', __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, 'wpcc-settings', [ $this, 'render_settings' ] );
 		add_submenu_page( 'wp-command-center', __( 'AI Integrations', 'wp-command-center' ), __( 'AI Integrations', 'wp-command-center' ), self::CAPABILITY, 'wpcc-ai-integrations', [ $this, 'render_ai_integrations' ] );
 		// STEP 106.4 — "Pending Approvals" becomes the Approval Center (Pending /
@@ -149,6 +185,13 @@ final class AdminMenu {
 
 	public function render_settings(): void {
 		$this->render_view( 'settings' );
+	}
+
+	public function render_token_capability_manager(): void {
+		// STEP 107.1 — Token & Capability Manager (Tokens / Capabilities /
+		// Operation Map), read-only visibility surface over the token + capability
+		// system.
+		$this->render_view( 'token-capability-manager' );
 	}
 
 	public function render_ai_integrations(): void {
