@@ -266,57 +266,66 @@ final class AdminRestApi {
 		] );
 	}
 
+	/**
+	 * C1 (Phase B) — the FeatureGate key each admin surface's REST routes gate on,
+	 * keyed by a short surface handle. Local to AdminRestApi by design: the Dashboard
+	 * Overview aggregator (DashboardAdminQuery) keeps its OWN independent map, and a
+	 * shared cross-file gate map is a deliberate future concern, out of C1 scope. A
+	 * surface that is absent here — or the null the legacy gate passes — means
+	 * capability-only (no feature seam), which preserves the legacy /admin/approvals*
+	 * routes exactly.
+	 */
+	private const FEATURE_KEYS = [
+		'approvals'      => 'approval_center',
+		'operations'     => 'operations_explorer',
+		'tokens'         => 'token_capability_manager',
+		'change_history' => 'change_history',
+		'dashboard'      => 'dashboard_overview',
+	];
+
+	/**
+	 * C1 (Phase B) — the single admin permission resolver. Consolidates six
+	 * near-identical callbacks into one rule: every admin route requires
+	 * `manage_options` AND, when its surface has a FeatureGate key, that key (the
+	 * Free/Pro switch point a future edition flips via FeatureGate). $surface === null
+	 * (or an unmapped surface) is capability-only — no feature seam. The per-surface
+	 * methods below are thin, named bindings the route registrations point at; the
+	 * gating logic lives here only.
+	 */
+	private function gate( ?string $surface ): bool {
+		$feature = ( null !== $surface ) ? ( self::FEATURE_KEYS[ $surface ] ?? null ) : null;
+		return current_user_can( 'manage_options' )
+			&& ( null === $feature || FeatureGate::allows( $feature ) );
+	}
+
+	/** Legacy approval routes (/admin/approvals*): capability-only, no feature seam. */
 	public function check_permission(): bool {
-		return current_user_can( 'manage_options' );
+		return $this->gate( null );
 	}
 
-	/**
-	 * STEP 105.4 — permission gate for the Change History admin surface:
-	 * manage_options AND the (currently ungated) feature seam. This is the single
-	 * REST switch point a future Free/Pro layer flips via FeatureGate.
-	 */
+	/** Change History surface gate (manage_options + FeatureGate 'change_history'). */
 	public function check_history_permission(): bool {
-		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'change_history' );
+		return $this->gate( 'change_history' );
 	}
 
-	/**
-	 * STEP 106.1 — permission gate for the Approval Center read surface:
-	 * manage_options AND the (currently ungated) feature seam. Single REST switch
-	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
-	 * History gate.
-	 */
+	/** Approval Center surface gate (manage_options + FeatureGate 'approval_center'). */
 	public function check_approval_permission(): bool {
-		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'approval_center' );
+		return $this->gate( 'approvals' );
 	}
 
-	/**
-	 * STEP 107.1 — permission gate for the Token & Capability Manager surface:
-	 * manage_options AND the (currently ungated) feature seam. Single REST switch
-	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
-	 * History and Approval Center gates.
-	 */
+	/** Token & Capability Manager surface gate (manage_options + FeatureGate 'token_capability_manager'). */
 	public function check_tokens_permission(): bool {
-		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'token_capability_manager' );
+		return $this->gate( 'tokens' );
 	}
 
-	/**
-	 * STEP 108.1 — permission gate for the Operations Explorer surface:
-	 * manage_options AND the (currently ungated) feature seam. Single REST switch
-	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
-	 * History / Approval Center / Token & Capability gates.
-	 */
+	/** Operations Explorer surface gate (manage_options + FeatureGate 'operations_explorer'). */
 	public function check_operations_permission(): bool {
-		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'operations_explorer' );
+		return $this->gate( 'operations' );
 	}
 
-	/**
-	 * STEP 109.1 — permission gate for the Dashboard Overview surface:
-	 * manage_options AND the (currently ungated) feature seam. Single REST switch
-	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
-	 * History / Approval Center / Token & Capability / Operations Explorer gates.
-	 */
+	/** Dashboard Overview surface gate (manage_options + FeatureGate 'dashboard_overview'). */
 	public function check_dashboard_permission(): bool {
-		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'dashboard_overview' );
+		return $this->gate( 'dashboard' );
 	}
 
 	/**

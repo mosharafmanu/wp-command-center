@@ -93,7 +93,7 @@ has "route: /admin/tokens/{id}"       "/admin/tokens/\(\?P<id>"   "$RESTAPI"
 has "route: /admin/capabilities"      "'/admin/capabilities'"     "$RESTAPI"
 has "route: /admin/operations-map"    "'/admin/operations-map'"   "$RESTAPI"
 has "permission gate helper present"  "function check_tokens_permission" "$RESTAPI"
-has "gate = manage_options + FeatureGate" "FeatureGate::allows\( 'token_capability_manager' \)" "$RESTAPI"
+has "tokens surface maps to FeatureGate key (C1 consolidated gate)" "'tokens'\s*=> 'token_capability_manager'" "$RESTAPI"
 has "handlers delegate to query"      "new TokenCapabilityAdminQuery\(\)" "$RESTAPI"
 # STEP 107.3 — capability write routes (assign POST / remove DELETE).
 has "route: POST .../capabilities"    "36\}\)/capabilities',"      "$RESTAPI"
@@ -219,7 +219,7 @@ echo
 echo "== 5e. STEP 107.5 — i18n completeness (no raw user-facing JS strings) =="
 RAW="$(grep -nE "'(>| )[A-Z][a-z]{3,}" "$VIEW" | grep -vE "i18n\.|escHtml|className|getElementById|querySelector|createElement|addEventListener|wpcc-|encodeURIComponent|Content-Type|X-WP-Nonce|JSON|Object|Array|Promise|wp-command-center|'POST'|'DELETE'|'GET'" || true)"
 if [ -z "$RAW" ]; then pass "no raw user-facing strings in view JS"; else fail "raw user-facing strings found: $RAW"; fi
-has "FeatureGate key (REST gate)"     "FeatureGate::allows\( 'token_capability_manager' \)" "$RESTAPI"
+has "FeatureGate key (REST gate, via C1 map)" "'tokens'\s*=> 'token_capability_manager'" "$RESTAPI"
 has "FeatureGate key (menu gate)"     "FeatureGate::allows\( 'token_capability_manager' \)" "$MENU"
 
 echo

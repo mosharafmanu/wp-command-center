@@ -338,7 +338,7 @@ lint "FeatureGate lints"                 "$GATE"
 has  "FeatureGate in Admin namespace"    "namespace WPCommandCenter.Admin" "$GATE"
 has  "FeatureGate exposes wpcc_feature_allowed filter" "wpcc_feature_allowed" "$GATE"
 has  "REST history routes use the feature-gated permission" "check_history_permission" "$RESTAPI"
-has  "history permission combines manage_options + FeatureGate" "FeatureGate::allows\( 'change_history' \)" "$RESTAPI"
+has  "history surface maps to FeatureGate key (C1 consolidated gate)" "'change_history'\s*=> 'change_history'" "$RESTAPI"
 has  "menu gates Change History via FeatureGate" "FeatureGate::allows\( 'change_history' \)" "$MENU"
 
 GATEFN=$(wpe "

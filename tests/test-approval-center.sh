@@ -90,7 +90,7 @@ has "queue route"          "/admin/approvals/queue"            "$RESTAPI"
 has "results route"        "/admin/approvals/results"          "$RESTAPI"
 has "detail route handler" "function approval_detail"          "$RESTAPI"
 has "approval permission gate"  "function check_approval_permission" "$RESTAPI"
-has "gate uses FeatureGate seam" "FeatureGate::allows\( 'approval_center'" "$RESTAPI"
+has "gate maps surface to FeatureGate key (C1 consolidated gate)" "'approvals'\s*=> 'approval_center'" "$RESTAPI"
 has "all new approval read routes are READABLE" "approvals_history" "$RESTAPI"
 # The only approval write surfaces are the existing approve/reject + the 106.3
 # engine-routed retry; there must be NO direct rollback bypass in this namespace.

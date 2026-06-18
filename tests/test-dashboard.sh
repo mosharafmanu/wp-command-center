@@ -65,7 +65,7 @@ echo
 echo "== 2. Admin REST route registered (read-only) =="
 has "route: /admin/dashboard"            "'/admin/dashboard'"          "$RESTAPI"
 has "permission gate helper present"     "function check_dashboard_permission" "$RESTAPI"
-has "gate = manage_options + FeatureGate" "FeatureGate::allows\( 'dashboard_overview' \)" "$RESTAPI"
+has "dashboard surface maps to FeatureGate key (C1 consolidated gate)" "'dashboard'\s*=> 'dashboard_overview'" "$RESTAPI"
 has "overview handler present"           "function dashboard_overview" "$RESTAPI"
 has "handler delegates to query"         "new DashboardAdminQuery\(\)" "$RESTAPI"
 # The dashboard route is READABLE only — no write method on the registration.
