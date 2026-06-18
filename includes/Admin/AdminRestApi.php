@@ -253,6 +253,17 @@ final class AdminRestApi {
 			'callback'            => [ $this, 'operation_detail' ],
 			'permission_callback' => [ $this, 'check_operations_permission' ],
 		] );
+
+		// STEP 109.1 — Dashboard Overview: a single READABLE roll-up of the existing
+		// admin surfaces (approvals / change history / tokens & capabilities /
+		// operations) plus the live security posture and the platform invariants.
+		// Read-only — no write/execute route, no engine dispatch. The aggregation is
+		// a thin fan-out over the per-surface AdminQuery summaries (DashboardAdminQuery).
+		register_rest_route( self::NS, '/admin/dashboard', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'dashboard_overview' ],
+			'permission_callback' => [ $this, 'check_dashboard_permission' ],
+		] );
 	}
 
 	public function check_permission(): bool {
@@ -296,6 +307,25 @@ final class AdminRestApi {
 	 */
 	public function check_operations_permission(): bool {
 		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'operations_explorer' );
+	}
+
+	/**
+	 * STEP 109.1 — permission gate for the Dashboard Overview surface:
+	 * manage_options AND the (currently ungated) feature seam. Single REST switch
+	 * point a future Free/Pro layer flips via FeatureGate, mirroring the Change
+	 * History / Approval Center / Token & Capability / Operations Explorer gates.
+	 */
+	public function check_dashboard_permission(): bool {
+		return current_user_can( 'manage_options' ) && FeatureGate::allows( 'dashboard_overview' );
+	}
+
+	/**
+	 * STEP 109.1 — Dashboard Overview read handler. Delegates to the read-only
+	 * DashboardAdminQuery aggregator (a thin fan-out over the existing per-surface
+	 * summaries). It never executes an operation and never writes.
+	 */
+	public function dashboard_overview(): \WP_REST_Response {
+		return new \WP_REST_Response( ( new DashboardAdminQuery() )->overview(), 200 );
 	}
 
 	public function list_pending( \WP_REST_Request $request ): \WP_REST_Response {

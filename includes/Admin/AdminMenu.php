@@ -102,6 +102,15 @@ final class AdminMenu {
 		);
 
 		add_submenu_page( 'wp-command-center', __( 'Dashboard', 'wp-command-center' ), __( 'Dashboard', 'wp-command-center' ), self::CAPABILITY, 'wp-command-center', [ $this, 'render_dashboard' ] );
+		// STEP 109.1 — Dashboard Overview: an additive, read-only at-a-glance landing
+		// that aggregates the existing surfaces (Approval Center / Change History /
+		// Tokens & Capabilities / Operations Explorer) plus the live security posture
+		// and platform invariants. Gated by the same FeatureGate seam as the other
+		// surfaces (ungated today; future Free/Pro switch). It NEVER executes an
+		// operation — the legacy operational Dashboard above keeps all write controls.
+		if ( FeatureGate::allows( 'dashboard_overview' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'Dashboard Overview', 'wp-command-center' ), __( 'Dashboard Overview', 'wp-command-center' ), self::CAPABILITY, 'wpcc-dashboard-overview', [ $this, 'render_dashboard_overview' ] );
+		}
 		// STEP 105.4 — single feature seam (ungated today; future Free/Pro switch).
 		if ( FeatureGate::allows( 'change_history' ) ) {
 			add_submenu_page( 'wp-command-center', __( 'Change History', 'wp-command-center' ), __( 'Change History', 'wp-command-center' ), self::CAPABILITY, 'wpcc-change-history', [ $this, 'render_change_history' ] );
@@ -168,6 +177,12 @@ final class AdminMenu {
 
 	public function render_dashboard(): void {
 		$this->render_view( 'dashboard' );
+	}
+
+	public function render_dashboard_overview(): void {
+		// STEP 109.1 — Dashboard Overview, a read-only at-a-glance roll-up of the
+		// existing admin surfaces. Never executes an operation.
+		$this->render_view( 'dashboard-overview' );
 	}
 
 	public function render_change_history(): void {
