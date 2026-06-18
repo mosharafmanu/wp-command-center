@@ -1,13 +1,80 @@
-# PROJECT HANDOFF — STEP 105: Change History Admin UI
+# PROJECT HANDOFF — STEP 105 / STEP 106
 
-**Written:** 2026-06-17 (updated post-105.6-deploy). Supersedes
-`HANDOFF-STEP-104.md` for current state. STEP 104 (Change History backend) is
-COMPLETE, deployed, prod-verified. STEP 105 surfaced it in wp-admin and is now
-**COMPLETE (105.1–105.6), RELEASED, and PRODUCTION-VERIFIED.**
+**Written:** 2026-06-17; **updated 2026-06-18 (post-STEP-106 release).** Supersedes
+`HANDOFF-STEP-104.md` for current state. STEP 104 (Change History backend) and
+STEP 105 (Change History Admin UI, 105.1–105.6) are COMPLETE, RELEASED, and
+PRODUCTION-VERIFIED. **STEP 106 — Approval Center (106.1–106.4) is now COMPLETE,
+RELEASED, and PRODUCTION-VERIFIED.**
 
-- **Production runs `8f5d830` (tag `v0.105.2`); origin/main == local HEAD == `8f5d830`; working tree clean.**
-- See **§A2** (105.5 release proofs) and **§A3** (105.6 release & production
-  verification) for the deployed-commit / route / verifier proofs.
+- **Production runs `c28d33d` (tag `v0.106.0`); origin/main == local HEAD ==
+  `c28d33d`; working tree clean.** See **§A4** for the STEP 106 release &
+  production-verification proofs.
+- STEP 105 release proofs remain in **§A2** (105.5 → `v0.105.1`) and **§A3**
+  (105.6 → `v0.105.2`).
+
+---
+
+## A4. STEP 106 — Approval Center: Release & Production Verification (deployed `c28d33d` / `v0.106.0`)
+
+**Current production release.** A dedicated wp-admin Approval Center over the
+existing approval engine (STEP 20/78/80) — reuse-only, no parallel approval
+logic. Built + validated report-first across four phases:
+
+- **106.1 — Read surface + approver attribution.** Schema `DB_VERSION 2.3.0 →
+  2.4.0`: four nullable columns on `wpcc_operation_requests`
+  (`resolved_by_label`/`_type`/`_user_id`, `cancelled_at`), additive via
+  idempotent dbDelta (forward-only; legacy rows stay NULL). `OperationManager`
+  stamps approver attribution at approve/reject/cancel on BOTH the admin and MCP
+  paths. NEW `ApprovalAdminQuery` (presentation-only, read-only) +
+  `AdminRestApi` history/summary/queue/results/detail routes (cookie+nonce,
+  `manage_options` + FeatureGate). `approval-center.php` Pending/History/Queue.
+- **106.2 — Detail panel.** Per-request payload, change-set, queue/result,
+  per-request audit trail (AuditLog tail), and a server-rendered escaped diff
+  via the SHARED `DiffRenderer` (no fork). History excludes `pending_review`
+  (resolved-lifecycle only).
+- **106.3 — Write actions (engine reuse, no bypass).** Queue retry routes
+  through `ApprovalRuntimeManager` (human-approver guard + audit). "Approve &
+  Run" destructive escalation: `DestructiveGuard::classify` → `confirmation_
+  required` (NO state change) → phrase+reason → fold into stored payload →
+  execute via `OperationExecutor` (DestructiveGuard/security-mode/audit intact).
+- **106.4 — Rename + redirect + gate + a11y + i18n + polish.** "Pending
+  Approvals" → "Approval Center" (slug `wpcc-approval-center`),
+  `FeatureGate('approval_center')` menu gate, `admin_init` redirect from
+  `wpcc-approvals` (preserves tab/view deep-link args); obsolete
+  `views/approvals.php` REMOVED. a11y (role=dialog modal + focus trap,
+  role=status live regions, aria-current tabs, scope=col headers), i18n
+  (localized risk/status labels), 403 nonce-expiry + empty/error states, unset
+  lifecycle-row suppression.
+
+- **Commit of record:** `c28d33d` (single coherent milestone, 106.1–106.4).
+  **Pushed:** `460964b..c28d33d  main -> main`.
+- **Tag `v0.106.0`** (annotated) → `c28d33d`, pushed to origin.
+- **Deployed-commit proof (SSH, allowlisted IP):** server
+  `git rev-parse HEAD` = `c28d33d`, `git describe` = `v0.106.0`; deploy log:
+  `2026-06-18T02:01:07Z DEPLOYED 460964b -> c28d33d active=yes`. Plugin active.
+- **Invariants (read from deployed code, SSH):** operation_map **34**,
+  capabilities **23**, DB_VERSION **2.4.0**, MCP tools **40** (deployed code is
+  byte-identical to the locally-verified tree where `tools/list` returned 40; no
+  prod token to query token-gated `tools/list`, consistent with prior releases).
+  **Approver-attribution migration applied on prod: 4/4 columns present.**
+- **Approval Center (functional, read-only via prod wp-cli):** 10
+  `/admin/approvals*` route keys registered; `FeatureGate::allows('approval_
+  center')` = true (filterable); `redirect_legacy_approvals` + `render_approval_
+  center` present; `views/approvals.php` confirmed REMOVED on prod.
+- **Route/health (anonymous HTTP):** homepage 200; namespace index 200;
+  `admin/approvals`, `/history`, `/queue`, and `POST .../retry` all **401**
+  (live, auth-gated, not 404); admin page `wpcc-approval-center` 302 (login);
+  legacy `wpcc-approvals` 302; **no 500s.**
+- **Rollback guarantees preserved:** `test-change-history-admin.sh` 118/0 —
+  rollback still routes THROUGH `OperationExecutor` (no bypass), double-rollback
+  refused, client/enterprise routes to approval without execution. STEP 105.5
+  actor attribution intact (**prod `change_log`: 0 `unknown` rows**).
+- **Test gates:** `test-approval-center.sh` 125/0; `--changed` T0 398/0 net-new
+  0, T1 1088/0 net-new 0; **pristine serial T2 4213/25, net-new 1** — the lone
+  net-new (`test-capability-runtime.sh`) passes **61/0 standalone** (cross-suite
+  pollution, asserts caps:23 / 34 ops) → **0 net-new attributable to STEP 106.**
+- **Anomaly:** none affecting the release. Verification was SSH reads + wp-cli
+  reflection + anonymous HTTP; production data was not modified.
 
 ---
 
@@ -324,16 +391,24 @@ storage / capability / operation_map changes.** RELEASED & prod-verified
 **STEP 105 is complete, released, and production-verified.** **Next milestone:
 STEP 106 — Approval Center.**
 
-## F2. Roadmap (post-105)
+## F2. Roadmap (post-106)
 
 **Phase A — Finish the Platform**
-- **STEP 106 — Approval Center** ← next milestone
-- **STEP 107 — Token & Capability Manager**
+- **STEP 106 — Approval Center** ✅ DONE + RELEASED (`v0.106.0` → `c28d33d`)
+- **STEP 107 — Token & Capability Manager** ← next milestone
 - **STEP 108 — Operations Explorer**
 - **STEP 109 — Dashboard**
 
 **Phase B — Product Hardening**
 - **STEP 110 — Platform Hardening & Certification**
+
+### STEP 106 — Approval Center: ✅ COMPLETE + RELEASED
+- **106.1 — Read surface + approver attribution (DB 2.4.0). ✅**
+- **106.2 — Detail panel (change-set, shared-DiffRenderer diff, audit trail). ✅**
+- **106.3 — Queue retry + Approve&Run destructive escalation (engine reuse). ✅**
+- **106.4 — Rename + redirect + FeatureGate + a11y + i18n + polish. ✅**
+
+Released as one milestone commit `c28d33d`, tag `v0.106.0`, prod-verified (see §A4).
 
 ### Behavioral note (105.3, now live)
 Admin restores honor approval/DestructiveGuard/security-mode. In client/enterprise
@@ -359,12 +434,24 @@ mode a restore that the old Rollback page executed instantly now routes to
 - **6 historical `unknown` actor rows exist on DEV only** (from a workflow-via-CLI
   test); production has 0. Left as-is by design (105.5 is forward-only).
 
-## G. Next-Chat Starting Point — STEP 106 (Approval Center)
+## G. Next-Chat Starting Point — STEP 107 (Token & Capability Manager)
 
-- **Current state:** STEP 105 complete + released (105.1–105.6); production =
-  `8f5d830` (`v0.105.2`); origin == local == `8f5d830`; tree clean; `wpcc-env.sh`
-  present (git-ignored). STEP 104 + 105 backends/UI all live and verified.
-  Security mode on prod = developer.
+- **Current state:** STEP 106 complete + released (106.1–106.4); production =
+  `c28d33d` (`v0.106.0`); origin == local == `c28d33d`; tree clean; `wpcc-env.sh`
+  present (git-ignored). STEP 104 + 105 + 106 backends/UI all live and verified.
+  Security mode on prod = developer. **DB_VERSION on prod = 2.4.0.**
+- **STEP 107 = Token & Capability Manager** — the next admin surface. Plan it
+  report-first like 105/106: a wp-admin manager over the existing token + STEP-38
+  capability system (`CapabilityRegistry`, `OPERATION_MAP`, token issuance/scopes,
+  per-token capability assignment, self-heal). Reuse the existing capability
+  engine — no parallel auth logic, capability-scoped, audited. The FeatureGate
+  seam (`wpcc_feature_allowed`) is the licensing switch point to reuse again.
+- **STEP 106 carry-forward notes:** (1) the engine's `pending_approval`
+  `approval_url` still emits the old `page=wpcc-approvals` slug — harmless, the
+  106.4 `redirect_legacy_approvals` 302s it to the new page; optional one-line
+  cleanup if STEP 107 touches `OperationExecutor`. (2) Approver attribution is
+  forward-only from STEP 106 — pre-106 resolved rows show "unavailable" (no
+  backfill, by design).
 - **Do NOT push/deploy without explicit direction** (pull-cron: `git push origin
   main` = live in ~1 min). Confirm scope before writing code.
 - **STEP 106 = Approval Center** — the next admin surface. Likely scope (to be
