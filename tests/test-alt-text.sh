@@ -231,15 +231,16 @@ done <<< "$PRES"
 
 # ── Static: provider-layer boundaries ────────────────────────────────────────
 ALT_TMP="$(mktemp /tmp/wpcc-altcode-XXXXXX)"
-# 6/7: wp_remote_* appears ONLY in AnthropicVisionProvider.php (code).
+# 6/7: Slice 2a extracted the transport — wp_remote_* now lives ONLY in the shared
+# AI transport (AnthropicClient), not in any alt-text provider-layer file.
 WP_REMOTE_FILES=""
-for f in includes/AltText/AltTextProvider.php includes/AltText/ProviderResult.php includes/AltText/AnthropicVisionProvider.php includes/AltText/ProviderResolver.php; do
+for f in includes/AltText/AltTextProvider.php includes/AltText/ProviderResult.php includes/AltText/AnthropicVisionProvider.php includes/AltText/ProviderResolver.php includes/Ai/AnthropicClient.php; do
   grep -vE '^[[:space:]]*(\*|/\*|//)' "$f" > "$ALT_TMP"
   if grep -qE 'wp_remote_(post|get|request)' "$ALT_TMP"; then WP_REMOTE_FILES="${WP_REMOTE_FILES}$(basename "$f") "; fi
 done
-assert_eq "wp_remote_* only in AnthropicVisionProvider" "AnthropicVisionProvider.php " "$WP_REMOTE_FILES"
-grep -vE '^[[:space:]]*(\*|/\*|//)' includes/AltText/AnthropicVisionProvider.php > "$ALT_TMP"
-assert_eq "Anthropic provider sets a timeout" "yes" "$(grep -q "'timeout'" "$ALT_TMP" && echo yes || echo no)"
+assert_eq "wp_remote_* only in the shared AnthropicClient transport" "AnthropicClient.php " "$WP_REMOTE_FILES"
+grep -vE '^[[:space:]]*(\*|/\*|//)' includes/Ai/AnthropicClient.php > "$ALT_TMP"
+assert_eq "shared transport sets a timeout" "yes" "$(grep -q "'timeout'" "$ALT_TMP" && echo yes || echo no)"
 
 # 11/12: NO provider-layer file mutates WP or touches the engine/store.
 for f in includes/AltText/AltTextProvider.php includes/AltText/ProviderResult.php includes/AltText/AnthropicVisionProvider.php includes/AltText/ProviderResolver.php; do

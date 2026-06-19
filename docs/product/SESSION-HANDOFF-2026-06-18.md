@@ -352,3 +352,34 @@ New: `includes/Seo/SeoAuditQuery.php`, `includes/Admin/views/seo-meta.php`, `tes
 - `tests/run.sh --tier T0 --changed` **126/0 net-new 0** · `--tier T1 --changed` **299/0 net-new 0**
 
 **Next:** Slice 2 (shared AI text provider + `SeoMetaGenerator` → governed drafts), report-first, on explicit direction. **Slice 2 not started.**
+
+---
+
+# GA#2 SEO Meta Generator — Slice 2a (Shared Anthropic Transport) — committed locally, NOT pushed
+
+> The first half of Slice 2: extract the Anthropic transport (extract-on-second-use) so the vision provider and the future SEO text provider share one outbound path. Committed on `main`; **not pushed, not deployed.** Production is at `ff64e9e`.
+
+## What shipped
+- **`AnthropicClient` added** (`includes/Ai/AnthropicClient.php`) — the single low-level Anthropic Messages transport: URL/version/headers/timeout/`wp_remote_post`, key + model resolution, response parsing + HTTP error mapping, Redactor scrubbing, **errors-as-data (never thrown)**. Operation-agnostic: caller supplies `messages` + `max_tokens` + `model`. No prompt construction, no `ProviderResult` coupling, no SEO/alt-text *logic* (architecture-reviewed pre-commit: GO, no required changes).
+- **`AnthropicVisionProvider` refactored** to delegate transport to `AnthropicClient` while keeping all vision concerns (image size guard, mime/readable checks, image+text message, WCAG prompt, `ProviderResult` mapping, error codes). **Alt Text behavior preserved** (proven baseline-identical).
+
+## Key / model resolution
+- **Canonical shared (new):** `WPCC_ANTHROPIC_API_KEY` / `wpcc_anthropic_api_key`, `WPCC_ANTHROPIC_MODEL` / `wpcc_anthropic_model`.
+- **Legacy preserved (back-compat):** `WPCC_VISION_API_KEY` / `wpcc_alt_text_api_key`, `WPCC_VISION_MODEL` / `wpcc_alt_text_model`.
+- Precedence: canonical constant → canonical option → legacy constant → legacy option (→ caller default for model). One BYO Anthropic key now powers all WPCC AI; existing Alt Text installs keep working unchanged.
+
+## Explicitly NOT in Slice 2a
+**No** SEO provider · **no** `SeoMetaGenerator` · **no** SEO generate route · **no** SEO generation · **no** proposals · **no** writes · **no** schema change · **no** new operation/capability/MCP tool.
+
+## Invariants (unchanged)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**.
+
+## Files (5)
+New: `includes/Ai/AnthropicClient.php`, `tests/test-anthropic-client.sh`. Modified: `includes/AltText/AnthropicVisionProvider.php` (delegates transport), `tests/test-alt-text.sh` (2 static assertions repointed to the AI transport layer), `tests/regression-map.tsv` (+`ai_transport` group → `test-anthropic-client.sh`).
+
+## Testing
+- `test-anthropic-client.sh` **42/0** (not-configured-send path skipped — a key constant is defined on dev)
+- `test-alt-text.sh` **baseline-identical: 125/4 vs 125/4** (stash-compare) → behavior unchanged, net-new 0. (The 4 are the chronic "key present on dev" env failures.)
+- `tests/run.sh --tier T0 --changed` **96/0 net-new 0** · `--tier T1 --changed` **193/0 net-new 0**
+
+**Next:** Slice 2b (`SeoMetaProvider`/`AnthropicSeoProvider` on `AnthropicClient` + `SeoMetaResult` + `SeoMetaGenerator` → governed drafts via `ProposalStore`, drafts-only, no apply), report-first, on explicit direction. **Slice 2b not started.**
