@@ -181,6 +181,16 @@ has "delete-token control"            "wpcc-token-delete"        "$VIEW"
 has "new-token (copy-once) region"    "wpcc-new-token"           "$VIEW"
 
 echo
+echo "== 5a2. S2.1 — server-side token pagination in the view =="
+has "view sends limit"                "limit="                   "$VIEW"
+has "view sends offset"               "offset="                  "$VIEW"
+has "view consumes canonical items[]" "body.items"               "$VIEW"
+has "view consumes total_count"       "total_count"              "$VIEW"
+has "view consumes has_more"          "has_more"                 "$VIEW"
+has "Prev/Next pager present"         "wpcc-tok-prev"            "$VIEW"
+has "paged loader present"            "loadTokensPage"           "$VIEW"
+
+echo
 echo "== 5b. Full settings.php migration (STEP 107.4) =="
 lacks "settings.php: no AuthTokens import" "use WPCommandCenter\\\\Security\\\\AuthTokens" "$SETTINGS"
 lacks "settings.php: no new AuthTokens"    "new AuthTokens"        "$SETTINGS"
@@ -268,6 +278,23 @@ RES="$(wpe '
 	$out["list_total"] = $list["total"];
 	$out["unknown"]    = ( null === $q->token( "00000000-0000-0000-0000-000000000000" ) ) ? 1 : 0;
 
+	// ── S2.1 — canonical pagination envelope + limit/offset behavior ──
+	$keys = ["items","total_count","returned","has_more","next_cursor","limit","offset","filters"];
+	$shape_ok = 1; foreach ( $keys as $k ) { if ( ! array_key_exists( $k, $list ) ) { $shape_ok = 0; } }
+	$out["env_shape"]  = $shape_ok;
+	$out["total_alias"] = ( (int) $list["total"] === (int) $list["total_count"] ) ? 1 : 0; // back-compat alias
+	$grand = (int) $list["total_count"]; // there are at least 2 tokens (ro + full) here
+	$p1 = $q->tokens( [], 1, 0 );
+	$out["page1_one"]  = ( count( $p1["items"] ) === 1 && (int) $p1["returned"] === 1 && (int) $p1["limit"] === 1 ) ? 1 : 0;
+	$out["page1_more"] = ( $grand > 1 ) ? ( $p1["has_more"] ? 1 : 0 ) : 1;
+	$cur = json_decode( base64_decode( (string) $p1["next_cursor"] ), true );
+	$out["cursor_off"] = ( $grand > 1 ) ? ( ( (int) ( $cur["offset"] ?? -1 ) === 1 ) ? 1 : 0 ) : 1;
+	// Paged walk (limit 1) visits every token exactly once (no drops/dupes).
+	$seen = []; $off = 0; do { $pp = $q->tokens( [], 1, $off ); foreach ( $pp["items"] as $t ) { $seen[ $t["id"] ] = true; } $off += 1; } while ( $pp["has_more"] && $off < 500 );
+	$out["walk_all"]   = ( count( $seen ) === $grand ) ? 1 : 0;
+	// Matrix is computed only for the page (page of 1 still carries its matrix counts).
+	$out["page_matrix"] = ( isset( $p1["items"][0]["total_operations"] ) && (int) $p1["items"][0]["total_operations"] === 34 ) ? 1 : 0;
+
 	$at->delete( $ro_id );
 	$at->delete( $full_id );
 
@@ -285,6 +312,16 @@ assert_eq "full token: all 34 ops allowed"        "34" "$(getj full_allowed)"
 assert_eq "full token: is system.admin"           "1"  "$(getj full_admin)"
 assert_eq "token list exposes NO token_hash"      "0"  "$(getj has_hash)"
 assert_eq "unknown token id returns null (404able)" "1" "$(getj unknown)"
+
+echo
+echo "== 6a2. S2.1 — server-side token pagination (canonical envelope) =="
+assert_eq "tokens() returns canonical envelope keys" "1"  "$(getj env_shape)"
+assert_eq "total alias == total_count (back-compat)"  "1"  "$(getj total_alias)"
+assert_eq "page of 1: items/returned/limit bounded"   "1"  "$(getj page1_one)"
+assert_eq "page 1 reports has_more when more remain"  "1"  "$(getj page1_more)"
+assert_eq "next_cursor encodes the next offset"       "1"  "$(getj cursor_off)"
+assert_eq "paged walk visits every token once"        "1"  "$(getj walk_all)"
+assert_eq "per-page matrix preserved (34 ops)"        "1"  "$(getj page_matrix)"
 
 echo
 echo "== 6b. Functional — per-token audit trail (STEP 107.2) =="
@@ -396,9 +433,11 @@ LRES="$(wpe '
 	// AuthTokens reuse: capability assignment auto-bootstrapped on create.
 	$out["bootstrapped"]   = ! empty( $reg->get_for_subject( "token", $id ) ) ? 1 : 0;
 
-	// Appears in the list read.
-	$list = rest_do_request( new WP_REST_Request( "GET", "/wp-command-center/v1/admin/tokens" ) )->get_data();
-	$out["in_list"] = count( array_filter( $list["tokens"], fn( $t ) => ( $t["id"] ?? "" ) === $id ) ) > 0 ? 1 : 0;
+	// Appears in the list read (wide page so membership is order/count independent).
+	$lreq = new WP_REST_Request( "GET", "/wp-command-center/v1/admin/tokens" );
+	$lreq->set_param( "limit", 100 );
+	$list = rest_do_request( $lreq )->get_data();
+	$out["in_list"] = count( array_filter( $list["items"] ?? [], fn( $t ) => ( $t["id"] ?? "" ) === $id ) ) > 0 ? 1 : 0;
 
 	// REVOKE via real route.
 	$rv = rest_do_request( new WP_REST_Request( "POST", "/wp-command-center/v1/admin/tokens/$id/revoke" ) )->get_data();
@@ -409,8 +448,10 @@ LRES="$(wpe '
 	// DELETE via real route.
 	$del = rest_do_request( new WP_REST_Request( "DELETE", "/wp-command-center/v1/admin/tokens/$id" ) )->get_data();
 	$out["delete_success"] = ! empty( $del["success"] ) ? 1 : 0;
-	$list2 = rest_do_request( new WP_REST_Request( "GET", "/wp-command-center/v1/admin/tokens" ) )->get_data();
-	$out["gone"] = count( array_filter( $list2["tokens"], fn( $t ) => ( $t["id"] ?? "" ) === $id ) ) === 0 ? 1 : 0;
+	$lreq2 = new WP_REST_Request( "GET", "/wp-command-center/v1/admin/tokens" );
+	$lreq2->set_param( "limit", 100 );
+	$list2 = rest_do_request( $lreq2 )->get_data();
+	$out["gone"] = count( array_filter( $list2["items"] ?? [], fn( $t ) => ( $t["id"] ?? "" ) === $id ) ) === 0 ? 1 : 0;
 
 	// AUDIT: admin.token.created/revoked/deleted recorded for this token id.
 	$tail = ( new \WPCommandCenter\Security\AuditLog() )->tail( 160 );

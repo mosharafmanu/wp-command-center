@@ -116,12 +116,21 @@ echo
 echo "== 5. View is read-only + escaped + filterable =="
 has "HTML escaper present"               "function escHtml"             "$VIEW"
 has "uses REST nonce"                     "X-WP-Nonce"                   "$VIEW"
-has "fetches /operations"                 "/operations'"                 "$VIEW"
+has "fetches paginated /operations"       "/operations?"                 "$VIEW"
 has "fetches /operations/summary"         "/operations/summary'"         "$VIEW"
 has "text filter present"                 "wpcc-ops-search"              "$VIEW"
 has "risk filter present"                 "wpcc-ops-risk"                "$VIEW"
 has "available-only filter present"       "wpcc-ops-available"           "$VIEW"
 has "role=status live region"             "role=\"status\""              "$VIEW"
+# S2.1 — server-side pagination: query carries limit/offset, Prev/Next pager, no client load-all.
+has "query sends limit"                   "limit="                       "$VIEW"
+has "query sends offset"                  "offset="                      "$VIEW"
+has "consumes canonical items[]"          "body.items"                   "$VIEW"
+has "consumes total_count"                "total_count"                  "$VIEW"
+has "consumes has_more"                   "has_more"                     "$VIEW"
+has "Prev/Next pager present"             "wpcc-ops-pager"               "$VIEW"
+has "server-side reload on filter"        "function reload"              "$VIEW"
+lacks "no client-side load-all filtering" "allOps.filter"               "$VIEW"
 has "renders required capability"         "required_capability"          "$VIEW"
 has "renders availability"                "availBadge"                   "$VIEW"
 # No execution / write affordance on this surface.
@@ -189,8 +198,8 @@ if ! command -v wp >/dev/null 2>&1; then
 	echo "  SKIP: wp-cli not available — static checks only."
 else
 	# Catalogue total + availability + security mode envelope.
-	TOTAL="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); echo (int) $r["total"];')"
-	assert_eq "operations() total = 40" "40" "$TOTAL"
+	TOTAL="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); echo (int) $r["total_count"];')"
+	assert_eq "operations() total_count = 40" "40" "$TOTAL"
 
 	ACTION="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); echo (string) $r["action"];')"
 	assert_eq "operations() action envelope" "operations_list" "$ACTION"
@@ -198,8 +207,46 @@ else
 	MODE_OK="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); echo ( isset($r["security_mode"]["mode"]) && isset($r["security_mode"]["label"]) ) ? "yes" : "no";')"
 	assert_eq "operations() carries security mode" "yes" "$MODE_OK"
 
-	# LEFT JOIN correctness: exactly 34 mapped, 6 unrestricted, summary agrees.
-	MAPPED="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); $n = 0; foreach ( $r["operations"] as $o ) { if ( ! empty( $o["required_capability"] ) ) { $n++; } } echo $n;')"
+	# ── S2.1 — canonical pagination envelope (items/total_count/returned/has_more/next_cursor/limit/offset/filters) ──
+	SHAPE_OK="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); $keys = ["items","total_count","returned","has_more","next_cursor","limit","offset","filters"]; $ok = "yes"; foreach ($keys as $k) { if ( ! array_key_exists($k, $r) ) { $ok = "no"; } } echo $ok;')"
+	assert_eq "operations() returns the canonical envelope keys" "yes" "$SHAPE_OK"
+
+	# Default page is bounded (limit 20), total_count is the full catalogue.
+	PAGE1="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 0); echo count($r["items"]) . "/" . (int)$r["returned"] . "/" . (int)$r["limit"] . "/" . ( $r["has_more"] ? "more" : "end" );')"
+	assert_eq "operations() page 1 of 20 (items/returned/limit/has_more)" "20/20/20/more" "$PAGE1"
+
+	# limit/offset walk: page 2 returns the remaining 20, has_more=false.
+	PAGE2="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 20); echo count($r["items"]) . "/" . (int)$r["offset"] . "/" . ( $r["has_more"] ? "more" : "end" );')"
+	assert_eq "operations() page 2 (offset 20) ends the list" "20/20/end" "$PAGE2"
+
+	# next_cursor on page 1 decodes to the next offset; null at the end.
+	CURSOR="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 0); $d = json_decode( base64_decode( (string) $r["next_cursor"] ), true ); echo (int) ($d["offset"] ?? -1);')"
+	assert_eq "operations() next_cursor encodes offset 20" "20" "$CURSOR"
+	ENDCURSOR="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 20); echo ( null === $r["next_cursor"] ) ? "null" : "set";')"
+	assert_eq "operations() next_cursor is null at the end" "null" "$ENDCURSOR"
+
+	# No pages dropped or duplicated across the full walk.
+	WALK="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $seen = []; $off = 0; do { $r = $q->operations([], 7, $off); foreach ($r["items"] as $o) { $seen[$o["id"]] = true; } $off += 7; } while ( $r["has_more"] && $off < 500 ); echo count($seen);')"
+	assert_eq "paged walk (limit 7) visits all 40 unique ops" "40" "$WALK"
+
+	# ── S2.1 — server-side filtering (replaces in-JS filtering) ──
+	RISKF="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(["risk" => "diagnostic"], 100, 0); $ok = "yes"; foreach ($r["items"] as $o) { if ($o["risk_level"] !== "diagnostic") { $ok = "no"; } } echo ( $r["total_count"] === count($r["items"]) && $ok === "yes" && $r["total_count"] > 0 ) ? "yes" : "no";')"
+	assert_eq "operations() server-side risk filter returns only that tier" "yes" "$RISKF"
+
+	SEARCHF="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(["search" => "plugin_manage"], 100, 0); $found = "no"; foreach ($r["items"] as $o) { if ($o["id"] === "plugin_manage") { $found = "yes"; } } echo $found;')"
+	assert_eq "operations() server-side search finds plugin_manage" "yes" "$SEARCHF"
+
+	SEARCHNONE="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(["search" => "zzz_no_such_op_zzz"], 100, 0); echo (int) $r["total_count"];')"
+	assert_eq "operations() search with no match returns 0" "0" "$SEARCHNONE"
+
+	AVAILF="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(["available" => true], 100, 0); $ok = "yes"; foreach ($r["items"] as $o) { if ( empty($o["available"]) ) { $ok = "no"; } } echo $ok;')"
+	assert_eq "operations() available-only filter returns only available" "yes" "$AVAILF"
+
+	FILTERS_ECHO="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(["risk" => "low"], 100, 0); $f = (array) $r["filters"]; echo (string) ($f["risk"] ?? "");')"
+	assert_eq "operations() echoes applied filters" "low" "$FILTERS_ECHO"
+
+	# LEFT JOIN correctness over the FULL catalogue (fetch all via a wide page).
+	MAPPED="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); $n = 0; foreach ( $r["items"] as $o ) { if ( ! empty( $o["required_capability"] ) ) { $n++; } } echo $n;')"
 	assert_eq "exactly 34 operations carry a required capability" "34" "$MAPPED"
 
 	UNMAPPED="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->summary(); echo (int) $r["unmapped_count"];')"
@@ -209,23 +256,23 @@ else
 	assert_eq "summary total = 40" "40" "$SUM_TOTAL"
 
 	# Required capability matches OPERATION_MAP for a representative mapped op.
-	PLUGCAP="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); foreach ( $r["operations"] as $o ) { if ( $o["id"] === "plugin_manage" ) { echo (string) $o["required_capability"]; break; } }')"
+	PLUGCAP="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); foreach ( $r["items"] as $o ) { if ( $o["id"] === "plugin_manage" ) { echo (string) $o["required_capability"]; break; } }')"
 	assert_eq "plugin_manage required capability = plugin.manage" "plugin.manage" "$PLUGCAP"
 
 	# Unrestricted operation surfaced honestly (system_info has no capability).
-	SYSCAP="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); foreach ( $r["operations"] as $o ) { if ( $o["id"] === "system_info" ) { echo ( null === $o["required_capability"] ) ? "null" : (string) $o["required_capability"]; break; } }')"
+	SYSCAP="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); foreach ( $r["items"] as $o ) { if ( $o["id"] === "system_info" ) { echo ( null === $o["required_capability"] ) ? "null" : (string) $o["required_capability"]; break; } }')"
 	assert_eq "system_info is unrestricted (null capability)" "null" "$SYSCAP"
 
 	# read-only-scope flag matches READ_ONLY_SCOPE_OPERATIONS (5).
-	ROCOUNT="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); $n = 0; foreach ( $r["operations"] as $o ) { if ( ! empty( $o["read_only_scope"] ) ) { $n++; } } echo $n;')"
+	ROCOUNT="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); $n = 0; foreach ( $r["items"] as $o ) { if ( ! empty( $o["read_only_scope"] ) ) { $n++; } } echo $n;')"
 	assert_eq "exactly 5 read-only-scope operations flagged" "5" "$ROCOUNT"
 
-	# Per-action risk preserved in the summary action_count (plugin_manage has 6).
-	PLUGACTIONS="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); foreach ( $r["operations"] as $o ) { if ( $o["id"] === "plugin_manage" ) { echo (int) $o["action_count"]; break; } }')"
+	# Per-action risk preserved in the action_count (plugin_manage has 6).
+	PLUGACTIONS="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); foreach ( $r["items"] as $o ) { if ( $o["id"] === "plugin_manage" ) { echo (int) $o["action_count"]; break; } }')"
 	assert_eq "plugin_manage action_count = 6" "6" "$PLUGACTIONS"
 
 	# Availability mirrors OperationRegistry::get_operations() exactly (no drift).
-	AVAIL_MATCH="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); $base = []; foreach ( $reg->get_operations() as $o ) { $base[ $o["id"] ] = (bool) $o["available"]; } $q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); $ok = "yes"; foreach ( $r["operations"] as $o ) { if ( ( $base[ $o["id"] ] ?? null ) !== (bool) $o["available"] ) { $ok = "no"; break; } } echo $ok;')"
+	AVAIL_MATCH="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); $base = []; foreach ( $reg->get_operations() as $o ) { $base[ $o["id"] ] = (bool) $o["available"]; } $q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); $ok = "yes"; foreach ( $r["items"] as $o ) { if ( ( $base[ $o["id"] ] ?? null ) !== (bool) $o["available"] ) { $ok = "no"; break; } } echo $ok;')"
 	assert_eq "availability mirrors the registry (no drift)" "yes" "$AVAIL_MATCH"
 
 	# Read does not mutate state: a second call yields the same total.

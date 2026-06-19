@@ -202,3 +202,39 @@ Committed locally on `main` as **`0b74293`** (`feat(ai-alt-text): Task 8.4 — T
 **Validation:** `test-alt-text-ui.sh` **69/0**; T1 `--changed` **97/0 net-new 0**; invariants live-verified **34/23/40/40/2.5.0**; Four Guarantees preserved per item. Pre-existing env failures (`test-alt-text.sh` 125/4, `test-proposal-admin.sh` 24/1) confirmed identical at the clean `3c37cbf` baseline (Anthropic key present + dev mu-plugin flags ON) — **0 net-new attributable to 8.4**.
 
 **Next:** S2 — Selection & Pagination Consistency (architecture review first; this is the prerequisite for cross-page/server-side bulk selection).
+
+---
+
+# STEP 111 — Task 8.4 Bulk Workflows + S2.1 Pagination Consistency
+
+> Two committed-locally slices on `main` after the milestone deploy. **Not pushed, not deployed.** Production remains at **`3c37cbf`**.
+
+## Task 8.4 — Tier-1 Bulk Workflows (committed `0b74293`)
+- **Tier-1, UI-only** bulk workflows on the AI Alt Text Suggestions tab (one view file + its test).
+- Bulk **Apply**/**Dismiss** reuse the **existing per-item endpoints** (`POST /admin/proposals/{id}/apply`, `/dismiss`) run sequentially; each item governed individually (own approval gate, `change_id`, rollback). Developer → applied; client/enterprise → `pending_approval`. Per-item failure never aborts the run; progress in a `role=status` region.
+- **No batch approval. No batch rollback. No async queue. No cross-page selection. No new backend/schema/operation/capability/MCP tool.**
+
+## S2.1 — Selection & Pagination Consistency (this section's commit)
+- **Operations Explorer** moved **away from load-all + client-side filtering** → server-paginated **and** server-filtered (search / risk / available-only applied before pagination).
+- **Tokens & Capabilities** token list moved **away from load-all** → server-paginated (the per-token access matrix is now computed only for the page, not the whole manifest; the matrix itself is unchanged — S3 untouched). `capabilities()` (23) and `operations_map()` (34) left as-is (invariant-bounded).
+- Both now use the **canonical pagination envelope** shared with Approval Center / Change History / ProposalAdminQuery / AltTextScanQuery:
+  `items` · `total_count` · `returned` · `has_more` · `next_cursor` · `limit` · `offset` · `filters`.
+  (Tokens also keeps a `total` alias for `DashboardAdminQuery`.)
+- Views consume the envelope and add **Prev/Next** pagers; no new REST routes (existing list handlers parse `limit`/`offset`/`cursor`/filters via a shared `list_paging()` helper).
+- **S2.2 explicitly deferred:** no cross-page selection · no select-all-matching · no server-side selection contract · no batch approval/rollback.
+- **Files (7):** `includes/Admin/OperationExplorerAdminQuery.php`, `includes/Admin/TokenCapabilityAdminQuery.php`, `includes/Admin/AdminRestApi.php`, `includes/Admin/views/operations-explorer.php`, `includes/Admin/views/token-capability-manager.php`, `tests/test-operations-explorer.sh`, `tests/test-token-capability-admin.sh`.
+
+## Invariants (unchanged, live-verified)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**.
+
+## Testing
+- `test-alt-text-ui.sh` **69/0**
+- `test-operations-explorer.sh` **130/0**
+- `test-token-capability-admin.sh` **153/0**
+- `test-dashboard.sh` **123/0** (confirms the `tokens()['total']` back-compat alias)
+- `tests/run.sh --tier T0 --changed` **253/0 net-new 0** · `--tier T1 --changed` **584/0 net-new 0** (14 suites)
+
+## Deployment
+- **Production remains at `3c37cbf`.** S2.1 **not deployed** (and Task 8.4 not deployed). Builder UIs stay build-flag OFF either way.
+
+**Next:** S2.2 (cross-page server-side selection) only on explicit direction — it is the unlock for cross-page bulk; design as select-by-criteria → bounded, capability-scoped, server-resolved id set → existing per-item governed action (no batch primitive).

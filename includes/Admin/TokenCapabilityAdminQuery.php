@@ -42,6 +42,10 @@ final class TokenCapabilityAdminQuery {
 	/** Hard cap on audit-trail entries surfaced per token (display bound). */
 	private const MAX_AUDIT = 100;
 
+	/** S2.1 — canonical list paging bounds (shared with the other list surfaces). */
+	private const DEFAULT_LIMIT = 20;
+	private const MAX_LIMIT      = 100;
+
 	private AuthTokens $tokens;
 	private CapabilityRegistry $caps;
 
@@ -51,20 +55,51 @@ final class TokenCapabilityAdminQuery {
 	}
 
 	/**
-	 * Enriched token list (newest first), each with its effective scope, assigned
-	 * capabilities, admin flag, status, and a compact access summary (how many of
-	 * the mapped operations it can run). No access matrix here — that is per-token
-	 * detail. No secrets: token_hash is never surfaced.
+	 * S2.1 — server-paginated token list using the CANONICAL list envelope (items /
+	 * total_count / returned / has_more / next_cursor / limit / offset / filters)
+	 * shared with Approval Center, Change History, ProposalAdminQuery and
+	 * AltTextScanQuery. Each row carries its effective scope, assigned capabilities,
+	 * admin flag, status, and a compact access summary.
 	 *
-	 * @return array<string,mixed> { action, tokens[], total }
+	 * Scaling note: only the requested PAGE of tokens is summarised — the per-token
+	 * access matrix (the expensive part) is computed for the page, not the whole
+	 * manifest, so the list read scales with the page size rather than the token
+	 * count. The matrix itself is UNCHANGED; matrix scaling (S3) is out of scope.
+	 *
+	 * No access matrix in the list (that is per-token detail). No secrets:
+	 * token_hash is never surfaced.
+	 *
+	 * @param array<string,mixed> $filters reserved for forward compatibility (none today).
+	 * @return array<string,mixed> canonical list envelope (+ back-compat total alias)
 	 */
-	public function tokens(): array {
-		$rows = array_map( fn( array $t ): array => $this->summarise_token( $t ), $this->tokens->list() );
+	public function tokens( array $filters = [], int $limit = self::DEFAULT_LIMIT, int $offset = 0 ): array {
+		$limit  = min( self::MAX_LIMIT, max( 1, $limit ) );
+		$offset = max( 0, $offset );
+
+		$all   = $this->tokens->list();
+		$total = count( $all );
+
+		// Slice the raw manifest BEFORE summarising so the O(ops) matrix work is paid
+		// only for the page, not every token (S2.1 page-scoped cost; S3 untouched).
+		$page_raw = array_slice( $all, $offset, $limit );
+		$rows     = array_map( fn( array $t ): array => $this->summarise_token( $t ), $page_raw );
+
+		$returned    = count( $rows );
+		$next_offset = $offset + $returned;
+		$has_more    = $next_offset < $total;
 
 		return [
-			'action' => 'tokens_list',
-			'tokens' => $rows,
-			'total'  => count( $rows ),
+			'action'      => 'tokens_list',
+			'items'       => $rows,
+			'total_count' => $total,
+			'returned'    => $returned,
+			'has_more'    => $has_more,
+			'next_cursor' => $has_more ? base64_encode( (string) wp_json_encode( [ 'offset' => $next_offset ] ) ) : null,
+			'limit'       => $limit,
+			'offset'      => $offset,
+			'filters'     => (object) [],
+			// Back-compat: DashboardAdminQuery reads ['total'] for its token roll-up.
+			'total'       => $total,
 		];
 	}
 

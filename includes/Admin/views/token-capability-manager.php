@@ -205,7 +205,11 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		confirmRevoke: <?php echo wp_json_encode( __( 'Revoke the token "%s"? Any AI agent using it loses access immediately.', 'wp-command-center' ) ); ?>,
 		/* translators: %s: token label */
 		confirmDelete: <?php echo wp_json_encode( __( 'Permanently delete the token "%s"? This cannot be undone.', 'wp-command-center' ) ); ?>,
-		tokenCreated:  <?php echo wp_json_encode( __( 'Token created.', 'wp-command-center' ) ); ?>
+		tokenCreated:  <?php echo wp_json_encode( __( 'Token created.', 'wp-command-center' ) ); ?>,
+		prev:          <?php echo wp_json_encode( __( '← Previous', 'wp-command-center' ) ); ?>,
+		next:          <?php echo wp_json_encode( __( 'Next →', 'wp-command-center' ) ); ?>,
+		/* translators: %1$d first row on page, %2$d last row on page, %3$d total */
+		pageInfo:      <?php echo wp_json_encode( __( 'Tokens %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>
 	};
 
 	function escHtml( s ) {
@@ -590,13 +594,44 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		b.appendChild( strong );
 		b.appendChild( inp );
 	}
-	function reloadTokensPanel( secret ) {
-		apiFetch( '/tokens' ).then( function( r ) {
-			if ( ! r.ok ) { return fail( 'wpcc-tokens-panel' ); }
-			setHtml( 'wpcc-tokens-panel', renderTokens( r.body.tokens || [] ) );
+	// S2.1 — server-side token pagination state.
+	var tokPg = { limit: 20, offset: 0, total: 0, returned: 0, hasMore: false };
+
+	// Fetch ONE page of tokens from the server (canonical envelope: items + paging).
+	// The UI renders only the returned page — it never loads every token.
+	function loadTokensPage( secret ) {
+		apiFetch( '/tokens?limit=' + tokPg.limit + '&offset=' + tokPg.offset ).then( function( r ) {
+			if ( ! r.ok || ! r.body ) { return fail( 'wpcc-tokens-panel' ); }
+			tokPg.total    = r.body.total_count || 0;
+			tokPg.returned = r.body.returned || ( r.body.items ? r.body.items.length : 0 );
+			tokPg.hasMore  = !! r.body.has_more;
+			setHtml( 'wpcc-tokens-panel', renderTokens( r.body.items || [] ) + renderTokensPager() );
 			wireTokens();
+			wireTokensPager();
 			if ( secret ) { showNewToken( secret ); }
 		} ).catch( function() { fail( 'wpcc-tokens-panel' ); } );
+	}
+	// Create flow re-renders the current page in place (keeps the one-time secret).
+	function reloadTokensPanel( secret ) { loadTokensPage( secret ); }
+
+	function renderTokensPager() {
+		if ( tokPg.total <= tokPg.limit && tokPg.offset === 0 ) { return ''; }
+		var from = tokPg.total ? ( tokPg.offset + 1 ) : 0;
+		var to   = tokPg.offset + tokPg.returned;
+		var prevDis = tokPg.offset <= 0 ? ' disabled' : '';
+		var nextDis = tokPg.hasMore ? '' : ' disabled';
+		var info = i18n.pageInfo.replace( '%1$d', from ).replace( '%2$d', to ).replace( '%3$d', tokPg.total );
+		return '<div class="wpcc-ops-pager" style="display:flex;align-items:center;gap:10px;margin:12px 0;">'
+			+ '<button type="button" class="button" id="wpcc-tok-prev"' + prevDis + '>' + escHtml( i18n.prev ) + '</button>'
+			+ '<span class="wpcc-pageinfo" style="font-size:12px;color:#646970;">' + escHtml( info ) + '</span>'
+			+ '<button type="button" class="button" id="wpcc-tok-next"' + nextDis + '>' + escHtml( i18n.next ) + '</button>'
+			+ '</div>';
+	}
+	function wireTokensPager() {
+		var prev = document.getElementById( 'wpcc-tok-prev' );
+		var next = document.getElementById( 'wpcc-tok-next' );
+		if ( prev ) { prev.addEventListener( 'click', function() { if ( tokPg.offset > 0 ) { tokPg.offset = Math.max( 0, tokPg.offset - tokPg.limit ); loadTokensPage(); } } ); }
+		if ( next ) { next.addEventListener( 'click', function() { if ( tokPg.hasMore ) { tokPg.offset += tokPg.limit; loadTokensPage(); } } ); }
 	}
 	function createToken() {
 		var labelEl = document.getElementById( 'wpcc-new-label' );
@@ -667,11 +702,8 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 				setHtml( 'wpcc-tokens-panel', renderOperations( r.body.operations || [] ) );
 			} ).catch( function() { fail( 'wpcc-tokens-panel' ); } );
 		} else {
-			apiFetch( '/tokens' ).then( function( r ) {
-				if ( ! r.ok ) { return fail( 'wpcc-tokens-panel' ); }
-				setHtml( 'wpcc-tokens-panel', renderTokens( r.body.tokens || [] ) );
-				wireTokens();
-			} ).catch( function() { fail( 'wpcc-tokens-panel' ); } );
+			tokPg.offset = 0;
+			loadTokensPage();
 		}
 	}
 

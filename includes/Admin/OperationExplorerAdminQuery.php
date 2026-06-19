@@ -42,6 +42,10 @@ final class OperationExplorerAdminQuery {
 	/** Display bound on the truncated list summary (full text lives in detail). */
 	private const SUMMARY_CHARS = 160;
 
+	/** S2.1 — canonical list paging bounds (shared with the other list surfaces). */
+	private const DEFAULT_LIMIT = 20;
+	private const MAX_LIMIT      = 100;
+
 	private OperationRegistry $registry;
 
 	public function __construct() {
@@ -49,31 +53,88 @@ final class OperationExplorerAdminQuery {
 	}
 
 	/**
-	 * The operation catalogue (sorted by id), each row carrying its risk, approval
-	 * requirement, live availability, required capability (null when unrestricted),
-	 * read-only-scope eligibility, and a truncated description. The headline list
-	 * read. Derived entirely from the registries — no policy added.
+	 * S2.1 — server-paginated, server-filtered catalogue list using the CANONICAL
+	 * list envelope (items / total_count / returned / has_more / next_cursor / limit
+	 * / offset / filters) shared with Approval Center, Change History,
+	 * ProposalAdminQuery and AltTextScanQuery. The full catalogue is built and sorted
+	 * once, filtered server-side (search / risk / available-only), then a single page
+	 * is returned — so the UI no longer loads every row and filters in JS. Read-only;
+	 * derived entirely from the registries — no policy added, no execution.
 	 *
-	 * @return array<string,mixed> { action, operations[], total, available_count, security_mode }
+	 * @param array<string,mixed> $filters { search?: string, risk?: string, available?: bool }
+	 * @return array<string,mixed> canonical list envelope (+ back-compat total + security_mode)
 	 */
-	public function operations(): array {
-		$rows = array_map( fn( array $op ): array => $this->summarise_operation( $op ), $this->registry->get_operations() );
+	public function operations( array $filters = [], int $limit = self::DEFAULT_LIMIT, int $offset = 0 ): array {
+		$limit  = min( self::MAX_LIMIT, max( 1, $limit ) );
+		$offset = max( 0, $offset );
 
+		$rows = array_map( fn( array $op ): array => $this->summarise_operation( $op ), $this->registry->get_operations() );
 		usort( $rows, static fn( array $a, array $b ): int => strcmp( $a['id'], $b['id'] ) );
 
-		$available = 0;
-		foreach ( $rows as $row ) {
-			if ( $row['available'] ) {
-				$available++;
-			}
-		}
+		$rows = $this->apply_filters( $rows, $filters );
+
+		$total       = count( $rows );
+		$page        = array_slice( $rows, $offset, $limit );
+		$returned    = count( $page );
+		$next_offset = $offset + $returned;
+		$has_more    = $next_offset < $total;
 
 		return [
-			'action'          => 'operations_list',
-			'operations'      => $rows,
-			'total'           => count( $rows ),
-			'available_count' => $available,
-			'security_mode'   => $this->security_mode(),
+			'action'        => 'operations_list',
+			'items'         => $page,
+			'total_count'   => $total,
+			'returned'      => $returned,
+			'has_more'      => $has_more,
+			'next_cursor'   => $has_more ? base64_encode( (string) wp_json_encode( [ 'offset' => $next_offset ] ) ) : null,
+			'limit'         => $limit,
+			'offset'        => $offset,
+			'filters'       => (object) $this->normalise_filters( $filters ),
+			// Back-compat extras (header posture + a total alias); not part of the
+			// canonical contract but cheap and harmless for existing consumers.
+			'total'         => $total,
+			'security_mode' => $this->security_mode(),
+		];
+	}
+
+	/**
+	 * Server-side equivalent of the former in-JS filtering: free-text match over
+	 * id / title / required capability / summary, exact risk tier, and available-only.
+	 * Read-only; the canonical filters apply BEFORE pagination so total_count is the
+	 * filtered total.
+	 *
+	 * @param array<int,array<string,mixed>> $rows
+	 * @param array<string,mixed>            $filters
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function apply_filters( array $rows, array $filters ): array {
+		$f = $this->normalise_filters( $filters );
+
+		if ( '' !== $f['risk'] ) {
+			$rows = array_values( array_filter( $rows, static fn( array $o ): bool => (string) $o['risk_level'] === $f['risk'] ) );
+		}
+		if ( $f['available'] ) {
+			$rows = array_values( array_filter( $rows, static fn( array $o ): bool => ! empty( $o['available'] ) ) );
+		}
+		if ( '' !== $f['search'] ) {
+			$needle = strtolower( $f['search'] );
+			$rows   = array_values( array_filter(
+				$rows,
+				static function ( array $o ) use ( $needle ): bool {
+					$hay = strtolower( $o['id'] . ' ' . $o['title'] . ' ' . ( (string) ( $o['required_capability'] ?? '' ) ) . ' ' . $o['summary'] );
+					return false !== strpos( $hay, $needle );
+				}
+			) );
+		}
+
+		return $rows;
+	}
+
+	/** Normalise the recognised filters into a stable, typed shape. */
+	private function normalise_filters( array $filters ): array {
+		return [
+			'search'    => isset( $filters['search'] ) ? trim( (string) $filters['search'] ) : '',
+			'risk'      => isset( $filters['risk'] ) ? (string) $filters['risk'] : '',
+			'available' => ! empty( $filters['available'] ),
 		];
 	}
 

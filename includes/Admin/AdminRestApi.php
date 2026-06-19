@@ -1164,9 +1164,10 @@ final class AdminRestApi {
 	// over the existing token manifest + capability assignments. No writes, no
 	// engine calls, no new source of truth.
 
-	/** GET /admin/tokens — enriched token list (no secrets; preview only). */
-	public function tokens_list(): \WP_REST_Response {
-		return new \WP_REST_Response( ( new TokenCapabilityAdminQuery() )->tokens(), 200 );
+	/** GET /admin/tokens — enriched, server-paginated token list (no secrets; preview only). */
+	public function tokens_list( \WP_REST_Request $request ): \WP_REST_Response {
+		[ $limit, $offset ] = $this->list_paging( $request );
+		return new \WP_REST_Response( ( new TokenCapabilityAdminQuery() )->tokens( [], $limit, $offset ), 200 );
 	}
 
 	/** GET /admin/tokens/{id} — one token + its 34-operation access matrix. */
@@ -1196,9 +1197,45 @@ final class AdminRestApi {
 	// over the operation catalogue + capability map. No writes, no execution, no
 	// engine dispatch, no new source of truth.
 
-	/** GET /admin/operations — the operation catalogue (risk, capability, availability). */
-	public function operations_list(): \WP_REST_Response {
-		return new \WP_REST_Response( ( new OperationExplorerAdminQuery() )->operations(), 200 );
+	/** GET /admin/operations — server-paginated, server-filtered operation catalogue. */
+	public function operations_list( \WP_REST_Request $request ): \WP_REST_Response {
+		[ $limit, $offset ] = $this->list_paging( $request );
+
+		$filters = [];
+		foreach ( [ 'search', 'risk' ] as $k ) {
+			$v = (string) $request->get_param( $k );
+			if ( '' !== $v ) {
+				$filters[ $k ] = sanitize_text_field( $v );
+			}
+		}
+		if ( null !== $request->get_param( 'available' ) && '' !== (string) $request->get_param( 'available' ) ) {
+			$filters['available'] = rest_sanitize_boolean( $request->get_param( 'available' ) );
+		}
+
+		return new \WP_REST_Response( ( new OperationExplorerAdminQuery() )->operations( $filters, $limit, $offset ), 200 );
+	}
+
+	/**
+	 * S2.1 — parse the canonical limit/offset paging params from a list request.
+	 * Accepts an opaque `cursor` (base64 {offset}) as produced by the canonical
+	 * `next_cursor`; it takes precedence over a raw `offset`. Read-only; mirrors the
+	 * paging contract used by the proposals / history / approvals list reads.
+	 *
+	 * @return array{0:int,1:int} [ limit, offset ]
+	 */
+	private function list_paging( \WP_REST_Request $request ): array {
+		$limit  = (int) ( $request->get_param( 'limit' ) ?: 20 );
+		$offset = (int) ( $request->get_param( 'offset' ) ?: 0 );
+
+		$cursor = (string) $request->get_param( 'cursor' );
+		if ( '' !== $cursor ) {
+			$decoded = json_decode( (string) base64_decode( $cursor, true ), true );
+			if ( is_array( $decoded ) && isset( $decoded['offset'] ) ) {
+				$offset = (int) $decoded['offset'];
+			}
+		}
+
+		return [ max( 1, $limit ), max( 0, $offset ) ];
 	}
 
 	/** GET /admin/operations/summary — catalogue header counts (availability / risk / approval). */
