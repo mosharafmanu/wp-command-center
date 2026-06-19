@@ -82,7 +82,7 @@ SAVED_TITLE="$(wpe 'echo get_option("blogname");')"
 
 echo "== 1. Foundation: schema + DB version =="
 
-assert_eq "DB version is 2.4.0" "2.4.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "DB version is 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 assert_eq "wpcc_change_log table exists" "yes" "$(wpe 'global $wpdb;$t=$wpdb->prefix."wpcc_change_log";echo $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s",$t))?"yes":"no";')"
 assert_eq "change_log has 28 columns" "28" "$(wpe 'global $wpdb;$t=$wpdb->prefix."wpcc_change_log";echo count($wpdb->get_col("SHOW COLUMNS FROM $t"));')"
 

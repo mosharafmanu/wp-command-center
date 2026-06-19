@@ -160,7 +160,7 @@ else
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
 	assert_eq "operation catalogue stays 40" "40" "$CAT"
 	DBV="$(wpe 'echo get_option("wpcc_db_version");')"
-	assert_eq "DB_VERSION stays 2.4.0" "2.4.0" "$DBV"
+	assert_eq "DB_VERSION stays 2.5.0" "2.5.0" "$DBV"
 fi
 
 echo

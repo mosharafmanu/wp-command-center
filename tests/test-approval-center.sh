@@ -65,7 +65,7 @@ lint "AdminMenu lints"            "$MENU"
 
 echo
 echo "== 2. Schema: DB 2.4.0 + forward-only attribution columns =="
-has "DB_VERSION bumped to 2.4.0"        "DB_VERSION = '2.4.0'"   "$SCHEMA"
+has "DB_VERSION bumped to 2.5.0"        "DB_VERSION = '2.5.0'"   "$SCHEMA"
 has "column resolved_by_label"          "resolved_by_label"      "$SCHEMA"
 has "column resolved_by_type"           "resolved_by_type"       "$SCHEMA"
 has "column resolved_by_user_id"        "resolved_by_user_id"    "$SCHEMA"

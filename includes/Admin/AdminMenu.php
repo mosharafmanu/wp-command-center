@@ -142,6 +142,52 @@ final class AdminMenu {
 		if ( FeatureGate::allows( 'operations_explorer' ) ) {
 			add_submenu_page( 'wp-command-center', __( 'Operations Explorer', 'wp-command-center' ), __( 'Operations Explorer', 'wp-command-center' ), self::CAPABILITY, 'wpcc-operations', [ $this, 'render_operations_explorer' ] );
 		}
+
+		// STEP 110 (Task 6) — Governed Drafts (Proposal Store) DEV validation
+		// surface. Unlike the other surfaces, this is NOT a user feature: it is a
+		// developer instrument to validate the Proposal Store primitive. It is
+		// gated by a dev switch that defaults OFF (FeatureGate alone defaults ON,
+		// so it cannot be the only gate here), AND by the future Free/Pro
+		// FeatureGate seam. Real users never see it; the eventual AI Alt Text UI is
+		// the product surface. Registered last; folds under Operate in Phase C.
+		if ( $this->proposals_dev_ui_enabled() && FeatureGate::allows( 'proposal_store' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'Governed Drafts (Dev)', 'wp-command-center' ), __( 'Governed Drafts (Dev)', 'wp-command-center' ), self::CAPABILITY, 'wpcc-proposals', [ $this, 'render_proposals' ] );
+		}
+
+		// STEP 110 (Task 8.1) — Builder-facing AI Alt Text surface (scaffold +
+		// Review tab). This is the real product surface, but it is incrementally
+		// built (8.1–8.5): gated by a build flag that defaults OFF so it is not
+		// shown to real users until the workflow is complete, AND by the Free/Pro
+		// FeatureGate seam ('ai_alt_text'). The build flag is removed/defaulted on
+		// when Task 8 completes. Folds under Operate in the Phase C 5-C IA.
+		if ( $this->alt_text_ui_enabled() && FeatureGate::allows( 'ai_alt_text' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'AI Alt Text', 'wp-command-center' ), __( 'AI Alt Text', 'wp-command-center' ), self::CAPABILITY, 'wpcc-alt-text', [ $this, 'render_ai_alt_text' ] );
+		}
+	}
+
+	/**
+	 * Build switch for the Builder AI Alt Text surface. Defaults OFF (the feature
+	 * is built incrementally across Task 8.1–8.5 and must not surface a partial
+	 * workflow to real users). Enable on a dev site via the WPCC_ALT_TEXT_UI
+	 * constant or the `wpcc_alt_text_ui` filter; remove the gate when Task 8 lands.
+	 */
+	private function alt_text_ui_enabled(): bool {
+		if ( defined( 'WPCC_ALT_TEXT_UI' ) && WPCC_ALT_TEXT_UI ) {
+			return true;
+		}
+		return (bool) apply_filters( 'wpcc_alt_text_ui', false );
+	}
+
+	/**
+	 * Dev switch for the Governed Drafts validation surface. Defaults OFF so real
+	 * users never see it; enable on a dev site via the WPCC_PROPOSALS_DEV_UI
+	 * constant or the `wpcc_proposals_dev_ui` filter.
+	 */
+	private function proposals_dev_ui_enabled(): bool {
+		if ( defined( 'WPCC_PROPOSALS_DEV_UI' ) && WPCC_PROPOSALS_DEV_UI ) {
+			return true;
+		}
+		return (bool) apply_filters( 'wpcc_proposals_dev_ui', false );
 	}
 
 	public function admin_bar_badge( \WP_Admin_Bar $wp_admin_bar ): void {
@@ -218,6 +264,14 @@ final class AdminMenu {
 
 	public function render_ai_integrations(): void {
 		$this->render_view( 'ai-integrations' );
+	}
+
+	public function render_proposals(): void {
+		$this->render_view( 'proposals' );
+	}
+
+	public function render_ai_alt_text(): void {
+		$this->render_view( 'ai-alt-text' );
 	}
 
 	public function render_approval_center(): void {

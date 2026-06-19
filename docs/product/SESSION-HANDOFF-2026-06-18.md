@@ -130,3 +130,53 @@ This keeps the discipline intact: **report-first → phased build → net-new 0 
 ---
 
 *Documentation only. No code changes and no commits were made in the session that produced this handoff.*
+
+---
+
+# STEP 110 — Proposal Store + AI Alt Text (Governed Action #1) — milestone
+
+> Added after the Proposal Store primitive (Tasks 1–6) and AI Alt Text (Tasks 7–8.3) were built and validated. Committed as one milestone on `main` (not pushed, not deployed).
+
+## Proposal Store primitive — COMPLETE (Tasks 1–6)
+The canonical **Propose** stage of the Governed Action contract — a generic, pre-decision staging primitive that reaches the site only through the existing `OperationExecutor` chokepoint (never a second write/approval/audit/rollback path):
+- **Schema:** `wpcc_proposals` table; **DB_VERSION 2.4.0 → 2.5.0** (additive; idempotent `dbDelta`; no backfill).
+- **`ProposalStore`** — state-machine repository, **sole writer** of proposal rows (`status`/`request_id`/`change_id`/`error_json`); statuses draft → pending_approval → applied/dismissed/failed (terminal, idempotent).
+- **`ProposalApplyService`** — the single execution crossing point (developer direct apply + gated branch → approval).
+- **`ProposalOutcome`** — shared executor-envelope interpreter (success / in-band error / gated / hard failure) — the one definition consumed by ApplyService and Sync.
+- **`ProposalSync`** — pull-only authority resolver (read-through of requests/results/change_log; lazy materialize).
+- **`ProposalReconciler`** — bounded sweep reusing Sync (cron wiring deferred).
+- **Proposal REST** — list/get/create/edit(final_payload)/apply/dismiss under `wp-command-center/v1/admin/proposals`, gated by the C1 resolver (`proposal_store` feature key); read-through on GET; rollback-aware presentation.
+- **Governed Drafts (Dev) UI** — `wpcc-proposals` admin surface, **build-flag OFF by default**.
+
+## AI Alt Text (Governed Action #1) — COMPLETE through Task 8.3
+First user-facing consumer, entirely on the proposal store; apply/undo route through the engine:
+- **7A** read-only scan (`AltTextScanQuery`, `GET /admin/alt-text/scan`) — missing/weak/ok audit.
+- **7B** provider abstraction (`AltTextProvider`/`ProviderResult`/`ProviderResolver`) + **Anthropic BYO** vision provider (`AnthropicVisionProvider`; key via constant/option; Redactor-scrubbed; outbound isolated; 30s timeout; size guard).
+- **7C** `AltTextGenerator` + `POST /admin/alt-text/generate` — provider suggestion → governed **drafts** only (provenance: provider/model/confidence/batch_id/proposed_by).
+- **7D** live validation (Anthropic) — quality 9/10, 0 content hallucinations; drafts only.
+- **8.1** Builder surface scaffold + **Review tab** (scan/readiness, read-only).
+- **8.2** **Suggestions tab** — chunked Generate, edit (`final_payload`), dismiss.
+- **8.3** **Approve & Apply** (mode-aware) + **Applied tab** (rollback-aware) + per-image **Undo** (existing rollback route).
+- Builder UI is `wpcc-alt-text`, **build-flag OFF by default**.
+
+## Four Guarantees — INTACT
+Approval (gated apply → real Approval Center request) · Rollback (existing change-history rollback; rollback-aware status) · Audit (executor/ChangeRecorder; store only reflects) · Capability Scoping (REST gate + executor `media_manage` capability + actor propagation). No second Approval Center / Change History / rollback system; no ungoverned write path.
+
+## Invariants (unchanged across the whole arc)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (the only intended delta).
+
+## Build flags & local enablers
+- Governed Drafts dev UI: **off by default** (`WPCC_PROPOSALS_DEV_UI` const / `wpcc_proposals_dev_ui` filter).
+- AI Alt Text UI: **off by default** (`WPCC_ALT_TEXT_UI` const / `wpcc_alt_text_ui` filter).
+- Local-only mu-plugins (`wp-content/mu-plugins/wpcc-dev-*.php`) enable these on dev — **outside the plugin repo, NOT committed, never deployed.**
+
+## Testing state (clean env, key removed)
+- `tests/test-alt-text.sh` **129/0** · `tests/test-alt-text-ui.sh` **57/0**
+- `tests/test-proposal-store.sh` **161/0** · `tests/test-proposal-rest.sh` **23/0** · `tests/test-proposal-admin.sh` green
+- `--changed` **T0/T1 net-new 0** throughout.
+
+## Current recommendation
+- **Hold deployment** (Builder UI is build-flag off; deploy changes nothing user-facing until flipped — your call).
+- **Next task = Task 8.4 Bulk Workflows**, on the committed baseline.
+
+*Milestone committed locally on `main`; not pushed, not deployed.*

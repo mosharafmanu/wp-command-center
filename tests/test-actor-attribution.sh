@@ -129,7 +129,7 @@ assert_eq "capabilities stay 23"   "23" "$(pj "$MANIFEST" '.capability_managemen
 # STEP 106.1 bumped DB_VERSION to 2.4.0 (forward-only approver-attribution
 # columns on wpcc_operation_requests). The actor-attribution code this suite
 # guards is unchanged; only the schema baseline moved.
-assert_eq "DB_VERSION baseline 2.4.0" "2.4.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "DB_VERSION baseline 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 
 echo
 echo "== Summary =="

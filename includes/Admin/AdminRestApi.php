@@ -21,6 +21,11 @@ use WPCommandCenter\Operations\OperationExecutor;
 use WPCommandCenter\PatchSystem\PatchManager;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Security\AuthTokens;
+use WPCommandCenter\Proposals\ProposalStore;
+use WPCommandCenter\Proposals\ProposalApplyService;
+use WPCommandCenter\Proposals\ProposalSync;
+use WPCommandCenter\AltText\AltTextScanQuery;
+use WPCommandCenter\AltText\AltTextGenerator;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -264,6 +269,69 @@ final class AdminRestApi {
 			'callback'            => [ $this, 'dashboard_overview' ],
 			'permission_callback' => [ $this, 'check_dashboard_permission' ],
 		] );
+
+		// STEP 110 (Task 5) — Proposal Store admin surface. Reads are read-through
+		// (ProposalSync materializes pending_approval rows on GET, since the
+		// reconciler cron is not scheduled). Writes route ONLY through
+		// ProposalApplyService (apply) and ProposalStore (edit/dismiss) — never a
+		// direct table write and never a direct OperationExecutor call here.
+		// Literal /apply and /dismiss suffixes are registered before the bare
+		// /{id} route so they match first.
+		register_rest_route( self::NS, '/admin/proposals', [
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'proposals_list' ],
+				'permission_callback' => [ $this, 'check_proposals_permission' ],
+			],
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [ $this, 'proposals_create' ],
+				'permission_callback' => [ $this, 'check_proposals_permission' ],
+			],
+		] );
+
+		register_rest_route( self::NS, '/admin/proposals/(?P<id>[a-f0-9-]{36})/apply', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'proposals_apply' ],
+			'permission_callback' => [ $this, 'check_proposals_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/proposals/(?P<id>[a-f0-9-]{36})/dismiss', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'proposals_dismiss' ],
+			'permission_callback' => [ $this, 'check_proposals_permission' ],
+		] );
+
+		register_rest_route( self::NS, '/admin/proposals/(?P<id>[a-f0-9-]{36})', [
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [ $this, 'proposals_get' ],
+				'permission_callback' => [ $this, 'check_proposals_permission' ],
+			],
+			[
+				'methods'             => \WP_REST_Server::EDITABLE,
+				'callback'            => [ $this, 'proposals_update' ],
+				'permission_callback' => [ $this, 'check_proposals_permission' ],
+			],
+		] );
+
+		// STEP 110 (Task 7A) — AI Alt Text read-only scan. READABLE only: audits the
+		// Media Library for missing/weak/ok alt text. No writes, no outbound HTTP, no
+		// proposal creation, no engine interaction. Delegates to AltTextScanQuery.
+		register_rest_route( self::NS, '/admin/alt-text/scan', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'alt_text_scan' ],
+			'permission_callback' => [ $this, 'check_alt_text_permission' ],
+		] );
+
+		// STEP 110 (Task 7C) — AI Alt Text generation. CREATABLE: produces governed
+		// DRAFTS only (provider suggestion → ProposalStore::create). It never applies
+		// and never mutates the site. Delegates to AltTextGenerator.
+		register_rest_route( self::NS, '/admin/alt-text/generate', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'alt_text_generate' ],
+			'permission_callback' => [ $this, 'check_alt_text_permission' ],
+		] );
 	}
 
 	/**
@@ -281,6 +349,8 @@ final class AdminRestApi {
 		'tokens'         => 'token_capability_manager',
 		'change_history' => 'change_history',
 		'dashboard'      => 'dashboard_overview',
+		'proposals'      => 'proposal_store',
+		'alt_text'       => 'ai_alt_text',
 	];
 
 	/**
@@ -328,6 +398,16 @@ final class AdminRestApi {
 		return $this->gate( 'dashboard' );
 	}
 
+	/** Proposal Store surface gate (manage_options + FeatureGate 'proposal_store'). */
+	public function check_proposals_permission(): bool {
+		return $this->gate( 'proposals' );
+	}
+
+	/** AI Alt Text surface gate (manage_options + FeatureGate 'ai_alt_text'). */
+	public function check_alt_text_permission(): bool {
+		return $this->gate( 'alt_text' );
+	}
+
 	/**
 	 * STEP 109.1 — Dashboard Overview read handler. Delegates to the read-only
 	 * DashboardAdminQuery aggregator (a thin fan-out over the existing per-surface
@@ -335,6 +415,133 @@ final class AdminRestApi {
 	 */
 	public function dashboard_overview(): \WP_REST_Response {
 		return new \WP_REST_Response( ( new DashboardAdminQuery() )->overview(), 200 );
+	}
+
+	// ── STEP 110 (Task 5) — Proposal Store handlers (thin controllers) ─────────
+	// Reads delegate shaping to ProposalAdminQuery (read-only); writes delegate to
+	// ProposalApplyService (apply) and ProposalStore (create/edit/dismiss). No
+	// query logic, no table writes, and no OperationExecutor call live here.
+
+	/** GET /admin/proposals — paginated list; read-through pending rows on this page. */
+	public function proposals_list( \WP_REST_Request $request ): \WP_REST_Response {
+		$limit  = (int) ( $request->get_param( 'limit' ) ?: 20 );
+		$offset = (int) ( $request->get_param( 'offset' ) ?: 0 );
+		$filters = [];
+		foreach ( [ 'status', 'operation_id', 'target_type', 'batch_id' ] as $k ) {
+			$v = (string) $request->get_param( $k );
+			if ( '' !== $v ) {
+				$filters[ $k ] = sanitize_text_field( $v );
+			}
+		}
+
+		$query = new ProposalAdminQuery();
+		$env   = $query->list( $filters, $limit, $offset );
+
+		// Read-through (Readiness C1): materialize pending_approval rows on this
+		// page via ProposalSync; re-shape once if any advanced to a terminal state.
+		$sync    = new ProposalSync();
+		$changed = false;
+		foreach ( $env['proposals'] as $row ) {
+			if ( ProposalStore::STATUS_PENDING_APPROVAL === ( $row['status'] ?? '' ) ) {
+				$res = $sync->sync( (string) $row['proposal_id'] );
+				if ( ! is_wp_error( $res ) && ProposalStore::STATUS_PENDING_APPROVAL !== ( $res['status'] ?? '' ) ) {
+					$changed = true;
+				}
+			}
+		}
+		if ( $changed ) {
+			$env = $query->list( $filters, $limit, $offset );
+		}
+
+		return new \WP_REST_Response( $env, 200 );
+	}
+
+	/** GET /admin/proposals/{id} — read-through then shaped detail. */
+	public function proposals_get( \WP_REST_Request $request ): \WP_REST_Response {
+		$id = sanitize_text_field( (string) $request->get_param( 'id' ) );
+
+		// Read-through (Readiness C1): idempotent; no-op unless pending_approval.
+		( new ProposalSync() )->sync( $id );
+
+		$proposal = ( new ProposalAdminQuery() )->get( $id );
+		if ( null === $proposal ) {
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_proposal_not_found', 'message' => __( 'Proposal not found.', 'wp-command-center' ) ], 404 );
+		}
+		return new \WP_REST_Response( $proposal, 200 );
+	}
+
+	/** POST /admin/proposals — create a draft (manual seed). */
+	public function proposals_create( \WP_REST_Request $request ): \WP_REST_Response {
+		$args = [
+			'operation_id' => sanitize_text_field( (string) $request->get_param( 'operation_id' ) ),
+			'action'       => sanitize_text_field( (string) $request->get_param( 'action' ) ),
+			'target_type'  => sanitize_text_field( (string) $request->get_param( 'target_type' ) ),
+			'target_id'    => sanitize_text_field( (string) $request->get_param( 'target_id' ) ),
+			'payload'      => (array) $request->get_param( 'payload' ),
+			'proposed_by'  => $this->admin_actor(),
+		];
+		foreach ( [ 'provider', 'model', 'session_id', 'batch_id' ] as $k ) {
+			$v = (string) $request->get_param( $k );
+			if ( '' !== $v ) {
+				$args[ $k ] = sanitize_text_field( $v );
+			}
+		}
+
+		$created = ( new ProposalStore() )->create( $args );
+		return $this->proposal_write_response( $created, 201 );
+	}
+
+	/** PATCH /admin/proposals/{id} — edit final_payload (draft only). */
+	public function proposals_update( \WP_REST_Request $request ): \WP_REST_Response {
+		$id            = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$final_payload = (array) $request->get_param( 'final_payload' );
+		$updated       = ( new ProposalStore() )->update_final_payload( $id, $final_payload );
+		return $this->proposal_write_response( $updated, 200 );
+	}
+
+	/** POST /admin/proposals/{id}/apply — route through ProposalApplyService only. */
+	public function proposals_apply( \WP_REST_Request $request ): \WP_REST_Response {
+		$id      = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$result  = ( new ProposalApplyService() )->apply( $id, [ 'actor' => $this->admin_actor() ] );
+		return $this->proposal_write_response( $result, 200 );
+	}
+
+	/** POST /admin/proposals/{id}/dismiss — route through ProposalStore only. */
+	public function proposals_dismiss( \WP_REST_Request $request ): \WP_REST_Response {
+		$id     = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$result = ( new ProposalStore() )->dismiss( $id );
+		return $this->proposal_write_response( $result, 200 );
+	}
+
+	/** GET /admin/alt-text/scan — read-only Media Library alt-text audit (Task 7A). */
+	public function alt_text_scan( \WP_REST_Request $request ): \WP_REST_Response {
+		$limit   = (int) ( $request->get_param( 'limit' ) ?: 20 );
+		$offset  = (int) ( $request->get_param( 'offset' ) ?: 0 );
+		$filters = [
+			'state'      => sanitize_key( (string) $request->get_param( 'state' ) ?: 'all' ),
+			'with_usage' => rest_sanitize_boolean( $request->get_param( 'with_usage' ) ),
+		];
+		return new \WP_REST_Response( ( new AltTextScanQuery() )->audit( $filters, $limit, $offset ), 200 );
+	}
+
+	/** POST /admin/alt-text/generate — provider suggestion → governed drafts (Task 7C). */
+	public function alt_text_generate( \WP_REST_Request $request ): \WP_REST_Response {
+		$ids = array_map( 'intval', (array) $request->get_param( 'attachment_ids' ) );
+		$result = ( new AltTextGenerator() )->generate( $ids, [ 'actor' => $this->admin_actor() ] );
+		return new \WP_REST_Response( $result, 200 );
+	}
+
+	/** Shape a ProposalStore/ApplyService write result (row or WP_Error) into a response. */
+	private function proposal_write_response( mixed $result, int $ok_status ): \WP_REST_Response {
+		if ( is_wp_error( $result ) ) {
+			return new \WP_REST_Response(
+				[ 'error' => true, 'code' => $result->get_error_code(), 'message' => $result->get_error_message() ],
+				400
+			);
+		}
+		$proposal_id = is_array( $result ) ? (string) ( $result['proposal_id'] ?? '' ) : '';
+		$shaped      = '' !== $proposal_id ? ( new ProposalAdminQuery() )->get( $proposal_id ) : null;
+		return new \WP_REST_Response( $shaped ?? $result, $ok_status );
 	}
 
 	public function list_pending( \WP_REST_Request $request ): \WP_REST_Response {

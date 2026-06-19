@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Schema {
 
-	public const DB_VERSION = '2.4.0';
+	public const DB_VERSION = '2.5.0';
 
 	/**
 	 * Install schema changes when the active plugin code is newer than the
@@ -55,6 +55,7 @@ final class Schema {
 		$recommendations_table = $wpdb->prefix . 'wpcc_recommendations';
 		$health_results_table = $wpdb->prefix . 'wpcc_health_verifications';
 		$change_log_table     = $wpdb->prefix . 'wpcc_change_log';
+		$proposals_table      = $wpdb->prefix . 'wpcc_proposals';
 
 		dbDelta( "CREATE TABLE {$patches_table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -337,6 +338,52 @@ final class Schema {
 			KEY target_key (target_key),
 			KEY session_id (session_id),
 			KEY created_at (created_at)
+		) {$charset_collate};" );
+
+		// STEP 110 (Proposal Store / Governed Drafts) — the canonical "Propose"
+		// stage of the Governed Action contract. Pre-decision staging only: a row
+		// holds a PROPOSED operation + payload and NEVER mutates WordPress. The site
+		// is reached solely by handing final_payload_json to OperationExecutor; the
+		// approval decision lives in wpcc_operation_requests (request_id) and the
+		// applied truth in wpcc_change_log (change_id) — this table only reflects
+		// them. Timestamps are unix seconds (BIGINT), matching wpcc_change_log.
+		dbDelta( "CREATE TABLE {$proposals_table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			proposal_id VARCHAR(36) NOT NULL,
+			batch_id VARCHAR(36) NULL,
+			session_id VARCHAR(36) NULL,
+			operation_id VARCHAR(50) NOT NULL,
+			action VARCHAR(64) NULL,
+			target_type VARCHAR(32) NOT NULL,
+			target_id VARCHAR(64) NULL,
+			payload_json LONGTEXT NOT NULL,
+			prior_json LONGTEXT NULL,
+			final_payload_json LONGTEXT NULL,
+			status VARCHAR(24) NOT NULL,
+			provider VARCHAR(64) NULL,
+			model VARCHAR(96) NULL,
+			confidence DECIMAL(4,3) NULL,
+			proposed_by TEXT NULL,
+			approved_by TEXT NULL,
+			applied_by TEXT NULL,
+			request_id VARCHAR(36) NULL,
+			change_id VARCHAR(36) NULL,
+			risk_level VARCHAR(20) NULL,
+			error_json LONGTEXT NULL,
+			created_at BIGINT UNSIGNED NOT NULL,
+			updated_at BIGINT UNSIGNED NOT NULL,
+			expires_at BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY proposal_id (proposal_id),
+			KEY batch_id (batch_id),
+			KEY session_id (session_id),
+			KEY operation_id (operation_id),
+			KEY status (status),
+			KEY request_id (request_id),
+			KEY change_id (change_id),
+			KEY target (target_type, target_id),
+			KEY created_at (created_at),
+			KEY expires_at (expires_at)
 		) {$charset_collate};" );
 
 		update_option( 'wpcc_db_version', self::DB_VERSION );
