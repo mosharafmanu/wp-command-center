@@ -33,6 +33,14 @@ $api_base = rest_url( 'wp-command-center/v1/admin' );
 			<option value="all"><?php esc_html_e( 'All content', 'wp-command-center' ); ?></option>
 		</select>
 		<span id="wpcc-seo-count" class="wpcc-seo-count" role="status" aria-live="polite"></span>
+		<?php // GA#2 Slice 2b — minimal generate control. Creates governed DRAFTS only; nothing is applied here. ?>
+		<label><input type="checkbox" id="wpcc-seo-selectall"> <?php esc_html_e( 'Select all on this page', 'wp-command-center' ); ?></label>
+		<button type="button" class="button button-primary" id="wpcc-seo-generate" disabled><?php esc_html_e( 'Generate suggestions', 'wp-command-center' ); ?></button>
+		<span class="description"><?php
+			/* translators: %d: max per generation */
+			printf( esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'wp-command-center' ), 25 );
+		?></span>
+		<span id="wpcc-seo-gen-status" role="status" aria-live="polite" style="margin-left:auto;color:#646970;"></span>
 	</div>
 
 	<div id="wpcc-seo-panel">
@@ -89,15 +97,27 @@ $api_base = rest_url( 'wp-command-center/v1/admin' );
 		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'wp-command-center' ) ); ?>,
 		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
-		pageInfo: <?php echo wp_json_encode( __( 'Showing %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>
+		pageInfo: <?php echo wp_json_encode( __( 'Showing %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>,
+		// GA#2 Slice 2b — generation (drafts only).
+		colSel:    <?php echo wp_json_encode( esc_html__( 'Select', 'wp-command-center' ) ); ?>,
+		gen:       <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'wp-command-center' ) ); ?>,
+		generating:<?php echo wp_json_encode( esc_html__( 'Generating…', 'wp-command-center' ) ); ?>,
+		/* translators: %1$d created, %2$d skipped, %3$d failed */
+		genDone:   <?php echo wp_json_encode( __( '%1$d drafts created, %2$d skipped, %3$d failed.', 'wp-command-center' ) ); ?>,
+		genCap:    <?php echo wp_json_encode( esc_html__( 'Up to 25 at a time; only the first 25 are used.', 'wp-command-center' ) ); ?>,
+		genErr:    <?php echo wp_json_encode( esc_html__( 'Generation failed. Please retry.', 'wp-command-center' ) ); ?>
 	};
+	const MAX_BATCH = 25;
 
 	const $ = ( id ) => document.getElementById( id );
 	const esc = ( s ) => String( s == null ? '' : s ).replace( /[&<>"']/g, ( c ) => ( { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ c ] ) );
 	const pg = { limit: LIMIT, offset: 0, total: 0, returned: 0, hasMore: false };
+	let genBusy = false;
 
-	function api( path ) {
-		return fetch( API + path, { headers: { 'X-WP-Nonce': NONCE } } )
+	function api( path, opts ) {
+		opts = opts || {};
+		opts.headers = Object.assign( { 'X-WP-Nonce': NONCE }, opts.headers || {} );
+		return fetch( API + path, opts )
 			.then( ( r ) => r.json().then( ( d ) => ( { ok: r.ok, data: d } ), () => ( { ok: r.ok, data: {} } ) ) );
 	}
 	function setHtml( id, html ) { const el = $( id ); if ( el ) { el.innerHTML = html; } }
@@ -123,6 +143,7 @@ $api_base = rest_url( 'wp-command-center/v1/admin' );
 	function renderTable( items ) {
 		if ( ! items.length ) { setHtml( 'wpcc-seo-panel', '<div class="wpcc-empty">' + esc( STR.empty ) + '</div>' ); return; }
 		let h = '<table class="widefat striped wpcc-seo-table"><thead><tr>' +
+			'<th scope="col" style="width:28px;"><span class="screen-reader-text">' + esc( STR.colSel ) + '</span></th>' +
 			'<th scope="col">' + esc( STR.colPost ) + '</th>' +
 			'<th scope="col">' + esc( STR.colTitle ) + '</th>' +
 			'<th scope="col">' + esc( STR.colDesc ) + '</th>' +
@@ -134,6 +155,7 @@ $api_base = rest_url( 'wp-command-center/v1/admin' );
 				? '<a href="' + esc( it.edit_link ) + '">' + esc( it.title || ( '#' + it.post_id ) ) + '</a>'
 				: esc( it.title || ( '#' + it.post_id ) );
 			h += '<tr>' +
+				'<td><input type="checkbox" class="wpcc-seo-cb" value="' + esc( it.post_id ) + '" aria-label="' + esc( STR.gen ) + '"></td>' +
 				'<th scope="row"><strong>' + titleCell + '</strong><div class="wpcc-seo-meta">' + esc( it.post_type || '' ) + '</div></th>' +
 				'<td class="wpcc-seo-meta">' + metaCell( it.seo_title ) + '</td>' +
 				'<td class="wpcc-seo-meta">' + metaCell( it.seo_description ) + '</td>' +
@@ -143,6 +165,38 @@ $api_base = rest_url( 'wp-command-center/v1/admin' );
 		} );
 		h += '</tbody></table>';
 		setHtml( 'wpcc-seo-panel', h );
+		if ( $( 'wpcc-seo-selectall' ) ) { $( 'wpcc-seo-selectall' ).checked = false; }
+		refreshGenerate();
+	}
+
+	// ---------- GA#2 Slice 2b — generation (governed DRAFTS only) ----------
+	function selectedIds() {
+		return Array.prototype.slice.call( document.querySelectorAll( '.wpcc-seo-cb:checked' ) ).map( ( c ) => parseInt( c.value, 10 ) ).filter( ( n ) => n > 0 );
+	}
+	function refreshGenerate() {
+		const b = $( 'wpcc-seo-generate' ); if ( ! b ) { return; }
+		const n = selectedIds().length;
+		b.disabled = ( n === 0 ) || genBusy;
+		b.textContent = n > 0 ? STR.gen + ' (' + n + ')' : STR.gen;
+		const s = $( 'wpcc-seo-gen-status' ); if ( s && n > MAX_BATCH ) { s.textContent = STR.genCap; }
+	}
+	function generate() {
+		if ( genBusy ) { return; }
+		let ids = selectedIds();
+		if ( ! ids.length ) { return; }
+		if ( ids.length > MAX_BATCH ) { ids = ids.slice( 0, MAX_BATCH ); }
+		genBusy = true; refreshGenerate();
+		const status = $( 'wpcc-seo-gen-status' ); if ( status ) { status.textContent = STR.generating; }
+		api( '/seo/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { post_ids: ids } ) } )
+			.then( ( res ) => {
+				genBusy = false;
+				const d = res.data || {};
+				if ( ! res.ok ) { if ( status ) { status.textContent = STR.genErr; } refreshGenerate(); return; }
+				const c = ( d.created || [] ).length, sk = ( d.skipped || [] ).length, f = ( d.failed || [] ).length;
+				if ( status ) { status.textContent = STR.genDone.replace( '%1$d', c ).replace( '%2$d', sk ).replace( '%3$d', f ); }
+				pg.offset = 0; load(); // reflect items that now have an open proposal
+			} )
+			.catch( () => { genBusy = false; if ( status ) { status.textContent = STR.genErr; } refreshGenerate(); } );
 	}
 
 	function renderPager() {
@@ -186,6 +240,15 @@ $api_base = rest_url( 'wp-command-center/v1/admin' );
 	}
 
 	if ( $( 'wpcc-seo-filter' ) ) { $( 'wpcc-seo-filter' ).addEventListener( 'change', function () { pg.offset = 0; load(); } ); }
+	if ( $( 'wpcc-seo-generate' ) ) { $( 'wpcc-seo-generate' ).addEventListener( 'click', generate ); }
+	if ( $( 'wpcc-seo-selectall' ) ) {
+		$( 'wpcc-seo-selectall' ).addEventListener( 'change', function () {
+			const on = this.checked;
+			document.querySelectorAll( '.wpcc-seo-cb' ).forEach( ( c ) => { c.checked = on; } );
+			refreshGenerate();
+		} );
+	}
+	document.addEventListener( 'change', function ( e ) { if ( e.target.classList && e.target.classList.contains( 'wpcc-seo-cb' ) ) { refreshGenerate(); } } );
 	load();
 } )();
 </script>

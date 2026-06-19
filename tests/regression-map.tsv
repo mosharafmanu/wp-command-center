@@ -45,3 +45,4 @@ core	OperationExecutor|OperationRegistry|AiAgent/RestApi	test-operations-registr
 selection	SelectionResolver|SelectionContract|alt-text/selection|alt_text_selection|ai-alt-text|wpcc-at-sg-matchall|test-selection-resolver	test-selection-resolver.sh	test-selection-resolver.sh,test-alt-text-ui.sh
 seo_audit	SeoAuditQuery|admin/seo/audit|seo_audit|seo-meta|wpcc-seo|seo_meta_generator|seo_meta_ui|check_seo_permission|test-seo-audit	test-seo-audit.sh	test-seo-audit.sh
 ai_transport	AnthropicClient|includes/Ai/|WPCC_ANTHROPIC|wpcc_anthropic|AnthropicVisionProvider|test-anthropic-client	test-anthropic-client.sh	test-anthropic-client.sh
+seo_generate	SeoMetaGenerator|AnthropicSeoProvider|SeoMetaProvider|SeoMetaResult|SeoMetaProviderResolver|seo/generate|seo_generate|test-seo-generate	test-seo-generate.sh	test-seo-generate.sh

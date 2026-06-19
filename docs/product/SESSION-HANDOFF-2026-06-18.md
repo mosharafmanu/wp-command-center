@@ -383,3 +383,33 @@ New: `includes/Ai/AnthropicClient.php`, `tests/test-anthropic-client.sh`. Modifi
 - `tests/run.sh --tier T0 --changed` **96/0 net-new 0** · `--tier T1 --changed` **193/0 net-new 0**
 
 **Next:** Slice 2b (`SeoMetaProvider`/`AnthropicSeoProvider` on `AnthropicClient` + `SeoMetaResult` + `SeoMetaGenerator` → governed drafts via `ProposalStore`, drafts-only, no apply), report-first, on explicit direction. **Slice 2b not started.**
+
+---
+
+# GA#2 SEO Meta Generator — Slice 2b (Governed SEO Draft Generation) — committed locally, NOT pushed
+
+> The second half of Slice 2: AI suggestions → governed DRAFTS on the proposal store. Committed on `main`; **not pushed, not deployed.** Production is at `364011d`.
+
+## What shipped (drafts only)
+- **`SeoMetaResult`** — SEO result value object (ok/error + meta_title + meta_description + provenance).
+- **`SeoMetaProvider`** (interface) + **`AnthropicSeoProvider`** — consumes the shared `AnthropicClient` (Slice 2a); grounded JSON-only prompt; tolerant `extract_meta()` (bare/fenced/embedded JSON; rejects non-JSON/missing-key — never fabricates).
+- **`SeoMetaProviderResolver`** — config-only active-provider selection (non-final test/extension seam).
+- **`SeoMetaGenerator`** — provider → `ProposalStore::create` governed draft (`operation_id=seo_manage`, `action=seo_update`, `payload={action:'seo_update', content_id, seo:{title,description}}`, `prior`={current meta}, provenance, batch_id). **`ProposalStore::create` is the only write.**
+- **`POST /admin/seo/generate`** (CREATABLE, `check_seo_permission`) + minimal Generate control on the Slice-1 view (per-row select; reports created/skipped/failed).
+
+## Hard boundaries (architecture-verified pre-commit)
+- **Explicit `post_ids[]` only.** Handler reads solely `post_ids`; generator's id set = that array, deduped, capped at **`MAX_BATCH=25`**. No criteria/filter/state/"all-matching" generation, **no `SelectionResolver` integration**, no cross-page generation, no audit-filter→server-side expansion. No path creates drafts without explicit ids.
+- **Drafts only:** no `seo_update` execution, no `SeoProvider::write`, no `OperationExecutor`/`ProposalApplyService`, no apply, no undo, no approval, no bulk, no site write.
+- Two preconditions degrade gracefully (skip): SEO plugin active (`no_seo_plugin`) and AI provider configured (`no_provider`). Per-item failure never aborts the run.
+
+## Invariants (unchanged)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (no operation/capability/MCP/schema change; drafts are rows in existing `wpcc_proposals`).
+
+## Files (10)
+New: `includes/Seo/SeoMetaResult.php`, `includes/Seo/SeoMetaProvider.php`, `includes/Seo/AnthropicSeoProvider.php`, `includes/Seo/SeoMetaProviderResolver.php`, `includes/Seo/SeoMetaGenerator.php`, `tests/test-seo-generate.sh`. Modified: `includes/Admin/AdminRestApi.php` (route+handler), `includes/Admin/views/seo-meta.php` (Generate control), `tests/test-seo-audit.sh` (section-4 guards updated for the drafts control), `tests/regression-map.tsv` (+`seo_generate` group).
+
+## Testing
+- `test-seo-generate.sh` **46/0** (stub provider — no real API call) · `test-seo-audit.sh` **55/0**
+- `tests/run.sh --tier T0 --changed` **167/0 net-new 0** · `--tier T1 --changed` **264/0 net-new 0**
+
+**Next:** Slice 3 (review/edit/dismiss UI over the existing proposal routes), report-first, on explicit direction. **Slice 3 not started.** Live provider quality (real Anthropic JSON) still needs a manual validation step before relying on real suggestions; prod has no Anthropic key configured.

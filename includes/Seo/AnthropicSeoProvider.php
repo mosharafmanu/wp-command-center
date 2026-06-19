@@ -1,0 +1,132 @@
+<?php
+/**
+ * STEP 111 — GA#2 Slice 2b: BYO-key Anthropic SEO meta provider.
+ *
+ * The first concrete SeoMetaProvider. It is a pure TEXT suggestion source: it owns
+ * the SEO prompt + the JSON response parsing, and delegates the outbound call,
+ * key/model resolution, timeout, and redaction to the shared AnthropicClient
+ * (Slice 2a). It returns suggestions as a SeoMetaResult — never throws.
+ *
+ * Strict boundaries — this class NEVER:
+ *   - writes WordPress data (no post/meta/option writes),
+ *   - touches ProposalStore / ProposalApplyService / OperationExecutor / SeoProvider::write,
+ *   - performs the HTTP call itself (the shared client does, and redacts errors).
+ */
+
+namespace WPCommandCenter\Seo;
+
+use WPCommandCenter\Ai\AnthropicClient;
+
+defined( 'ABSPATH' ) || exit;
+
+final class AnthropicSeoProvider implements SeoMetaProvider {
+
+	private const DEFAULT_MODEL = 'claude-sonnet-4-6'; // short structured output; cost/quality balance
+	private const MAX_TOKENS    = 400;
+
+	/** Advisory length guidance in the prompt (mirrors SeoRuntimeManager thresholds). */
+	private const TITLE_MAX = 60;
+	private const DESC_MIN  = 120;
+	private const DESC_MAX  = 160;
+
+	private AnthropicClient $client;
+
+	public function __construct( ?AnthropicClient $client = null ) {
+		$this->client = $client ?? new AnthropicClient();
+	}
+
+	public function id(): string {
+		return 'anthropic';
+	}
+
+	public function is_configured(): bool {
+		return $this->client->is_configured();
+	}
+
+	public function suggest_meta( array $content, array $context = [] ): SeoMetaResult {
+		$model = $this->client->model( self::DEFAULT_MODEL );
+
+		if ( ! $this->client->is_configured() ) {
+			return SeoMetaResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $this->id(), $model );
+		}
+
+		$messages = [
+			[
+				'role'    => 'user',
+				'content' => [
+					[ 'type' => 'text', 'text' => $this->prompt( $content ) ],
+				],
+			],
+		];
+
+		$res = $this->client->send( $messages, self::MAX_TOKENS, $model );
+
+		if ( empty( $res['ok'] ) ) {
+			return SeoMetaResult::error( (string) ( $res['code'] ?? 'request_failed' ), (string) ( $res['message'] ?? '' ), $this->id(), $model );
+		}
+
+		$parsed = self::extract_meta( (string) ( $res['text'] ?? '' ) );
+		if ( null === $parsed ) {
+			return SeoMetaResult::error( 'invalid_response', __( 'The provider did not return valid SEO meta JSON.', 'wp-command-center' ), $this->id(), $model );
+		}
+
+		return SeoMetaResult::ok( $parsed['meta_title'], $parsed['meta_description'], $this->id(), $model );
+	}
+
+	/**
+	 * Tolerant JSON extraction: accepts a bare JSON object, a ```json fenced block,
+	 * or JSON embedded in prose (first "{" … last "}"). Requires both keys to be
+	 * non-empty strings; returns null otherwise (never fabricates).
+	 *
+	 * @return array{meta_title:string,meta_description:string}|null
+	 */
+	public static function extract_meta( string $text ): ?array {
+		$text = trim( $text );
+		if ( '' === $text ) {
+			return null;
+		}
+
+		$decoded = json_decode( $text, true );
+		if ( ! is_array( $decoded ) ) {
+			// Strip a leading/trailing markdown fence, then try the first {...} span.
+			$start = strpos( $text, '{' );
+			$end   = strrpos( $text, '}' );
+			if ( false === $start || false === $end || $end <= $start ) {
+				return null;
+			}
+			$decoded = json_decode( substr( $text, $start, $end - $start + 1 ), true );
+			if ( ! is_array( $decoded ) ) {
+				return null;
+			}
+		}
+
+		$title = isset( $decoded['meta_title'] ) && is_string( $decoded['meta_title'] ) ? trim( $decoded['meta_title'] ) : '';
+		$desc  = isset( $decoded['meta_description'] ) && is_string( $decoded['meta_description'] ) ? trim( $decoded['meta_description'] ) : '';
+		if ( '' === $title || '' === $desc ) {
+			return null;
+		}
+
+		return [ 'meta_title' => $title, 'meta_description' => $desc ];
+	}
+
+	/** Build the grounded, JSON-only prompt for one page. */
+	private function prompt( array $content ): string {
+		$title        = wp_strip_all_tags( (string) ( $content['title'] ?? '' ) );
+		$excerpt      = wp_strip_all_tags( (string) ( $content['content'] ?? '' ) );
+		$cur_title    = wp_strip_all_tags( (string) ( $content['current_title'] ?? '' ) );
+		$cur_desc     = wp_strip_all_tags( (string) ( $content['current_description'] ?? '' ) );
+
+		$rules = sprintf(
+			'You are an SEO assistant. Write an SEO meta title and meta description for the page below. Rules: meta_title at most %1$d characters; meta_description between %2$d and %3$d characters; describe ONLY what the content actually says (do not invent facts, prices, or claims); match the content language; no clickbait; no surrounding quotes. Return ONLY a JSON object of the exact shape {"meta_title": "...", "meta_description": "..."} with no markdown and no preamble.',
+			self::TITLE_MAX,
+			self::DESC_MIN,
+			self::DESC_MAX
+		);
+
+		return $rules
+			. "\n\nPage title: " . $title
+			. "\nExisting SEO title: " . $cur_title
+			. "\nExisting meta description: " . $cur_desc
+			. "\nContent:\n" . $excerpt;
+	}
+}

@@ -66,7 +66,7 @@ has  "menu slug wpcc-seo"                  "'wpcc-seo'"          "$MENU"
 has  "render method present"               "function render_seo_meta" "$MENU"
 
 echo
-echo "== 4. View: read-only, escaped, NO generation/apply controls =="
+echo "== 4. View: escaped, paginated; generation = drafts only (Slice 2b), NO apply/undo =="
 has  "HTML escaper present"                "const esc"           "$VIEW"
 has  "uses REST nonce"                     "X-WP-Nonce"          "$VIEW"
 has  "fetches /seo/audit"                  "/seo/audit"          "$VIEW"
@@ -74,9 +74,11 @@ has  "filter (missing/weak/all)"           "wpcc-seo-filter"     "$VIEW"
 has  "Prev/Next pager"                     "wpcc-seo-pager"      "$VIEW"
 has  "no-plugin empty-state"               "provider_available"  "$VIEW"
 has  "consumes canonical items[]"          "d.items"             "$VIEW"
-lacks "no Generate control"                "Generate"            "$VIEW"
+# Slice 2b: generation control creates DRAFTS via /seo/generate; still NO apply/undo.
+has  "generate control (drafts) present"   "wpcc-seo-generate"   "$VIEW"
+has  "generation posts to /seo/generate"   "/seo/generate"       "$VIEW"
 lacks "no Apply control"                   "/apply"             "$VIEW"
-lacks "no proposal creation in view"       "/proposals"          "$VIEW"
+lacks "no proposal apply route in view"    "/proposals/"         "$VIEW"
 lacks "no Undo control"                    "rollback"            "$VIEW"
 
 echo

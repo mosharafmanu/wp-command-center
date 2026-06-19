@@ -27,6 +27,7 @@ use WPCommandCenter\Proposals\ProposalSync;
 use WPCommandCenter\AltText\AltTextScanQuery;
 use WPCommandCenter\AltText\AltTextGenerator;
 use WPCommandCenter\Seo\SeoAuditQuery;
+use WPCommandCenter\Seo\SeoMetaGenerator;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -354,6 +355,15 @@ final class AdminRestApi {
 			'callback'            => [ $this, 'seo_audit' ],
 			'permission_callback' => [ $this, 'check_seo_permission' ],
 		] );
+
+		// STEP 111 — GA#2 Slice 2b: SEO meta generation. CREATABLE: produces governed
+		// DRAFTS only (AI suggestion → ProposalStore::create with a seo_manage/seo_update
+		// payload). It never applies and never mutates the site. Delegates to SeoMetaGenerator.
+		register_rest_route( self::NS, '/admin/seo/generate', [
+			'methods'             => \WP_REST_Server::CREATABLE,
+			'callback'            => [ $this, 'seo_generate' ],
+			'permission_callback' => [ $this, 'check_seo_permission' ],
+		] );
 	}
 
 	/**
@@ -557,6 +567,13 @@ final class AdminRestApi {
 		[ $limit, $offset ] = $this->list_paging( $request );
 		$filters = [ 'state' => sanitize_key( (string) $request->get_param( 'state' ) ?: 'all' ) ];
 		return new \WP_REST_Response( ( new SeoAuditQuery() )->audit( $filters, $limit, $offset ), 200 );
+	}
+
+	/** POST /admin/seo/generate — AI suggestion → governed SEO drafts (GA#2 Slice 2b). */
+	public function seo_generate( \WP_REST_Request $request ): \WP_REST_Response {
+		$ids    = array_map( 'intval', (array) $request->get_param( 'post_ids' ) );
+		$result = ( new SeoMetaGenerator() )->generate( $ids, [ 'actor' => $this->admin_actor() ] );
+		return new \WP_REST_Response( $result, 200 );
 	}
 
 	/** POST /admin/alt-text/generate — provider suggestion → governed drafts (Task 7C). */
