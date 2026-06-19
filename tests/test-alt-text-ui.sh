@@ -106,6 +106,15 @@ $emit('per-item failure isolation (failed row keeps a message)', strpos($html,'c
 $emit('mode-aware bulk confirm (dev vs gate)', strpos($html,'confirmApplyDev')!==false && strpos($html,'confirmApplyGate')!==false);
 $emit('batch-scoped review via batch_id grouping key', strpos($html,'wpcc-at-sg-scope')!==false && strpos($html,'lastRunBatchIds')!==false);
 
+// 8a. S2.2.1 — cross-page "select all matching" (server-resolved, bounded)
+$emit('select-all-matching control present', strpos($html,'wpcc-at-sg-matchall')!==false);
+$emit('resolves server-side via /alt-text/selection', strpos($html,'/alt-text/selection')!==false);
+$emit('re-resolves at action time', strpos($html,'resolveMatching')!==false);
+$emit('over-cap refusal surfaced (not truncated)', strpos($html,'matchOverCap')!==false);
+$emit('feeds existing per-item loops (runApply/runDismiss)', strpos($html,'runApply')!==false && strpos($html,'runDismiss')!==false);
+$emit('match-all is stateless (no persisted selection id)', strpos($html,'selection_id')===false && strpos($html,'saved_selection')===false);
+$emit('no batch endpoint / batch primitive in view', strpos($html,'/batch')===false && strpos($html,'batch_apply')===false);
+
 // 7. No proposal internals DISPLAYED (ids only as opaque data-* handles)
 $emit('no payload_json shown', strpos($html,'payload_json')===false);
 $emit('no request_id referenced', strpos($html,'request_id')===false);

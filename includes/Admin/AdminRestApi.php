@@ -332,6 +332,17 @@ final class AdminRestApi {
 			'callback'            => [ $this, 'alt_text_generate' ],
 			'permission_callback' => [ $this, 'check_alt_text_permission' ],
 		] );
+
+		// STEP 111 (S2.2.1) — selection resolve. READABLE only: resolves a stateless
+		// "select all matching" criteria into a BOUNDED, capability-scoped id set via
+		// the read-only SelectionResolver. It NEVER writes, never applies, never
+		// persists a selection — the ids it returns are fed to the EXISTING per-item
+		// apply/dismiss routes by the client. No new operation/capability/MCP tool.
+		register_rest_route( self::NS, '/admin/alt-text/selection', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'alt_text_selection' ],
+			'permission_callback' => [ $this, 'check_alt_text_permission' ],
+		] );
 	}
 
 	/**
@@ -528,6 +539,36 @@ final class AdminRestApi {
 	public function alt_text_generate( \WP_REST_Request $request ): \WP_REST_Response {
 		$ids = array_map( 'intval', (array) $request->get_param( 'attachment_ids' ) );
 		$result = ( new AltTextGenerator() )->generate( $ids, [ 'actor' => $this->admin_actor() ] );
+		return new \WP_REST_Response( $result, 200 );
+	}
+
+	/**
+	 * GET /admin/alt-text/selection — S2.2.1 read-only "select all matching" resolve.
+	 *
+	 * Resolves the alt-text draft selection (criteria: media_manage drafts, or an
+	 * explicit id set) into a BOUNDED, capability-scoped id list. Read-only: the
+	 * client feeds the returned ids to the EXISTING per-item apply/dismiss routes.
+	 * The criteria filter is fixed server-side to this surface's own scope; the
+	 * caller cannot widen it to other operations.
+	 */
+	public function alt_text_selection( \WP_REST_Request $request ): \WP_REST_Response {
+		$by = sanitize_key( (string) $request->get_param( 'by' ) ?: SelectionContract::BY_CRITERIA );
+
+		$contract = SelectionContract::from_array( [
+			'by'      => $by,
+			'ids'     => array_map( 'strval', (array) $request->get_param( 'ids' ) ),
+			// Fixed to this surface's governed scope — never caller-supplied.
+			'filters' => [ 'operation_id' => 'media_manage', 'status' => ProposalStore::STATUS_DRAFT ],
+			'cap'     => SelectionResolver::MAX_SELECTION,
+		] );
+		if ( is_wp_error( $contract ) ) {
+			return new \WP_REST_Response(
+				[ 'error' => true, 'code' => $contract->get_error_code(), 'message' => $contract->get_error_message() ],
+				400
+			);
+		}
+
+		$result = ( new SelectionResolver() )->resolve( $contract, [ 'allowed_operations' => [ 'media_manage' ] ] );
 		return new \WP_REST_Response( $result, 200 );
 	}
 

@@ -238,3 +238,40 @@ OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **4
 - **Production remains at `3c37cbf`.** S2.1 **not deployed** (and Task 8.4 not deployed). Builder UIs stay build-flag OFF either way.
 
 **Next:** S2.2 (cross-page server-side selection) only on explicit direction — it is the unlock for cross-page bulk; design as select-by-criteria → bounded, capability-scoped, server-resolved id set → existing per-item governed action (no batch primitive).
+
+> **Deploy status update:** Task 8.4 + S2.1 were subsequently **released to production** — prod HEAD = **`9259c7e`** (`git describe` v0.109.0-8-g9259c7e), pull-cron verified, invariants 34/23/40/40/2.5.0, Builder UIs still build-flag OFF. (The "Production remains at 3c37cbf" line above reflects the moment those commits were made, not the later deploy.)
+
+---
+
+# STEP 112 — S2.2.1 Cross-Page Server-Side Selection (committed locally, NOT pushed)
+
+> The S2.2 "smallest safe slice" from the S2.2 architecture review. Committed on `main`; **not pushed, not deployed.** Production is at `9259c7e`.
+
+## What shipped
+A **stateless, read-only selection primitive** that turns "select all matching {filter}" into a bounded, capability-scoped id set — feeding the **existing** per-item governed apply/dismiss. No new operation/capability/MCP tool/schema/persistence/authority/write path.
+
+- **`SelectionContract`** (`includes/Admin/SelectionContract.php`) — stateless value object: `by = ids | criteria`, `filters` (snapshot), `cap` clamped to `HARD_CAP = 100`. Validates `by`; never persisted; no selection table.
+- **`SelectionResolver`** (`includes/Admin/SelectionResolver.php`) — **read-only** resolver over the **existing `ProposalStore`** source (`count()`/`list()` only). **Bounded:** when matches exceed `min(cap, MAX_SELECTION = 100)` it **REFUSES** (`over_cap`, empty ids) rather than truncating into a partial mass action. **Capability-scoped:** criteria for an operation outside the caller's `allowed_operations` resolve to nothing. **Whitelisted filters** (`operation_id/status/target_type/batch_id`) — no arbitrary column injection. No alt-text/media literals (surface-agnostic).
+- **Route** — `GET /admin/alt-text/selection` (**READABLE only**), gated by the existing `check_alt_text_permission`. Criteria are **fixed server-side** to this surface (`media_manage` drafts); the caller cannot widen scope. AI Alt Text is the **only** wired consumer.
+- **AI Alt Text UI** — a "Select all matching" control resolves server-side, previews the count (or shows over-cap refusal / empty), and **persists a cross-page selection across paging**. On Apply/Dismiss it **RE-RESOLVES at action time** and feeds the fresh, bounded id set into the existing per-item `runApply`/`runDismiss` loops. Per-page selection and match-all are mutually exclusive.
+
+## Architecture posture (sanity-reviewed pre-commit)
+`SelectionContract` is fully generic; `SelectionResolver` is reusable **unmodified by any proposal-backed governed action** (pass its own `operation_id` + `allowed_operations`). AI Alt Text coupling is **isolated to the route + UI** (the resolver has zero alt-text knowledge). A `SelectionSource` abstraction (for non-proposal sources) is deliberately **deferred to the second consumer** (extract-on-second-use, not speculative generality).
+
+## Four Guarantees — preserved (per item)
+Approval (each resolved id → existing per-item apply → its own `pending_approval` in gated modes; **no batch approval**) · Rollback (per-`change_id`; **no batch rollback**) · Audit (existing chokepoint) · Capability scoping (resolver scope + per-item `OperationExecutor`). Bounded execution via `MAX_SELECTION`; re-resolution at action time so actions run against current governed truth.
+
+## Explicitly NOT built (deferred)
+Persisted/server-materialized selections · saved selections · batch approval · batch rollback · async queue · selection on Approval Center / Change History · a `SelectionSource` source-abstraction.
+
+## Invariants (unchanged, live-verified)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (`Schema.php` untouched; no migration; no new table).
+
+## Files (7)
+New: `includes/Admin/SelectionContract.php`, `includes/Admin/SelectionResolver.php`, `tests/test-selection-resolver.sh`. Modified: `includes/Admin/AdminRestApi.php` (read route + handler), `includes/Admin/views/ai-alt-text.php` (select-all-matching + id-list bulk loops), `tests/test-alt-text-ui.sh` (+7), `tests/regression-map.tsv` (+`selection` group).
+
+## Testing
+- `test-selection-resolver.sh` **48/0** · `test-alt-text-ui.sh` **76/0**
+- `tests/run.sh --tier T0 --changed` **89/0 net-new 0** · `--tier T1 --changed` **541/0 net-new 0** (15 suites)
+
+**Next:** deploy decision for S2.2.1, or the next S2.2 increment (server-materialized/saved selections, or extend the resolver to a second governed action) — report-first, on explicit direction.

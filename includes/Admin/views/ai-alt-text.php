@@ -114,7 +114,10 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 			<label><input type="checkbox" id="wpcc-at-sg-selectall"> <?php esc_html_e( 'Select all on this page', 'wp-command-center' ); ?></label>
 			<button type="button" class="button button-primary" id="wpcc-at-sg-apply" disabled><?php esc_html_e( 'Apply selected', 'wp-command-center' ); ?></button>
 			<button type="button" class="button" id="wpcc-at-sg-dismiss" disabled><?php esc_html_e( 'Dismiss selected', 'wp-command-center' ); ?></button>
+			<?php // S2.2.1 — cross-page "select all matching": server resolves a bounded id set; bulk acts over it. ?>
+			<button type="button" class="button" id="wpcc-at-sg-matchall"><?php esc_html_e( 'Select all matching', 'wp-command-center' ); ?></button>
 		</div>
+		<div id="wpcc-at-sg-matchall-bar" role="status" aria-live="polite" style="display:none;margin:6px 0;padding:8px 10px;border:1px solid #c3c4c7;background:#f6f7f7;border-radius:4px;font-size:13px;"></div>
 		<div id="wpcc-at-sg-progress" role="status" aria-live="polite" style="display:none;margin:8px 0;padding:10px;border:1px solid #c3c4c7;background:#fff;border-radius:4px;"></div>
 
 		<table class="widefat striped">
@@ -217,7 +220,21 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		// Confirm dialogs use plain text (not HTML-escaped) — they are not injected into the DOM.
 		confirmApplyDev:  <?php echo wp_json_encode( __( 'Apply the selected suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
 		confirmApplyGate: <?php echo wp_json_encode( __( 'Submit the selected suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
-		confirmDismiss:   <?php echo wp_json_encode( __( 'Dismiss the selected suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>
+		confirmDismiss:   <?php echo wp_json_encode( __( 'Dismiss the selected suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>,
+		// S2.2.1 — cross-page "select all matching".
+		resolving:    <?php echo wp_json_encode( esc_html__( 'Resolving…', 'wp-command-center' ) ); ?>,
+		matchClear:   <?php echo wp_json_encode( esc_html__( 'Clear', 'wp-command-center' ) ); ?>,
+		matchNone:    <?php echo wp_json_encode( esc_html__( 'No matching draft suggestions.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of matching draft suggestions */
+		matchSelected: <?php echo wp_json_encode( __( 'All %d matching draft suggestions selected (across pages).', 'wp-command-center' ) ); ?>,
+		/* translators: %1$d: number of matches, %2$d: per-action cap */
+		matchOverCap: <?php echo wp_json_encode( __( '%1$d matches exceed the limit of %2$d. Narrow the view or act in pages.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of matching suggestions */
+		confirmApplyAllDev:  <?php echo wp_json_encode( __( 'Apply all %d matching suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of matching suggestions */
+		confirmApplyAllGate: <?php echo wp_json_encode( __( 'Submit all %d matching suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of matching suggestions */
+		confirmDismissAll:   <?php echo wp_json_encode( __( 'Dismiss all %d matching suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );
@@ -348,6 +365,8 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 	let lastRunBatchIds = new Set(); // batch_ids produced by the most recent Generate run.
 	let sgScope = 'all';             // 'all' | 'last' (filters the draft view by the last run's batches).
 	let sgBusy  = false;             // true while a bulk Apply/Dismiss run is in flight.
+	// S2.2.1 — cross-page "select all matching" state (stateless: resolved server-side, never persisted).
+	let matchAll = { active: false, count: 0 };
 
 	function loadSuggestions() {
 		$( 'wpcc-at-sg-rows' ).innerHTML = '<tr><td colspan="6">' + esc( STR.loading ) + '</td></tr>';
@@ -420,19 +439,28 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 	// No new endpoint, no batch object, no batch approval, no batch rollback, no new
 	// write path. Each item is governed individually (its own capability check,
 	// approval gate, change record, rollback). Per-item failure NEVER aborts the run.
-	function sgSelectedRows() {
+	// Selected proposal_ids on the current page (DOM checkboxes).
+	function sgSelectedIds() {
 		return Array.prototype.slice.call(
 			document.querySelectorAll( '#wpcc-at-sg-rows .wpcc-at-sg-cb:checked' )
-		).map( ( c ) => ( c.closest ? c.closest( 'tr[data-id]' ) : null ) ).filter( Boolean );
+		).map( ( c ) => ( c.closest ? c.closest( 'tr[data-id]' ) : null ) ).filter( Boolean )
+		 .map( ( r ) => r.getAttribute( 'data-id' ) );
+	}
+	// Find a rendered row for an id (may be null for an off-page id under match-all).
+	function rowById( id ) {
+		const rows = document.querySelectorAll( '#wpcc-at-sg-rows tr[data-id]' );
+		for ( let i = 0; i < rows.length; i++ ) { if ( rows[ i ].getAttribute( 'data-id' ) === id ) { return rows[ i ]; } }
+		return null;
 	}
 	function sgRefreshBulk() {
-		const n = sgSelectedRows().length;
 		const ap = $( 'wpcc-at-sg-apply' ), di = $( 'wpcc-at-sg-dismiss' );
 		if ( ! ap || ! di ) { return; }
+		const n = matchAll.active ? matchAll.count : sgSelectedIds().length;
 		ap.disabled = ( n === 0 ) || sgBusy;
 		di.disabled = ( n === 0 ) || sgBusy;
 		ap.textContent = n > 0 ? STR.applySel + ' (' + n + ')' : STR.applySel;
 		di.textContent = n > 0 ? STR.dismissSel + ' (' + n + ')' : STR.dismissSel;
+		const mb = $( 'wpcc-at-sg-matchall' ); if ( mb ) { mb.disabled = sgBusy; }
 	}
 	function sgProgress( text ) {
 		const p = $( 'wpcc-at-sg-progress' );
@@ -440,39 +468,39 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		p.style.display = 'block';
 		p.textContent = text;
 	}
-	// Process rows one at a time (sequential); isolate per-item failure.
-	function runSequential( rows, worker, onEach, onDone ) {
+	// Process ids one at a time (sequential); isolate per-item failure.
+	function runSequentialIds( ids, worker, onEach, onDone ) {
 		let i = 0;
 		( function step() {
-			if ( i >= rows.length ) { onDone(); return; }
-			const row = rows[ i ];
-			worker( row ).then( ( outcome ) => { onEach( row, outcome ); i++; step(); } );
+			if ( i >= ids.length ) { onDone(); return; }
+			const id = ids[ i ];
+			worker( id ).then( ( outcome ) => { onEach( id, outcome ); i++; step(); } );
 		} )();
 	}
-	function bulkApply() {
-		const rows = sgSelectedRows();
-		if ( ! rows.length || sgBusy ) { return; }
-		if ( ! window.confirm( IS_DEV ? STR.confirmApplyDev : STR.confirmApplyGate ) ) { return; }
+
+	// Shared sequential apply over an explicit id list (per-page OR match-all).
+	// Each id → existing per-proposal /apply (governed individually). DOM row updated
+	// when present (current page); ids beyond the page just tally. after() runs on done.
+	function runApply( ids, after ) {
 		sgBusy = true; sgRefreshBulk();
-		const total = rows.length;
+		const total = ids.length;
 		let processed = 0, applied = 0, pending = 0, failed = 0;
 		const tick = () => sgProgress( STR.bulkProcessing + ' ' + processed + '/' + total + ' — ' +
 			applied + ' ' + STR.lblApplied + ', ' + pending + ' ' + STR.lblPending + ', ' + failed + ' ' + STR.lblFailed );
 		tick();
-		runSequential( rows,
-			( row ) => {
-				const id  = row.getAttribute( 'data-id' );
-				const msg = row.querySelector( '.wpcc-at-rowmsg' );
+		runSequentialIds( ids,
+			( id ) => {
+				const row = rowById( id ); const msg = row ? row.querySelector( '.wpcc-at-rowmsg' ) : null;
 				if ( msg ) { msg.textContent = '…'; }
 				return wpcc( '/proposals/' + encodeURIComponent( id ) + '/apply', { method: 'POST' } )
 					.then( ( res ) => ( { st: ( res.data && res.data.status ) || '' } ) )
 					.catch( () => ( { st: '' } ) );
 			},
-			( row, outcome ) => {
+			( id, outcome ) => {
 				processed++;
-				const msg = row.querySelector( '.wpcc-at-rowmsg' );
-				if ( outcome.st === 'applied' ) { applied++; if ( row.parentNode ) { row.parentNode.removeChild( row ); } }
-				else if ( outcome.st === 'pending_approval' ) { pending++; if ( row.parentNode ) { row.parentNode.removeChild( row ); } }
+				const row = rowById( id ); const msg = row ? row.querySelector( '.wpcc-at-rowmsg' ) : null;
+				if ( outcome.st === 'applied' ) { applied++; if ( row && row.parentNode ) { row.parentNode.removeChild( row ); } }
+				else if ( outcome.st === 'pending_approval' ) { pending++; if ( row && row.parentNode ) { row.parentNode.removeChild( row ); } }
 				else { failed++; if ( msg ) { msg.textContent = STR.cantApply; } }
 				tick();
 			},
@@ -482,32 +510,29 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 					pending + ' ' + STR.lblPending + ', ' + failed + ' ' + STR.lblFailed + '.' );
 				if ( $( 'wpcc-at-sg-selectall' ) ) { $( 'wpcc-at-sg-selectall' ).checked = false; }
 				sgRefreshBulk();
+				if ( after ) { after(); }
 			}
 		);
 	}
-	function bulkDismiss() {
-		const rows = sgSelectedRows();
-		if ( ! rows.length || sgBusy ) { return; }
-		if ( ! window.confirm( STR.confirmDismiss ) ) { return; }
+	function runDismiss( ids, after ) {
 		sgBusy = true; sgRefreshBulk();
-		const total = rows.length;
+		const total = ids.length;
 		let processed = 0, dismissed = 0, failed = 0;
 		const tick = () => sgProgress( STR.bulkProcessing + ' ' + processed + '/' + total + ' — ' +
 			dismissed + ' ' + STR.lblDismissed + ', ' + failed + ' ' + STR.lblFailed );
 		tick();
-		runSequential( rows,
-			( row ) => {
-				const id  = row.getAttribute( 'data-id' );
-				const msg = row.querySelector( '.wpcc-at-rowmsg' );
+		runSequentialIds( ids,
+			( id ) => {
+				const row = rowById( id ); const msg = row ? row.querySelector( '.wpcc-at-rowmsg' ) : null;
 				if ( msg ) { msg.textContent = '…'; }
 				return wpcc( '/proposals/' + encodeURIComponent( id ) + '/dismiss', { method: 'POST' } )
 					.then( ( res ) => ( { ok: !! res.ok } ) )
 					.catch( () => ( { ok: false } ) );
 			},
-			( row, outcome ) => {
+			( id, outcome ) => {
 				processed++;
-				const msg = row.querySelector( '.wpcc-at-rowmsg' );
-				if ( outcome.ok ) { dismissed++; if ( row.parentNode ) { row.parentNode.removeChild( row ); } }
+				const row = rowById( id ); const msg = row ? row.querySelector( '.wpcc-at-rowmsg' ) : null;
+				if ( outcome.ok ) { dismissed++; if ( row && row.parentNode ) { row.parentNode.removeChild( row ); } }
 				else { failed++; if ( msg ) { msg.textContent = STR.error; } }
 				tick();
 			},
@@ -516,8 +541,84 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 				sgProgress( total + ' ' + STR.bulkDone + ' — ' + dismissed + ' ' + STR.lblDismissed + ', ' + failed + ' ' + STR.lblFailed + '.' );
 				if ( $( 'wpcc-at-sg-selectall' ) ) { $( 'wpcc-at-sg-selectall' ).checked = false; }
 				sgRefreshBulk();
+				if ( after ) { after(); }
 			}
 		);
+	}
+
+	// ---------- S2.2.1 — cross-page "select all matching" ----------
+	// Stateless: the server resolves the criteria into a BOUNDED, capability-scoped
+	// id set (GET /alt-text/selection). The UI only previews the count and, at action
+	// time, RE-RESOLVES and feeds the fresh ids into the existing per-item loops.
+	function resolveMatching() {
+		return wpcc( '/alt-text/selection?by=criteria' ).then( ( res ) => {
+			const d = res.data || {};
+			return { ids: d.ids || [], total: ( d.total_matched != null ? d.total_matched : 0 ), over_cap: !! d.over_cap, cap: d.cap || 0 };
+		} ).catch( () => ( { ids: [], total: 0, over_cap: false, cap: 0, error: true } ) );
+	}
+	function overCapText( total, cap ) { return STR.matchOverCap.replace( '%1$d', total ).replace( '%2$d', cap ); }
+	function renderMatchBar() {
+		const bar = $( 'wpcc-at-sg-matchall-bar' ); if ( ! bar ) { return; }
+		bar.style.display = 'block';
+		bar.innerHTML = esc( STR.matchSelected.replace( '%d', matchAll.count ) ) +
+			' <button type="button" class="button-link" id="wpcc-at-sg-matchclear">' + esc( STR.matchClear ) + '</button>';
+		const c = $( 'wpcc-at-sg-matchclear' ); if ( c ) { c.addEventListener( 'click', clearMatchAll ); }
+	}
+	function clearMatchAll() {
+		matchAll.active = false; matchAll.count = 0;
+		const bar = $( 'wpcc-at-sg-matchall-bar' ); if ( bar ) { bar.style.display = 'none'; bar.textContent = ''; }
+		sgRefreshBulk();
+	}
+	function selectAllMatching() {
+		if ( sgBusy ) { return; }
+		const bar = $( 'wpcc-at-sg-matchall-bar' );
+		if ( bar ) { bar.style.display = 'block'; bar.textContent = STR.resolving; }
+		resolveMatching().then( ( r ) => {
+			if ( r.error ) { matchAll.active = false; if ( bar ) { bar.textContent = STR.error; } sgRefreshBulk(); return; }
+			if ( r.over_cap ) { matchAll.active = false; if ( bar ) { bar.textContent = overCapText( r.total, r.cap ); } sgRefreshBulk(); return; }
+			if ( ! r.total ) { matchAll.active = false; if ( bar ) { bar.textContent = STR.matchNone; } sgRefreshBulk(); return; }
+			matchAll.active = true; matchAll.count = r.total;
+			// Clear any page selection to avoid an ambiguous mixed selection.
+			if ( $( 'wpcc-at-sg-selectall' ) ) { $( 'wpcc-at-sg-selectall' ).checked = false; }
+			document.querySelectorAll( '#wpcc-at-sg-rows .wpcc-at-sg-cb' ).forEach( ( c ) => { c.checked = false; } );
+			renderMatchBar();
+			sgRefreshBulk();
+		} );
+	}
+
+	// Apply/Dismiss dispatchers: match-all RE-RESOLVES at action time; else uses the
+	// current page's checked ids. Both feed the same governed per-item loops.
+	function bulkApply() {
+		if ( sgBusy ) { return; }
+		if ( matchAll.active ) {
+			if ( ! window.confirm( ( IS_DEV ? STR.confirmApplyAllDev : STR.confirmApplyAllGate ).replace( '%d', matchAll.count ) ) ) { return; }
+			sgProgress( STR.resolving );
+			resolveMatching().then( ( r ) => {
+				if ( r.over_cap || ! r.ids.length ) { sgProgress( r.over_cap ? overCapText( r.total, r.cap ) : STR.matchNone ); clearMatchAll(); return; }
+				runApply( r.ids, () => { clearMatchAll(); sOffset = 0; loadSuggestions(); } );
+			} );
+			return;
+		}
+		const ids = sgSelectedIds();
+		if ( ! ids.length ) { return; }
+		if ( ! window.confirm( IS_DEV ? STR.confirmApplyDev : STR.confirmApplyGate ) ) { return; }
+		runApply( ids );
+	}
+	function bulkDismiss() {
+		if ( sgBusy ) { return; }
+		if ( matchAll.active ) {
+			if ( ! window.confirm( STR.confirmDismissAll.replace( '%d', matchAll.count ) ) ) { return; }
+			sgProgress( STR.resolving );
+			resolveMatching().then( ( r ) => {
+				if ( r.over_cap || ! r.ids.length ) { sgProgress( r.over_cap ? overCapText( r.total, r.cap ) : STR.matchNone ); clearMatchAll(); return; }
+				runDismiss( r.ids, () => { clearMatchAll(); sOffset = 0; loadSuggestions(); } );
+			} );
+			return;
+		}
+		const ids = sgSelectedIds();
+		if ( ! ids.length ) { return; }
+		if ( ! window.confirm( STR.confirmDismiss ) ) { return; }
+		runDismiss( ids );
 	}
 
 	// Edit (final_payload) + dismiss, delegated.
@@ -674,15 +775,18 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 	document.addEventListener( 'change', function ( e ) { if ( e.target.classList.contains( 'wpcc-at-cb' ) ) { refreshGenerateBtn(); } } );
 
 	// Task 8.4 — bulk action bar wiring (Suggestions tab).
-	$( 'wpcc-at-sg-scope' ).addEventListener( 'change', function () { sgScope = this.value; sOffset = 0; loadSuggestions(); } );
+	$( 'wpcc-at-sg-scope' ).addEventListener( 'change', function () { sgScope = this.value; sOffset = 0; clearMatchAll(); loadSuggestions(); } );
 	$( 'wpcc-at-sg-selectall' ).addEventListener( 'change', function () {
 		const on = this.checked;
+		if ( matchAll.active ) { clearMatchAll(); } // page selection supersedes a cross-page selection
 		document.querySelectorAll( '#wpcc-at-sg-rows .wpcc-at-sg-cb' ).forEach( ( c ) => { c.checked = on; } );
 		sgRefreshBulk();
 	} );
 	$( 'wpcc-at-sg-apply' ).addEventListener( 'click', bulkApply );
 	$( 'wpcc-at-sg-dismiss' ).addEventListener( 'click', bulkDismiss );
-	document.addEventListener( 'change', function ( e ) { if ( e.target.classList && e.target.classList.contains( 'wpcc-at-sg-cb' ) ) { sgRefreshBulk(); } } );
+	// S2.2.1 — "Select all matching" (cross-page, server-resolved).
+	$( 'wpcc-at-sg-matchall' ).addEventListener( 'click', selectAllMatching );
+	document.addEventListener( 'change', function ( e ) { if ( e.target.classList && e.target.classList.contains( 'wpcc-at-sg-cb' ) ) { if ( matchAll.active ) { clearMatchAll(); } sgRefreshBulk(); } } );
 
 	loadReview();
 } )();
