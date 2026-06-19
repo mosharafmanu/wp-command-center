@@ -46,3 +46,4 @@ selection	SelectionResolver|SelectionContract|alt-text/selection|alt_text_select
 seo_audit	SeoAuditQuery|admin/seo/audit|seo_audit|seo-meta|wpcc-seo|seo_meta_generator|seo_meta_ui|check_seo_permission|test-seo-audit	test-seo-audit.sh	test-seo-audit.sh
 ai_transport	AnthropicClient|includes/Ai/|WPCC_ANTHROPIC|wpcc_anthropic|AnthropicVisionProvider|test-anthropic-client	test-anthropic-client.sh	test-anthropic-client.sh
 seo_generate	SeoMetaGenerator|AnthropicSeoProvider|SeoMetaProvider|SeoMetaResult|SeoMetaProviderResolver|seo/generate|seo_generate|test-seo-generate	test-seo-generate.sh	test-seo-generate.sh
+seo_review	seo-meta|test-seo-review|wpcc-seo-tab-suggestions|wpcc-seo-sg-rows	test-seo-review.sh	test-seo-review.sh

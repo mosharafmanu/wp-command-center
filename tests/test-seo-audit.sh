@@ -78,8 +78,8 @@ has  "consumes canonical items[]"          "d.items"             "$VIEW"
 has  "generate control (drafts) present"   "wpcc-seo-generate"   "$VIEW"
 has  "generation posts to /seo/generate"   "/seo/generate"       "$VIEW"
 lacks "no Apply control"                   "/apply"             "$VIEW"
-lacks "no proposal apply route in view"    "/proposals/"         "$VIEW"
-lacks "no Undo control"                    "rollback"            "$VIEW"
+lacks "no Undo / history-rollback route"   "/history/"          "$VIEW"
+lacks "no OperationExecutor in view"       "OperationExecutor"  "$VIEW"
 
 echo
 echo "== 5. Functional: audit over the real registry =="

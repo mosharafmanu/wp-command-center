@@ -413,3 +413,33 @@ New: `includes/Seo/SeoMetaResult.php`, `includes/Seo/SeoMetaProvider.php`, `incl
 - `tests/run.sh --tier T0 --changed` **167/0 net-new 0** · `--tier T1 --changed` **264/0 net-new 0**
 
 **Next:** Slice 3 (review/edit/dismiss UI over the existing proposal routes), report-first, on explicit direction. **Slice 3 not started.** Live provider quality (real Anthropic JSON) still needs a manual validation step before relying on real suggestions; prod has no Anthropic key configured.
+
+---
+
+# GA#2 SEO Meta Generator — Slice 3 (SEO Suggestions: Review / Edit / Dismiss) — committed locally, NOT pushed
+
+> UI-only review workflow over the existing proposal platform. Committed on `main`; **not pushed, not deployed.** Production is at `a600432`.
+
+## What shipped (UI-only)
+- **Suggestions tab** added to `seo-meta.php` (now tabbed Review | Suggestions). Lists `seo_manage` draft proposals; per row shows post title/type/edit-link · **Current** (`prior`) vs **Suggested** (editable title + description) · live char counts (≤60 / 120–160, advisory) · provider/model attribution · **Edited** indicator.
+- **Reuses ONLY the existing proposal routes** — no backend, no new class, no new route:
+  - `GET /admin/proposals?operation_id=seo_manage&status=draft` (list)
+  - `PUT /admin/proposals/{id}` (edit `final_payload`; draft stays draft)
+  - `POST /admin/proposals/{id}/dismiss` (dismiss; terminal)
+- **WP core REST** (`/wp/v2/posts` + `/wp/v2/pages` by `include`) used **only** for post-context enrichment (client-side); edit links built client-side. CPT-without-`show_in_rest` degrades to `#id` (edit link still works).
+- **`final_payload`-first rendering verified**: `suggested()` prefers `final_payload.seo`, falls back to `payload.seo` only when absent — an edit never reverts to the original AI suggestion after reload.
+
+## Boundaries (architecture-verified, grep counts = 0)
+No Apply / Approval-Center / Change-History / Undo / rollback / `/history/` / `OperationExecutor` / `ProposalApplyService` / `SeoProvider::write` / SelectionResolver / bulk apply / bulk dismiss. The single `seo_update` string is the edit's `final_payload.action` **data** (not execution). Save updates `final_payload` only; dismiss terminates the draft only; no SEO meta write. **`ProposalAdminQuery` untouched.**
+
+## Four Guarantees & invariants
+Pre-decision / proposal-only / draft-only → Approval · Rollback · Audit · Capability scoping all unchanged (enforced later at apply, Slice 4). Invariants frozen: OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (no new route/operation/capability/MCP tool/schema).
+
+## Files (5) — UI + tests only
+Modified: `includes/Admin/views/seo-meta.php` (Suggestions tab + JS), `tests/test-seo-audit.sh` + `tests/test-seo-generate.sh` (2 stale view guards repointed to `/apply`+`/history/` since the shared view's scope grew), `tests/regression-map.tsv` (+`seo_review` group). New: `tests/test-seo-review.sh`.
+
+## Testing
+- `test-seo-review.sh` **39/0** · `test-seo-audit.sh` **55/0** · `test-seo-generate.sh` **46/0**
+- `tests/run.sh --tier T0 --changed` **182/0 net-new 0** · `--tier T1 --changed` **424/0 net-new 0**
+
+**Next:** Slice 4 (approve/apply + undo), report-first, on explicit direction. **Slice 4 not started.** Apply → `ProposalApplyService` → `seo_manage`/`seo_update`; undo → existing change-history rollback (`change_id`→`rollback_id`→`seo_restore`, verified). Slice 5 (bulk) needs `wpcc_seo_rollbacks` store hardening first.

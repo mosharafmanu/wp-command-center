@@ -66,7 +66,7 @@ has  "view has generate control"              "wpcc-seo-generate"    "$VIEW"
 has  "view posts to /seo/generate"            "/seo/generate"        "$VIEW"
 has  "view states drafts only"                "nothing is applied"   "$VIEW"
 lacks "view has no apply route"               "/apply"               "$VIEW"
-lacks "view has no undo/rollback"             "rollback"             "$VIEW"
+lacks "view has no undo/history-rollback route" "/history/"          "$VIEW"
 
 echo
 echo "== 5. Functional: parsing + generation (stub provider, no network) =="
