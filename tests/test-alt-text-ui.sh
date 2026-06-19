@@ -89,12 +89,29 @@ $emit('gated undo handled (sent for approval)', strpos($html,'Undo sent for appr
 // 6b. No second-system boundary (still forbidden)
 $emit('no standalone approve/reject CONTROLS', stripos($html,'>Approve<')===false && stripos($html,'>Reject<')===false && strpos($html,'wpcc-at-approve')===false && strpos($html,'wpcc-at-reject')===false);
 $emit('no Change History timeline/diff duplication (link only)', stripos($html,'timeline')===false && strpos($html,'wpcc-diff')===false);
-$emit('no batch apply/undo', strpos($html,'batch_apply')===false && strpos($html,'batchUndo')===false && strpos($html,'batch-undo')===false);
+// Tier-2 still deferred: no BATCH-level apply/undo/approval/rollback primitive.
+$emit('no batch-level apply/undo/approval/rollback primitive', strpos($html,'batch_apply')===false && strpos($html,'batchUndo')===false && strpos($html,'batch-undo')===false && strpos($html,'batch_rollback')===false && strpos($html,'batch_approval')===false);
+
+// 8. Task 8.4 — Tier-1 bulk workflows (Suggestions tab; UI-only, reuses endpoints)
+$emit('bulk action bar present (apply/dismiss selected)', strpos($html,'wpcc-at-sg-apply')!==false && strpos($html,'wpcc-at-sg-dismiss')!==false);
+$emit('per-row bulk select checkboxes', strpos($html,'wpcc-at-sg-cb')!==false);
+$emit('select-all on Suggestions page', strpos($html,'wpcc-at-sg-selectall')!==false);
+$emit('bulk Apply reuses existing /proposals/{id}/apply', strpos($html,'bulkApply')!==false && strpos($html,'/apply')!==false);
+$emit('bulk Dismiss reuses existing /proposals/{id}/dismiss', strpos($html,'bulkDismiss')!==false && strpos($html,'/dismiss')!==false);
+$emit('sequential (one-at-a-time) processing', strpos($html,'runSequential')!==false);
+$emit('progress region role=status', strpos($html,'wpcc-at-sg-progress')!==false && strpos($html,'role="status"')!==false);
+$emit('progress reports applied/submitted/dismissed/failed', strpos($html,'lblApplied')!==false && strpos($html,'lblPending')!==false && strpos($html,'lblDismissed')!==false && strpos($html,'lblFailed')!==false);
+$emit('processed/total counter present', strpos($html,'bulkProcessing')!==false);
+$emit('per-item failure isolation (failed row keeps a message)', strpos($html,'cantApply')!==false);
+$emit('mode-aware bulk confirm (dev vs gate)', strpos($html,'confirmApplyDev')!==false && strpos($html,'confirmApplyGate')!==false);
+$emit('batch-scoped review via batch_id grouping key', strpos($html,'wpcc-at-sg-scope')!==false && strpos($html,'lastRunBatchIds')!==false);
 
 // 7. No proposal internals DISPLAYED (ids only as opaque data-* handles)
 $emit('no payload_json shown', strpos($html,'payload_json')===false);
 $emit('no request_id referenced', strpos($html,'request_id')===false);
-$emit('no batch_id UUID surfaced', strpos($html,'batch_id')===false);
+// Task 8.4: batch_id is used ONLY as an internal grouping key (like proposal_id as
+// data-id) — never escaped into a displayed cell.
+$emit('batch_id used only as opaque grouping key (never displayed)', strpos($html,'lastRunBatchIds')!==false && strpos($html,'esc( p.batch_id')===false && strpos($html,'esc(p.batch_id')===false);
 $emit('proposal_id only as opaque data-id handle', strpos($html,'data-id')!==false);
 $emit('change_id only as opaque data-cid handle', strpos($html,'data-cid')!==false);
 $leak=false; foreach(['ProposalStore','AltTextGenerator','OperationExecutor','ProposalApplyService'] as $t){ if(strpos($html,$t)!==false){$leak=true;} }

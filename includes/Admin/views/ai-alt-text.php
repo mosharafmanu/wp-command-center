@@ -99,12 +99,28 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 	<!-- ============ SUGGESTIONS TAB ============ -->
 	<div id="wpcc-at-panel-suggestions" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the text or dismiss a suggestion. Nothing is applied to your site yet.', 'wp-command-center' ); ?></span>
+			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit, dismiss, or apply suggestions individually or in bulk. Nothing is applied to your site until you choose to.', 'wp-command-center' ); ?></span>
 			<span id="wpcc-at-sg-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
+
+		<!-- Task 8.4 — bulk action bar. Operates on the selected draft rows on this
+		     page via the EXISTING per-proposal apply/dismiss endpoints (sequential). -->
+		<div style="display:flex;align-items:center;gap:12px;margin:12px 0;flex-wrap:wrap;">
+			<label for="wpcc-at-sg-scope"><?php esc_html_e( 'Show:', 'wp-command-center' ); ?></label>
+			<select id="wpcc-at-sg-scope">
+				<option value="all"><?php esc_html_e( 'All drafts', 'wp-command-center' ); ?></option>
+				<option value="last" disabled><?php esc_html_e( 'Last generated', 'wp-command-center' ); ?></option>
+			</select>
+			<label><input type="checkbox" id="wpcc-at-sg-selectall"> <?php esc_html_e( 'Select all on this page', 'wp-command-center' ); ?></label>
+			<button type="button" class="button button-primary" id="wpcc-at-sg-apply" disabled><?php esc_html_e( 'Apply selected', 'wp-command-center' ); ?></button>
+			<button type="button" class="button" id="wpcc-at-sg-dismiss" disabled><?php esc_html_e( 'Dismiss selected', 'wp-command-center' ); ?></button>
+		</div>
+		<div id="wpcc-at-sg-progress" role="status" aria-live="polite" style="display:none;margin:8px 0;padding:10px;border:1px solid #c3c4c7;background:#fff;border-radius:4px;"></div>
+
 		<table class="widefat striped">
 			<thead>
 				<tr>
+					<th style="width:28px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'wp-command-center' ); ?></span></th>
 					<th style="width:60px;"><?php esc_html_e( 'Image', 'wp-command-center' ); ?></th>
 					<th><?php esc_html_e( 'File', 'wp-command-center' ); ?></th>
 					<th style="width:24%;"><?php esc_html_e( 'Current alt text', 'wp-command-center' ); ?></th>
@@ -113,7 +129,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 				</tr>
 			</thead>
 			<tbody id="wpcc-at-sg-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
+				<tr><td colspan="6"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
 			</tbody>
 		</table>
 		<p style="margin-top:12px;">
@@ -185,7 +201,23 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'wp-command-center' ) ); ?>,
 		reviewAppr: <?php echo wp_json_encode( esc_html__( 'Review in Approval Center →', 'wp-command-center' ) ); ?>,
 		viewHist:  <?php echo wp_json_encode( esc_html__( 'View in Change History →', 'wp-command-center' ) ); ?>,
-		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'wp-command-center' ) ); ?>
+		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'wp-command-center' ) ); ?>,
+		// Task 8.4 — bulk action labels (Suggestions tab).
+		selectAllSg: <?php echo wp_json_encode( esc_html__( 'Select all on this page', 'wp-command-center' ) ); ?>,
+		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'wp-command-center' ) ); ?>,
+		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'wp-command-center' ) ); ?>,
+		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'wp-command-center' ) ); ?>,
+		bulkDone:    <?php echo wp_json_encode( esc_html__( 'processed', 'wp-command-center' ) ); ?>,
+		lblApplied:  <?php echo wp_json_encode( esc_html__( 'applied', 'wp-command-center' ) ); ?>,
+		lblPending:  <?php echo wp_json_encode( esc_html__( 'submitted for approval', 'wp-command-center' ) ); ?>,
+		lblDismissed: <?php echo wp_json_encode( esc_html__( 'dismissed', 'wp-command-center' ) ); ?>,
+		lblFailed:   <?php echo wp_json_encode( esc_html__( 'failed', 'wp-command-center' ) ); ?>,
+		scopeAll:    <?php echo wp_json_encode( esc_html__( 'All drafts', 'wp-command-center' ) ); ?>,
+		scopeLast:   <?php echo wp_json_encode( esc_html__( 'Last generated', 'wp-command-center' ) ); ?>,
+		// Confirm dialogs use plain text (not HTML-escaped) — they are not injected into the DOM.
+		confirmApplyDev:  <?php echo wp_json_encode( __( 'Apply the selected suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
+		confirmApplyGate: <?php echo wp_json_encode( __( 'Submit the selected suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
+		confirmDismiss:   <?php echo wp_json_encode( __( 'Dismiss the selected suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );
@@ -262,6 +294,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		let ids = selectedIds();
 		if ( ! ids.length ) { return; }
 		if ( ids.length > MAX_BATCH ) { ids = ids.slice( 0, MAX_BATCH ); }
+		lastRunBatchIds = new Set(); // fresh capture for this run (batch-scoped review).
 		const total = ids.length;
 		let created = 0, skipped = 0, failed = 0, done = 0;
 		$( 'wpcc-at-generate' ).disabled = true;
@@ -276,6 +309,16 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		function runChunk( idx ) {
 			if ( idx >= chunks.length ) {
 				$( 'wpcc-at-progress-text' ).textContent = total + ' processed — ' + created + ' created, ' + skipped + ' skipped, ' + failed + ' failed.';
+				// Batch-scoped review: default the Suggestions view to just this run.
+				if ( lastRunBatchIds.size ) {
+					const scopeSel = $( 'wpcc-at-sg-scope' );
+					if ( scopeSel ) {
+						const lastOpt = scopeSel.querySelector( 'option[value="last"]' );
+						if ( lastOpt ) { lastOpt.disabled = false; }
+						scopeSel.value = 'last';
+						sgScope = 'last';
+					}
+				}
 				setTimeout( () => { switchTab( 'suggestions' ); }, 600 );
 				return;
 			}
@@ -285,6 +328,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 				body: JSON.stringify( { attachment_ids: chunks[ idx ] } )
 			} ).then( ( res ) => {
 				const d = res.data || {};
+				if ( d.batch_id ) { lastRunBatchIds.add( d.batch_id ); } // batch-scoped review key.
 				created += ( d.created || [] ).length;
 				skipped += ( d.skipped || [] ).length;
 				failed  += ( d.failed  || [] ).length;
@@ -300,17 +344,28 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 
 	// ---------- SUGGESTIONS TAB ----------
 	let sOffset = 0, sHasMore = false;
+	// Task 8.4 — batch-scoped review + bulk state.
+	let lastRunBatchIds = new Set(); // batch_ids produced by the most recent Generate run.
+	let sgScope = 'all';             // 'all' | 'last' (filters the draft view by the last run's batches).
+	let sgBusy  = false;             // true while a bulk Apply/Dismiss run is in flight.
 
 	function loadSuggestions() {
-		$( 'wpcc-at-sg-rows' ).innerHTML = '<tr><td colspan="5">' + esc( STR.loading ) + '</td></tr>';
+		$( 'wpcc-at-sg-rows' ).innerHTML = '<tr><td colspan="6">' + esc( STR.loading ) + '</td></tr>';
 		// alt-text drafts only (media_manage drafts are produced solely by the alt-text generator).
 		wpcc( '/proposals?status=draft&operation_id=media_manage&limit=' + LIMIT + '&offset=' + sOffset )
 			.then( ( res ) => {
-				const d = res.data || {}, list = d.proposals || [];
+				const d = res.data || {};
+				let list = d.proposals || [];
+				// Batch-scoped review (Task 8.4): when scoped to the last run, keep only
+				// drafts whose batch_id is in that run. Uses the batch_id the proposal
+				// already carries — no new endpoint, no new query.
+				if ( sgScope === 'last' && lastRunBatchIds.size ) {
+					list = list.filter( ( p ) => p.batch_id && lastRunBatchIds.has( p.batch_id ) );
+				}
 				sHasMore = !! d.has_more;
 				$( 'wpcc-at-sg-prev' ).disabled = sOffset <= 0;
 				$( 'wpcc-at-sg-next' ).disabled = ! sHasMore;
-				if ( ! list.length ) { $( 'wpcc-at-sg-rows' ).innerHTML = '<tr><td colspan="5">' + esc( STR.noSug ) + '</td></tr>'; $( 'wpcc-at-sg-status' ).textContent = ''; return; }
+				if ( ! list.length ) { $( 'wpcc-at-sg-rows' ).innerHTML = '<tr><td colspan="6">' + esc( STR.noSug ) + '</td></tr>'; $( 'wpcc-at-sg-status' ).textContent = ''; if ( $( 'wpcc-at-sg-selectall' ) ) { $( 'wpcc-at-sg-selectall' ).checked = false; } sgRefreshBulk(); return; }
 				// Resolve thumbnails/filenames via WP core media (batched).
 				const ids = list.map( ( p ) => parseInt( p.target_id, 10 ) ).filter( ( n ) => n > 0 );
 				core( '/media?include=' + ids.join( ',' ) + '&per_page=' + ids.length + '&_fields=id,source_url,media_details,title' )
@@ -325,7 +380,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 					} )
 					.catch( () => renderSuggestions( list, {} ) );
 			} )
-			.catch( () => { $( 'wpcc-at-sg-rows' ).innerHTML = '<tr><td colspan="5" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>'; } );
+			.catch( () => { $( 'wpcc-at-sg-rows' ).innerHTML = '<tr><td colspan="6" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>'; } );
 	}
 
 	function renderSuggestions( list, media ) {
@@ -342,6 +397,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 			// proposal_id is an OPAQUE DOM key only — never shown to the user.
 			// data-mid carries the attachment id needed to rebuild final_payload on save.
 			return '<tr data-id="' + esc( p.proposal_id ) + '" data-mid="' + esc( tid ) + '">' +
+				'<td><input type="checkbox" class="wpcc-at-sg-cb" value="' + esc( p.proposal_id ) + '" aria-label="' + esc( STR.applySel ) + '"></td>' +
 				'<td>' + thumb + '</td>' +
 				'<td>' + esc( m.title || ( '#' + tid ) ) + editedChip + prov + '</td>' +
 				'<td>' + cur + '</td>' +
@@ -353,6 +409,115 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 					'<div class="wpcc-at-rowmsg description" role="status" style="margin-top:4px;"></div>' +
 				'</td></tr>';
 		} ).join( '' );
+		// New page of rows -> clear any prior selection and re-evaluate bulk controls.
+		if ( $( 'wpcc-at-sg-selectall' ) ) { $( 'wpcc-at-sg-selectall' ).checked = false; }
+		sgRefreshBulk();
+	}
+
+	// ---------- SUGGESTIONS BULK (Task 8.4, Tier-1) ----------
+	// UI-only orchestration. Bulk Apply / Dismiss are SEQUENTIAL loops over the
+	// EXISTING per-proposal endpoints (/proposals/{id}/apply, /proposals/{id}/dismiss).
+	// No new endpoint, no batch object, no batch approval, no batch rollback, no new
+	// write path. Each item is governed individually (its own capability check,
+	// approval gate, change record, rollback). Per-item failure NEVER aborts the run.
+	function sgSelectedRows() {
+		return Array.prototype.slice.call(
+			document.querySelectorAll( '#wpcc-at-sg-rows .wpcc-at-sg-cb:checked' )
+		).map( ( c ) => ( c.closest ? c.closest( 'tr[data-id]' ) : null ) ).filter( Boolean );
+	}
+	function sgRefreshBulk() {
+		const n = sgSelectedRows().length;
+		const ap = $( 'wpcc-at-sg-apply' ), di = $( 'wpcc-at-sg-dismiss' );
+		if ( ! ap || ! di ) { return; }
+		ap.disabled = ( n === 0 ) || sgBusy;
+		di.disabled = ( n === 0 ) || sgBusy;
+		ap.textContent = n > 0 ? STR.applySel + ' (' + n + ')' : STR.applySel;
+		di.textContent = n > 0 ? STR.dismissSel + ' (' + n + ')' : STR.dismissSel;
+	}
+	function sgProgress( text ) {
+		const p = $( 'wpcc-at-sg-progress' );
+		if ( ! p ) { return; }
+		p.style.display = 'block';
+		p.textContent = text;
+	}
+	// Process rows one at a time (sequential); isolate per-item failure.
+	function runSequential( rows, worker, onEach, onDone ) {
+		let i = 0;
+		( function step() {
+			if ( i >= rows.length ) { onDone(); return; }
+			const row = rows[ i ];
+			worker( row ).then( ( outcome ) => { onEach( row, outcome ); i++; step(); } );
+		} )();
+	}
+	function bulkApply() {
+		const rows = sgSelectedRows();
+		if ( ! rows.length || sgBusy ) { return; }
+		if ( ! window.confirm( IS_DEV ? STR.confirmApplyDev : STR.confirmApplyGate ) ) { return; }
+		sgBusy = true; sgRefreshBulk();
+		const total = rows.length;
+		let processed = 0, applied = 0, pending = 0, failed = 0;
+		const tick = () => sgProgress( STR.bulkProcessing + ' ' + processed + '/' + total + ' — ' +
+			applied + ' ' + STR.lblApplied + ', ' + pending + ' ' + STR.lblPending + ', ' + failed + ' ' + STR.lblFailed );
+		tick();
+		runSequential( rows,
+			( row ) => {
+				const id  = row.getAttribute( 'data-id' );
+				const msg = row.querySelector( '.wpcc-at-rowmsg' );
+				if ( msg ) { msg.textContent = '…'; }
+				return wpcc( '/proposals/' + encodeURIComponent( id ) + '/apply', { method: 'POST' } )
+					.then( ( res ) => ( { st: ( res.data && res.data.status ) || '' } ) )
+					.catch( () => ( { st: '' } ) );
+			},
+			( row, outcome ) => {
+				processed++;
+				const msg = row.querySelector( '.wpcc-at-rowmsg' );
+				if ( outcome.st === 'applied' ) { applied++; if ( row.parentNode ) { row.parentNode.removeChild( row ); } }
+				else if ( outcome.st === 'pending_approval' ) { pending++; if ( row.parentNode ) { row.parentNode.removeChild( row ); } }
+				else { failed++; if ( msg ) { msg.textContent = STR.cantApply; } }
+				tick();
+			},
+			() => {
+				sgBusy = false;
+				sgProgress( total + ' ' + STR.bulkDone + ' — ' + applied + ' ' + STR.lblApplied + ', ' +
+					pending + ' ' + STR.lblPending + ', ' + failed + ' ' + STR.lblFailed + '.' );
+				if ( $( 'wpcc-at-sg-selectall' ) ) { $( 'wpcc-at-sg-selectall' ).checked = false; }
+				sgRefreshBulk();
+			}
+		);
+	}
+	function bulkDismiss() {
+		const rows = sgSelectedRows();
+		if ( ! rows.length || sgBusy ) { return; }
+		if ( ! window.confirm( STR.confirmDismiss ) ) { return; }
+		sgBusy = true; sgRefreshBulk();
+		const total = rows.length;
+		let processed = 0, dismissed = 0, failed = 0;
+		const tick = () => sgProgress( STR.bulkProcessing + ' ' + processed + '/' + total + ' — ' +
+			dismissed + ' ' + STR.lblDismissed + ', ' + failed + ' ' + STR.lblFailed );
+		tick();
+		runSequential( rows,
+			( row ) => {
+				const id  = row.getAttribute( 'data-id' );
+				const msg = row.querySelector( '.wpcc-at-rowmsg' );
+				if ( msg ) { msg.textContent = '…'; }
+				return wpcc( '/proposals/' + encodeURIComponent( id ) + '/dismiss', { method: 'POST' } )
+					.then( ( res ) => ( { ok: !! res.ok } ) )
+					.catch( () => ( { ok: false } ) );
+			},
+			( row, outcome ) => {
+				processed++;
+				const msg = row.querySelector( '.wpcc-at-rowmsg' );
+				if ( outcome.ok ) { dismissed++; if ( row.parentNode ) { row.parentNode.removeChild( row ); } }
+				else { failed++; if ( msg ) { msg.textContent = STR.error; } }
+				tick();
+			},
+			() => {
+				sgBusy = false;
+				sgProgress( total + ' ' + STR.bulkDone + ' — ' + dismissed + ' ' + STR.lblDismissed + ', ' + failed + ' ' + STR.lblFailed + '.' );
+				if ( $( 'wpcc-at-sg-selectall' ) ) { $( 'wpcc-at-sg-selectall' ).checked = false; }
+				sgRefreshBulk();
+			}
+		);
 	}
 
 	// Edit (final_payload) + dismiss, delegated.
@@ -507,6 +672,17 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		refreshGenerateBtn();
 	} );
 	document.addEventListener( 'change', function ( e ) { if ( e.target.classList.contains( 'wpcc-at-cb' ) ) { refreshGenerateBtn(); } } );
+
+	// Task 8.4 — bulk action bar wiring (Suggestions tab).
+	$( 'wpcc-at-sg-scope' ).addEventListener( 'change', function () { sgScope = this.value; sOffset = 0; loadSuggestions(); } );
+	$( 'wpcc-at-sg-selectall' ).addEventListener( 'change', function () {
+		const on = this.checked;
+		document.querySelectorAll( '#wpcc-at-sg-rows .wpcc-at-sg-cb' ).forEach( ( c ) => { c.checked = on; } );
+		sgRefreshBulk();
+	} );
+	$( 'wpcc-at-sg-apply' ).addEventListener( 'click', bulkApply );
+	$( 'wpcc-at-sg-dismiss' ).addEventListener( 'click', bulkDismiss );
+	document.addEventListener( 'change', function ( e ) { if ( e.target.classList && e.target.classList.contains( 'wpcc-at-sg-cb' ) ) { sgRefreshBulk(); } } );
 
 	loadReview();
 } )();
