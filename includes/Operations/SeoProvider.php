@@ -101,6 +101,19 @@ final class SeoProvider {
 	}
 
 	/**
+	 * The post-meta key backing a unified scalar field for a provider, or '' when
+	 * the field/provider is unknown. Read-only accessor over the existing scalar map
+	 * (STEP 111 / GA#2 Slice 1) — lets the read-only SEO audit narrow by the active
+	 * provider's keys without duplicating the mapping. Adds no behaviour.
+	 */
+	public static function meta_key( string $field, string $provider ): string {
+		if ( self::NONE === $provider ) {
+			return '';
+		}
+		return self::scalar_map( $provider )[ $field ] ?? '';
+	}
+
+	/**
 	 * Read all unified SEO fields for a post.
 	 *
 	 * @return array<string,mixed>

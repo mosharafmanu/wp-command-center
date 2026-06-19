@@ -43,3 +43,4 @@ history	ChangeRecorder|ChangeHistoryRuntimeManager|ChangeHistoryAdminQuery|wpcc_
 mcp	McpServerRuntime|McpServer|McpRestApi|ContextModeOptimizer|Mcp/|/mcp	test-mcp-timeout-budget-f22.sh	test-mcp-runtime.sh,test-mcp-error-surface.sh,test-mcp-tool-schema-compliance.sh,test-mcp-scope-enforcement.sh,test-mcp-timeout-budget-f22.sh,test-agent-search-ux.sh
 core	OperationExecutor|OperationRegistry|AiAgent/RestApi	test-operations-registry.sh	test-operations-registry.sh,test-operation-requests.sh,test-operation-retry.sh,test-operation-worker.sh,test-agent-manifest.sh,test-agent-actions.sh
 selection	SelectionResolver|SelectionContract|alt-text/selection|alt_text_selection|ai-alt-text|wpcc-at-sg-matchall|test-selection-resolver	test-selection-resolver.sh	test-selection-resolver.sh,test-alt-text-ui.sh
+seo_audit	SeoAuditQuery|admin/seo/audit|seo_audit|seo-meta|wpcc-seo|seo_meta_generator|seo_meta_ui|check_seo_permission|test-seo-audit	test-seo-audit.sh	test-seo-audit.sh

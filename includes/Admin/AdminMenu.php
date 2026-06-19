@@ -163,6 +163,13 @@ final class AdminMenu {
 		if ( $this->alt_text_ui_enabled() && FeatureGate::allows( 'ai_alt_text' ) ) {
 			add_submenu_page( 'wp-command-center', __( 'AI Alt Text', 'wp-command-center' ), __( 'AI Alt Text', 'wp-command-center' ), self::CAPABILITY, 'wpcc-alt-text', [ $this, 'render_ai_alt_text' ] );
 		}
+
+		// Governed Action #2 — SEO Meta Generator (Builder). Incrementally built
+		// (Slice 1 = read-only audit); gated by a build flag that defaults OFF until
+		// the workflow lands, AND by the Free/Pro FeatureGate seam ('seo_meta_generator').
+		if ( $this->seo_meta_ui_enabled() && FeatureGate::allows( 'seo_meta_generator' ) ) {
+			add_submenu_page( 'wp-command-center', __( 'SEO Meta', 'wp-command-center' ), __( 'SEO Meta', 'wp-command-center' ), self::CAPABILITY, 'wpcc-seo', [ $this, 'render_seo_meta' ] );
+		}
 	}
 
 	/**
@@ -176,6 +183,19 @@ final class AdminMenu {
 			return true;
 		}
 		return (bool) apply_filters( 'wpcc_alt_text_ui', false );
+	}
+
+	/**
+	 * Build switch for the Builder SEO Meta surface (GA#2). Defaults OFF — the
+	 * feature is built incrementally (Slice 1 = read-only audit) and must not surface
+	 * a partial workflow to real users. Enable on a dev site via the WPCC_SEO_META_UI
+	 * constant or the `wpcc_seo_meta_ui` filter; remove the gate when GA#2 lands.
+	 */
+	private function seo_meta_ui_enabled(): bool {
+		if ( defined( 'WPCC_SEO_META_UI' ) && WPCC_SEO_META_UI ) {
+			return true;
+		}
+		return (bool) apply_filters( 'wpcc_seo_meta_ui', false );
 	}
 
 	/**
@@ -272,6 +292,10 @@ final class AdminMenu {
 
 	public function render_ai_alt_text(): void {
 		$this->render_view( 'ai-alt-text' );
+	}
+
+	public function render_seo_meta(): void {
+		$this->render_view( 'seo-meta' );
 	}
 
 	public function render_approval_center(): void {

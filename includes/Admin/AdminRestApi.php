@@ -26,6 +26,7 @@ use WPCommandCenter\Proposals\ProposalApplyService;
 use WPCommandCenter\Proposals\ProposalSync;
 use WPCommandCenter\AltText\AltTextScanQuery;
 use WPCommandCenter\AltText\AltTextGenerator;
+use WPCommandCenter\Seo\SeoAuditQuery;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -343,6 +344,16 @@ final class AdminRestApi {
 			'callback'            => [ $this, 'alt_text_selection' ],
 			'permission_callback' => [ $this, 'check_alt_text_permission' ],
 		] );
+
+		// STEP 111 — Governed Action #2 (SEO Meta Generator) Slice 1. READABLE only:
+		// a read-only SEO meta audit (missing/weak/ok) over public content via the
+		// existing SeoProvider. No writes, no provider/model call, no proposal, no
+		// seo_update. Delegates to SeoAuditQuery.
+		register_rest_route( self::NS, '/admin/seo/audit', [
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => [ $this, 'seo_audit' ],
+			'permission_callback' => [ $this, 'check_seo_permission' ],
+		] );
 	}
 
 	/**
@@ -362,6 +373,7 @@ final class AdminRestApi {
 		'dashboard'      => 'dashboard_overview',
 		'proposals'      => 'proposal_store',
 		'alt_text'       => 'ai_alt_text',
+		'seo'            => 'seo_meta_generator',
 	];
 
 	/**
@@ -417,6 +429,11 @@ final class AdminRestApi {
 	/** AI Alt Text surface gate (manage_options + FeatureGate 'ai_alt_text'). */
 	public function check_alt_text_permission(): bool {
 		return $this->gate( 'alt_text' );
+	}
+
+	/** SEO Meta Generator surface gate (manage_options + FeatureGate 'seo_meta_generator'). */
+	public function check_seo_permission(): bool {
+		return $this->gate( 'seo' );
 	}
 
 	/**
@@ -533,6 +550,13 @@ final class AdminRestApi {
 			'with_usage' => rest_sanitize_boolean( $request->get_param( 'with_usage' ) ),
 		];
 		return new \WP_REST_Response( ( new AltTextScanQuery() )->audit( $filters, $limit, $offset ), 200 );
+	}
+
+	/** GET /admin/seo/audit — read-only SEO meta audit (GA#2 Slice 1). */
+	public function seo_audit( \WP_REST_Request $request ): \WP_REST_Response {
+		[ $limit, $offset ] = $this->list_paging( $request );
+		$filters = [ 'state' => sanitize_key( (string) $request->get_param( 'state' ) ?: 'all' ) ];
+		return new \WP_REST_Response( ( new SeoAuditQuery() )->audit( $filters, $limit, $offset ), 200 );
 	}
 
 	/** POST /admin/alt-text/generate — provider suggestion → governed drafts (Task 7C). */

@@ -320,3 +320,35 @@ Current state:
 - Production **stable**.
 
 **Next:** report-first planning of the next architectural task (e.g., next S2.2 increment — server-materialized/saved selections, or a second governed-action consumer of the resolver — or other Phase B/C debt) on explicit direction. **S2.2.2 not started.**
+
+---
+
+# Governed Action #2 — SEO Meta Generator · Slice 1 (Read-Only SEO Audit) — committed locally, NOT pushed
+
+> The first slice of GA#2, per the GA#2 architecture + SEO-rollback verification reviews. Committed on `main`; **not pushed, not deployed.** Production is at `da95a0f`.
+
+## What shipped (read-only only)
+- **Read-only SEO audit** of public content (posts / pages / public CPTs, published): which items are **missing / weak / ok** on SEO title + meta description, with a per-item score.
+- **Plugin support via the existing `SeoProvider`:** Rank Math / Yoast / **NONE**. When no supported SEO plugin is active → `provider_available:false`, empty population, Builder shows an empty-state and **no controls**.
+- **Canonical pagination envelope:** `items · total_count · returned · has_more · next_cursor · limit · offset · filters` (plus `provider`, `provider_available`, `summary`) — identical to every other list surface.
+- **Build flag OFF by default** (`WPCC_SEO_META_UI` const / `wpcc_seo_meta_ui` filter) AND FeatureGate `seo_meta_generator`. Menu `wpcc-seo` hidden until flipped.
+- Classification thresholds **mirror `SeoRuntimeManager`** (title ≤60, description 120–160, focus keyword present).
+
+## Explicitly NOT in Slice 1 (later slices)
+**No** AI text generation · **no** provider/model call · **no** proposal creation · **no** `seo_update` · **no** approve/apply · **no** undo · **no** bulk/selection · **no** writes of any kind · **no** schema change · **no** new operation/capability/MCP tool.
+
+## Reuse / new
+- **Reused:** `SeoProvider` (detect/read/label), the canonical pagination contract, the build-flag + FeatureGate + C1 `gate()` admin patterns, the read-only Builder view pattern.
+- **New:** `includes/Seo/SeoAuditQuery.php` (read-only audit), `includes/Admin/views/seo-meta.php` (read-only Builder view), one READABLE route `GET /admin/seo/audit` + `seo_audit()` handler + `check_seo_permission()` (`FEATURE_KEYS['seo']='seo_meta_generator'`), a build-flagged `wpcc-seo` menu, and one **additive read-only** helper `SeoProvider::meta_key()`.
+
+## Four Guarantees & invariants
+Four Guarantees untouched (read-only surface; no execution/approval/rollback/audit-write path). Invariants unchanged: OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (the `seo` FeatureGate key is a UI Free/Pro seam, not a `CapabilityRegistry` capability).
+
+## Files (7)
+New: `includes/Seo/SeoAuditQuery.php`, `includes/Admin/views/seo-meta.php`, `tests/test-seo-audit.sh`. Modified: `includes/Operations/SeoProvider.php` (additive `meta_key()`), `includes/Admin/AdminRestApi.php` (route + handler + gate), `includes/Admin/AdminMenu.php` (build-flagged menu), `tests/regression-map.tsv` (+`seo_audit` group).
+
+## Testing
+- `test-seo-audit.sh` **54/0** (dev provider: Yoast)
+- `tests/run.sh --tier T0 --changed` **126/0 net-new 0** · `--tier T1 --changed` **299/0 net-new 0**
+
+**Next:** Slice 2 (shared AI text provider + `SeoMetaGenerator` → governed drafts), report-first, on explicit direction. **Slice 2 not started.**
