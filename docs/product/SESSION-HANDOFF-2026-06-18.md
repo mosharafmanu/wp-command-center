@@ -180,3 +180,25 @@ OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **4
 - **Next task = Task 8.4 Bulk Workflows**, on the committed baseline.
 
 *Milestone committed locally on `main`; not pushed, not deployed.*
+
+---
+
+# Proposal Store + AI Alt Text milestone — DEPLOYED to production (2026-06-19)
+
+The milestone (`3c37cbf`) was pushed and **deployed to production** via the Hostinger pull-cron (`45971e1 -> 3c37cbf active=yes`). Post-deploy SSH+HTTP verification all green: plugin active · `wpcc_db_version` = **2.5.0** · `wp_wpcc_proposals` table created · invariants **34/23/40/40** (MCP tools verified via live `tools/list`) · dev flags `WPCC_ALT_TEXT_UI`/`WPCC_PROPOSALS_DEV_UI` UNDEFINED → both Builder UIs HIDDEN · no fatals · new routes `/admin/proposals` + `/admin/alt-text/scan` = 401 (live, auth-gated); existing admin routes (`/admin/dashboard`, `/admin/history`, `/admin/operations`, `/admin/tokens`, `/admin/approvals`) = 401. Prod REST ns = `wp-command-center/v1`. Deploy gotcha: hosting account has a STALE second checkout at `~/domains/mosdev.site/.../purple-surgical/` (at `5abea8f`) — prod path is the explicit `~/domains/mosharafmanu.com/public_html/wp-content/plugins/wp-command-center`.
+
+---
+
+# Task 8.4 — Tier-1 Bulk Workflows — COMPLETE (committed, NOT pushed)
+
+Committed locally on `main` as **`0b74293`** (`feat(ai-alt-text): Task 8.4 — Tier-1 bulk workflows (UI-only)`); **not pushed, not deployed.** Production remains at `3c37cbf`.
+
+**Scope delivered (UI-only, one view file + its test):** Suggestions-tab bulk action bar (scope selector All drafts / Last generated · select-all · Apply selected · Dismiss selected) + per-row checkboxes. Bulk **Apply**/**Dismiss** run **sequentially** over the existing `POST /admin/proposals/{id}/apply` and `/dismiss` — each item governed individually (own approval gate, `change_id`, rollback). Developer → applied; client/enterprise → `pending_approval`. Mode-aware `confirm()`. **Per-item failure never aborts the run**; failed rows kept with a message. Progress in a `role=status` region (processed/total · applied · submitted · dismissed · failed). **Batch-scoped review:** Generate captures chunk `batch_id`s and the view auto-scopes to the last run; `batch_id` used only as an opaque grouping key (never displayed). Per-item Undo unchanged.
+
+**Explicitly deferred (Tier-2):** batch-level approval, atomic batch rollback, async/queue generation, cross-page **server-side selection** (→ **S2**), raising `MAX_BATCH`. No new endpoint/route/operation/capability/MCP tool/schema/batch primitive.
+
+**Files:** `includes/Admin/views/ai-alt-text.php` (+183/−7), `tests/test-alt-text-ui.sh` (+13 assertions).
+
+**Validation:** `test-alt-text-ui.sh` **69/0**; T1 `--changed` **97/0 net-new 0**; invariants live-verified **34/23/40/40/2.5.0**; Four Guarantees preserved per item. Pre-existing env failures (`test-alt-text.sh` 125/4, `test-proposal-admin.sh` 24/1) confirmed identical at the clean `3c37cbf` baseline (Anthropic key present + dev mu-plugin flags ON) — **0 net-new attributable to 8.4**.
+
+**Next:** S2 — Selection & Pagination Consistency (architecture review first; this is the prerequisite for cross-page/server-side bulk selection).
