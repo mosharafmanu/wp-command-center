@@ -275,3 +275,48 @@ New: `includes/Admin/SelectionContract.php`, `includes/Admin/SelectionResolver.p
 - `tests/run.sh --tier T0 --changed` **89/0 net-new 0** · `--tier T1 --changed` **541/0 net-new 0** (15 suites)
 
 **Next:** deploy decision for S2.2.1, or the next S2.2 increment (server-materialized/saved selections, or extend the resolver to a second governed action) — report-first, on explicit direction.
+
+---
+
+# S2.2.1 (STEP 112) — DEPLOYED to production (2026-06-19)
+
+> Deployment record for the STEP 112 section above. Supersedes its "committed locally, NOT pushed" status: S2.2.1 is now **live in production**.
+
+## Deployment
+- **Commit:** `f5c19ea` — *feat(selection): add bounded cross-page server-side selection (S2.2.1)*
+- **Date:** 2026-06-19 · **Model:** Hostinger pull-cron
+- **Deploy log:** `DEPLOYED 9259c7e -> f5c19ea active=yes` @ 2026-06-19T14:15:09Z
+
+## Production status
+- **Production HEAD = `f5c19ea`** (`git describe` = `v0.109.0-9-gf5c19ea`); `origin == prod == local`.
+- Production **healthy** · pull-cron deployment **successful** · **no PHP fatals** (no `debug.log`/`error_log`) · plugin **active**.
+
+## Architecture summary (deployed)
+- **S2.2.1 deployed.** `SelectionContract` added (stateless: `by = ids | criteria`, cap clamped to `HARD_CAP = 100`). `SelectionResolver` added (read-only over the existing `ProposalStore`).
+- **Cross-page server-side selection** available for **AI Alt Text** ("Select all matching") via the READABLE route `GET /admin/alt-text/selection`.
+- **Stateless criteria-based selection** · **capability-scoped resolution** · **refuse-over-cap** (no truncation) · **re-resolve at action time** before feeding the existing per-item apply/dismiss loops.
+- **No persistence · no selection table · no batch approval · no batch rollback · no new operations · no new capabilities · no new MCP tools · no schema change.**
+- Live verification: selection route auth-gated (anon `401`, not 404); authenticated resolve returns the bounded envelope; **read-only confirmed** (draft count unchanged before/after resolve).
+
+## Invariants (verified live on production)
+- **OPERATION_MAP = 34**
+- **capabilities = 23**
+- **catalogue = 40**
+- **MCP tools = 40**
+- **DB_VERSION = 2.5.0** (14 `wpcc_*` tables; none added)
+
+## Current production baseline
+**Production HEAD: `f5c19ea`**
+
+Latest deployed milestones:
+1. Proposal Store primitive
+2. AI Alt Text (7A–8.4)
+3. S2.1 Pagination Consistency
+4. S2.2.1 Cross-Page Server-Side Selection
+
+Current state:
+- Builder UIs remain **build-flag OFF** · Governed Drafts **hidden** · AI Alt Text **hidden**.
+- **Four Guarantees intact** (approval · rollback · audit · capability scoping).
+- Production **stable**.
+
+**Next:** report-first planning of the next architectural task (e.g., next S2.2 increment — server-materialized/saved selections, or a second governed-action consumer of the resolver — or other Phase B/C debt) on explicit direction. **S2.2.2 not started.**
