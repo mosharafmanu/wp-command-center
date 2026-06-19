@@ -77,7 +77,7 @@ has  "consumes canonical items[]"          "d.items"             "$VIEW"
 # Slice 2b: generation control creates DRAFTS via /seo/generate; still NO apply/undo.
 has  "generate control (drafts) present"   "wpcc-seo-generate"   "$VIEW"
 has  "generation posts to /seo/generate"   "/seo/generate"       "$VIEW"
-lacks "no Apply control"                   "/apply"             "$VIEW"
+# (Apply arrives in Slice 4a — covered by test-seo-apply.sh.) Undo stays out (Slice 4b).
 lacks "no Undo / history-rollback route"   "/history/"          "$VIEW"
 lacks "no OperationExecutor in view"       "OperationExecutor"  "$VIEW"
 

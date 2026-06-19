@@ -443,3 +443,32 @@ Modified: `includes/Admin/views/seo-meta.php` (Suggestions tab + JS), `tests/tes
 - `tests/run.sh --tier T0 --changed` **182/0 net-new 0** · `--tier T1 --changed` **424/0 net-new 0**
 
 **Next:** Slice 4 (approve/apply + undo), report-first, on explicit direction. **Slice 4 not started.** Apply → `ProposalApplyService` → `seo_manage`/`seo_update`; undo → existing change-history rollback (`change_id`→`rollback_id`→`seo_restore`, verified). Slice 5 (bulk) needs `wpcc_seo_rollbacks` store hardening first.
+
+---
+
+# GA#2 SEO Meta Generator — Slice 4a (Apply + Applied) — committed locally, NOT pushed
+
+> Approve/Apply + a read-only Applied tab over the existing governed apply path. UI-only. Committed on `main`; **not pushed, not deployed.** Production is at `5158b47`. (Undo = Slice 4b, NOT started.)
+
+## What shipped (UI-only)
+- **Apply** on the Suggestions tab → reuses the existing `POST /admin/proposals/{id}/apply` → `ProposalApplyService::apply()` → `OperationExecutor::run('seo_manage')` → `SeoRuntimeManager::seo_update` → `ChangeRecorder` → `ProposalStore::mark_applied(change_id)`. No SEO-specific apply, no new route/executor/approval path; the UI never calls `seo_manage`/`OperationExecutor` directly.
+- **Mode-aware** label from server-rendered `SecurityModeManager::current()`: developer → "Approve & Apply" (immediate); client/enterprise → "Submit for approval" (`pending_approval`). Outcome read from the API response, never assumed from the label.
+- **Applied tab** (read-only) reuses the existing proposal list query: three disjoint reads (`status=applied|pending_approval|failed`, `operation_id=seo_manage`), merged + WP-core-REST post enrichment; rollback-aware status via the deployed `ProposalAdminQuery.change_status` ("Applied / Awaiting approval / Failed / Reverted"). No row actions.
+
+## Verified (Final Applied-State Verification: GO)
+Real developer apply → status `applied`, `change_id` recorded, change record `rollback_kind=runtime_option` + `rollback_id` present + `reversible=1`, and `seo_update` actually wrote the post meta. Applied/pending/failed all persist across reload + re-query; the 3-read merge is drop-safe (status-disjoint). Provider/model + Current-vs-Suggested render after reload.
+
+## Boundaries (grep-verified 0)
+No Undo (`wpcc-seo-undo`), no `/history/` rollback route, no Approval-Center link, no Change-History link, no rollback button, no bulk apply, no SelectionResolver, no direct `seo_manage`/`OperationExecutor` execution, no `SeoProvider::write`. The single `action: 'seo_update'` is the edit's `final_payload` data.
+
+## Four Guarantees & invariants
+Approval (per-mode gating via the existing executor) · Rollback (untouched; `rollback_id` preserved for 4b) · Audit (`ChangeRecorder`) · Capability scoping (`seo_manage → content.manage`) — all unchanged; no second path. Invariants frozen: OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (no new route/operation/capability/MCP tool/schema).
+
+## Files (6) — UI + tests only
+Modified: `includes/Admin/views/seo-meta.php` (Apply button + Applied tab + handlers), `tests/test-seo-review.sh` + `test-seo-audit.sh` + `test-seo-generate.sh` (stale `/apply` "no-apply" guards removed — apply now belongs to 4a; `/history/` undo guards retained), `tests/regression-map.tsv` (+`seo_apply` group). New: `tests/test-seo-apply.sh`.
+
+## Testing
+- `test-seo-apply.sh` **39/0** · `test-seo-review.sh` **37/0** · `test-seo-audit.sh` **54/0** · `test-seo-generate.sh` **45/0**
+- `tests/run.sh --tier T0 --changed` **227/0 net-new 0** · `--tier T1 --changed` **553/0 net-new 0**
+
+**Next:** Slice 4b (per-item Undo via the existing `/admin/history/{change_id}/rollback` → `seo_restore`), report-first, on explicit direction. **Slice 4b not started.** Slice 5 (bulk) still needs the `wpcc_seo_rollbacks` store hardening first.

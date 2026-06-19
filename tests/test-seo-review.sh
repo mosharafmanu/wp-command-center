@@ -56,8 +56,7 @@ has  "empty state"                          "No suggestions yet"  "$VIEW"
 
 echo
 echo "== 3. View: NO apply/approval/undo/rollback/bulk/selection controls =="
-lacks "no apply control"                   "wpcc-seo-apply"       "$VIEW"
-lacks "no apply route call"                "/apply"             "$VIEW"
+# (Apply control + Applied tab arrive in Slice 4a — covered by test-seo-apply.sh.)
 lacks "no Approval Center link"            "wpcc-approval-center" "$VIEW"
 lacks "no Change History link"            "wpcc-change-history"  "$VIEW"
 lacks "no history rollback route"         "/history/"           "$VIEW"

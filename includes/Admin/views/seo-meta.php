@@ -24,6 +24,10 @@ $nonce     = wp_create_nonce( 'wp_rest' );
 $api_base  = rest_url( 'wp-command-center/v1/admin' );
 $core_base = rest_url( 'wp/v2' );
 $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any post type)
+// Server-rendered security mode drives the apply button label (developer applies
+// directly; client/enterprise submit for approval). The outcome is still taken from
+// the apply API response (defensive) — the UI never assumes from the label.
+$security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 ?>
 <div class="wrap wpcc-wrap wpcc-seo">
 	<h1><?php esc_html_e( 'SEO Meta', 'wp-command-center' ); ?></h1>
@@ -34,6 +38,7 @@ $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any
 	<h2 class="nav-tab-wrapper">
 		<a href="#" class="nav-tab nav-tab-active" id="wpcc-seo-tab-review"><?php esc_html_e( 'Review', 'wp-command-center' ); ?></a>
 		<a href="#" class="nav-tab" id="wpcc-seo-tab-suggestions"><?php esc_html_e( 'Suggestions', 'wp-command-center' ); ?></a>
+		<a href="#" class="nav-tab" id="wpcc-seo-tab-applied"><?php esc_html_e( 'Applied', 'wp-command-center' ); ?></a>
 	</h2>
 
 	<!-- ============ REVIEW TAB ============ -->
@@ -86,6 +91,26 @@ $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any
 		</table>
 		<div id="wpcc-seo-sg-pager" class="wpcc-seo-pager"></div>
 	</div>
+
+	<!-- ============ APPLIED TAB (Slice 4a — read-only status) ============ -->
+	<div id="wpcc-seo-panel-applied" style="display:none;">
+		<p style="margin:12px 0;">
+			<span class="description"><?php esc_html_e( 'Applied SEO descriptions and items awaiting approval.', 'wp-command-center' ); ?></span>
+			<span id="wpcc-seo-ap-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
+		</p>
+		<table class="widefat striped wpcc-seo-sg-table">
+			<thead>
+				<tr>
+					<th style="width:26%;"><?php esc_html_e( 'Content', 'wp-command-center' ); ?></th>
+					<th><?php esc_html_e( 'Applied SEO meta', 'wp-command-center' ); ?></th>
+					<th style="width:160px;"><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th>
+				</tr>
+			</thead>
+			<tbody id="wpcc-seo-ap-rows">
+				<tr><td colspan="3"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
+			</tbody>
+		</table>
+	</div>
 </div>
 
 <style>
@@ -121,6 +146,8 @@ $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any
 	const CORE  = <?php echo wp_json_encode( $core_base ); ?>;
 	const EDIT  = <?php echo wp_json_encode( $edit_base ); ?>;
 	const NONCE = <?php echo wp_json_encode( $nonce ); ?>;
+	const MODE  = <?php echo wp_json_encode( $security_mode ); ?>; // developer | client | enterprise
+	const IS_DEV = ( MODE === 'developer' );
 	const LIMIT = 20;
 	const TITLE_MAX = 60, DESC_MIN = 120, DESC_MAX = 160;
 	const STR = {
@@ -168,7 +195,17 @@ $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any
 		/* translators: %1$d current length, %2$d max */
 		ccTitle:   <?php echo wp_json_encode( __( '%1$d / %2$d', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d min, %3$d max */
-		ccDesc:    <?php echo wp_json_encode( __( '%1$d (target %2$d–%3$d)', 'wp-command-center' ) ); ?>
+		ccDesc:    <?php echo wp_json_encode( __( '%1$d (target %2$d–%3$d)', 'wp-command-center' ) ); ?>,
+		// Slice 4a — apply + Applied tab.
+		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'wp-command-center' ) ); ?>,
+		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'wp-command-center' ) ); ?>,
+		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'wp-command-center' ) ); ?>,
+		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'wp-command-center' ) ); ?>,
+		stAwaiting:<?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'wp-command-center' ) ); ?>,
+		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'wp-command-center' ) ); ?>,
+		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'wp-command-center' ) ); ?>,
+		colStatus2:<?php echo wp_json_encode( esc_html__( 'Status', 'wp-command-center' ) ); ?>,
+		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'wp-command-center' ) ); ?>
 	};
 	const MAX_BATCH = 25;
 
@@ -355,7 +392,8 @@ $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any
 					'<textarea class="wpcc-seo-ed" rows="3">' + esc( sg.description ) + '</textarea>' +
 					'<div class="wpcc-seo-cc wpcc-seo-cc-d"></div>' +
 				'</td>' +
-				'<td><button type="button" class="button button-primary button-small wpcc-seo-save">' + esc( STR.save ) + '</button> ' +
+				'<td><button type="button" class="button button-primary button-small wpcc-seo-apply">' + esc( IS_DEV ? STR.applyDev : STR.applyGate ) + '</button> ' +
+					'<button type="button" class="button button-small wpcc-seo-save">' + esc( STR.save ) + '</button> ' +
 					'<button type="button" class="button button-small wpcc-seo-dismiss">' + esc( STR.dismiss ) + '</button>' +
 					'<div class="wpcc-seo-rowmsg" role="status"></div></td>' +
 				'</tr>';
@@ -417,20 +455,101 @@ $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any
 			api( '/proposals/' + encodeURIComponent( id ) + '/dismiss', { method: 'POST' } )
 				.then( ( res ) => { if ( res.ok ) { row.parentNode.removeChild( row ); } else if ( msg ) { msg.textContent = ( res.data && res.data.message ) || STR.error; } } )
 				.catch( () => { if ( msg ) { msg.textContent = STR.error; } } );
+		} else if ( t.classList.contains( 'wpcc-seo-apply' ) ) {
+			// Approve & Apply (developer) / Submit for approval (client/enterprise).
+			// Reuses the EXISTING proposal apply route; outcome is driven by the API
+			// response (applied | pending_approval), never assumed from the label.
+			t.disabled = true;
+			if ( msg ) { msg.textContent = '…'; }
+			api( '/proposals/' + encodeURIComponent( id ) + '/apply', { method: 'POST' } )
+				.then( ( res ) => {
+					const st = ( res.data && res.data.status ) || '';
+					if ( st === 'applied' || st === 'pending_approval' ) {
+						if ( row.parentNode ) { row.parentNode.removeChild( row ); } // moves to Applied tab
+					} else {
+						t.disabled = false;
+						if ( msg ) { msg.textContent = STR.cantApply; }
+					}
+				} )
+				.catch( () => { t.disabled = false; if ( msg ) { msg.textContent = STR.cantApply; } } );
 		}
 	} );
+
+	// ---------- APPLIED TAB (Slice 4a): read-only status (applied / awaiting / failed) ----------
+	function apBadge( color, label ) {
+		return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;color:#fff;font-size:12px;background:' + color + ';">' + esc( label ) + '</span>';
+	}
+	function appliedMeta( p ) {
+		const fp = ( p.final_payload && p.final_payload.seo ) ? p.final_payload.seo : null;
+		const pl = ( p.payload && p.payload.seo ) ? p.payload.seo : {};
+		const tt = ( fp && fp.title != null ) ? fp.title : ( pl.title || '' );
+		const dd = ( fp && fp.description != null ) ? fp.description : ( pl.description || '' );
+		return '<div><strong>' + esc( STR.sgCurTitle ) + ':</strong> ' + ( tt ? esc( tt ) : '<em class="wpcc-seo-none">' + esc( STR.none ) + '</em>' ) + '</div>' +
+			'<div style="margin-top:6px;"><strong>' + esc( STR.sgCurDesc ) + ':</strong> ' + ( dd ? esc( dd ) : '<em class="wpcc-seo-none">' + esc( STR.none ) + '</em>' ) + '</div>';
+	}
+	function renderApplied( list, ctx ) {
+		if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3">' + esc( STR.noApplied ) + '</td></tr>' ); return; }
+		setHtml( 'wpcc-seo-ap-rows', list.map( ( p ) => {
+			const tid = parseInt( p.target_id, 10 );
+			const c = ctx[ tid ] || {};
+			const title = c.title || ( '#' + tid );
+			const editLink = EDIT + '?post=' + encodeURIComponent( tid ) + '&action=edit';
+			let badge;
+			if ( p.status === 'pending_approval' ) { badge = apBadge( '#bd8600', STR.stAwaiting ); }
+			else if ( p.status === 'failed' ) { badge = apBadge( '#b32d2e', STR.stFailed ); }
+			else if ( p.status === 'applied' && p.change_status === 'rolled_back' ) { badge = apBadge( '#646970', STR.stReverted ); }
+			else { badge = apBadge( '#1a7f37', STR.stApplied ); } // applied + reversible (Undo arrives in Slice 4b)
+			return '<tr>' +
+				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-seo-meta">' + esc( c.type || '' ) + '</div></td>' +
+				'<td class="wpcc-seo-meta">' + appliedMeta( p ) + '</td>' +
+				'<td>' + badge + '</td>' +
+				'</tr>';
+		} ).join( '' ) );
+	}
+	function loadApplied() {
+		setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3">' + esc( STR.loading ) + '</td></tr>' );
+		// Reuse the EXISTING proposal list route: applied + pending_approval + failed
+		// for seo_manage. ProposalAdminQuery already enriches applied rows with
+		// change_status (rollback-aware). No new route, no new query.
+		Promise.all( [
+			api( '/proposals?status=applied&operation_id=seo_manage&limit=50' ),
+			api( '/proposals?status=pending_approval&operation_id=seo_manage&limit=50' ),
+			api( '/proposals?status=failed&operation_id=seo_manage&limit=50' )
+		] ).then( ( results ) => {
+			const applied = ( results[0].data && results[0].data.proposals ) || [];
+			const pending = ( results[1].data && results[1].data.proposals ) || [];
+			const failed  = ( results[2].data && results[2].data.proposals ) || [];
+			const list = pending.concat( applied, failed );
+			$( 'wpcc-seo-ap-status' ).textContent = '';
+			if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3">' + esc( STR.noApplied ) + '</td></tr>' ); return; }
+			const ids = list.map( ( p ) => parseInt( p.target_id, 10 ) ).filter( ( n ) => n > 0 );
+			const csv = ids.join( ',' );
+			Promise.all( [
+				coreGet( '/posts?include=' + csv + '&per_page=' + ids.length + '&_fields=id,title,type' ),
+				coreGet( '/pages?include=' + csv + '&per_page=' + ids.length + '&_fields=id,title,type' )
+			] ).then( ( r ) => {
+				const ctx = {};
+				[ r[0].data, r[1].data ].forEach( ( arr ) => { ( Array.isArray( arr ) ? arr : [] ).forEach( ( m ) => { ctx[ m.id ] = { title: ( m.title && m.title.rendered ) || '', type: m.type || '' }; } ); } );
+				renderApplied( list, ctx );
+			} ).catch( () => renderApplied( list, {} ) );
+		} ).catch( () => { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); } );
+	}
 
 	function switchTab( which ) {
 		$( 'wpcc-seo-panel-review' ).style.display = ( which === 'review' ) ? '' : 'none';
 		$( 'wpcc-seo-panel-suggestions' ).style.display = ( which === 'suggestions' ) ? '' : 'none';
+		$( 'wpcc-seo-panel-applied' ).style.display = ( which === 'applied' ) ? '' : 'none';
 		$( 'wpcc-seo-tab-review' ).classList.toggle( 'nav-tab-active', which === 'review' );
 		$( 'wpcc-seo-tab-suggestions' ).classList.toggle( 'nav-tab-active', which === 'suggestions' );
+		$( 'wpcc-seo-tab-applied' ).classList.toggle( 'nav-tab-active', which === 'applied' );
 		if ( which === 'suggestions' ) { sgOffset = 0; loadSuggestions(); }
+		else if ( which === 'applied' ) { loadApplied(); }
 	}
 
 	// ---------- wiring ----------
 	$( 'wpcc-seo-tab-review' ).addEventListener( 'click', function ( e ) { e.preventDefault(); switchTab( 'review' ); } );
 	$( 'wpcc-seo-tab-suggestions' ).addEventListener( 'click', function ( e ) { e.preventDefault(); switchTab( 'suggestions' ); } );
+	$( 'wpcc-seo-tab-applied' ).addEventListener( 'click', function ( e ) { e.preventDefault(); switchTab( 'applied' ); } );
 	if ( $( 'wpcc-seo-filter' ) ) { $( 'wpcc-seo-filter' ).addEventListener( 'change', function () { pg.offset = 0; load(); } ); }
 	if ( $( 'wpcc-seo-generate' ) ) { $( 'wpcc-seo-generate' ).addEventListener( 'click', generate ); }
 	if ( $( 'wpcc-seo-selectall' ) ) {

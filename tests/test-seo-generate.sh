@@ -65,7 +65,7 @@ echo "== 4. View: minimal generate control (drafts), no apply/undo controls =="
 has  "view has generate control"              "wpcc-seo-generate"    "$VIEW"
 has  "view posts to /seo/generate"            "/seo/generate"        "$VIEW"
 has  "view states drafts only"                "nothing is applied"   "$VIEW"
-lacks "view has no apply route"               "/apply"               "$VIEW"
+# (Apply arrives in Slice 4a — covered by test-seo-apply.sh.) Undo stays out (Slice 4b).
 lacks "view has no undo/history-rollback route" "/history/"          "$VIEW"
 
 echo
