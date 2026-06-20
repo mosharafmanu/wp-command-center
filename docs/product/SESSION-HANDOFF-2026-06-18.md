@@ -587,3 +587,28 @@ Modified: `includes/Admin/views/seo-meta.php` (only production change), `tests/t
 - `T0 --changed` **330/0 net-new 0** · `T1 --changed` **801/0 net-new 0** (22 suites; no flake).
 
 **Scope = Must-Have only.** Deferred (separate slices, NOT started): U2 audit-table badge relabels + score `/100` + "Suggestion ready" state; **Applied-tab pagination** (the remaining Public-Beta scalability blocker, visually confirmed unbounded in QA); Slice 5b / 5c.
+
+> **Deploy update:** UX Polish was **released to production** — prod HEAD = **`af9d314`** (`git describe` v0.109.0-20-gaf9d314), pull-cron verified, all UX-polish markers live (intro/tab badges/dashboard/no-provider + corrected `%d% optimized`), invariants 34/23/40/40/2.5.0, 14 tables, Builder UIs build-flag OFF, routes 401.
+
+---
+
+# SEO Meta Applied Tab Pagination — committed locally, NOT pushed
+
+> Fixes the unbounded/truncated Applied tab. UI-only. Committed on `main`; **not pushed, not deployed.** Production remains at **`af9d314`**.
+
+## What shipped (UI-only)
+- **Segmented Applied statuses:** the Applied tab now has a 3-segment control — **Applied** (default) · **Awaiting approval** · **Failed** — instead of the old 3-read merge (each capped at `limit=50`, silently truncating).
+- **Pagination envelope reuse:** each segment is **one paginated read** over the EXISTING `GET /admin/proposals?operation_id=seo_manage&status={apSeg}&limit=20&offset=N`, consuming the canonical envelope (`total_count/returned/has_more/offset`). Offset-based **Prev/Next** + "**Showing X–Y of N**" (reuses `STR.pageInfo`). Default segment = Applied; switching a segment or re-entering the Applied tab resets offset to 0. WP-core post/page enrichment now per-page (≤20 ids).
+- **Preserved:** Undo on reversible Applied rows (Slice 4b), Reverted badge, Applied/Awaiting/Failed rendering — `renderApplied` unchanged; `loadApplied()` kept its name so the Undo handler + tab switch reload the current segment/page transparently.
+
+## No backend / no invariant changes
+Only `seo-meta.php` changed in production. **No** new route / multi-status / `status IN` / store change / schema / DB_VERSION / operation / capability / MCP tool. All 9 named backend files byte-identical. Four Guarantees untouched (read-only presentation). Invariants: OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**.
+
+## Files (3)
+Modified: `includes/Admin/views/seo-meta.php` (only production change), `tests/test-seo-apply.sh` (section 2 → segmented + paginated assertions; +4c functional pagination test: 22 applied → page 1 returns 20 + has_more + total≥22, page 2 reachable). `docs/product/SESSION-HANDOFF-2026-06-18.md` (this section).
+
+## Testing
+- `test-seo-apply.sh` **56/0** (incl. live >20-record pagination) · `test-seo-undo.sh` **33/0** · `test-seo-bulk.sh` **36/0** · siblings green (audit 68/0, generate 49/0, review 36/0).
+- `T0 --changed` **281/0 net-new 0** · `T1 --changed` **607/0 net-new 0** (16 suites; no flake). Live visual smoke (Playwright, authed dev session): default Applied segment, "Showing 1–20 of 133", Next → "21–40 of 133", switch to Awaiting → "1–20 of 37" with 0 Undo (offset reset, no Undo on non-applied).
+
+**Not deployed yet.** Next = deploy decision for Applied-tab pagination. Slice 5b / 5c and other surfaces NOT started.

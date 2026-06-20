@@ -117,6 +117,13 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			<span class="description"><?php esc_html_e( 'Applied SEO descriptions and items awaiting approval.', 'wp-command-center' ); ?></span>
 			<span id="wpcc-seo-ap-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
+		<?php // Segmented, single-status pagination — each segment is one paginated
+		// /admin/proposals read; default = Applied. ?>
+		<div class="wpcc-seo-segbar" id="wpcc-seo-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'wp-command-center' ); ?>">
+			<button type="button" class="button button-primary wpcc-seo-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'wp-command-center' ); ?></button>
+			<button type="button" class="button wpcc-seo-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'wp-command-center' ); ?></button>
+			<button type="button" class="button wpcc-seo-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'wp-command-center' ); ?></button>
+		</div>
 		<table class="widefat striped wpcc-seo-sg-table">
 			<thead>
 				<tr>
@@ -130,6 +137,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 				<tr><td colspan="4"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
 			</tbody>
 		</table>
+		<div id="wpcc-seo-ap-pager" class="wpcc-seo-pager"></div>
 	</div>
 </div>
 
@@ -176,6 +184,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 .wpcc-seo-dash-foot { margin-top:12px;font-size:13px;color:#50575e; }
 .wpcc-seo-link { background:none;border:none;color:#2271b1;cursor:pointer;padding:0;font-size:13px;text-decoration:underline; }
 .wpcc-seo-link:hover { color:#135e96; }
+.wpcc-seo-segbar { display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 6px; }
 </style>
 
 <script>
@@ -764,33 +773,55 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 				'</tr>';
 		} ).join( '' ) );
 	}
+	// Segmented single-status pagination. Each segment (applied | pending_approval |
+	// failed) is ONE paginated read over the EXISTING /admin/proposals route + canonical
+	// envelope (total_count/returned/has_more/offset). No 3-read merge, no limit=50
+	// truncation, no new route. ProposalAdminQuery enriches applied rows with
+	// change_status (rollback-aware). loadApplied() keeps its name so the Undo handler
+	// and the tab switch reload the current segment/page transparently.
+	let apSeg = 'applied';            // applied | pending_approval | failed
+	let apOffset = 0, apTotal = 0, apReturned = 0, apHasMore = false;
+	const AP_LIMIT = LIMIT;           // 20, consistent with Review/Suggestions
+
+	function renderAppliedPager() {
+		if ( apTotal <= AP_LIMIT && apOffset === 0 ) { setHtml( 'wpcc-seo-ap-pager', '' ); return; }
+		const prevDis = apOffset <= 0 ? ' disabled' : ''; const nextDis = apHasMore ? '' : ' disabled';
+		setHtml( 'wpcc-seo-ap-pager',
+			'<button type="button" class="button" id="wpcc-seo-ap-prev"' + prevDis + '>' + esc( STR.prev ) + '</button>' +
+			'<button type="button" class="button" id="wpcc-seo-ap-next"' + nextDis + '>' + esc( STR.next ) + '</button>' );
+		const p = $( 'wpcc-seo-ap-prev' ), n = $( 'wpcc-seo-ap-next' );
+		if ( p ) { p.addEventListener( 'click', () => { if ( apOffset > 0 ) { apOffset = Math.max( 0, apOffset - AP_LIMIT ); loadApplied(); } } ); }
+		if ( n ) { n.addEventListener( 'click', () => { if ( apHasMore ) { apOffset += AP_LIMIT; loadApplied(); } } ); }
+	}
+	function switchApSeg( seg ) {
+		apSeg = seg; apOffset = 0;
+		document.querySelectorAll( '#wpcc-seo-ap-segbar .wpcc-seo-seg' ).forEach( ( b ) => {
+			b.classList.toggle( 'button-primary', b.getAttribute( 'data-seg' ) === seg );
+		} );
+		loadApplied();
+	}
 	function loadApplied() {
 		setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4">' + esc( STR.loading ) + '</td></tr>' );
-		// Reuse the EXISTING proposal list route: applied + pending_approval + failed
-		// for seo_manage. ProposalAdminQuery already enriches applied rows with
-		// change_status (rollback-aware). No new route, no new query.
-		Promise.all( [
-			api( '/proposals?status=applied&operation_id=seo_manage&limit=50' ),
-			api( '/proposals?status=pending_approval&operation_id=seo_manage&limit=50' ),
-			api( '/proposals?status=failed&operation_id=seo_manage&limit=50' )
-		] ).then( ( results ) => {
-			const applied = ( results[0].data && results[0].data.proposals ) || [];
-			const pending = ( results[1].data && results[1].data.proposals ) || [];
-			const failed  = ( results[2].data && results[2].data.proposals ) || [];
-			const list = pending.concat( applied, failed );
-			$( 'wpcc-seo-ap-status' ).textContent = '';
-			if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4">' + esc( STR.noApplied ) + '</td></tr>' ); return; }
-			const ids = list.map( ( p ) => parseInt( p.target_id, 10 ) ).filter( ( n ) => n > 0 );
-			const csv = ids.join( ',' );
-			Promise.all( [
-				coreGet( '/posts?include=' + csv + '&per_page=' + ids.length + '&_fields=id,title,type' ),
-				coreGet( '/pages?include=' + csv + '&per_page=' + ids.length + '&_fields=id,title,type' )
-			] ).then( ( r ) => {
-				const ctx = {};
-				[ r[0].data, r[1].data ].forEach( ( arr ) => { ( Array.isArray( arr ) ? arr : [] ).forEach( ( m ) => { ctx[ m.id ] = { title: ( m.title && m.title.rendered ) || '', type: m.type || '' }; } ); } );
-				renderApplied( list, ctx );
-			} ).catch( () => renderApplied( list, {} ) );
-		} ).catch( () => { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); } );
+		api( '/proposals?status=' + encodeURIComponent( apSeg ) + '&operation_id=seo_manage&limit=' + AP_LIMIT + '&offset=' + apOffset )
+			.then( ( res ) => {
+				if ( ! res.ok ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); setHtml( 'wpcc-seo-ap-pager', '' ); $( 'wpcc-seo-ap-status' ).textContent = ''; return; }
+				const d = res.data || {}, list = d.proposals || [];
+				apTotal = d.total_count || 0; apReturned = d.returned || list.length; apHasMore = !! d.has_more;
+				if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4">' + esc( STR.noApplied ) + '</td></tr>' ); setHtml( 'wpcc-seo-ap-pager', '' ); $( 'wpcc-seo-ap-status' ).textContent = ''; return; }
+				const ids = list.map( ( p ) => parseInt( p.target_id, 10 ) ).filter( ( n ) => n > 0 );
+				const csv = ids.join( ',' );
+				Promise.all( [
+					coreGet( '/posts?include=' + csv + '&per_page=' + ids.length + '&_fields=id,title,type' ),
+					coreGet( '/pages?include=' + csv + '&per_page=' + ids.length + '&_fields=id,title,type' )
+				] ).then( ( r ) => {
+					const ctx = {};
+					[ r[0].data, r[1].data ].forEach( ( arr ) => { ( Array.isArray( arr ) ? arr : [] ).forEach( ( m ) => { ctx[ m.id ] = { title: ( m.title && m.title.rendered ) || '', type: m.type || '' }; } ); } );
+					renderApplied( list, ctx );
+					$( 'wpcc-seo-ap-status' ).textContent = STR.pageInfo.replace( '%1$d', apOffset + 1 ).replace( '%2$d', apOffset + apReturned ).replace( '%3$d', apTotal );
+					renderAppliedPager();
+				} ).catch( () => { renderApplied( list, {} ); renderAppliedPager(); } );
+			} )
+			.catch( () => { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); setHtml( 'wpcc-seo-ap-pager', '' ); } );
 	}
 
 	// ---------- APPLIED TAB (Slice 4b): per-item Undo ----------
@@ -836,7 +867,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		$( 'wpcc-seo-tab-suggestions' ).classList.toggle( 'nav-tab-active', which === 'suggestions' );
 		$( 'wpcc-seo-tab-applied' ).classList.toggle( 'nav-tab-active', which === 'applied' );
 		if ( which === 'suggestions' ) { sgOffset = 0; loadSuggestions(); }
-		else if ( which === 'applied' ) { loadApplied(); }
+		else if ( which === 'applied' ) { switchApSeg( 'applied' ); } // default segment + offset 0
 		updateTabCounts(); // U1.3 — keep tab badges fresh on every switch.
 	}
 
@@ -886,6 +917,12 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		const all = document.querySelectorAll( '#wpcc-seo-sg-rows .wpcc-seo-sg-cb' );
 		const checked = document.querySelectorAll( '#wpcc-seo-sg-rows .wpcc-seo-sg-cb:checked' );
 		const sa = $( 'wpcc-seo-sg-selectall' ); if ( sa ) { sa.checked = ( all.length > 0 && all.length === checked.length ); }
+	} );
+
+	// Applied-tab segment control: each segment is a single-status paginated list.
+	document.addEventListener( 'click', function ( e ) {
+		const seg = e.target.closest ? e.target.closest( '#wpcc-seo-ap-segbar .wpcc-seo-seg' ) : null;
+		if ( seg ) { switchApSeg( seg.getAttribute( 'data-seg' ) ); }
 	} );
 
 	// U3 — dashboard actions: "Needs you" stats set the audit filter; footer links

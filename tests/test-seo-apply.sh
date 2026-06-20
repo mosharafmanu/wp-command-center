@@ -41,12 +41,28 @@ lacks "no direct seo_manage call in view"  "seo_manage'"         "$VIEW"
 lacks "no OperationExecutor in view"       "OperationExecutor"   "$VIEW"
 
 echo
-echo "== 2. View: Applied tab reuses proposal list query (applied/pending/failed) =="
+echo "== 2. View: Applied tab = segmented single-status paginated list =="
 has  "Applied tab present"                  "wpcc-seo-tab-applied" "$VIEW"
 has  "Applied panel present"                "wpcc-seo-panel-applied" "$VIEW"
-has  "reads applied"                        "status=applied&operation_id=seo_manage" "$VIEW"
-has  "reads pending_approval"               "status=pending_approval&operation_id=seo_manage" "$VIEW"
-has  "reads failed"                         "status=failed&operation_id=seo_manage" "$VIEW"
+# Segmented control (Applied default / Awaiting approval / Failed).
+has  "segment control present"              "wpcc-seo-ap-segbar"   "$VIEW"
+has  "Applied segment"                      'data-seg="applied"'   "$VIEW"
+has  "Awaiting approval segment"            'data-seg="pending_approval"' "$VIEW"
+has  "Failed segment"                       'data-seg="failed"'    "$VIEW"
+has  "default segment = applied"            "apSeg = 'applied'"    "$VIEW"
+has  "tab entry resets to Applied segment"  "switchApSeg( 'applied' )" "$VIEW"
+has  "segment switch resets offset"         "apSeg = seg; apOffset = 0" "$VIEW"
+# Single-status paginated read over the existing route (no 3-read merge, no limit=50).
+has  "single-status paginated read"         "status=' + encodeURIComponent( apSeg ) + '&operation_id=seo_manage&limit='" "$VIEW"
+has  "page size 20 (AP_LIMIT=LIMIT)"        "AP_LIMIT = LIMIT"     "$VIEW"
+has  "consumes canonical total_count"       "d.total_count"        "$VIEW"
+has  "consumes has_more"                    "d.has_more"           "$VIEW"
+has  "Showing X-Y of N status"              "STR.pageInfo.replace" "$VIEW"
+has  "Prev/Next pager"                      "wpcc-seo-ap-pager"    "$VIEW"
+has  "Next advances offset by AP_LIMIT"     "apOffset += AP_LIMIT" "$VIEW"
+has  "Prev decrements offset"               "apOffset - AP_LIMIT"  "$VIEW"
+lacks "no old 3-read merge (limit=50)"      "&operation_id=seo_manage&limit=50" "$VIEW"
+lacks "no merged concat"                    "pending.concat( applied, failed )" "$VIEW"
 has  "Applied state badge"                  "stApplied"           "$VIEW"
 has  "Awaiting approval state"              "Awaiting approval"   "$VIEW"
 has  "Failed state"                         "stFailed"            "$VIEW"
@@ -145,6 +161,44 @@ else
 		assert_eq "pending_approval listable for Applied tab" "1" "$(gj pending_listable)"
 		assert_eq "failed listable for Applied tab"           "1" "$(gj failed_listable)"
 	fi
+
+	# 4c. Pagination: >20 applied records page correctly (no silent truncation).
+	PG="$(wpe '
+		$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1);
+		$store = new WPCommandCenter\Proposals\ProposalStore();
+		$out = [];
+		// Seed 22 applied proposals (status set directly via the store transitions).
+		$ids = [];
+		for ($i=0;$i<22;$i++){
+			$p = $store->create(["operation_id"=>"seo_manage","action"=>"seo_update","target_type"=>"post","target_id"=>"99000".$i,
+				"payload"=>["action"=>"seo_update","content_id"=>0,"seo"=>["title"=>"PgT".$i,"description"=>"d"]],"prior"=>["title"=>"","description"=>""]]);
+			$store->mark_pending_approval($p["proposal_id"], wp_generate_uuid4());
+			$store->mark_applied($p["proposal_id"], wp_generate_uuid4());
+			$ids[] = $p["proposal_id"];
+		}
+		// Page 1: limit=20, offset=0 → 20 rows + has_more + total>=22.
+		$r1 = new WP_REST_Request("GET","/wp-command-center/v1/admin/proposals");
+		$r1->set_param("operation_id","seo_manage"); $r1->set_param("status","applied"); $r1->set_param("limit",20); $r1->set_param("offset",0);
+		$d1 = rest_do_request($r1)->get_data();
+		$out["p1_returned"] = (int)($d1["returned"] ?? -1);
+		$out["p1_has_more"] = !empty($d1["has_more"]) ? 1 : 0;
+		$out["total_ge_22"] = ((int)($d1["total_count"] ?? 0) >= 22) ? 1 : 0;
+		// Page 2: offset=20 → at least 2 more rows reachable (NOT truncated).
+		$r2 = new WP_REST_Request("GET","/wp-command-center/v1/admin/proposals");
+		$r2->set_param("operation_id","seo_manage"); $r2->set_param("status","applied"); $r2->set_param("limit",20); $r2->set_param("offset",20);
+		$d2 = rest_do_request($r2)->get_data();
+		$out["p2_reachable"] = ((int)($d2["returned"] ?? 0) >= 2) ? 1 : 0;
+		// cleanup our seeded rows
+		global $wpdb; $t=$wpdb->prefix."wpcc_proposals";
+		$in = implode(",", array_map(fn($p)=>"\"".esc_sql($p)."\"", $ids));
+		$wpdb->query("DELETE FROM $t WHERE proposal_id IN ($in)");
+		echo wp_json_encode($out);
+	')"
+	pj() { printf '%s' "$PG" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }
+	assert_eq "page 1 returns 20 (limit honored)"        "20" "$(pj p1_returned)"
+	assert_eq "page 1 has_more (not truncated at 20)"    "1"  "$(pj p1_has_more)"
+	assert_eq "total_count >= 22 (full count)"           "1"  "$(pj total_ge_22)"
+	assert_eq "page 2 reachable via offset (no truncation)" "1" "$(pj p2_reachable)"
 fi
 
 echo
