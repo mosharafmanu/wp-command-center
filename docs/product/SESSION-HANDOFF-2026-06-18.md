@@ -612,3 +612,17 @@ Modified: `includes/Admin/views/seo-meta.php` (only production change), `tests/t
 - `T0 --changed` **281/0 net-new 0** · `T1 --changed` **607/0 net-new 0** (16 suites; no flake). Live visual smoke (Playwright, authed dev session): default Applied segment, "Showing 1–20 of 133", Next → "21–40 of 133", switch to Awaiting → "1–20 of 37" with 0 Undo (offset reset, no Undo on non-applied).
 
 **Not deployed yet.** Next = deploy decision for Applied-tab pagination. Slice 5b / 5c and other surfaces NOT started.
+
+---
+
+# GA#2 — SEO Meta Applied Tab Pagination — DEPLOYED to production
+
+- **Commit:** `75e1631` — *feat(seo): paginate applied proposal history*
+- **Deployment verified:** pull-cron released; **Production HEAD = `75e1631`** (`git describe` v0.109.0-21-g75e1631), plugin active, homepage/namespace **200**, admin routes **401**, no PHP fatals.
+- **What shipped (UI-only):** the Applied tab is now a **segmented single-status paginated list** — **Applied** (default) · **Awaiting approval** · **Failed**. Each segment is one paginated read over the EXISTING `GET /admin/proposals?operation_id=seo_manage&status={seg}&limit=20&offset=N`, **reusing the canonical pagination envelope** (`total_count/returned/has_more/offset`) with offset-based Prev/Next and "Showing X–Y of N". Default = Applied; segment switch / tab entry resets offset to 0.
+- **Silent truncation removed:** the old 3-read merge (each `limit=50`) is gone; >20 records in any status now page fully (live-verified "Showing 1–20 of 133" → Next "21–40 of 133").
+- **Preserved:** Undo on reversible Applied rows, Reverted badge, all status rendering (`renderApplied` unchanged; `loadApplied` kept its name).
+- **No backend / route / schema changes:** only `seo-meta.php` (production); all 9 named backend files byte-identical on prod (`git diff af9d314..75e1631` = view + tests + docs only). **Four Guarantees preserved** (read-only presentation). **Invariants unchanged: 34 / 23 / 40 / 40 / 2.5.0**; **14** `wpcc_*` tables (no migration).
+- **Tests:** `test-seo-apply.sh` 56/0 (incl. live >20-record pagination) · siblings green · `T0 --changed` 281/0 net-new 0 · `T1 --changed` 607/0 net-new 0.
+
+**Production baseline is now `75e1631`.** Builder UIs remain build-flag OFF on prod. Next = contextual SEO AI entry points (architecture review) / Slice 5b / 5c — NOT started.
