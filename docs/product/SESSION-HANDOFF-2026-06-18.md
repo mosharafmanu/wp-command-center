@@ -731,7 +731,7 @@ Modal opens (`role=dialog` / `aria-modal=true`); loading → real `claude-sonnet
 - **vs new REST endpoint (D):** would add a route (a contract/invariant surface) for a capability `generate` + `proposals/{id}` already cover 1:1 — violates "no new route," more to certify, no gain. Rejected.
 - **vs redirect-only UX (A):** the deployed behavior — functional but dated (navigates away from the list on every click). Option B keeps A as the **no-JS fallback layer** while adding the in-context modal for JS users — best of both, zero backend change.
 
-> **Deploy:** committed this session; releasing via pull-cron — production stamp recorded in the follow-up docs refresh below.
+> **Deploy update:** released to production via pull-cron this session — prod HEAD = **`343d720`** (`git describe` v0.109.0-26-g343d720), plugin active, invariants 34/23/40/40/2.5.0, 14 tables, no fatals; SEO Builder build-flag OFF → row action **and** Quick Panel asset hidden on prod (expected); homepage 200, SEO routes 401. The `343d720` feature commit is the new production baseline (this docs-stamp commit advances git HEAD only).
 
 ---
 ---
@@ -741,7 +741,7 @@ Modal opens (`role=dialog` / `aria-modal=true`); loading → real `claude-sonnet
 > This block supersedes the per-slice history above for "what is live today." The sections above are the chronological build log.
 
 ## Current production
-- **Production HEAD = `15bcd6d`** (`git describe` = `v0.109.0-24-g15bcd6d`). **origin/main == local == prod == `15bcd6d`; working tree clean.**
+- **Production baseline = `343d720`** (`git describe` = `v0.109.0-26-g343d720`) — the Contextual SEO Quick Panel (Option B) feature commit, released this session. **origin/main == local == prod**; working tree clean. (A docs-stamp commit may advance git HEAD past `343d720`; the feature baseline is `343d720`.)
 - **Deploy model:** Hostinger pull-cron on `mosharafmanu.com` — `git push origin main` → live ~1 min. Manual deploy: `ssh -p 65002 u916998506@72.62.68.183` then `bash ~/wpcc-deploy.sh`. Runbook: `.ai/DEPLOY.md`. Prod REST namespace = **`wp-command-center/v1`** (not `wpcc/v1`). Prod plugin path: `~/domains/mosharafmanu.com/public_html/wp-content/plugins/wp-command-center`.
 - **Plugin active · homepage/namespace 200 · admin routes 401 · no PHP fatals.**
 
@@ -841,8 +841,8 @@ Read docs/product/SESSION-HANDOFF-2026-06-18.md in full, especially the
 "CONSOLIDATED PRODUCTION STATE" and "NEXT SESSION START HERE" sections.
 
 Authoritative state to confirm before any work:
-- Production HEAD = 15bcd6d (git describe v0.109.0-24-g15bcd6d);
-  origin/main == local == prod == 15bcd6d; tree clean.
+- Production baseline = 343d720 (git describe v0.109.0-26-g343d720);
+  origin/main == local == prod; tree clean. (Quick Panel feature commit.)
 - Invariants FROZEN: OPERATION_MAP 34 · capabilities 23 · catalogue 40 ·
   MCP tools 40 · DB_VERSION 2.5.0 (14 wpcc_* tables, no migration).
 - Deploy = Hostinger pull-cron: `git push origin main` -> live ~1 min.
