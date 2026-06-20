@@ -36,6 +36,11 @@ class SeoRowActions {
 		add_filter( 'page_row_actions', [ $this, 'add_row_action' ], 10, 2 );
 		add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
 
+		// Quick Panel (Option B) — progressive enhancement. The row action stays a
+		// working admin-post <a> (no-JS fallback = the redirect handler above); when
+		// the asset loads it intercepts the click and proposes a draft in-context.
+		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+
 		// Sprint B — native WordPress Bulk Actions (per-screen hooks). WP core verifies
 		// the bulk-action nonce before `handle_bulk_actions-*` runs.
 		foreach ( $this->supported_types() as $type ) {
@@ -108,7 +113,12 @@ class SeoRowActions {
 			admin_url( 'admin-post.php?action=' . self::ACTION . '&post=' . (int) $post->ID ),
 			self::ACTION . '_' . (int) $post->ID
 		);
-		$actions[ self::ACTION ] = '<a href="' . esc_url( $url ) . '">'
+		// `wpcc-seo-quickgen` + data-* are the progressive-enhancement hooks the Quick
+		// Panel asset binds to. With no JS the href still redirects (the fallback path).
+		$actions[ self::ACTION ] = '<a href="' . esc_url( $url ) . '"'
+			. ' class="wpcc-seo-quickgen"'
+			. ' data-id="' . (int) $post->ID . '"'
+			. ' data-type="' . esc_attr( $post->post_type ) . '">'
 			. esc_html__( 'Generate SEO Suggestion', 'wp-command-center' ) . '</a>';
 
 		return $actions;
@@ -167,6 +177,71 @@ class SeoRowActions {
 		);
 		wp_safe_redirect( $url );
 		exit;
+	}
+
+	// ── Quick Panel (Option B) — in-context AJAX modal over EXISTING routes ────
+
+	/**
+	 * Enqueue the Quick Panel asset on the list-table screen for supported types.
+	 *
+	 * Loads ONLY on `edit.php` for a supported post type and ONLY when the entry
+	 * points are allowed (cap + build flag + FeatureGate) — same gate as the row
+	 * action itself. Localizes the EXISTING REST base + a fresh `wp_rest` nonce; the
+	 * modal calls `POST /admin/seo/generate` then `GET /admin/proposals/{id}` and only
+	 * ever navigates. No apply, no new route. Server-side permission on those routes
+	 * (`check_seo_permission`) is authoritative; this client gate is convenience only.
+	 *
+	 * @param string $hook Current admin page hook.
+	 */
+	public function enqueue_assets( string $hook ): void {
+		if ( 'edit.php' !== $hook ) {
+			return;
+		}
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$ptype  = $screen ? (string) $screen->post_type : '';
+		if ( ! $this->supported_type( $ptype ) || ! $this->allowed() ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			'wpcc-seo-quick-panel',
+			WPCC_PLUGIN_URL . 'assets/css/seo-quick-panel.css',
+			[],
+			WPCC_VERSION
+		);
+		wp_enqueue_script(
+			'wpcc-seo-quick-panel',
+			WPCC_PLUGIN_URL . 'assets/js/seo-quick-panel.js',
+			[],
+			WPCC_VERSION,
+			true
+		);
+		wp_localize_script( 'wpcc-seo-quick-panel', 'wpccSeoQuickPanel', [
+			'restBase'   => esc_url_raw( rest_url( 'wp-command-center/v1' ) ),
+			'nonce'      => wp_create_nonce( 'wp_rest' ),
+			// Where "Open Suggestions" / "Review in WPCC" navigate (the governed Builder).
+			'suggestUrl' => esc_url_raw( admin_url( 'admin.php?page=' . self::MENU . '&tab=suggestions' ) ),
+			'i18n'       => [
+				'title'        => __( 'Generate SEO Suggestion', 'wp-command-center' ),
+				'generating'   => __( 'Generating suggestion…', 'wp-command-center' ),
+				'current'      => __( 'Current', 'wp-command-center' ),
+				'suggested'    => __( 'Suggested', 'wp-command-center' ),
+				'metaTitle'    => __( 'SEO title', 'wp-command-center' ),
+				'metaDesc'     => __( 'Meta description', 'wp-command-center' ),
+				'empty'        => __( '(none)', 'wp-command-center' ),
+				'openSuggest'  => __( 'Open in Suggestions', 'wp-command-center' ),
+				'review'       => __( 'Review in WP Command Center', 'wp-command-center' ),
+				'close'        => __( 'Close', 'wp-command-center' ),
+				'draftNote'    => __( 'Saved as a draft for review — nothing has been applied to your site.', 'wp-command-center' ),
+				'provBy'       => __( 'Suggested by %1$s · %2$s', 'wp-command-center' ),
+				'exists'       => __( 'A suggestion already exists for this item. Open it in Suggestions to review.', 'wp-command-center' ),
+				'noProvider'   => __( 'No AI provider is configured. Add an API key under AI Integrations to generate suggestions.', 'wp-command-center' ),
+				'noPlugin'     => __( 'No supported SEO plugin (Rank Math or Yoast) is active.', 'wp-command-center' ),
+				'notPublished' => __( 'Only published content can be suggested.', 'wp-command-center' ),
+				'failed'       => __( 'Could not generate a suggestion. Please try again.', 'wp-command-center' ),
+				'error'        => __( 'Something went wrong. Please try again.', 'wp-command-center' ),
+			],
+		] );
 	}
 
 	// ── Sprint B — native WordPress Bulk Actions ──────────────────────────────

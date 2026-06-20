@@ -1,0 +1,157 @@
+/**
+ * Contextual SEO Quick Panel (Option B) — modal styles.
+ * Neutral surface; semantic color only. Respects prefers-reduced-motion.
+ */
+
+.wpcc-qp-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba( 0, 0, 0, 0.5 );
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	z-index: 100000;
+	padding: 6vh 16px 16px;
+	overflow-y: auto;
+}
+
+.wpcc-qp-modal {
+	background: #fff;
+	border-radius: 6px;
+	box-shadow: 0 8px 30px rgba( 0, 0, 0, 0.25 );
+	width: 100%;
+	max-width: 720px;
+	outline: none;
+	animation: wpcc-qp-in 160ms ease-out;
+}
+
+@keyframes wpcc-qp-in {
+	from { transform: translateY( -8px ); opacity: 0; }
+	to { transform: translateY( 0 ); opacity: 1; }
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.wpcc-qp-modal { animation: none; }
+}
+
+.wpcc-qp-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 20px;
+	border-bottom: 1px solid #dcdcde;
+}
+
+.wpcc-qp-h {
+	margin: 0;
+	font-size: 16px;
+	line-height: 1.3;
+}
+
+.wpcc-qp-x {
+	background: none;
+	border: none;
+	font-size: 24px;
+	line-height: 1;
+	cursor: pointer;
+	color: #50575e;
+	padding: 0 4px;
+}
+
+.wpcc-qp-x:hover,
+.wpcc-qp-x:focus { color: #1d2327; }
+
+/* Live region for screen-reader announcements only — the visible copy of any
+   message/loading text lives in the body, so render this off-screen to avoid a
+   duplicate on screen while still announcing via role=status / aria-describedby. */
+.wpcc-qp-status {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect( 0, 0, 0, 0 );
+	white-space: nowrap;
+	border: 0;
+}
+
+.wpcc-qp-body {
+	padding: 12px 20px 20px;
+}
+
+.wpcc-qp-msg {
+	margin: 8px 0;
+	font-size: 13px;
+	color: #1d2327;
+}
+
+.wpcc-qp-cols {
+	display: flex;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.wpcc-qp-col {
+	flex: 1 1 280px;
+	min-width: 0;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	padding: 12px;
+	background: #f6f7f7;
+}
+
+.wpcc-qp-col--suggested {
+	background: #f0f6fc;
+	border-color: #c5d9ed;
+}
+
+.wpcc-qp-coltitle {
+	margin: 0 0 8px;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #646970;
+}
+
+.wpcc-qp-field { margin-bottom: 10px; }
+.wpcc-qp-field:last-child { margin-bottom: 0; }
+
+.wpcc-qp-label {
+	font-size: 11px;
+	color: #646970;
+	margin-bottom: 2px;
+}
+
+.wpcc-qp-value {
+	font-size: 13px;
+	color: #1d2327;
+	word-wrap: break-word;
+	white-space: pre-wrap;
+}
+
+.wpcc-qp-prov {
+	margin: 12px 0 0;
+	font-size: 11px;
+	color: #646970;
+}
+
+.wpcc-qp-note {
+	margin: 8px 0 0;
+	font-size: 12px;
+	color: #2271b1;
+}
+
+.wpcc-qp-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	padding: 14px 20px;
+	border-top: 1px solid #dcdcde;
+}
+
+@media ( max-width: 600px ) {
+	.wpcc-qp-cols { flex-direction: column; }
+	.wpcc-qp-footer { flex-direction: column-reverse; }
+	.wpcc-qp-footer .button { width: 100%; text-align: center; }
+}
