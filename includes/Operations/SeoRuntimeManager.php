@@ -22,6 +22,16 @@ final class SeoRuntimeManager {
 	private const DESC_MIN  = 120;
 	private const DESC_MAX  = 160;
 
+	/**
+	 * Slice 4c — protected post-meta key prefix for SEO rollback snapshots. One
+	 * meta row per rollback, keyed `_wpcc_seo_rb_{rollback_id}`. Leading underscore
+	 * makes it protected (hidden from the Custom Fields UI / unauthorized core REST
+	 * meta). Replaces the capped, autoloaded `wpcc_seo_rollbacks` option for new
+	 * rollbacks; the option is still read as a backward-compat fallback.
+	 */
+	private const ROLLBACK_META_PREFIX  = '_wpcc_seo_rb_';
+	private const LEGACY_ROLLBACK_OPTION = 'wpcc_seo_rollbacks';
+
 	private AuditLog $audit;
 
 	public function __construct() {
@@ -173,10 +183,50 @@ final class SeoRuntimeManager {
 			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
 		}
 
-		$rollbacks = get_option( 'wpcc_seo_rollbacks', [] );
+		// Slice 4c — current store: resolve the per-post snapshot by rollback_id
+		// alone (seo_restore is dispatched with only the rollback_id — never a
+		// post_id). meta_key is indexed, so this is one indexed lookup; get_post_meta
+		// then returns the unserialized record from the meta cache.
+		global $wpdb;
+		$meta_key = self::ROLLBACK_META_PREFIX . $rollback_id;
+		$post_id  = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s LIMIT 1", $meta_key )
+		);
+
+		if ( $post_id > 0 ) {
+			$record = get_post_meta( $post_id, $meta_key, true );
+			if ( ! is_array( $record ) ) {
+				return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			}
+			if ( ! empty( $record['rollback_applied'] ) ) {
+				return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+			}
+
+			SeoProvider::write( (int) $record['post_id'], $record['before_state'], $record['provider'] );
+
+			$record['rollback_applied'] = true;
+			update_post_meta( $post_id, $meta_key, $record );
+
+			$this->audit->record( 'seo.restored', [ 'post_id' => $record['post_id'], 'rollback_id' => $rollback_id ] );
+
+			return [ 'action' => 'seo_restore', 'post_id' => (int) $record['post_id'], 'rollback_id' => $rollback_id, 'restored' => true ];
+		}
+
+		// Backward-compat: records created before Slice 4c still live in the legacy
+		// option (a draining set; new rollbacks never write there).
+		return $this->seo_restore_legacy( $rollback_id );
+	}
+
+	/**
+	 * Slice 4c — legacy fallback. Restore a rollback record that still lives in the
+	 * pre-4c `wpcc_seo_rollbacks` option. Behavior is identical to the pre-4c
+	 * restore, including marking the option record rollback_applied = true.
+	 */
+	private function seo_restore_legacy( string $rollback_id ): array {
+		$rollbacks = get_option( self::LEGACY_ROLLBACK_OPTION, [] );
 		$idx       = null;
 		foreach ( $rollbacks as $i => $r ) {
-			if ( $r['id'] === $rollback_id ) {
+			if ( ( $r['id'] ?? '' ) === $rollback_id ) {
 				$idx = $i;
 				break;
 			}
@@ -192,7 +242,7 @@ final class SeoRuntimeManager {
 		SeoProvider::write( (int) $record['post_id'], $record['before_state'], $record['provider'] );
 
 		$rollbacks[ $idx ]['rollback_applied'] = true;
-		update_option( 'wpcc_seo_rollbacks', $rollbacks );
+		update_option( self::LEGACY_ROLLBACK_OPTION, $rollbacks );
 
 		$this->audit->record( 'seo.restored', [ 'post_id' => $record['post_id'], 'rollback_id' => $rollback_id ] );
 
@@ -273,11 +323,18 @@ final class SeoRuntimeManager {
 		return [ 'check' => $name, 'passed' => $passed, 'detail' => $detail ];
 	}
 
+	/**
+	 * Slice 4c — persist one SEO rollback snapshot as a dedicated protected post-meta
+	 * row keyed by the rollback_id (`_wpcc_seo_rb_{id}`). One row per rollback: no
+	 * global cap, no FIFO eviction, not autoloaded, and free of the shared-option
+	 * lost-update race. New rollbacks NO LONGER write the `wpcc_seo_rollbacks` option
+	 * (seo_restore still reads it for pre-4c records). The rollback_id contract is
+	 * unchanged — the same uuid4 is returned and recorded by ChangeRecorder.
+	 */
 	private function store_rollback( int $post_id, string $provider, array $before, array $context ): string {
-		$rollbacks   = get_option( 'wpcc_seo_rollbacks', [] );
 		$rollback_id = wp_generate_uuid4();
 
-		$rollbacks[] = [
+		$record = [
 			'id'               => $rollback_id,
 			'post_id'          => $post_id,
 			'provider'         => $provider,
@@ -288,11 +345,7 @@ final class SeoRuntimeManager {
 			'task_id'          => $context['task_id'] ?? null,
 		];
 
-		if ( count( $rollbacks ) > 100 ) {
-			$rollbacks = array_slice( $rollbacks, -100 );
-		}
-
-		update_option( 'wpcc_seo_rollbacks', $rollbacks );
+		add_post_meta( $post_id, self::ROLLBACK_META_PREFIX . $rollback_id, $record, true );
 
 		return $rollback_id;
 	}

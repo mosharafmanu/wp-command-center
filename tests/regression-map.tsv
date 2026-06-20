@@ -49,3 +49,4 @@ seo_generate	SeoMetaGenerator|AnthropicSeoProvider|SeoMetaProvider|SeoMetaResult
 seo_review	seo-meta|test-seo-review|wpcc-seo-tab-suggestions|wpcc-seo-sg-rows	test-seo-review.sh	test-seo-review.sh
 seo_apply	seo-meta|test-seo-apply|wpcc-seo-apply|wpcc-seo-tab-applied|wpcc-seo-panel-applied	test-seo-apply.sh	test-seo-apply.sh
 seo_undo	seo-meta|test-seo-undo|wpcc-seo-undo|seo_restore|history/.*rollback	test-seo-undo.sh	test-seo-undo.sh
+seo_rollback_store	SeoRuntimeManager|_wpcc_seo_rb_|store_rollback|seo_restore_legacy|wpcc_seo_rollbacks|test-seo-rollback-store	test-seo-rollback-store.sh	test-seo-rollback-store.sh

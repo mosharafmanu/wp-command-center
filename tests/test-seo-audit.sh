@@ -106,8 +106,10 @@ else
 		}
 
 		// Provider present: create known-state posts, classify, verify read-only.
-		$prop_before = ( new \WPCommandCenter\Proposals\ProposalStore() )->count([]);
-		$rb_before   = get_option( "wpcc_seo_rollbacks", [] );
+		global $wpdb;
+		$prop_before   = ( new \WPCommandCenter\Proposals\ProposalStore() )->count([]);
+		$rb_before     = get_option( "wpcc_seo_rollbacks", [] );                                         // legacy option store
+		$rbmeta_before = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_wpcc\_seo\_rb\_%'" ); // Slice 4c meta store
 
 		$mk = function( $meta ) {
 			$id = wp_insert_post([ "post_title"=>"WPCC SEO selftest", "post_status"=>"publish", "post_type"=>"post", "post_content"=>"x" ]);
@@ -138,10 +140,13 @@ else
 		$out["page_limit"] = ( count($p1["items"]) <= 2 ) ? 1 : 0;
 		$out["cursor_ok"]  = ( $p1["has_more"] ) ? ( ( (int) ( json_decode( base64_decode( (string)$p1["next_cursor"] ), true )["offset"] ?? -1 ) === 2 ) ? 1 : 0 ) : 1;
 
-		// Read-only: our ok post meta unchanged; no proposals created; rollbacks unchanged.
-		$out["meta_intact"]  = ( get_post_meta( $id_ok, "_yoast_wpseo_title", true ) === "A fine SEO title" ) ? 1 : 0;
-		$out["no_proposals"] = ( ( new \WPCommandCenter\Proposals\ProposalStore() )->count([]) === $prop_before ) ? 1 : 0;
-		$out["no_rollbacks"] = ( get_option( "wpcc_seo_rollbacks", [] ) === $rb_before ) ? 1 : 0;
+		// Read-only: our ok post meta unchanged; no proposals created; rollbacks
+		// unchanged in BOTH stores (legacy option AND Slice 4c per-post meta).
+		$rbmeta_after = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_wpcc\_seo\_rb\_%'" );
+		$out["meta_intact"]       = ( get_post_meta( $id_ok, "_yoast_wpseo_title", true ) === "A fine SEO title" ) ? 1 : 0;
+		$out["no_proposals"]      = ( ( new \WPCommandCenter\Proposals\ProposalStore() )->count([]) === $prop_before ) ? 1 : 0;
+		$out["no_rollbacks"]      = ( get_option( "wpcc_seo_rollbacks", [] ) === $rb_before ) ? 1 : 0;
+		$out["no_rollback_meta"]  = ( $rbmeta_after === $rbmeta_before ) ? 1 : 0;
 
 		// cleanup
 		foreach ( [ $id_missing, $id_weak, $id_ok ] as $id ) { wp_delete_post( $id, true ); }
@@ -168,6 +173,7 @@ else
 		assert_eq "read-only: post meta intact" "1" "$(getj meta_intact)"
 		assert_eq "read-only: no proposals created" "1" "$(getj no_proposals)"
 		assert_eq "read-only: rollbacks option unchanged" "1" "$(getj no_rollbacks)"
+		assert_eq "read-only: no rollback meta created (Slice 4c store)" "1" "$(getj no_rollback_meta)"
 	fi
 
 	echo

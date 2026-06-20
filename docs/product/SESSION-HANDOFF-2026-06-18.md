@@ -498,3 +498,35 @@ Modified: `includes/Admin/views/seo-meta.php` (Apply button + Applied tab + hand
 
 ## GA#2 progress
 Slice 1 (audit) · 2a (AnthropicClient) · 2b (drafts) · 3 (review/edit/dismiss) · **4a (approve & apply + Applied tab)** — all DEPLOYED, Builder UI build-flag OFF throughout. **Next = Slice 4b (per-item Undo), NOT started.** Slice 5 (bulk) still gated on `wpcc_seo_rollbacks` store hardening.
+
+---
+
+# GA#2 Slice 4b — Per-item Undo — DEPLOYED to production (2026-06-20)
+
+Per-item Undo on the SEO Applied tab. **UI-only** (one production file: `seo-meta.php`): an Undo control on applied + reversible (not yet rolled back) rows carrying a `change_id`, reusing the EXISTING governed route `POST /admin/history/{change_id}/rollback` (`change_history → seo_restore`). Developer reverts immediately; client/enterprise route to `pending_approval`. No new route/operation/capability/MCP tool/schema; no backend PHP change. Committed `14a1999` (*feat(seo): add governed per-item undo workflow*), pushed, pull-cron **DEPLOYED to production**; `git describe` = `v0.109.0-17-g14a1999`, plugin active, all admin routes 401, invariants **34/23/40/40/2.5.0**, 14 tables, Builder UIs build-flag OFF. Tests: `test-seo-undo.sh` 33/0 · `test-seo-apply.sh` 39/0 · T0/T1 `--changed` net-new 0.
+
+---
+
+# GA#2 Slice 4c — SEO Rollback Store Hardening — committed locally, NOT pushed
+
+> Backend-only prerequisite for Slice 5 bulk. Committed on `main` as **`<slice-4c-commit>`** (*feat(seo): harden rollback storage for bulk readiness*); **not pushed, not deployed.** Production remains at **`14a1999`**.
+
+## What shipped (Option B — per-post protected meta snapshots)
+- **New rollback store:** each SEO rollback snapshot is a dedicated **protected post-meta row** keyed `_wpcc_seo_rb_{rollback_id}` (one row per rollback). Replaces the capped, autoloaded `wpcc_seo_rollbacks` option for new writes — **no global 100-cap, no FIFO eviction, not autoloaded, no shared-blob lost-update race.**
+- **`rollback_id`-only restore:** `seo_restore` resolves the snapshot by `rollback_id` alone via one **indexed** `meta_key` lookup → `get_post_meta()` → restore `before_state` → mark `rollback_applied=true` (record kept). The dispatch contract is unchanged (no post_id needed from the caller).
+- **Legacy fallback:** if no meta row is found, `seo_restore_legacy()` reads the old `wpcc_seo_rollbacks` option and restores pre-4c records, marking them `rollback_applied=true`. **No migration; the legacy option is left in place** (a draining set; new writes never touch it).
+
+## Preserved / unchanged
+Change History route (`/admin/history/{change_id}/rollback`), `ChangeHistoryRuntimeManager`, `OperationExecutor`, `ACTION_ROLLBACKS`, `seo_restore`, `ChangeRecorder`, `ProposalApplyService` — all untouched. **Four Guarantees:** Approval/Audit/Capability scoping unchanged; **Rollback strengthened** (durable, bulk-safe). **No schema change, no DB_VERSION change.**
+
+## Invariants (unchanged, live-verified)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** · **14** `wpcc_*` tables (no migration).
+
+## Files (4) — one production file only
+Modified: `includes/Operations/SeoRuntimeManager.php` (the only production change). Tests: `tests/test-seo-rollback-store.sh` (new), `tests/test-seo-audit.sh` (read-only sentinel now store-agnostic), `tests/regression-map.tsv` (+`seo_rollback_store` group). Confirmed UNCHANGED: AdminRestApi · ChangeHistoryRuntimeManager · OperationExecutor · ProposalApplyService · ProposalAdminQuery · Schema · CapabilityRegistry · OperationRegistry · McpServerRuntime.
+
+## Testing
+- `test-seo-rollback-store.sh` **28/0** (write/restore-by-id/idempotency/legacy-fallback/no-evict-103/no-option-growth) · `test-seo-apply.sh` **39/0** · `test-seo-undo.sh` **33/0** · `test-seo-audit.sh` **54/0**.
+- `T0 --changed` **245/0 net-new 0** · `T1 --changed` **599/0 net-new 0** (a first-run transient flake in `test-change-history-rollback.sh` passed 48/0 standalone + after the store suite; re-run clean — cross-suite env pollution, not a regression).
+
+**Slice 5 prerequisite satisfied:** the rollback store is now bulk-safe (no cap, no eviction, no lost-update, not autoloaded). **Next = deploy decision for 4c, then GA#2 Slice 5 (bulk), NOT started.**
