@@ -53,13 +53,16 @@ has  "Failed state"                         "stFailed"            "$VIEW"
 has  "rollback-aware Reverted state"        "change_status"       "$VIEW"
 
 echo
-echo "== 3. View: NO Undo/rollback/Change-History/Approval-Center/bulk controls =="
-lacks "no Undo control"                    "wpcc-seo-undo"        "$VIEW"
-lacks "no history rollback route"          "/history/"           "$VIEW"
+echo "== 3. View: per-item Undo (Slice 4b) reuses governed rollback; NO bulk/links =="
+# Slice 4b legitimately introduces per-item Undo into the shared view: an Undo
+# control on Applied-tab reversible rows that reuses POST /admin/history/{cid}/rollback.
+has  "Undo control present (Slice 4b)"     "wpcc-seo-undo"        "$VIEW"
+has  "Undo reuses history rollback route"  "/history/"           "$VIEW"
+# Still NO bulk/selection, NO Approval-Center / Change-History nav links, NO direct write.
 lacks "no Approval Center link"            "wpcc-approval-center" "$VIEW"
 lacks "no Change History link"            "wpcc-change-history"  "$VIEW"
-lacks "no rollback button id"             "wpcc-seo-rollback"    "$VIEW"
 lacks "no bulk apply"                     "bulkApply"            "$VIEW"
+lacks "no bulk undo"                      "bulkUndo"             "$VIEW"
 lacks "no SelectionResolver"             "SelectionResolver"    "$VIEW"
 lacks "no SEO meta write in view"        "SeoProvider::write"    "$VIEW"
 

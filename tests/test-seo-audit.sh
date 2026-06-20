@@ -66,7 +66,7 @@ has  "menu slug wpcc-seo"                  "'wpcc-seo'"          "$MENU"
 has  "render method present"               "function render_seo_meta" "$MENU"
 
 echo
-echo "== 4. View: escaped, paginated; generation = drafts only (Slice 2b), NO apply/undo =="
+echo "== 4. View: escaped, paginated; generation = drafts only (Slice 2b) =="
 has  "HTML escaper present"                "const esc"           "$VIEW"
 has  "uses REST nonce"                     "X-WP-Nonce"          "$VIEW"
 has  "fetches /seo/audit"                  "/seo/audit"          "$VIEW"
@@ -74,11 +74,12 @@ has  "filter (missing/weak/all)"           "wpcc-seo-filter"     "$VIEW"
 has  "Prev/Next pager"                     "wpcc-seo-pager"      "$VIEW"
 has  "no-plugin empty-state"               "provider_available"  "$VIEW"
 has  "consumes canonical items[]"          "d.items"             "$VIEW"
-# Slice 2b: generation control creates DRAFTS via /seo/generate; still NO apply/undo.
+# Slice 2b: generation control creates DRAFTS via /seo/generate.
 has  "generate control (drafts) present"   "wpcc-seo-generate"   "$VIEW"
 has  "generation posts to /seo/generate"   "/seo/generate"       "$VIEW"
-# (Apply arrives in Slice 4a — covered by test-seo-apply.sh.) Undo stays out (Slice 4b).
-lacks "no Undo / history-rollback route"   "/history/"          "$VIEW"
+# (Apply arrives in Slice 4a; per-item Undo in Slice 4b — both covered by
+# test-seo-apply.sh / test-seo-undo.sh. The shared view now legitimately contains the
+# /history/ rollback route for the Applied-tab Undo, so that absence guard is dropped.)
 lacks "no OperationExecutor in view"       "OperationExecutor"  "$VIEW"
 
 echo

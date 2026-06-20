@@ -61,12 +61,13 @@ GH="$(awk '/function seo_generate/{f=1} f{print} f&&/^\t}/{exit}' "$RESTAPI")"
 if printf '%s' "$GH" | grep -qE "OperationExecutor|->run\(|SeoProvider::write"; then fail "seo_generate handler does not apply"; else pass "seo_generate handler creates drafts only (no apply)"; fi
 
 echo
-echo "== 4. View: minimal generate control (drafts), no apply/undo controls =="
+echo "== 4. View: minimal generate control (drafts only) =="
 has  "view has generate control"              "wpcc-seo-generate"    "$VIEW"
 has  "view posts to /seo/generate"            "/seo/generate"        "$VIEW"
 has  "view states drafts only"                "nothing is applied"   "$VIEW"
-# (Apply arrives in Slice 4a — covered by test-seo-apply.sh.) Undo stays out (Slice 4b).
-lacks "view has no undo/history-rollback route" "/history/"          "$VIEW"
+# (Apply arrives in Slice 4a; per-item Undo in Slice 4b — both covered by
+# test-seo-apply.sh / test-seo-undo.sh. The shared view now legitimately contains the
+# /history/ rollback route for the Applied-tab Undo, so that absence guard is dropped.)
 
 echo
 echo "== 5. Functional: parsing + generation (stub provider, no network) =="

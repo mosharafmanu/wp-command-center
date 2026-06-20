@@ -10,12 +10,17 @@
  *   - POST /wp-command-center/v1/admin/proposals/{id}/dismiss (dismiss, Slice 3)
  *   - GET  /wp/v2/posts|pages?include=…  (WP core; post title/type only)
  *
- * Two tabs: Review (Slice 1 audit + Slice 2b generate) and Suggestions (Slice 3
- * review/edit/dismiss of governed DRAFTS). It performs NO apply / approve / undo /
- * rollback / bulk, has NO Approval-Center / Change-History controls, and NEVER
- * writes SEO meta. Outcome language only: proposal_id / change_id / request_id are
- * never displayed (proposal_id is an opaque DOM key for edit/dismiss). All API
- * output is escaped client-side via esc().
+ * Three tabs: Review (Slice 1 audit + Slice 2b generate), Suggestions (Slice 3
+ * review/edit/dismiss of governed DRAFTS), and Applied (Slice 4a apply + status,
+ * Slice 4b per-item Undo). Apply reuses POST /admin/proposals/{id}/apply; Undo
+ * reuses the existing governed rollback path POST /admin/history/{change_id}/rollback
+ * (change_history → seo_restore). It performs NO bulk apply/undo, no cross-page
+ * selection, no Approval-Center / Change-History navigation links, no direct
+ * operation-executor or seo-write call, and NEVER writes SEO meta directly. Outcome
+ * language only:
+ * proposal_id / change_id / request_id are never displayed (proposal_id is an opaque
+ * DOM key for edit/dismiss; change_id is an opaque DOM key for Undo). All API output
+ * is escaped client-side via esc().
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -101,13 +106,14 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		<table class="widefat striped wpcc-seo-sg-table">
 			<thead>
 				<tr>
-					<th style="width:26%;"><?php esc_html_e( 'Content', 'wp-command-center' ); ?></th>
-					<th><?php esc_html_e( 'Applied SEO meta', 'wp-command-center' ); ?></th>
-					<th style="width:160px;"><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Content', 'wp-command-center' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Applied SEO meta', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:160px;"><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:120px;"><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-seo-ap-rows">
-				<tr><td colspan="3"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
+				<tr><td colspan="4"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
 			</tbody>
 		</table>
 	</div>
@@ -205,7 +211,12 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'wp-command-center' ) ); ?>,
 		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'wp-command-center' ) ); ?>,
 		colStatus2:<?php echo wp_json_encode( esc_html__( 'Status', 'wp-command-center' ) ); ?>,
-		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'wp-command-center' ) ); ?>
+		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'wp-command-center' ) ); ?>,
+		// Slice 4b — per-item Undo (reuses the governed change-history rollback).
+		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'wp-command-center' ) ); ?>,
+		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'wp-command-center' ) ); ?>,
+		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'wp-command-center' ) ); ?>,
+		colActions:<?php echo wp_json_encode( esc_html__( 'Actions', 'wp-command-center' ) ); ?>
 	};
 	const MAX_BATCH = 25;
 
@@ -488,26 +499,35 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			'<div style="margin-top:6px;"><strong>' + esc( STR.sgCurDesc ) + ':</strong> ' + ( dd ? esc( dd ) : '<em class="wpcc-seo-none">' + esc( STR.none ) + '</em>' ) + '</div>';
 	}
 	function renderApplied( list, ctx ) {
-		if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3">' + esc( STR.noApplied ) + '</td></tr>' ); return; }
+		if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4">' + esc( STR.noApplied ) + '</td></tr>' ); return; }
 		setHtml( 'wpcc-seo-ap-rows', list.map( ( p ) => {
 			const tid = parseInt( p.target_id, 10 );
 			const c = ctx[ tid ] || {};
 			const title = c.title || ( '#' + tid );
 			const editLink = EDIT + '?post=' + encodeURIComponent( tid ) + '&action=edit';
-			let badge;
+			let badge, reversible = false;
 			if ( p.status === 'pending_approval' ) { badge = apBadge( '#bd8600', STR.stAwaiting ); }
 			else if ( p.status === 'failed' ) { badge = apBadge( '#b32d2e', STR.stFailed ); }
 			else if ( p.status === 'applied' && p.change_status === 'rolled_back' ) { badge = apBadge( '#646970', STR.stReverted ); }
-			else { badge = apBadge( '#1a7f37', STR.stApplied ); } // applied + reversible (Undo arrives in Slice 4b)
-			return '<tr>' +
+			else { badge = apBadge( '#1a7f37', STR.stApplied ); reversible = ( p.status === 'applied' && !! p.change_id ); }
+			// Slice 4b — Undo ONLY for applied + reversible (not yet rolled back) rows
+			// that carry a change_id. change_id is an OPAQUE handle for the single Undo
+			// action (never displayed). Reuses POST /admin/history/{change_id}/rollback
+			// → change_history → seo_restore. Pending/failed/reverted rows get no Undo.
+			const cid = reversible ? ' data-cid="' + esc( p.change_id ) + '"' : '';
+			const actions = reversible
+				? '<button type="button" class="button button-small wpcc-seo-undo">' + esc( STR.undo ) + '</button><div class="wpcc-seo-rowmsg" role="status"></div>'
+				: '';
+			return '<tr' + cid + '>' +
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-seo-meta">' + esc( c.type || '' ) + '</div></td>' +
 				'<td class="wpcc-seo-meta">' + appliedMeta( p ) + '</td>' +
 				'<td>' + badge + '</td>' +
+				'<td>' + actions + '</td>' +
 				'</tr>';
 		} ).join( '' ) );
 	}
 	function loadApplied() {
-		setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3">' + esc( STR.loading ) + '</td></tr>' );
+		setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4">' + esc( STR.loading ) + '</td></tr>' );
 		// Reuse the EXISTING proposal list route: applied + pending_approval + failed
 		// for seo_manage. ProposalAdminQuery already enriches applied rows with
 		// change_status (rollback-aware). No new route, no new query.
@@ -521,7 +541,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			const failed  = ( results[2].data && results[2].data.proposals ) || [];
 			const list = pending.concat( applied, failed );
 			$( 'wpcc-seo-ap-status' ).textContent = '';
-			if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3">' + esc( STR.noApplied ) + '</td></tr>' ); return; }
+			if ( ! list.length ) { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4">' + esc( STR.noApplied ) + '</td></tr>' ); return; }
 			const ids = list.map( ( p ) => parseInt( p.target_id, 10 ) ).filter( ( n ) => n > 0 );
 			const csv = ids.join( ',' );
 			Promise.all( [
@@ -532,8 +552,43 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 				[ r[0].data, r[1].data ].forEach( ( arr ) => { ( Array.isArray( arr ) ? arr : [] ).forEach( ( m ) => { ctx[ m.id ] = { title: ( m.title && m.title.rendered ) || '', type: m.type || '' }; } ); } );
 				renderApplied( list, ctx );
 			} ).catch( () => renderApplied( list, {} ) );
-		} ).catch( () => { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="3" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); } );
+		} ).catch( () => { setHtml( 'wpcc-seo-ap-rows', '<tr><td colspan="4" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); } );
 	}
+
+	// ---------- APPLIED TAB (Slice 4b): per-item Undo ----------
+	// Reuses the EXISTING governed change-history rollback route only:
+	//   POST /admin/history/{change_id}/rollback
+	// The change_history operation resolves the owning change and reverses it via its
+	// seo_restore action — the same governed chokepoint as apply (capability +
+	// approval + audit + rollback all inherited). Developer → immediate revert
+	// (status flips to "Reverted" on reload); client/enterprise → pending_approval
+	// ("Undo sent for approval"). No bulk, no cross-page selection, no direct
+	// executor call, no direct seo write.
+	document.addEventListener( 'click', function ( e ) {
+		const t = e.target;
+		if ( ! t.classList || ! t.classList.contains( 'wpcc-seo-undo' ) ) { return; }
+		const row = t.closest ? t.closest( '#wpcc-seo-ap-rows tr[data-cid]' ) : null;
+		if ( ! row ) { return; }
+		const cid = row.getAttribute( 'data-cid' );
+		if ( ! cid ) { return; }
+		const msg = row.querySelector( '.wpcc-seo-rowmsg' );
+		t.disabled = true; // disable while the request is in flight
+		if ( msg ) { msg.textContent = '…'; }
+		fetch( API + '/history/' + encodeURIComponent( cid ) + '/rollback', { method: 'POST', headers: { 'X-WP-Nonce': NONCE } } )
+			.then( ( r ) => r.json().then( ( d ) => ( { ok: r.ok, data: d } ), () => ( { ok: r.ok, data: {} } ) ) )
+			.then( ( res ) => {
+				const inner = ( res.data && res.data.result ) || {};
+				if ( inner.status === 'pending_approval' ) {
+					if ( msg ) { msg.textContent = STR.undoSent; } // gated → sent for approval, row stays
+				} else if ( res.ok && res.data && res.data.success === true && inner.status !== 'confirmation_required' ) {
+					loadApplied(); // success → reload; rollback-aware status flips to "Reverted"
+				} else {
+					t.disabled = false; // non-fatal: let the operator retry
+					if ( msg ) { msg.textContent = STR.cantUndo; }
+				}
+			} )
+			.catch( () => { t.disabled = false; if ( msg ) { msg.textContent = STR.cantUndo; } } );
+	} );
 
 	function switchTab( which ) {
 		$( 'wpcc-seo-panel-review' ).style.display = ( which === 'review' ) ? '' : 'none';

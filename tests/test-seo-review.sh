@@ -55,11 +55,14 @@ has  "dismiss control"                      "wpcc-seo-dismiss"    "$VIEW"
 has  "empty state"                          "No suggestions yet"  "$VIEW"
 
 echo
-echo "== 3. View: NO apply/approval/undo/rollback/bulk/selection controls =="
-# (Apply control + Applied tab arrive in Slice 4a — covered by test-seo-apply.sh.)
+echo "== 3. View: NO Approval-Center/Change-History links, bulk or selection =="
+# (Apply control + Applied tab arrive in Slice 4a; per-item Undo in Slice 4b — both
+# covered by test-seo-apply.sh / test-seo-undo.sh. The Undo control lives ONLY in the
+# Applied panel rows, never in the Review/Suggestions tabs.) The shared view now
+# legitimately contains the /history/ rollback route (Applied-tab Undo), so the
+# file-level "/history/" absence guard moved to test-seo-undo.sh's scoped check.
 lacks "no Approval Center link"            "wpcc-approval-center" "$VIEW"
 lacks "no Change History link"            "wpcc-change-history"  "$VIEW"
-lacks "no history rollback route"         "/history/"           "$VIEW"
 lacks "no SelectionResolver"              "SelectionResolver"    "$VIEW"
 lacks "no select-all-matching"           "matchall"             "$VIEW"
 lacks "no OperationExecutor"             "OperationExecutor"     "$VIEW"
