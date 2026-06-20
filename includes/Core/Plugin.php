@@ -38,6 +38,7 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new AdminMenu() )->init();
 			( new Assets() )->init();
+			( new \WPCommandCenter\Admin\SeoRowActions() )->init();
 		}
 	}
 

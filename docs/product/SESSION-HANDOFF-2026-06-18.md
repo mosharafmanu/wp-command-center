@@ -626,3 +626,28 @@ Modified: `includes/Admin/views/seo-meta.php` (only production change), `tests/t
 - **Tests:** `test-seo-apply.sh` 56/0 (incl. live >20-record pagination) · siblings green · `T0 --changed` 281/0 net-new 0 · `T1 --changed` 607/0 net-new 0.
 
 **Production baseline is now `75e1631`.** Builder UIs remain build-flag OFF on prod. Next = contextual SEO AI entry points (architecture review) / Slice 5b / 5c — NOT started.
+
+---
+
+# Contextual SEO Entry Points (Sprint A) — committed locally, NOT pushed
+
+> Posts/Pages/Products list **row action** "Generate SEO Suggestion" → governed draft → SEO Meta → Suggestions. Thin admin wiring only. Committed on `main`; **not pushed, not deployed.** Production remains at **`75e1631`**.
+
+## What shipped (propose-only)
+- **New `includes/Admin/SeoRowActions.php`** — registers a **"Generate SEO Suggestion"** row action on `post_row_actions` (Posts + WooCommerce Products) and `page_row_actions` (Pages), plus one `admin_post_wpcc_seo_generate` handler. The handler verifies a **nonce**, checks **`manage_options` + `FeatureGate('seo_meta_generator')` + the SEO Meta UI build flag**, then creates a **governed DRAFT** via the EXISTING `SeoMetaGenerator::generate([id])` and **redirects to SEO Meta → Suggestions** (`?page=wpcc-seo&tab=suggestions&wpcc_seo_gen={code}`).
+- **`seo-meta.php`** (UI): reads `?tab=suggestions` (auto-switch) + `?wpcc_seo_gen={code}` → shows a result notice (created / already-exists / no-provider+AI-Integrations link / no-plugin / not-published / failed).
+- **`Plugin.php`**: wires `SeoRowActions` in the `is_admin()` bootstrap block (gated, so it only appears when the Builder is enabled).
+- **Products only when WooCommerce is active** (`class_exists('WooCommerce')`); action only on **published** content (mirrors the generator's `not_published` skip). Reuses the generator's existing skip handling (`has_open_proposal`/`no_provider`/`no_seo_plugin`).
+
+## Propose ≠ Apply (Four Guarantees intact)
+The row action **only creates drafts** — it NEVER applies, NEVER writes SEO meta, NEVER calls `ProposalApplyService`/`OperationExecutor`/`SeoProvider::write`, NEVER bypasses approval/rollback/audit/capability scoping. Review + apply + undo stay in the governed Builder chokepoint. **No new route/operation/capability/MCP tool/schema/DB table/DB_VERSION; no batch primitive.** All 9 contract-backend files byte-identical. Invariants: OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**.
+
+## Files (5)
+New: `includes/Admin/SeoRowActions.php`, `tests/test-seo-row-actions.sh`. Modified: `includes/Core/Plugin.php` (admin wiring), `includes/Admin/views/seo-meta.php` (entry notice + Suggestions landing), `tests/regression-map.tsv` (+`seo_row_actions` group).
+
+## Testing + visual validation
+- `test-seo-row-actions.sh` **39/0** — visibility matrix (admin+flag+published → present; non-published / unsupported type / FeatureGate-off / subscriber / flag-off → absent), nonce/capability/FeatureGate/flag gates, propose-only round-trip (draft created, **no SEO meta written**, duplicate prevented), invariants. Siblings green.
+- `T0 --changed` **345/0 net-new 0** · `T1 --changed` **671/0 net-new 0** (17 suites; no flake).
+- **Playwright (authed dev session):** row action present on Posts (20/20 published), Pages (5/5), **Products (7/7, Woo active)**; redirect lands on Suggestions with the green "SEO suggestion created" notice; duplicate + no-provider notices render; no layout regressions. (Drafts correctly show no action.)
+
+**Not deployed yet.** Gated in practice on enabling the SEO Meta Builder UI in production (build-flag OFF). Next = deploy decision; Slice 5b / 5c and editor/Yoast/RankMath metabox integrations NOT started.

@@ -51,3 +51,4 @@ seo_apply	seo-meta|test-seo-apply|wpcc-seo-apply|wpcc-seo-tab-applied|wpcc-seo-p
 seo_undo	seo-meta|test-seo-undo|wpcc-seo-undo|seo_restore|history/.*rollback	test-seo-undo.sh	test-seo-undo.sh
 seo_rollback_store	SeoRuntimeManager|_wpcc_seo_rb_|store_rollback|seo_restore_legacy|wpcc_seo_rollbacks|test-seo-rollback-store	test-seo-rollback-store.sh	test-seo-rollback-store.sh
 seo_bulk	seo-meta|test-seo-bulk|wpcc-seo-sg-apply|wpcc-seo-sg-dismiss|wpcc-seo-sg-cb	test-seo-bulk.sh	test-seo-bulk.sh
+seo_row_actions	SeoRowActions|wpcc_seo_generate|post_row_actions|page_row_actions|test-seo-row-actions|wpcc-seo-entry-notice	test-seo-row-actions.sh	test-seo-row-actions.sh

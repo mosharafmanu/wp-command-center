@@ -47,6 +47,10 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		<a href="#" class="nav-tab" id="wpcc-seo-tab-applied"><?php esc_html_e( 'Applied', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-applied"></span></a>
 	</h2>
 
+	<?php // Result of a contextual "Generate SEO Suggestion" row action (set via the
+	// wpcc_seo_gen query arg on redirect; rendered client-side, escaped). ?>
+	<div id="wpcc-seo-entry-notice" class="notice inline" role="status" aria-live="polite" style="display:none;margin:10px 0;"></div>
+
 	<!-- ============ REVIEW TAB ============ -->
 	<div id="wpcc-seo-panel-review">
 	<div id="wpcc-seo-readiness" class="wpcc-seo-readiness" role="status" aria-live="polite"></div>
@@ -235,6 +239,13 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		// U1.4 — no AI provider connected.
 		noKey:         <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so no suggestions were generated. Add an Anthropic API key, then try again.', 'wp-command-center' ) ); ?>,
 		aiIntegrations:<?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'wp-command-center' ) ); ?>,
+		// Contextual row-action result notices (wpcc_seo_gen redirect codes).
+		genCreated:    <?php echo wp_json_encode( esc_html__( 'SEO suggestion created. Review it below and apply when you’re ready.', 'wp-command-center' ) ); ?>,
+		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'wp-command-center' ) ); ?>,
+		genNoProvider: <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so nothing was generated. Add an Anthropic API key in AI Integrations.', 'wp-command-center' ) ); ?>,
+		genNoPlugin:   <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'wp-command-center' ) ); ?>,
+		genNotPub:     <?php echo wp_json_encode( esc_html__( 'Only published content can receive SEO suggestions.', 'wp-command-center' ) ); ?>,
+		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'wp-command-center' ) ); ?>,
 		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'wp-command-center' ) ); ?>,
 		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
@@ -939,7 +950,34 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		if ( link ) { switchTab( link.getAttribute( 'data-go' ) ); }
 	} );
 
+	// Contextual entry points: a "Generate SEO Suggestion" row action redirects here
+	// with ?tab=suggestions&wpcc_seo_gen={code}. Show the result + land on Suggestions.
+	function showEntryNotice( code ) {
+		const el = $( 'wpcc-seo-entry-notice' ); if ( ! el ) { return; }
+		const map = {
+			created:     [ 'notice-success', STR.genCreated ],
+			exists:      [ 'notice-info',    STR.genExists ],
+			no_provider: [ 'notice-warning', STR.genNoProvider, AI_URL, STR.aiIntegrations ],
+			no_plugin:   [ 'notice-warning', STR.genNoPlugin ],
+			not_published:[ 'notice-warning', STR.genNotPub ],
+			failed:      [ 'notice-error',   STR.genFailed ]
+		};
+		const m = map[ code ]; if ( ! m ) { return; }
+		el.className = 'notice inline ' + m[0];
+		let html = '<p>' + esc( m[1] );
+		if ( m[2] ) { html += ' <a href="' + esc( m[2] ) + '">' + esc( m[3] ) + '</a>'; }
+		html += '</p>';
+		el.innerHTML = html;
+		el.style.display = '';
+	}
+
 	updateTabCounts(); // U1.3 — populate tab badges on first paint.
+	( function () {
+		const sp = new URLSearchParams( location.search );
+		const code = sp.get( 'wpcc_seo_gen' );
+		if ( code ) { showEntryNotice( code ); }
+		if ( sp.get( 'tab' ) === 'suggestions' ) { switchTab( 'suggestions' ); }
+	} )();
 	load();
 } )();
 </script>
