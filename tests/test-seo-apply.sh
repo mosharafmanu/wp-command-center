@@ -58,12 +58,12 @@ echo "== 3. View: per-item Undo (Slice 4b) reuses governed rollback; NO bulk/lin
 # control on Applied-tab reversible rows that reuses POST /admin/history/{cid}/rollback.
 has  "Undo control present (Slice 4b)"     "wpcc-seo-undo"        "$VIEW"
 has  "Undo reuses history rollback route"  "/history/"           "$VIEW"
-# Still NO bulk/selection, NO Approval-Center / Change-History nav links, NO direct write.
+# Page-scoped bulk Apply (Slice 5a) now lives on the Suggestions tab — covered by
+# test-seo-bulk.sh. Still NO bulk UNDO, NO cross-page selection, NO nav links, NO write.
 lacks "no Approval Center link"            "wpcc-approval-center" "$VIEW"
 lacks "no Change History link"            "wpcc-change-history"  "$VIEW"
-lacks "no bulk apply"                     "bulkApply"            "$VIEW"
 lacks "no bulk undo"                      "bulkUndo"             "$VIEW"
-lacks "no SelectionResolver"             "SelectionResolver"    "$VIEW"
+lacks "no cross-page selection resolver" "SelectionResolver"    "$VIEW"
 lacks "no SEO meta write in view"        "SeoProvider::write"    "$VIEW"
 
 echo

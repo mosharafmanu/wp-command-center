@@ -78,20 +78,30 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<!-- ============ SUGGESTIONS TAB ============ -->
 	<div id="wpcc-seo-panel-suggestions" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or description, or dismiss a suggestion. Nothing is applied to your site here.', 'wp-command-center' ); ?></span>
+			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or description, dismiss a suggestion, or apply individually or in bulk. Nothing is applied to your site until you choose to.', 'wp-command-center' ); ?></span>
 			<span id="wpcc-seo-sg-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
+		<?php // Slice 5a — page-scoped bulk action bar. Operates only on checked rows of the
+		// currently rendered page; Apply/Dismiss are sequential loops over the existing
+		// per-proposal routes (no batch object, no cross-page selection). ?>
+		<div class="wpcc-seo-bulkbar" id="wpcc-seo-sg-bulkbar">
+			<label><input type="checkbox" id="wpcc-seo-sg-selectall"> <?php esc_html_e( 'Select all on this page', 'wp-command-center' ); ?></label>
+			<button type="button" class="button button-primary" id="wpcc-seo-sg-apply" disabled><?php esc_html_e( 'Apply selected', 'wp-command-center' ); ?></button>
+			<button type="button" class="button" id="wpcc-seo-sg-dismiss" disabled><?php esc_html_e( 'Dismiss selected', 'wp-command-center' ); ?></button>
+		</div>
+		<div id="wpcc-seo-sg-progress" role="status" aria-live="polite" style="display:none;"></div>
 		<table class="widefat striped wpcc-seo-sg-table">
 			<thead>
 				<tr>
-					<th style="width:22%;"><?php esc_html_e( 'Content', 'wp-command-center' ); ?></th>
-					<th style="width:26%;"><?php esc_html_e( 'Current', 'wp-command-center' ); ?></th>
-					<th><?php esc_html_e( 'Suggested (editable)', 'wp-command-center' ); ?></th>
-					<th style="width:130px;"><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:28px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'wp-command-center' ); ?></span></th>
+					<th scope="col" style="width:22%;"><?php esc_html_e( 'Content', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Current', 'wp-command-center' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Suggested (editable)', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:130px;"><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-seo-sg-rows">
-				<tr><td colspan="4"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-seo-sg-pager" class="wpcc-seo-pager"></div>
@@ -144,6 +154,8 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 .wpcc-seo-prov { font-size:11px;color:#646970; }
 .wpcc-seo-edited { display:inline-block;font-size:11px;border-radius:8px;padding:1px 6px;background:#cce5d6;color:#1a4731;margin-left:6px; }
 .wpcc-seo-rowmsg { font-size:12px;color:#646970;margin-top:4px; }
+.wpcc-seo-bulkbar { display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0;padding:8px 10px;border:1px solid #c3c4c7;background:#f6f7f7;border-radius:4px; }
+#wpcc-seo-sg-progress { margin:8px 0;padding:10px;border:1px solid #c3c4c7;background:#fff;border-radius:4px;font-size:13px; }
 </style>
 
 <script>
@@ -196,6 +208,22 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		save:      <?php echo wp_json_encode( esc_html__( 'Save', 'wp-command-center' ) ); ?>,
 		saved:     <?php echo wp_json_encode( esc_html__( 'Saved', 'wp-command-center' ) ); ?>,
 		dismiss:   <?php echo wp_json_encode( esc_html__( 'Dismiss', 'wp-command-center' ) ); ?>,
+		// Slice 5a — page-scoped bulk apply/dismiss (Suggestions tab).
+		selectSug:   <?php echo wp_json_encode( esc_html__( 'Select suggestion', 'wp-command-center' ) ); ?>,
+		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'wp-command-center' ) ); ?>,
+		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'wp-command-center' ) ); ?>,
+		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'wp-command-center' ) ); ?>,
+		bulkDone:    <?php echo wp_json_encode( esc_html__( 'processed', 'wp-command-center' ) ); ?>,
+		lblApplied:  <?php echo wp_json_encode( esc_html__( 'applied', 'wp-command-center' ) ); ?>,
+		lblPending:  <?php echo wp_json_encode( esc_html__( 'submitted', 'wp-command-center' ) ); ?>,
+		lblDismissed:<?php echo wp_json_encode( esc_html__( 'dismissed', 'wp-command-center' ) ); ?>,
+		lblFailed:   <?php echo wp_json_encode( esc_html__( 'failed', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of selected suggestions */
+		confirmBulkApplyDev:  <?php echo wp_json_encode( __( 'Apply the %d selected suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of selected suggestions */
+		confirmBulkApplyGate: <?php echo wp_json_encode( __( 'Submit the %d selected suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of selected suggestions */
+		confirmBulkDismiss:   <?php echo wp_json_encode( __( 'Dismiss the %d selected suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>,
 		edit:      <?php echo wp_json_encode( esc_html__( 'Edit', 'wp-command-center' ) ); ?>,
 		none:      <?php echo wp_json_encode( esc_html__( '(not set)', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
@@ -391,8 +419,9 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			const prov = p.provider ? '<div class="wpcc-seo-prov">' + esc( STR.byAI ) + ( p.model ? ' · ' + esc( p.model ) : '' ) + editedChip + '</div>' : ( editedChip ? '<div>' + editedChip + '</div>' : '' );
 			const curT = cur.title ? esc( cur.title ) : '<em class="wpcc-seo-none">' + esc( STR.none ) + '</em>';
 			const curD = cur.description ? esc( cur.description ) : '<em class="wpcc-seo-none">' + esc( STR.none ) + '</em>';
-			// proposal_id is an OPAQUE DOM key only (edit/dismiss); never displayed.
+			// proposal_id is an OPAQUE DOM key only (edit/dismiss/bulk); never displayed.
 			return '<tr data-id="' + esc( p.proposal_id ) + '" data-tid="' + esc( tid ) + '">' +
+				'<td><input type="checkbox" class="wpcc-seo-sg-cb" aria-label="' + esc( STR.selectSug ) + '"></td>' +
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-seo-meta">' + esc( c.type || '' ) + '</div></td>' +
 				'<td class="wpcc-seo-meta"><div><strong>' + esc( STR.sgCurTitle ) + ':</strong> ' + curT + '</div><div style="margin-top:6px;"><strong>' + esc( STR.sgCurDesc ) + ':</strong> ' + curD + '</div></td>' +
 				'<td>' + prov +
@@ -410,6 +439,9 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 				'</tr>';
 		} ).join( '' ) );
 		document.querySelectorAll( '#wpcc-seo-sg-rows tr[data-id]' ).forEach( updateCounts );
+		// New page of rows → clear any prior selection and re-evaluate the bulk bar.
+		if ( $( 'wpcc-seo-sg-selectall' ) ) { $( 'wpcc-seo-sg-selectall' ).checked = false; }
+		sgRefreshBulk();
 	}
 	function renderSgPager() {
 		if ( sgTotal <= LIMIT && sgOffset === 0 ) { setHtml( 'wpcc-seo-sg-pager', '' ); return; }
@@ -422,13 +454,13 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		if ( n ) { n.addEventListener( 'click', () => { if ( sgHasMore ) { sgOffset += LIMIT; loadSuggestions(); } } ); }
 	}
 	function loadSuggestions() {
-		setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="4">' + esc( STR.loading ) + '</td></tr>' );
+		setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="5">' + esc( STR.loading ) + '</td></tr>' );
 		api( '/proposals?status=draft&operation_id=seo_manage&limit=' + LIMIT + '&offset=' + sgOffset )
 			.then( ( res ) => {
-				if ( ! res.ok ) { setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="4" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); return; }
+				if ( ! res.ok ) { setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="5" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); return; }
 				const d = res.data || {}, list = d.proposals || [];
 				sgTotal = d.total_count || 0; sgReturned = d.returned || list.length; sgHasMore = !! d.has_more;
-				if ( ! list.length ) { setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="4">' + esc( STR.noSug ) + '</td></tr>' ); setHtml( 'wpcc-seo-sg-pager', '' ); $( 'wpcc-seo-sg-status' ).textContent = ''; return; }
+				if ( ! list.length ) { setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="5">' + esc( STR.noSug ) + '</td></tr>' ); setHtml( 'wpcc-seo-sg-pager', '' ); $( 'wpcc-seo-sg-status' ).textContent = ''; if ( $( 'wpcc-seo-sg-selectall' ) ) { $( 'wpcc-seo-sg-selectall' ).checked = false; } sgRefreshBulk(); return; }
 				const ids = list.map( ( p ) => parseInt( p.target_id, 10 ) ).filter( ( n ) => n > 0 );
 				const csv = ids.join( ',' );
 				Promise.all( [
@@ -442,7 +474,109 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 					renderSgPager();
 				} ).catch( () => { renderSuggestions( list, {} ); renderSgPager(); } );
 			} )
-			.catch( () => { setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="4" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); } );
+			.catch( () => { setHtml( 'wpcc-seo-sg-rows', '<tr><td colspan="5" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); } );
+	}
+
+	// ---------- SUGGESTIONS TAB (Slice 5a): page-scoped bulk Apply / Dismiss ----------
+	// UI-only orchestration. Bulk Apply/Dismiss are SEQUENTIAL loops over the EXISTING
+	// per-proposal routes (/proposals/{id}/apply, /proposals/{id}/dismiss). No new
+	// endpoint, no batch object, no batch approval, no batch rollback, and no
+	// cross-page / criteria-based selection. Each item is governed individually (its own
+	// capability check, approval gate, change_id, rollback). Per-item failure NEVER
+	// aborts the run. Acts ONLY on checked rows of the currently rendered page.
+	let sgBusy = false;
+	function sgSelectedIds() {
+		return Array.prototype.slice.call( document.querySelectorAll( '#wpcc-seo-sg-rows .wpcc-seo-sg-cb:checked' ) )
+			.map( ( c ) => ( c.closest ? c.closest( 'tr[data-id]' ) : null ) ).filter( Boolean )
+			.map( ( r ) => r.getAttribute( 'data-id' ) );
+	}
+	function sgRowById( id ) {
+		const rows = document.querySelectorAll( '#wpcc-seo-sg-rows tr[data-id]' );
+		for ( let i = 0; i < rows.length; i++ ) { if ( rows[ i ].getAttribute( 'data-id' ) === id ) { return rows[ i ]; } }
+		return null;
+	}
+	function sgRefreshBulk() {
+		const ap = $( 'wpcc-seo-sg-apply' ), di = $( 'wpcc-seo-sg-dismiss' );
+		if ( ! ap || ! di ) { return; }
+		const n = sgSelectedIds().length;
+		ap.disabled = ( n === 0 ) || sgBusy;
+		di.disabled = ( n === 0 ) || sgBusy;
+		ap.textContent = n > 0 ? STR.applySel + ' (' + n + ')' : STR.applySel;
+		di.textContent = n > 0 ? STR.dismissSel + ' (' + n + ')' : STR.dismissSel;
+	}
+	function sgProgress( text ) {
+		const p = $( 'wpcc-seo-sg-progress' ); if ( ! p ) { return; }
+		p.style.display = 'block'; p.textContent = text;
+	}
+	// Process ids one at a time (sequential); isolate per-item failure.
+	function sgRunSeq( ids, worker, onEach, onDone ) {
+		let i = 0;
+		( function step() {
+			if ( i >= ids.length ) { onDone(); return; }
+			const id = ids[ i ];
+			worker( id ).then( ( outcome ) => { onEach( id, outcome ); i++; step(); } );
+		} )();
+	}
+	function sgBulkApply( ids ) {
+		sgBusy = true; sgRefreshBulk();
+		const total = ids.length; let processed = 0, applied = 0, pending = 0, failed = 0;
+		const tick = () => sgProgress( STR.bulkProcessing + ' ' + processed + '/' + total + ' — ' +
+			applied + ' ' + STR.lblApplied + ', ' + pending + ' ' + STR.lblPending + ', ' + failed + ' ' + STR.lblFailed );
+		tick();
+		sgRunSeq( ids,
+			( id ) => {
+				const row = sgRowById( id ); const msg = row ? row.querySelector( '.wpcc-seo-rowmsg' ) : null;
+				if ( msg ) { msg.textContent = '…'; }
+				// EXISTING per-proposal apply route — outcome read from the response, never the mode.
+				return api( '/proposals/' + encodeURIComponent( id ) + '/apply', { method: 'POST' } )
+					.then( ( res ) => ( { st: ( res.data && res.data.status ) || '' } ) )
+					.catch( () => ( { st: '' } ) );
+			},
+			( id, outcome ) => {
+				processed++;
+				const row = sgRowById( id ); const msg = row ? row.querySelector( '.wpcc-seo-rowmsg' ) : null;
+				if ( outcome.st === 'applied' ) { applied++; if ( row && row.parentNode ) { row.parentNode.removeChild( row ); } }
+				else if ( outcome.st === 'pending_approval' ) { pending++; if ( row && row.parentNode ) { row.parentNode.removeChild( row ); } }
+				else { failed++; if ( msg ) { msg.textContent = STR.cantApply; } }
+				tick();
+			},
+			() => {
+				sgBusy = false;
+				sgProgress( total + ' ' + STR.bulkDone + ' — ' + applied + ' ' + STR.lblApplied + ', ' +
+					pending + ' ' + STR.lblPending + ', ' + failed + ' ' + STR.lblFailed + '.' );
+				if ( $( 'wpcc-seo-sg-selectall' ) ) { $( 'wpcc-seo-sg-selectall' ).checked = false; }
+				sgRefreshBulk();
+			}
+		);
+	}
+	function sgBulkDismiss( ids ) {
+		sgBusy = true; sgRefreshBulk();
+		const total = ids.length; let processed = 0, dismissed = 0, failed = 0;
+		const tick = () => sgProgress( STR.bulkProcessing + ' ' + processed + '/' + total + ' — ' +
+			dismissed + ' ' + STR.lblDismissed + ', ' + failed + ' ' + STR.lblFailed );
+		tick();
+		sgRunSeq( ids,
+			( id ) => {
+				const row = sgRowById( id ); const msg = row ? row.querySelector( '.wpcc-seo-rowmsg' ) : null;
+				if ( msg ) { msg.textContent = '…'; }
+				// EXISTING per-proposal dismiss route.
+				return api( '/proposals/' + encodeURIComponent( id ) + '/dismiss', { method: 'POST' } )
+					.then( ( res ) => ( { ok: res.ok } ) ).catch( () => ( { ok: false } ) );
+			},
+			( id, outcome ) => {
+				processed++;
+				const row = sgRowById( id ); const msg = row ? row.querySelector( '.wpcc-seo-rowmsg' ) : null;
+				if ( outcome.ok ) { dismissed++; if ( row && row.parentNode ) { row.parentNode.removeChild( row ); } }
+				else { failed++; if ( msg ) { msg.textContent = STR.error; } }
+				tick();
+			},
+			() => {
+				sgBusy = false;
+				sgProgress( total + ' ' + STR.bulkDone + ' — ' + dismissed + ' ' + STR.lblDismissed + ', ' + failed + ' ' + STR.lblFailed + '.' );
+				if ( $( 'wpcc-seo-sg-selectall' ) ) { $( 'wpcc-seo-sg-selectall' ).checked = false; }
+				sgRefreshBulk();
+			}
+		);
 	}
 
 	// Live char counts.
@@ -615,6 +749,39 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		} );
 	}
 	document.addEventListener( 'change', function ( e ) { if ( e.target.classList && e.target.classList.contains( 'wpcc-seo-cb' ) ) { refreshGenerate(); } } );
+
+	// Slice 5a — Suggestions-tab bulk wiring (page-scoped).
+	if ( $( 'wpcc-seo-sg-apply' ) ) {
+		$( 'wpcc-seo-sg-apply' ).addEventListener( 'click', function () {
+			const ids = sgSelectedIds(); if ( ! ids.length || sgBusy ) { return; }
+			// Mode-aware confirm; outcome is still read from each API response, not the mode.
+			const tmpl = IS_DEV ? STR.confirmBulkApplyDev : STR.confirmBulkApplyGate;
+			if ( ! window.confirm( tmpl.replace( '%d', ids.length ) ) ) { return; }
+			sgBulkApply( ids );
+		} );
+	}
+	if ( $( 'wpcc-seo-sg-dismiss' ) ) {
+		$( 'wpcc-seo-sg-dismiss' ).addEventListener( 'click', function () {
+			const ids = sgSelectedIds(); if ( ! ids.length || sgBusy ) { return; }
+			if ( ! window.confirm( STR.confirmBulkDismiss.replace( '%d', ids.length ) ) ) { return; }
+			sgBulkDismiss( ids );
+		} );
+	}
+	if ( $( 'wpcc-seo-sg-selectall' ) ) {
+		$( 'wpcc-seo-sg-selectall' ).addEventListener( 'change', function () {
+			const on = this.checked;
+			document.querySelectorAll( '#wpcc-seo-sg-rows .wpcc-seo-sg-cb' ).forEach( ( c ) => { c.checked = on; } );
+			sgRefreshBulk();
+		} );
+	}
+	// Per-row checkbox toggles the bulk bar + keeps select-all in sync.
+	document.addEventListener( 'change', function ( e ) {
+		if ( ! e.target.classList || ! e.target.classList.contains( 'wpcc-seo-sg-cb' ) ) { return; }
+		sgRefreshBulk();
+		const all = document.querySelectorAll( '#wpcc-seo-sg-rows .wpcc-seo-sg-cb' );
+		const checked = document.querySelectorAll( '#wpcc-seo-sg-rows .wpcc-seo-sg-cb:checked' );
+		const sa = $( 'wpcc-seo-sg-selectall' ); if ( sa ) { sa.checked = ( all.length > 0 && all.length === checked.length ); }
+	} );
 	load();
 } )();
 </script>

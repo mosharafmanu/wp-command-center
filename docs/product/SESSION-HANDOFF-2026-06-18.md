@@ -530,3 +530,30 @@ Modified: `includes/Operations/SeoRuntimeManager.php` (the only production chang
 - `T0 --changed` **245/0 net-new 0** · `T1 --changed` **599/0 net-new 0** (a first-run transient flake in `test-change-history-rollback.sh` passed 48/0 standalone + after the store suite; re-run clean — cross-suite env pollution, not a regression).
 
 **Slice 5 prerequisite satisfied:** the rollback store is now bulk-safe (no cap, no eviction, no lost-update, not autoloaded). **Next = deploy decision for 4c, then GA#2 Slice 5 (bulk), NOT started.**
+
+> **Deploy update:** Slice 4c was subsequently **released to production** — prod HEAD = **`529023d`** (`git describe` v0.109.0-18-g529023d), pull-cron verified, invariants 34/23/40/40/2.5.0, 14 tables, Builder UIs build-flag OFF. The protected `_wpcc_seo_rb_` meta store + legacy fallback are live.
+
+---
+
+# GA#2 Slice 5a — Bulk Apply + Bulk Dismiss — committed locally, NOT pushed
+
+> First increment of GA#2 Slice 5 (bulk). UI-only. Committed on `main`; **not pushed, not deployed.** Production remains at **`529023d`**.
+
+## What shipped (UI-only)
+- **Page-scoped bulk action bar on the SEO Suggestions tab:** per-row checkboxes (`wpcc-seo-sg-cb`), *Select all on this page* (`wpcc-seo-sg-selectall`), **Apply selected** (`wpcc-seo-sg-apply`), **Dismiss selected** (`wpcc-seo-sg-dismiss`), and a `role=status`/`aria-live=polite` progress region (`wpcc-seo-sg-progress`).
+- **Bulk Apply/Dismiss are SEQUENTIAL loops over the EXISTING per-proposal routes** (`POST /admin/proposals/{id}/apply`, `/dismiss`) — they act only on **checked rows of the current page**. Each item is governed individually (own approval gate, `change_id`, audit, independent Slice-4c rollback snapshot). Developer → applied; client/enterprise → `pending_approval`. Mode-aware confirm; outcome read from each API response, never the mode. **Per-item failure never aborts** (failed rows kept with a message; successful rows removed).
+
+## Boundaries (grep-verified absent in the view)
+NO cross-page selection · NO `SelectionResolver` · NO `matchall` / select-all-matching · NO `/admin/seo/selection` · NO bulk **Undo** · NO batch approval · NO batch rollback · NO async/background job · NO direct `OperationExecutor`/`seo_manage`/`SeoProvider::write` · NO new REST route.
+
+## Invariants (unchanged, live-verified)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (no new route/operation/capability/MCP tool/schema).
+
+## Files (4) — one production file only
+Modified: `includes/Admin/views/seo-meta.php` (the only production change). Tests: `tests/test-seo-bulk.sh` (new), `tests/test-seo-apply.sh` (stale "no bulk apply" guard flipped — bulk apply now lives on the Suggestions tab), `tests/regression-map.tsv` (+`seo_bulk` group). `test-seo-review.sh` unchanged (its `lacks SelectionResolver`/`matchall` boundaries remain valid — 5a is page-scoped). Confirmed UNCHANGED: AdminRestApi · ChangeHistoryRuntimeManager · OperationExecutor · ProposalApplyService · ProposalAdminQuery · Schema · CapabilityRegistry · OperationRegistry · McpServerRuntime · SeoRuntimeManager.
+
+## Testing
+- `test-seo-bulk.sh` **36/0** (incl. live 3-item apply → 3 distinct `change_id`s + 3 independent `_wpcc_seo_rb_*` snapshots; 2-item dismiss; partial-failure isolation) · `test-seo-apply.sh` **38/0** · `test-seo-undo.sh` **33/0** · `test-seo-audit.sh` **54/0** · `test-seo-review.sh` **36/0**.
+- `T0 --changed` **325/0 net-new 0** · `T1 --changed` **727/0 net-new 0** (19 suites; no flake).
+
+**Next = deploy decision for 5a; Slice 5b (cross-page select-all-matching, needs a READABLE `/admin/seo/selection` route) and 5c (bulk Undo) deferred — NOT started.**
