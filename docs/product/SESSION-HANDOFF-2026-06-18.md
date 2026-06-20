@@ -764,7 +764,7 @@ Propose-only (same `ProposalStore::create`); no direct SEO write / apply / rollb
 ## Visual validation (Playwright, dev: Yoast + live key)
 Draft Posts list → **20** row actions present; Quick Panel opens on a **draft** and renders a real `claude-sonnet-4-6` Current-vs-Suggested comparison with the "saved as a draft — nothing applied" note (no apply/undo/approve). Trash list → **0** row actions (disallowed status correctly hidden).
 
-> **Deploy:** committed this session; releasing via pull-cron — production stamp recorded in the follow-up docs refresh below.
+> **Deploy update:** released to production via pull-cron — prod HEAD = **`c87ce08`** (`git describe` v0.109.0-28-gc87ce08), feat(seo) draft/pending/scheduled/private support. Live-verified: plugin active · `SeoMetaGenerator::SUPPORTED_STATUSES = publish,draft,pending,future,private` · `is_supported_status('draft')=yes` / `('trash')=no` · invariants 34/23/40/40/2.5.0 · 14 tables · no fatals · build-flag OFF (entry points hidden on prod) · homepage 200 / SEO routes 401. Pre-deploy clean serial T2 = 5295/30, **net-new attributable 0** (24 chronic baseline · 5 environment-specific key-present [alt-text 125/4, proposal-admin 24/1, reproduced standalone] · 1 cross-suite pollution [safe-search-replace, clean 11/0 standalone]).
 
 ---
 ---
@@ -774,7 +774,7 @@ Draft Posts list → **20** row actions present; Quick Panel opens on a **draft*
 > This block supersedes the per-slice history above for "what is live today." The sections above are the chronological build log.
 
 ## Current production
-- **Production baseline = `343d720`** (`git describe` = `v0.109.0-26-g343d720`) — the Contextual SEO Quick Panel (Option B) feature commit, released this session. **origin/main == local == prod**; working tree clean. (A docs-stamp commit may advance git HEAD past `343d720`; the feature baseline is `343d720`.)
+- **Production baseline = `c87ce08`** (`git describe` = `v0.109.0-28-gc87ce08`) — SEO Suggestions for **draft/pending/scheduled/private** content (the editable-status allow-list), released this session on top of the Quick Panel (`343d720`). **origin/main == local == prod**; working tree clean. (A docs-stamp commit may advance git HEAD past `c87ce08`; the feature baseline is `c87ce08`.)
 - **Deploy model:** Hostinger pull-cron on `mosharafmanu.com` — `git push origin main` → live ~1 min. Manual deploy: `ssh -p 65002 u916998506@72.62.68.183` then `bash ~/wpcc-deploy.sh`. Runbook: `.ai/DEPLOY.md`. Prod REST namespace = **`wp-command-center/v1`** (not `wpcc/v1`). Prod plugin path: `~/domains/mosharafmanu.com/public_html/wp-content/plugins/wp-command-center`.
 - **Plugin active · homepage/namespace 200 · admin routes 401 · no PHP fatals.**
 
@@ -838,7 +838,7 @@ The SEO Meta Generator is **UX feature-complete**; there is no remaining UX gap 
 # 🚀 NEXT SESSION START HERE
 
 ## Current architecture state
-- SEO Meta Generator is **UX feature-complete and deployed** (see consolidated state above), now including the **Contextual SEO Quick Panel (Option B)** released this session. The governed pipeline (Propose → capability → approval → execute → audit → reversible) is intact across every surface.
+- SEO Meta Generator is **UX feature-complete and deployed** (see consolidated state above), including the **Contextual SEO Quick Panel (Option B)** and **editable-status support** (`SeoMetaGenerator::SUPPORTED_STATUSES` = publish/draft/pending/future/private; disallowed → `unsupported_status`), both released this session. The governed pipeline (Propose → capability → approval → execute → audit → reversible) is intact across every surface.
 - **Contextual entry points:** the row action is a nonce-signed `<a href="admin-post.php?action=wpcc_seo_generate&post=ID">` (no-JS fallback) handled by `SeoRowActions::handle()` → `SeoMetaGenerator::generate([id])` (drafts only) → `wp_safe_redirect` to SEO Meta → Suggestions; when JS is present the **Quick Panel** intercepts the click and shows Current vs Suggested in an in-context modal (same generator, drafts only). Bulk uses `bulk_actions-edit-{type}` / `handle_bulk_actions-edit-{type}` → same generator → redirect with counts.
 - **Reusable governed routes available to admin JS** (cookie + `wp_rest` nonce, gated by `check_seo_permission` = `manage_options` + `FeatureGate('seo_meta_generator')`):
   - `POST /wp-command-center/v1/admin/seo/generate` — body `{post_ids:[…]}` → `{created:[proposal_id…], skipped:[{post_id,reason}], failed:[{post_id,code,message}], provider, model, batch_id}`.
@@ -851,18 +851,74 @@ The SEO Meta Generator is **UX feature-complete**; there is no remaining UX gap 
 - **Recommendation:** validate first, then enable. The SEO UX is now **feature-complete** (Quick Panel shipped) — no UX work remains before enablement.
 
 ## Next recommended task — Production Enablement + Real-world Validation (product/config call)
-The SEO Meta Generator is **UX feature-complete** (audit → generate → review/edit → apply → undo → bulk → contextual row/bulk entry → in-context Quick Panel). There is no remaining UX gap. The next step is **not** an engineering task — it is a **product/config decision**:
+The SEO Meta Generator is **UX feature-complete** (audit → generate [publish/draft/pending/future/private] → review/edit → apply → undo → bulk → contextual row/bulk entry → in-context Quick Panel). There is no remaining UX gap. Per **Roadmap v3** (below), the next step is a **product/config decision**, not engineering:
 1. **Production Enablement** — configure an AI key on prod (`WPCC_ANTHROPIC_API_KEY`) and flip `WPCC_SEO_META_UI` to surface the (already-deployed, currently dormant) Builder + row/bulk/Quick Panel entry points.
 2. **Real-world Validation** — with the prod provider (Rank Math) + a real key, exercise generate → approve/apply → undo round-trips; pick a security-mode posture (`developer` immediate vs `client`/`enterprise` → `pending_approval`).
 
-If continuing to **build** instead of enable, the next *engineering* increment is **Cross-page Selection (5b)** — the only remaining scale gap (server-resolved select-all-matching → existing per-item governed apply; reuses `SelectionResolver`; no batch primitive) — followed by **Design System / Modern UI** (Phase C). **Do not start a new feature without explicit direction.**
+After validation+enablement, Roadmap v3 sequences: **onboarding/activation → thin premium Experience Layer → agency white-label "AI activity" report → enable Alt Text → WooCommerce governed product workflow → Free/Pro seam.** See the Roadmap v3 and Experience Layer Vision sections below.
+
+> **EXPLICIT HOLD (per product owner):** do **NOT** start new feature work without direction — specifically **NOT** WooCommerce workflow, Experience Layer implementation, Design System work, or Alt Text expansion. The Draft Support work is the last shipped item this session.
 
 ## Guardrails that still apply to any next SEO work
 - **Reusable governed routes for admin JS** (cookie + `wp_rest` nonce, gated by `check_seo_permission` = `manage_options` + `FeatureGate('seo_meta_generator')`): `POST /admin/seo/generate {post_ids:[…]}`; `GET /admin/proposals/{id}` (shaped: `payload`/`final_payload`/`prior`/`provider`/`model`); `GET /admin/proposals?status=draft&operation_id=seo_manage`.
 - **Four Guarantees are non-negotiable** — every mutation flows through `ProposalApplyService`/`OperationExecutor`/`change_history`; Propose ≠ Apply.
 - **Invariants frozen: 34 / 23 / 40 / 40 / 2.5.0.** No new route / admin-ajax / operation / capability / MCP tool / schema / DB_VERSION without an explicit, reviewed decision.
 - **Backend contract files that stay byte-identical for UI-only work:** `AdminRestApi`, `ProposalStore`, `ProposalAdminQuery`, `OperationExecutor`, `ChangeHistoryRuntimeManager`, `SeoRuntimeManager`, `Schema`, `CapabilityRegistry`, `OperationRegistry`, `McpServerRuntime`.
-- **Test discipline:** `tests/run.sh --tier T0|T1 --changed` net-new 0 → pristine serial **T2** before deploy. Note: run.sh's auto net-new over-reports on dev-with-key (alt-text / proposal-admin) and under serial pollution (change-history-rollback / safe-search-replace) — triage standalone before treating as a regression.
+- **Test discipline:** `tests/run.sh --tier T0|T1 --changed` net-new 0 → pristine serial **T2** before deploy. Note: run.sh's auto net-new over-reports on dev-with-key (alt-text / proposal-admin) and under serial pollution (change-history-rollback / safe-search-replace) — triage standalone before treating as a regression. **Run only ONE T2 at a time** — concurrent runs share the dev DB and mutually pollute results.
+
+---
+
+# 🧭 PRODUCT ROADMAP v3 (strategy — adopted this session)
+
+> Supersedes Roadmap v2. Optimized for adoption, differentiation, commercial viability, premium perception, and long-term category leadership — not engineering purity.
+
+## Positioning
+- **Category (architecture):** Safe AI Operations / governance layer for WordPress. **Category (buyer language):** *"The safe way to run AI on WordPress — especially on client sites."* Governance is the **proof/mechanism**, not the headline. Do not market "governance platform" to SMB/agencies.
+- **Headline:** *Run AI on WordPress without breaking your site* — review, approve, undo, and audit everything AI does (for you and the agents you connect).
+- **SEO is the wedge, not the product.** The product is the safe multi-domain AI execution layer (SEO → media → Woo → ops), all on one trust spine, plus the **MCP agent-governance gateway**.
+
+## The real moat (ranked)
+1. **Governed single chokepoint** — every mutation reversible + audited; hard to retrofit onto direct-apply competitors (Rank Math AI / Yoast AI / AI Engine).
+2. **MCP agent-governance gateway** — the agentic-era position; most future-proof, currently most undervalued.
+3. **Data gravity** — audit log + change history + rollback snapshots become an agency system-of-record (switching cost).
+Generation quality is **not** a moat (BYO-Anthropic). Compete on trust + breadth + agent-readiness, never on raw generation.
+
+## Feature priority ranking (1–20)
+1. SEO real-world validation on prod *(blocker)* · 2. SEO enablement (controlled) · 3. Onboarding / time-to-first-governed-action · 4. **Thin premium Experience Layer** (shell/dashboard/trust chips/Builder mode — NOT a full CDS) · 5. **Agency white-label "AI activity" report** · 6. Client approval workflow polish · 7. Reversibility-as-hero (visible one-click undo) · 8. Alt Text enablement (accessibility/compliance) · 9. **WooCommerce governed product content workflow** *(next major build)* · 10. Free/Pro seam + licensing groundwork · 11. Command palette + in-context premium interactions (absorbs "Quick Panel V2") · 12. Scheduling / recurring governed ops (Pro) · 13. MCP agent-governance UX + dev docs · 14. Audit export / compliance reporting · 15. Cross-page bulk 5b *(demand-gated)* · 16. Bulk Undo 5c *(demand-gated)* · 17. Site Intelligence / issue detection · 18. Multi-site / fleet · 19. Additional AI providers (post-validation) · 20. Full versioned CDS (last).
+
+## Reject / avoid (now)
+Generic blog writer · chatbot · "AI buttons everywhere" · any direct-apply/ungoverned path · multi-provider before validation · MCP tool-count as a metric · full CDS rewrite now · multisite fleet/marketplace now · standalone "Quick Panel V2" project · ungated bulk-scale before demand.
+
+## Free vs Pro
+- **Free (trust + adoption):** governance core (approval/rollback/audit/capability scoping/change history) · read-only audits (SEO/alt-text/site-intel) · single-item governed actions · MCP gateway (rate-limited) · security modes · reversibility-as-hero.
+- **Pro (scale + agency + automation):** bulk/cross-page (5b/5c) · scheduling/recurring ops · WooCommerce workflow (or gate at volume) · **agency white-label client reports, roles/delegation, multi-site** · audit export/compliance · policy templates · AI usage metering · white-label · priority support. Rides the existing FeatureGate seam. Keep the safety promise free.
+
+## Roadmap horizons
+- **1 week:** finish + deploy Draft Support *(DONE this session — `c87ce08`)*; prod AI key + real-world validation; security-mode posture decision; enable SEO Builder (controlled).
+- **2 weeks:** onboarding/activation v1; thin premium Experience Layer pass on SEO surfaces; agency white-label report v1 + client-approval polish.
+- **30 days:** enable Alt Text; begin WooCommerce governed product workflow (report-first); wire Free/Pro seam.
+- **90 days / later:** Woo v1; scheduling; command palette; demand-gated bulk; MCP agent-governance UX; audit export; then Site Intelligence, fleet, providers, full CDS.
+
+## Public beta criteria
+Real-key prod validation passed (quality + apply→undo in a gated mode; rollback proven on prod) · ≥2 governed workflows live (SEO + Alt Text) · onboarding in place, time-to-first-governed-action minimal · ≥1 premium "wow" · no ungoverned mutation path; invariants stable; T2 net-new 0 · plain-language errors + a feedback/telemetry channel · build flags flipped intentionally with a rollback plan.
+
+---
+
+# 🎨 EXPERIENCE LAYER VISION (premium perception — NOT yet implemented)
+
+> The lever that moves WPCC from "$49 admin plugin" to a premium SaaS agencies pay for. **Vision only — do not implement without direction.** Deliberately a *thin* layer first, NOT the full versioned CDS (#20).
+
+What makes WPCC feel like premium SaaS *inside* WordPress:
+- **Branded app shell + one home** — retire the ~12-menu sprawl into a single Command Center entry with the 5-C IA (Overview · Operate · Audit · Access · Connect); kill the two-dashboard split.
+- **Onboarding / readiness** with progress (connect agent → token → security mode → run a governed action → undo it).
+- **Action-first dashboard** — a "Needs you" approval/queue hero + recent-activity timeline; **reversibility as a first-class, visible affordance** (one-click Undo column), not buried in Change History.
+- **In-context, no-reload interactions** — modals (the Quick Panel pattern), optimistic UI, toasts, live status dots; **command palette (⌘K)**.
+- **Builder vs Engineer mode** — plain-language outcomes vs system detail over shared data; density + disclosure toggle persisted per user; maps to security modes.
+- **Trust signals everywhere** — "reversible · audited · provenance" chips, actor identity (human/system/agent), security-posture pill.
+- **Agency white-label client report** — shareable "what AI did this month, all reversible" summary; turns the audit log into a billable deliverable.
+- **Polished voice + states** — empty/loading/skeleton states, no raw error codes to Builder users.
+
+Sequencing: ship a **thin** Experience Layer on the SEO surfaces first (priority #4), prove premium perception + pricing power, then generalize. The **full versioned Command Design System (CDS)** remains the *last* item (#20) — do not start it early.
 
 ---
 
@@ -875,8 +931,9 @@ Read docs/product/SESSION-HANDOFF-2026-06-18.md in full, especially the
 "CONSOLIDATED PRODUCTION STATE" and "NEXT SESSION START HERE" sections.
 
 Authoritative state to confirm before any work:
-- Production baseline = 343d720 (git describe v0.109.0-26-g343d720);
-  origin/main == local == prod; tree clean. (Quick Panel feature commit.)
+- Production baseline = c87ce08 (git describe v0.109.0-28-gc87ce08);
+  origin/main == local == prod; tree clean. (Draft/pending/scheduled/private
+  SEO-suggestion support, on top of the Quick Panel 343d720.)
 - Invariants FROZEN: OPERATION_MAP 34 · capabilities 23 · catalogue 40 ·
   MCP tools 40 · DB_VERSION 2.5.0 (14 wpcc_* tables, no migration).
 - Deploy = Hostinger pull-cron: `git push origin main` -> live ~1 min.
@@ -884,10 +941,11 @@ Authoritative state to confirm before any work:
   prod path ~/domains/mosharafmanu.com/public_html/wp-content/plugins/wp-command-center ;
   prod REST namespace = wp-command-center/v1 ; runbook .ai/DEPLOY.md.
 - SEO Meta Builder + Sprint A row actions + Sprint B bulk actions + the
-  Contextual SEO Quick Panel (Option B AJAX modal) are DEPLOYED but build-flag
-  OFF on prod (WPCC_SEO_META_UI undefined). Prod has NO AI key and
-  security_mode=developer; provider=Rank Math. SEO Meta Generator is UX
-  feature-complete.
+  Contextual SEO Quick Panel (Option B) + editable-status support
+  (publish/draft/pending/future/private; disallowed -> unsupported_status) are
+  DEPLOYED but build-flag OFF on prod (WPCC_SEO_META_UI undefined). Prod has NO
+  AI key and security_mode=developer; provider=Rank Math. SEO Meta Generator is
+  UX feature-complete.
 - Local dev enables the Builder via wp-content/mu-plugins/wpcc-dev-seo-meta-ui.php
   (outside the repo). Tests: tests/run.sh --tier T0|T1 --changed ; gate net-new 0
   vs tests/regression-baseline.tsv ; full serial T2 before deploy.
@@ -896,17 +954,20 @@ Authoritative state to confirm before any work:
   http://localhost/ClientProjects/WordPress/2026/plugins-dev .
 
 NEXT STEP (no new feature without direction): the SEO Meta Generator is UX
-feature-complete (Quick Panel shipped). The recommended next step is a
-PRODUCT/CONFIG call, not engineering:
+feature-complete (Quick Panel + draft/pending/scheduled/private support shipped).
+Per Roadmap v3 (in this doc) the recommended next step is a PRODUCT/CONFIG call,
+not engineering:
   1. Production Enablement — set WPCC_ANTHROPIC_API_KEY on prod + flip
      WPCC_SEO_META_UI to surface the already-deployed (dormant) SEO Builder +
      row/bulk/Quick Panel entry points.
   2. Real-world Validation — prod provider (Rank Math) + real key: generate ->
      approve/apply -> undo round-trips; choose security-mode posture.
-If building instead: next engineering increment = Cross-page Selection (5b),
-then Design System / Modern UI (Phase C). Preserve the Four Guarantees and the
-frozen invariants 34/23/40/40/2.5.0; no new route/admin-ajax/operation/
-capability/MCP tool/schema without an explicit reviewed decision.
+Roadmap v3 order after enable: onboarding -> thin premium Experience Layer ->
+agency white-label report -> enable Alt Text -> WooCommerce workflow -> Free/Pro
+seam. EXPLICIT HOLD: do NOT start WooCommerce workflow, Experience Layer
+implementation, Design System work, or Alt Text expansion without direction.
+Preserve the Four Guarantees and frozen invariants 34/23/40/40/2.5.0; no new
+route/admin-ajax/operation/capability/MCP tool/schema without a reviewed decision.
 
 Work report-first: architecture verification -> implementation -> tests
 (focused + T0/T1 --changed net-new 0) -> Playwright visual -> commit on approval
