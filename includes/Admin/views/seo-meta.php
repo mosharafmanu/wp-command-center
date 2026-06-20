@@ -246,6 +246,11 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		genNoPlugin:   <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'wp-command-center' ) ); ?>,
 		genNotPub:     <?php echo wp_json_encode( esc_html__( 'Only published content can receive SEO suggestions.', 'wp-command-center' ) ); ?>,
 		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'wp-command-center' ) ); ?>,
+		// Bulk-action result summary (wpcc_seo_bulk redirect).
+		/* translators: %1$d created, %2$d skipped, %3$d failed */
+		bulkSummary:   <?php echo wp_json_encode( __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'wp-command-center' ) ); ?>,
+		bulkAllExist:  <?php echo wp_json_encode( esc_html__( 'All selected items already have open suggestions — review them below.', 'wp-command-center' ) ); ?>,
+		bulkNone:      <?php echo wp_json_encode( esc_html__( 'No suggestions were created for the selected items.', 'wp-command-center' ) ); ?>,
 		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'wp-command-center' ) ); ?>,
 		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
@@ -970,12 +975,41 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		el.innerHTML = html;
 		el.style.display = '';
 	}
+	// Bulk-action result: "X created · Y skipped · Z failed", or the dominant skip
+	// reason when nothing was created (Sprint B — WP Bulk Actions).
+	function showBulkNotice( c, s, f, r ) {
+		const el = $( 'wpcc-seo-entry-notice' ); if ( ! el ) { return; }
+		let cls = 'notice-success', extraUrl = '', extraLabel = '';
+		let msg = STR.bulkSummary.replace( '%1$d', c ).replace( '%2$d', s ).replace( '%3$d', f );
+		if ( c === 0 ) {
+			cls = 'notice-warning';
+			if ( r === 'no_provider' ) { msg = STR.genNoProvider; extraUrl = AI_URL; extraLabel = STR.aiIntegrations; }
+			else if ( r === 'no_seo_plugin' ) { msg = STR.genNoPlugin; }
+			else if ( r === 'has_open_proposal' ) { msg = STR.bulkAllExist; cls = 'notice-info'; }
+			else if ( r === 'not_published' ) { msg = STR.genNotPub; }
+			else { msg = STR.bulkNone; }
+		}
+		el.className = 'notice inline ' + cls;
+		let html = '<p>' + esc( msg );
+		if ( extraUrl ) { html += ' <a href="' + esc( extraUrl ) + '">' + esc( extraLabel ) + '</a>'; }
+		html += '</p>';
+		el.innerHTML = html;
+		el.style.display = '';
+	}
 
 	updateTabCounts(); // U1.3 — populate tab badges on first paint.
 	( function () {
 		const sp = new URLSearchParams( location.search );
 		const code = sp.get( 'wpcc_seo_gen' );
 		if ( code ) { showEntryNotice( code ); }
+		if ( sp.get( 'wpcc_seo_bulk' ) ) {
+			showBulkNotice(
+				parseInt( sp.get( 'c' ) || '0', 10 ),
+				parseInt( sp.get( 's' ) || '0', 10 ),
+				parseInt( sp.get( 'f' ) || '0', 10 ),
+				sp.get( 'r' ) || ''
+			);
+		}
 		if ( sp.get( 'tab' ) === 'suggestions' ) { switchTab( 'suggestions' ); }
 	} )();
 	load();

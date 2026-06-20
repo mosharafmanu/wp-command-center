@@ -651,3 +651,29 @@ New: `includes/Admin/SeoRowActions.php`, `tests/test-seo-row-actions.sh`. Modifi
 - **Playwright (authed dev session):** row action present on Posts (20/20 published), Pages (5/5), **Products (7/7, Woo active)**; redirect lands on Suggestions with the green "SEO suggestion created" notice; duplicate + no-provider notices render; no layout regressions. (Drafts correctly show no action.)
 
 **Not deployed yet.** Gated in practice on enabling the SEO Meta Builder UI in production (build-flag OFF). Next = deploy decision; Slice 5b / 5c and editor/Yoast/RankMath metabox integrations NOT started.
+
+> **Deploy update:** Sprint A row actions were **released to production** — prod HEAD = **`a69a2d3`** (`git describe` v0.109.0-23-ga69a2d3), pull-cron verified, `SeoRowActions.php` live + propose-only, invariants 34/23/40/40/2.5.0, 14 tables, no fatals; row action hidden on prod (build-flag OFF, expected).
+
+---
+
+# Contextual SEO Entry Points (Sprint B) — Bulk Actions — committed locally, NOT pushed
+
+> Native WordPress **Bulk Actions** "Generate SEO Suggestions" on Posts/Pages/Products. Extends the deployed `SeoRowActions`; propose-only. Committed on `main`; **not pushed, not deployed.** Production remains at **`a69a2d3`**.
+
+## What shipped (propose-only)
+- **`SeoRowActions` extended** with `bulk_actions-edit-{post|page|product}` (dropdown) + `handle_bulk_actions-edit-{type}` (handler), registered for the same supported types (Products only when Woo active). The handler verifies **capability + FeatureGate + build flag**, sanitizes ids, **caps to `MAX_BATCH ≤ 25`**, calls the EXISTING `SeoMetaGenerator::generate()` (drafts only), and **redirects to SEO Meta → Suggestions** with aggregate counts (`?wpcc_seo_bulk=1&c=&s=&f=&r=`). WP core verifies the bulk nonce before dispatch.
+- **`seo-meta.php`**: reads `wpcc_seo_bulk` → shows an aggregate notice ("X created · Y skipped · Z failed"), or the dominant skip reason when nothing was created (no-provider + AI-Integrations link / all-already-exist / no-plugin / not-published).
+- **Test seam:** `SeoRowActions` gained a `protected make_generator()` factory (class no longer `final`) so the bulk handler can be tested with a stub provider — no production behavior change.
+
+## Propose ≠ Apply (Four Guarantees intact)
+Bulk action **only creates drafts** — never applies/writes meta/calls `ProposalApplyService`/`OperationExecutor`/`SeoProvider::write`/rollback; review+apply+undo stay in the governed Builder. **No new REST route / AJAX / operation / capability / MCP tool / schema / DB table / DB_VERSION; no batch-apply primitive.** `ProposalStore`/`ProposalAdminQuery`/`AdminRestApi` contracts byte-identical. Invariants **34/23/40/40/2.5.0**.
+
+## Files (4)
+Modified: `includes/Admin/SeoRowActions.php` (bulk hooks + handler + factory seam; only production logic file), `includes/Admin/views/seo-meta.php` (bulk summary notice), `tests/test-seo-row-actions.sh` (+bulk section), `tests/regression-map.tsv` (trigger extended).
+
+## Testing + visual validation
+- `test-seo-row-actions.sh` **64/0** — bulk registration, dropdown gating (admin+flag present; subscriber/flag-off/FeatureGate-off absent or pass-through), **MAX_BATCH (27 → 25 created, overflow dropped)**, **drafts created via bulk (stub provider) with NO SEO meta written**, duplicate bulk → all `has_open_proposal`, redirect to Suggestions. Siblings green.
+- `T0 --changed` **366/0 net-new 0** · `T1 --changed` **463/0 net-new 0** (11 suites; no flake).
+- **Playwright (authed dev session):** "Generate SEO Suggestions" present in Posts/Pages/**Products** bulk dropdowns; bulk-result landing shows "8 created · 2 skipped · 0 failed" on the Suggestions tab; all-exist + no-provider notices render; no admin regressions.
+
+**Not deployed yet.** Next = deploy decision; editor metabox / Yoast / Rank Math integrations and Slice 5b/5c NOT started.

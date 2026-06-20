@@ -43,7 +43,8 @@ has  "FeatureGate gate"                      "FeatureGate::allows( self::FEATURE
 has  "build-flag gate (const)"               "WPCC_SEO_META_UI"               "$SRC"
 has  "build-flag gate (filter)"              "wpcc_seo_meta_ui"               "$SRC"
 has  "Products only when Woo active"         "class_exists( 'WooCommerce' )"  "$SRC"
-has  "calls existing generator"              "SeoMetaGenerator() )->generate" "$SRC"
+has  "calls existing generator"              "make_generator()->generate"     "$SRC"
+has  "generator is SeoMetaGenerator"         "new SeoMetaGenerator()"          "$SRC"
 has  "redirects to SEO Meta menu"            "'page' => self::MENU"           "$SRC"
 has  "lands on Suggestions tab"              "'tab' => 'suggestions'"         "$SRC"
 has  "passes result code"                    "'wpcc_seo_gen'"                 "$SRC"
@@ -159,7 +160,107 @@ else
 fi
 
 echo
-echo "== 4. Invariants unchanged =="
+echo "== 4. Bulk actions (Sprint B): registration, gating, MAX_BATCH, propose-only =="
+has  "registers bulk_actions filter"        "bulk_actions-edit-{\$type}"      "$SRC"
+has  "registers handle_bulk_actions filter" "handle_bulk_actions-edit-{\$type}" "$SRC"
+has  "add_bulk_action method"               "function add_bulk_action"        "$SRC"
+has  "handle_bulk method"                    "function handle_bulk"           "$SRC"
+has  "bulk action label"                     "Generate SEO Suggestions"       "$SRC"
+has  "enforces MAX_BATCH cap"                "count( \$ids ) > SeoMetaGenerator::MAX_BATCH" "$SRC"
+has  "bulk capability gate"                  "current_user_can( 'manage_options' )" "$SRC"
+has  "bulk FeatureGate gate"                 "FeatureGate::allows( self::FEATURE )" "$SRC"
+has  "bulk redirects to Suggestions"         "'wpcc_seo_bulk' => 1"           "$SRC"
+has  "bulk reuses the generator"             "make_generator()->generate( \$ids" "$SRC"
+lacks "bulk: no apply"                       "->apply("                       "$SRC"
+lacks "bulk: no rollback"                    "->rollback("                    "$SRC"
+has  "view shows bulk summary notice"        "showBulkNotice"                 "$VIEW"
+has  "view reads wpcc_seo_bulk"              "wpcc_seo_bulk"                  "$VIEW"
+
+if command -v wp >/dev/null 2>&1; then
+	BRES="$(wpe '
+		$out = [];
+		$admin = get_users(["role"=>"administrator","number"=>1]); $aid = $admin?$admin[0]->ID:1;
+		add_filter("wpcc_seo_meta_ui","__return_true"); wp_set_current_user($aid);
+
+		// Test subclass injects a stub-provider generator (deterministic; no network).
+		$ra = new class extends \WPCommandCenter\Admin\SeoRowActions {
+			public $genFactory;
+			protected function make_generator(): \WPCommandCenter\Seo\SeoMetaGenerator { return ($this->genFactory)(); }
+		};
+		$okStub = new class implements \WPCommandCenter\Seo\SeoMetaProvider {
+			public function id(): string { return "stub"; }
+			public function is_configured(): bool { return true; }
+			public function suggest_meta(array $c, array $x=[]): \WPCommandCenter\Seo\SeoMetaResult { return \WPCommandCenter\Seo\SeoMetaResult::ok("Bulk Title","Bulk description long enough to be a realistic meta description for this generated test proposal.","stub","stub-model"); }
+		};
+		$resolver = new class($okStub) extends \WPCommandCenter\Seo\SeoMetaProviderResolver { private $p; public function __construct($p){ $this->p=$p; } public function active(): ?\WPCommandCenter\Seo\SeoMetaProvider { return $this->p; } };
+		$store = new \WPCommandCenter\Proposals\ProposalStore();
+		$ra->genFactory = function() use ($store,$resolver){ return new \WPCommandCenter\Seo\SeoMetaGenerator($store,$resolver); };
+
+		$seoActive = ( \WPCommandCenter\Operations\SeoProvider::NONE !== \WPCommandCenter\Operations\SeoProvider::detect() );
+		$out["seo_active"] = $seoActive ? 1 : 0;
+
+		// Dropdown registration (admin + flag) -> action present with label.
+		$acts = $ra->add_bulk_action( [] );
+		$out["bulk_action_present"] = ( isset($acts["wpcc_seo_generate"]) && $acts["wpcc_seo_generate"]==="Generate SEO Suggestions" ) ? 1 : 0;
+
+		// Wrong action -> redirect unchanged.
+		$out["wrong_action_passthrough"] = ( $ra->handle_bulk("HOME","not_mine",[1,2]) === "HOME" ) ? 1 : 0;
+
+		if ( $seoActive ) {
+			// MAX_BATCH: 27 published posts -> generator caps to 25; 25 drafts created.
+			$pids = [];
+			for ($i=0;$i<27;$i++){ $pids[] = wp_insert_post(["post_title"=>"Bulk RA ".$i,"post_status"=>"publish","post_type"=>"post","post_content"=>"x"]); }
+			$url = $ra->handle_bulk("HOME","wpcc_seo_generate",$pids);
+			parse_str((string)parse_url($url, PHP_URL_QUERY), $q);
+			$out["redirect_to_suggestions"] = ( ($q["page"]??"")==="wpcc-seo" && ($q["tab"]??"")==="suggestions" && ($q["wpcc_seo_bulk"]??"")=="1" ) ? 1 : 0;
+			$out["cap_25_created"]   = ( (int)($q["c"]??0) === 25 ) ? 1 : 0;   // 27 selected, only 25 processed
+			$out["overflow_dropped"] = ( (int)($q["c"]??0) + (int)($q["s"]??0) + (int)($q["f"]??0) <= 25 ) ? 1 : 0;
+			// Verify drafts actually created in the store + no SEO meta written to a post.
+			$drafts = $store->count(["operation_id"=>"seo_manage","status"=>"draft"]);
+			$out["drafts_exist"] = ( $drafts >= 25 ) ? 1 : 0;
+			$meta = \WPCommandCenter\Operations\SeoProvider::read($pids[0], \WPCommandCenter\Operations\SeoProvider::detect());
+			$out["no_meta_written"] = ( ($meta["title"]??"") === "" ) ? 1 : 0; // generator never writes meta
+
+			// Duplicate prevention on a second bulk over the same ids.
+			$url2 = $ra->handle_bulk("HOME","wpcc_seo_generate",$pids);
+			parse_str((string)parse_url($url2, PHP_URL_QUERY), $q2);
+			$out["dup_all_skipped"] = ( (int)($q2["c"]??-1)===0 && ($q2["r"]??"")==="has_open_proposal" ) ? 1 : 0;
+
+			// cleanup: drafts for these posts + the posts.
+			global $wpdb; $t=$wpdb->prefix."wpcc_proposals";
+			foreach ($pids as $pid){ $wpdb->query($wpdb->prepare("DELETE FROM $t WHERE target_id=%s AND operation_id=%s",(string)$pid,"seo_manage")); wp_delete_post($pid,true); }
+		}
+
+		// Not-allowed (subscriber) -> redirect unchanged, no generation.
+		$sub = wp_insert_user(["user_login"=>"bra_".wp_generate_password(5,false),"user_pass"=>wp_generate_password(),"role"=>"subscriber"]);
+		wp_set_current_user($sub);
+		$out["subscriber_passthrough"] = ( $ra->handle_bulk("HOME","wpcc_seo_generate",[1]) === "HOME" ) ? 1 : 0;
+		$out["subscriber_no_dropdown"] = ( ! isset($ra->add_bulk_action([])["wpcc_seo_generate"]) ) ? 1 : 0;
+		wp_set_current_user($aid); wp_delete_user($sub);
+
+		echo wp_json_encode($out);
+	')"
+	bj() { printf '%s' "$BRES" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }
+	assert_eq "bulk dropdown action present + label" "1" "$(bj bulk_action_present)"
+	assert_eq "wrong action -> redirect passthrough"  "1" "$(bj wrong_action_passthrough)"
+	assert_eq "subscriber -> redirect passthrough"    "1" "$(bj subscriber_passthrough)"
+	assert_eq "subscriber -> no bulk dropdown action" "1" "$(bj subscriber_no_dropdown)"
+	if [ "$(bj seo_active)" = "1" ]; then
+		assert_eq "bulk redirects to Suggestions tab"  "1" "$(bj redirect_to_suggestions)"
+		assert_eq "MAX_BATCH enforced (27 -> 25 created)" "1" "$(bj cap_25_created)"
+		assert_eq "overflow beyond 25 dropped"          "1" "$(bj overflow_dropped)"
+		assert_eq "draft proposals created via bulk"    "1" "$(bj drafts_exist)"
+		assert_eq "NO SEO meta written (propose-only)"  "1" "$(bj no_meta_written)"
+		assert_eq "duplicate bulk -> all has_open_proposal" "1" "$(bj dup_all_skipped)"
+	else
+		echo "  NOTE: no SEO plugin active — bulk propose-only round-trip skipped."
+	fi
+else
+	echo "  SKIP: wp-cli not available — bulk functional checks skipped."
+fi
+
+echo
+echo "== 5. Invariants unchanged =="
 assert_eq "OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
 assert_eq "catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
