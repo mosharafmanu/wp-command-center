@@ -472,3 +472,29 @@ Modified: `includes/Admin/views/seo-meta.php` (Apply button + Applied tab + hand
 - `tests/run.sh --tier T0 --changed` **227/0 net-new 0** · `--tier T1 --changed` **553/0 net-new 0**
 
 **Next:** Slice 4b (per-item Undo via the existing `/admin/history/{change_id}/rollback` → `seo_restore`), report-first, on explicit direction. **Slice 4b not started.** Slice 5 (bulk) still needs the `wpcc_seo_rollbacks` store hardening first.
+
+---
+
+# GA#2 Slice 4a — DEPLOYED to production (2026-06-20)
+
+> Deployment record for the Slice 4a section above. **Supersedes its "committed locally, NOT pushed" status:** Slice 4a is now **live in production**.
+
+## Deployment
+- **Commit:** `f7c1ca8` — *feat(seo): add governed proposal apply workflow*
+- **Date:** 2026-06-20 · **Model:** Hostinger pull-cron
+- **Deploy log:** `DEPLOYED 5158b47 -> f7c1ca8 active=yes` @ 2026-06-20T03:55:09Z
+- **Pre-deploy gate:** `tests/test-seo-apply.sh` **39 / 0** (live DB, AMPPS env).
+
+## Production status
+- **Production HEAD = `f7c1ca8`** (`git describe` = `v0.109.0-15-gf7c1ca8`); **origin == prod == local**, working tree clean.
+- Plugin **active** · homepage **200** · **no `debug.log` / no PHP fatals**.
+
+## Verification (all PASS)
+- **Routes (anon):** `/admin/dashboard` 401 · `/admin/proposals` 401 · `/admin/seo/audit` 401 · POST `/admin/seo/generate` 401 (`rest_forbidden`, auth-gated — not 404).
+- **Slice 4a view (deployed `seo-meta.php`):** Apply control (`wpcc-seo-apply`) present · Applied tab (`wpcc-seo-tab-applied`) present · NO Undo (`wpcc-seo-undo` 0) · no `/history/` (0) · no Approval-Center (0) · no Change-History (0) · no `SelectionResolver` (0) · no `OperationExecutor` (0) · no bulk apply.
+- **Invariants (live `wp eval` on prod):** OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0** (`wpcc_db_version` option = 2.5.0).
+- **Schema:** **14** `wpcc_*` tables (none added) · no migration ran (`Schema.php` untouched; option matched code → no `dbDelta`).
+- **Build flags:** `WPCC_SEO_META_UI` / `WPCC_ALT_TEXT_UI` / `WPCC_PROPOSALS_DEV_UI` all **UNDEFINED → Builder UIs HIDDEN** (SEO Meta / AI Alt Text / Governed Drafts).
+
+## GA#2 progress
+Slice 1 (audit) · 2a (AnthropicClient) · 2b (drafts) · 3 (review/edit/dismiss) · **4a (approve & apply + Applied tab)** — all DEPLOYED, Builder UI build-flag OFF throughout. **Next = Slice 4b (per-item Undo), NOT started.** Slice 5 (bulk) still gated on `wpcc_seo_rollbacks` store hardening.
