@@ -557,3 +557,33 @@ Modified: `includes/Admin/views/seo-meta.php` (the only production change). Test
 - `T0 --changed` **325/0 net-new 0** · `T1 --changed` **727/0 net-new 0** (19 suites; no flake).
 
 **Next = deploy decision for 5a; Slice 5b (cross-page select-all-matching, needs a READABLE `/admin/seo/selection` route) and 5c (bulk Undo) deferred — NOT started.**
+
+> **Deploy update:** Slice 5a was **released to production** — prod HEAD = **`02682dc`** (`git describe` v0.109.0-19-g02682dc), pull-cron verified, invariants 34/23/40/40/2.5.0, 14 tables, Builder UIs build-flag OFF, all routes 401.
+
+---
+
+# GA#2 UX Polish — Workflow Guidance, Tab Counts, Action Dashboard — committed locally, NOT pushed
+
+> Must-Have UX polish (U1.1/U1.2/U1.3/U1.4/U3) on the SEO Meta Builder. UI-only. Committed on `main`; **not pushed, not deployed.** Production remains at **`02682dc`**.
+
+## What shipped (UI-only)
+- **U1.1 intro copy fix:** removed the false "Read-only — this page does not change anything"; the intro now states reviewable / approval-aware / **reversible**.
+- **U1.2 Generate → Suggestions handoff:** on successful generation (`created > 0`) the view **auto-switches** to the Suggestions tab; the dashboard footer is the persistent CTA. No more dead-end.
+- **U1.4 no-provider notice:** when generation returns `no_provider` (no AI key), a clear inline notice links to **AI Integrations** (reads the existing `skipped[].reason`; zero backend).
+- **U1.3 tab count badges:** Review / Suggestions / Applied carry live counts (reuse the existing proposal list route, `limit=1`).
+- **U3 action-first dashboard:** progress bar (optimized %) + **Needs you** (clickable **Missing** / **Needs work** → set the audit filter) + **Healthy** (Optimized) + footer **N suggestions ready** / **N applied (reversible)** deep-linking to those tabs.
+
+## Visual QA (real Chrome via Playwright, authenticated dev session)
+All states captured and verified: Review, Suggestions, Applied, dashboard card, tab badges, no-provider notice, Generate→Suggestions handoff, mobile (390px — no overflow). Dashboard actions functionally verified (filter switch + tab deep-links). **One double-percent bug found and fixed** ("0%% optimized" → "0% optimized"; `dashPct` `%%`→`%`).
+
+## Boundaries / invariants
+No new route/operation/capability/MCP tool/schema; **no backend PHP changed** (only `seo-meta.php`). The new count reads reuse the existing `/admin/proposals` route. Four Guarantees untouched (presentation-only). Invariants frozen: OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**.
+
+## Files (3) — one production file only
+Modified: `includes/Admin/views/seo-meta.php` (only production change), `tests/test-seo-audit.sh` (+14 UX assertions: intro/badges/dashboard), `tests/test-seo-generate.sh` (+5 UX assertions: handoff/no-provider).
+
+## Testing
+- `test-seo-audit.sh` **68/0** · `test-seo-generate.sh` **49/0** · siblings green (`test-seo-review.sh` 36/0 · `test-seo-apply.sh` 38/0 · `test-seo-bulk.sh` 36/0 · `test-seo-undo.sh` 33/0).
+- `T0 --changed` **330/0 net-new 0** · `T1 --changed` **801/0 net-new 0** (22 suites; no flake).
+
+**Scope = Must-Have only.** Deferred (separate slices, NOT started): U2 audit-table badge relabels + score `/100` + "Suggestion ready" state; **Applied-tab pagination** (the remaining Public-Beta scalability blocker, visually confirmed unbounded in QA); Slice 5b / 5c.

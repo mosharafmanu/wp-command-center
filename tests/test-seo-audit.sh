@@ -83,6 +83,26 @@ has  "generation posts to /seo/generate"   "/seo/generate"       "$VIEW"
 lacks "no OperationExecutor in view"       "OperationExecutor"  "$VIEW"
 
 echo
+echo "== 4b. UX polish (U1.1 intro, U1.3 tab badges, U3 dashboard) =="
+# U1.1 — the stale "read-only" intro is gone; intro now states reversibility.
+lacks "no stale read-only intro"           "this page does not change anything" "$VIEW"
+has  "intro states reversibility"          "every change is reviewable"  "$VIEW"
+# U1.3 — tab count badges.
+has  "Review tab count badge"              "wpcc-seo-tabcount-review"      "$VIEW"
+has  "Suggestions tab count badge"         "wpcc-seo-tabcount-suggestions" "$VIEW"
+has  "Applied tab count badge"             "wpcc-seo-tabcount-applied"     "$VIEW"
+has  "tab counts reuse proposal list"      "status=draft&operation_id=seo_manage&limit=1" "$VIEW"
+# U3 — action-first dashboard: progress bar + clickable filters + tab deep-links.
+has  "dashboard container"                 "wpcc-seo-dash"          "$VIEW"
+has  "progress bar fill"                   "wpcc-seo-dash-fill"     "$VIEW"
+has  "clickable filter stats (data-filter)" "data-filter"           "$VIEW"
+has  "needs-you label"                     "Needs you"              "$VIEW"
+has  "Needs work label"                    "Needs work"             "$VIEW"
+has  "dashboard deep-links (data-go)"      "data-go"                "$VIEW"
+has  "suggestions-ready metric"            "suggestions ready"      "$VIEW"
+has  "applied-reversible metric"           "applied (reversible)"   "$VIEW"
+
+echo
 echo "== 5. Functional: audit over the real registry =="
 if ! command -v wp >/dev/null 2>&1; then
 	echo "  SKIP: wp-cli not available — static checks only."

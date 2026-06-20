@@ -65,6 +65,16 @@ echo "== 4. View: minimal generate control (drafts only) =="
 has  "view has generate control"              "wpcc-seo-generate"    "$VIEW"
 has  "view posts to /seo/generate"            "/seo/generate"        "$VIEW"
 has  "view states drafts only"                "nothing is applied"   "$VIEW"
+
+echo
+echo "== 4b. UX polish (U1.2 handoff, U1.4 no-provider notice) =="
+# U1.2 — on successful generation the view auto-switches to the Suggestions tab.
+has  "Generate->Suggestions handoff"          "switchTab( 'suggestions' )" "$VIEW"
+# U1.4 — no_provider results surface AI-key guidance linking to AI Integrations.
+has  "no-provider notice element"             "wpcc-seo-gen-notice"  "$VIEW"
+has  "detects no_provider skip reason"        "reason === 'no_provider'" "$VIEW"
+has  "links to AI Integrations"               "wpcc-ai-integrations" "$VIEW"
+has  "uses server-provided AI URL const"      "AI_URL"               "$VIEW"
 # (Apply arrives in Slice 4a; per-item Undo in Slice 4b — both covered by
 # test-seo-apply.sh / test-seo-undo.sh. The shared view now legitimately contains the
 # /history/ rollback route for the Applied-tab Undo, so that absence guard is dropped.)

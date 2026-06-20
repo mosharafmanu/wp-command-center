@@ -29,6 +29,7 @@ $nonce     = wp_create_nonce( 'wp_rest' );
 $api_base  = rest_url( 'wp-command-center/v1/admin' );
 $core_base = rest_url( 'wp/v2' );
 $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any post type)
+$ai_url    = admin_url( 'admin.php?page=wpcc-ai-integrations' ); // U1.4 — connect an AI key
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
@@ -37,13 +38,13 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 <div class="wrap wpcc-wrap wpcc-seo">
 	<h1><?php esc_html_e( 'SEO Meta', 'wp-command-center' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'Audit which posts and pages are missing or have weak SEO titles and meta descriptions. Read-only — this page does not change anything.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'Find posts and pages with missing or weak SEO titles and descriptions, generate AI suggestions, and apply them — every change is reviewable, approval-aware, and reversible.', 'wp-command-center' ); ?>
 	</p>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="#" class="nav-tab nav-tab-active" id="wpcc-seo-tab-review"><?php esc_html_e( 'Review', 'wp-command-center' ); ?></a>
-		<a href="#" class="nav-tab" id="wpcc-seo-tab-suggestions"><?php esc_html_e( 'Suggestions', 'wp-command-center' ); ?></a>
-		<a href="#" class="nav-tab" id="wpcc-seo-tab-applied"><?php esc_html_e( 'Applied', 'wp-command-center' ); ?></a>
+		<a href="#" class="nav-tab nav-tab-active" id="wpcc-seo-tab-review"><?php esc_html_e( 'Review', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-review"></span></a>
+		<a href="#" class="nav-tab" id="wpcc-seo-tab-suggestions"><?php esc_html_e( 'Suggestions', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-suggestions"></span></a>
+		<a href="#" class="nav-tab" id="wpcc-seo-tab-applied"><?php esc_html_e( 'Applied', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-applied"></span></a>
 	</h2>
 
 	<!-- ============ REVIEW TAB ============ -->
@@ -67,6 +68,9 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		?></span>
 		<span id="wpcc-seo-gen-status" role="status" aria-live="polite" style="margin-left:auto;color:#646970;"></span>
 	</div>
+
+	<?php // U1.4 — surfaced when generation returns no_provider (no AI key connected). ?>
+	<div id="wpcc-seo-gen-notice" class="notice notice-warning inline" role="status" aria-live="polite" style="display:none;margin:8px 0;"></div>
 
 	<div id="wpcc-seo-panel">
 		<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></p>
@@ -156,6 +160,22 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 .wpcc-seo-rowmsg { font-size:12px;color:#646970;margin-top:4px; }
 .wpcc-seo-bulkbar { display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0;padding:8px 10px;border:1px solid #c3c4c7;background:#f6f7f7;border-radius:4px; }
 #wpcc-seo-sg-progress { margin:8px 0;padding:10px;border:1px solid #c3c4c7;background:#fff;border-radius:4px;font-size:13px; }
+.wpcc-seo-tabcount { display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;background:#dcdcde;color:#1d2327;font-size:11px;line-height:18px;vertical-align:2px; }
+.wpcc-seo-dash { border:1px solid #c3c4c7;background:#fff;border-radius:4px;padding:16px;max-width:1100px; }
+.wpcc-seo-dash-bar { height:8px;border-radius:5px;background:#e6e6e9;overflow:hidden;margin-bottom:8px; }
+.wpcc-seo-dash-fill { height:100%;background:#00a32a;transition:width .2s; }
+.wpcc-seo-dash-head { font-size:13px;color:#1d2327;margin-bottom:12px; }
+.wpcc-seo-dash-groups { display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start; }
+.wpcc-seo-dash-grp { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+.wpcc-seo-dash-label { font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#646970; }
+.wpcc-seo-stat { font-size:13px;border:1px solid #dcdcde;border-radius:4px;padding:6px 12px;background:#f6f7f7;cursor:default; }
+button.wpcc-seo-stat { cursor:pointer; }
+button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
+.wpcc-seo-stat b { font-size:16px;margin-right:4px; }
+.wpcc-seo-stat--bad b { color:#b32d2e; } .wpcc-seo-stat--warn b { color:#996800; } .wpcc-seo-stat--good b { color:#0a7c2f; }
+.wpcc-seo-dash-foot { margin-top:12px;font-size:13px;color:#50575e; }
+.wpcc-seo-link { background:none;border:none;color:#2271b1;cursor:pointer;padding:0;font-size:13px;text-decoration:underline; }
+.wpcc-seo-link:hover { color:#135e96; }
 </style>
 
 <script>
@@ -163,6 +183,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	const API   = <?php echo wp_json_encode( $api_base ); ?>;
 	const CORE  = <?php echo wp_json_encode( $core_base ); ?>;
 	const EDIT  = <?php echo wp_json_encode( $edit_base ); ?>;
+	const AI_URL = <?php echo wp_json_encode( $ai_url ); ?>;
 	const NONCE = <?php echo wp_json_encode( $nonce ); ?>;
 	const MODE  = <?php echo wp_json_encode( $security_mode ); ?>; // developer | client | enterprise
 	const IS_DEV = ( MODE === 'developer' );
@@ -187,6 +208,24 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		missingN: <?php echo wp_json_encode( esc_html__( 'Missing meta', 'wp-command-center' ) ); ?>,
 		weakN:    <?php echo wp_json_encode( esc_html__( 'Weak meta', 'wp-command-center' ) ); ?>,
 		totalN:   <?php echo wp_json_encode( esc_html__( 'Total content', 'wp-command-center' ) ); ?>,
+		// U3 — action-first dashboard.
+		dashNeedsYou:  <?php echo wp_json_encode( esc_html__( 'Needs you', 'wp-command-center' ) ); ?>,
+		dashHealthy:   <?php echo wp_json_encode( esc_html__( 'Healthy', 'wp-command-center' ) ); ?>,
+		stMissing:     <?php echo wp_json_encode( esc_html__( 'Missing', 'wp-command-center' ) ); ?>,
+		stNeedsWork:   <?php echo wp_json_encode( esc_html__( 'Needs work', 'wp-command-center' ) ); ?>,
+		stOptimized:   <?php echo wp_json_encode( esc_html__( 'Optimized', 'wp-command-center' ) ); ?>,
+		dashSugReady:  <?php echo wp_json_encode( esc_html__( 'suggestions ready', 'wp-command-center' ) ); ?>,
+		dashApplied:   <?php echo wp_json_encode( esc_html__( 'applied (reversible)', 'wp-command-center' ) ); ?>,
+		/* translators: %d: optimized percentage (literal percent sign follows) */
+		dashPct:       <?php echo wp_json_encode( __( '%d% optimized', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of published items */
+		dashPublished: <?php echo wp_json_encode( __( '%d published', 'wp-command-center' ) ); ?>,
+		// U1.2 — Generate → Suggestions handoff.
+		/* translators: %d: suggestions created */
+		viewSug:       <?php echo wp_json_encode( __( 'Review %d suggestions →', 'wp-command-center' ) ); ?>,
+		// U1.4 — no AI provider connected.
+		noKey:         <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so no suggestions were generated. Add an Anthropic API key, then try again.', 'wp-command-center' ) ); ?>,
+		aiIntegrations:<?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'wp-command-center' ) ); ?>,
 		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'wp-command-center' ) ); ?>,
 		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
@@ -268,15 +307,56 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	}
 	function metaCell( v ) { return v ? esc( v ) : '<em class="wpcc-seo-none">' + esc( STR.none ) + '</em>'; }
 
+	// U1.3 — tab count badge helper.
+	function setTabCount( id, n ) { const el = $( id ); if ( el ) { el.textContent = ( n > 0 ? ' ' + n : '' ); el.style.display = ( n > 0 ? '' : 'none' ); } }
+
+	// U1.3 / U3 — refresh Suggestions + Applied counts (used by tab badges AND the
+	// dashboard footer). Reuses the EXISTING proposal list route (limit=1 → total_count).
+	function updateTabCounts() {
+		api( '/proposals?status=draft&operation_id=seo_manage&limit=1' ).then( ( r ) => {
+			const n = ( r.ok && r.data && r.data.total_count ) || 0;
+			setTabCount( 'wpcc-seo-tabcount-suggestions', n );
+			const f = $( 'wpcc-seo-dash-sug' ); if ( f ) { f.textContent = n; }
+		} );
+		api( '/proposals?status=applied&operation_id=seo_manage&limit=1' ).then( ( r ) => {
+			const n = ( r.ok && r.data && r.data.total_count ) || 0;
+			setTabCount( 'wpcc-seo-tabcount-applied', n );
+			const f = $( 'wpcc-seo-dash-applied' ); if ( f ) { f.textContent = n; }
+		} );
+	}
+
+	// U3 — action-first dashboard: progress bar + "Needs you" (clickable Missing /
+	// Needs work, which set the filter) + "Healthy" (Optimized count) + a footer with
+	// Suggestions-ready / Applied counts that deep-link to those tabs.
 	function renderReadiness( s ) {
 		if ( ! s ) { setHtml( 'wpcc-seo-readiness', '' ); return; }
-		const stat = ( n, label ) => '<div class="stat"><b>' + esc( n ) + '</b><span>' + esc( label ) + '</span></div>';
+		const pct     = s.optimized_pct != null ? s.optimized_pct : 0;
+		const missing = s.missing != null ? s.missing : 0;
+		const weak    = s.weak != null ? s.weak : 0;
+		const ok      = s.ok != null ? s.ok : 0;
+		const total   = s.total_content != null ? s.total_content : 0;
+		setTabCount( 'wpcc-seo-tabcount-review', missing + weak );
 		setHtml( 'wpcc-seo-readiness',
-			stat( ( s.optimized_pct != null ? s.optimized_pct : 0 ) + '%', STR.optimized ) +
-			stat( s.missing != null ? s.missing : 0, STR.missingN ) +
-			stat( s.weak != null ? s.weak : 0, STR.weakN ) +
-			stat( s.total_content != null ? s.total_content : 0, STR.totalN )
+			'<div class="wpcc-seo-dash">' +
+				'<div class="wpcc-seo-dash-bar"><div class="wpcc-seo-dash-fill" style="width:' + esc( pct + '' ) + '%"></div></div>' +
+				'<div class="wpcc-seo-dash-head">' + esc( STR.dashPct.replace( '%d', pct ) ) + ' · ' + esc( STR.dashPublished.replace( '%d', total ) ) + '</div>' +
+				'<div class="wpcc-seo-dash-groups">' +
+					'<div class="wpcc-seo-dash-grp"><span class="wpcc-seo-dash-label">' + esc( STR.dashNeedsYou ) + '</span>' +
+						'<button type="button" class="wpcc-seo-stat wpcc-seo-stat--bad" data-filter="missing"><b>' + esc( missing + '' ) + '</b>' + esc( STR.stMissing ) + '</button>' +
+						'<button type="button" class="wpcc-seo-stat wpcc-seo-stat--warn" data-filter="weak"><b>' + esc( weak + '' ) + '</b>' + esc( STR.stNeedsWork ) + '</button>' +
+					'</div>' +
+					'<div class="wpcc-seo-dash-grp"><span class="wpcc-seo-dash-label">' + esc( STR.dashHealthy ) + '</span>' +
+						'<span class="wpcc-seo-stat wpcc-seo-stat--good"><b>' + esc( ok + '' ) + '</b>' + esc( STR.stOptimized ) + '</span>' +
+					'</div>' +
+				'</div>' +
+				'<div class="wpcc-seo-dash-foot">' +
+					'<button type="button" class="wpcc-seo-link" data-go="suggestions"><span id="wpcc-seo-dash-sug">0</span> ' + esc( STR.dashSugReady ) + '</button>' +
+					' · ' +
+					'<button type="button" class="wpcc-seo-link" data-go="applied"><span id="wpcc-seo-dash-applied">0</span> ' + esc( STR.dashApplied ) + '</button>' +
+				'</div>' +
+			'</div>'
 		);
+		updateTabCounts();
 	}
 
 	function renderTable( items ) {
@@ -325,17 +405,39 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		if ( ! ids.length ) { return; }
 		if ( ids.length > MAX_BATCH ) { ids = ids.slice( 0, MAX_BATCH ); }
 		genBusy = true; refreshGenerate();
+		hideGenNotice();
 		const status = $( 'wpcc-seo-gen-status' ); if ( status ) { status.textContent = STR.generating; }
 		api( '/seo/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { post_ids: ids } ) } )
 			.then( ( res ) => {
 				genBusy = false;
 				const d = res.data || {};
 				if ( ! res.ok ) { if ( status ) { status.textContent = STR.genErr; } refreshGenerate(); return; }
-				const c = ( d.created || [] ).length, sk = ( d.skipped || [] ).length, f = ( d.failed || [] ).length;
+				const created = d.created || [], skipped = d.skipped || [], failed = d.failed || [];
+				const c = created.length, sk = skipped.length, f = failed.length;
+				// U1.4 — nothing created AND a no_provider skip → the AI key isn't connected.
+				const noProvider = ( c === 0 ) && skipped.some( ( s ) => s && s.reason === 'no_provider' );
+				if ( noProvider ) {
+					if ( status ) { status.textContent = ''; }
+					showGenNotice();
+					refreshGenerate();
+					return;
+				}
 				if ( status ) { status.textContent = STR.genDone.replace( '%1$d', c ).replace( '%2$d', sk ).replace( '%3$d', f ); }
-				pg.offset = 0; load(); // reflect items that now have an open proposal
+				pg.offset = 0; load(); // refresh audit + counts
+				// U1.2 — handoff: when suggestions were created, move the user to them.
+				if ( c > 0 ) { switchTab( 'suggestions' ); }
+				else { refreshGenerate(); updateTabCounts(); }
 			} )
 			.catch( () => { genBusy = false; if ( status ) { status.textContent = STR.genErr; } refreshGenerate(); } );
+	}
+	// U1.4 — no-AI-provider guidance with a link to AI Integrations (server-provided URL).
+	function showGenNotice() {
+		const el = $( 'wpcc-seo-gen-notice' ); if ( ! el ) { return; }
+		el.innerHTML = '<p>' + esc( STR.noKey ) + ' <a href="' + esc( AI_URL ) + '">' + esc( STR.aiIntegrations ) + '</a></p>';
+		el.style.display = '';
+	}
+	function hideGenNotice() {
+		const el = $( 'wpcc-seo-gen-notice' ); if ( el ) { el.style.display = 'none'; el.innerHTML = ''; }
 	}
 
 	function renderPager() {
@@ -546,6 +648,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 					pending + ' ' + STR.lblPending + ', ' + failed + ' ' + STR.lblFailed + '.' );
 				if ( $( 'wpcc-seo-sg-selectall' ) ) { $( 'wpcc-seo-sg-selectall' ).checked = false; }
 				sgRefreshBulk();
+				updateTabCounts(); // U1.3 — refresh Suggestions/Applied badges after bulk apply.
 			}
 		);
 	}
@@ -575,6 +678,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 				sgProgress( total + ' ' + STR.bulkDone + ' — ' + dismissed + ' ' + STR.lblDismissed + ', ' + failed + ' ' + STR.lblFailed + '.' );
 				if ( $( 'wpcc-seo-sg-selectall' ) ) { $( 'wpcc-seo-sg-selectall' ).checked = false; }
 				sgRefreshBulk();
+				updateTabCounts(); // U1.3 — refresh Suggestions/Applied badges after bulk dismiss.
 			}
 		);
 	}
@@ -733,6 +837,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		$( 'wpcc-seo-tab-applied' ).classList.toggle( 'nav-tab-active', which === 'applied' );
 		if ( which === 'suggestions' ) { sgOffset = 0; loadSuggestions(); }
 		else if ( which === 'applied' ) { loadApplied(); }
+		updateTabCounts(); // U1.3 — keep tab badges fresh on every switch.
 	}
 
 	// ---------- wiring ----------
@@ -782,6 +887,22 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		const checked = document.querySelectorAll( '#wpcc-seo-sg-rows .wpcc-seo-sg-cb:checked' );
 		const sa = $( 'wpcc-seo-sg-selectall' ); if ( sa ) { sa.checked = ( all.length > 0 && all.length === checked.length ); }
 	} );
+
+	// U3 — dashboard actions: "Needs you" stats set the audit filter; footer links
+	// deep-link to the Suggestions / Applied tabs. Client-side only.
+	document.addEventListener( 'click', function ( e ) {
+		const stat = e.target.closest ? e.target.closest( '.wpcc-seo-stat[data-filter]' ) : null;
+		if ( stat ) {
+			const f = stat.getAttribute( 'data-filter' );
+			const sel = $( 'wpcc-seo-filter' );
+			if ( sel ) { sel.value = f; pg.offset = 0; load(); }
+			return;
+		}
+		const link = e.target.closest ? e.target.closest( '.wpcc-seo-link[data-go]' ) : null;
+		if ( link ) { switchTab( link.getAttribute( 'data-go' ) ); }
+	} );
+
+	updateTabCounts(); // U1.3 — populate tab badges on first paint.
 	load();
 } )();
 </script>
