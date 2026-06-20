@@ -30,6 +30,21 @@ final class SeoMetaGenerator {
 	/** Hard cap on a single explicit selection (bounded; no bulk-at-scale here). */
 	public const MAX_BATCH = 25;
 
+	/**
+	 * Editable content statuses SEO suggestions may be generated for — the single
+	 * source of truth shared with the contextual entry points (SeoRowActions) so the
+	 * UI never offers an action the generator would then skip. SEO meta is worth
+	 * preparing before publishing, so drafts/pending/scheduled/private are included.
+	 * Everything else (trash / auto-draft / inherit [revisions, attachments] / any
+	 * other) is intentionally excluded and skipped with reason `unsupported_status`.
+	 */
+	public const SUPPORTED_STATUSES = [ 'publish', 'draft', 'pending', 'future', 'private' ];
+
+	/** Whether SEO suggestions may be generated for a given post status. */
+	public static function is_supported_status( string $status ): bool {
+		return in_array( $status, self::SUPPORTED_STATUSES, true );
+	}
+
 	/** Content excerpt cap fed to the provider (~1.5k tokens). */
 	private const EXCERPT_CHARS = 6000;
 
@@ -88,8 +103,10 @@ final class SeoMetaGenerator {
 				$skipped[] = [ 'post_id' => $id, 'reason' => 'not_found' ];
 				continue;
 			}
-			if ( 'publish' !== $post->post_status ) {
-				$skipped[] = [ 'post_id' => $id, 'reason' => 'not_published' ];
+			// Allow editable statuses (publish/draft/pending/future/private); skip the
+			// rest (trash/auto-draft/inherit/…). Same allow-list the row action uses.
+			if ( ! self::is_supported_status( (string) $post->post_status ) ) {
+				$skipped[] = [ 'post_id' => $id, 'reason' => 'unsupported_status' ];
 				continue;
 			}
 			if ( $this->has_open_proposal( $id ) ) {

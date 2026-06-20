@@ -11,7 +11,7 @@
  * audit / capability scoping, and adds NO REST route / operation / capability /
  * MCP tool / schema. All proposal creation flows through the existing generator's
  * single ProposalStore::create write, including its skip handling
- * (no_seo_plugin / no_provider / has_open_proposal / not_published).
+ * (no_seo_plugin / no_provider / has_open_proposal / unsupported_status).
  *
  * Thin admin wiring only: WP `*_row_actions` filters + one `admin_post_*` handler.
  */
@@ -104,8 +104,10 @@ class SeoRowActions {
 		if ( ! $this->allowed() || ! $this->supported_type( $post->post_type ) ) {
 			return $actions;
 		}
-		// The generator only proposes for published content — mirror that here.
-		if ( 'publish' !== $post->post_status ) {
+		// Offer the action only for statuses the generator will actually accept — the
+		// shared allow-list (publish/draft/pending/future/private); never on
+		// trash/auto-draft/revisions. Single source of truth = SeoMetaGenerator.
+		if ( ! SeoMetaGenerator::is_supported_status( (string) $post->post_status ) ) {
 			return $actions;
 		}
 
@@ -162,8 +164,8 @@ class SeoRowActions {
 				return 'no_provider';
 			case 'no_seo_plugin':
 				return 'no_plugin';
-			case 'not_published':
-				return 'not_published';
+			case 'unsupported_status':
+				return 'unsupported_status';
 			default:
 				return 'skipped';
 		}
@@ -236,8 +238,8 @@ class SeoRowActions {
 				'provBy'       => __( 'Suggested by %1$s · %2$s', 'wp-command-center' ),
 				'exists'       => __( 'A suggestion already exists for this item. Open it in Suggestions to review.', 'wp-command-center' ),
 				'noProvider'   => __( 'No AI provider is configured. Add an API key under AI Integrations to generate suggestions.', 'wp-command-center' ),
-				'noPlugin'     => __( 'No supported SEO plugin (Rank Math or Yoast) is active.', 'wp-command-center' ),
-				'notPublished' => __( 'Only published content can be suggested.', 'wp-command-center' ),
+				'noPlugin'           => __( 'No supported SEO plugin (Rank Math or Yoast) is active.', 'wp-command-center' ),
+				'unsupportedStatus'  => __( 'This content status cannot receive SEO suggestions (e.g. trashed or auto-draft).', 'wp-command-center' ),
 				'failed'       => __( 'Could not generate a suggestion. Please try again.', 'wp-command-center' ),
 				'error'        => __( 'Something went wrong. Please try again.', 'wp-command-center' ),
 			],

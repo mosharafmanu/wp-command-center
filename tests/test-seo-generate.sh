@@ -162,6 +162,28 @@ $many = range(900000, 900040); // 41 ids
 $envc = (new SeoMetaGenerator($store, $nullResolver))->generate($many, ['actor'=>[]]);
 $out['cap'] = ( 25 === count($envc['skipped']) ) ? 1 : 0;
 
+// --- Status allow-list (generator) ---
+// Allowed editable statuses (draft/pending/future/private) each generate a draft.
+$mkStatusPost = function($status){
+  $a = ['post_title'=>'WPCC st '.$status,'post_status'=>$status,'post_type'=>'post','post_content'=>'Content about widgets and gadgets for the meta test.'];
+  if ('future' === $status){ $a['post_date'] = gmdate('Y-m-d H:i:s', time()+7*86400); $a['post_date_gmt'] = $a['post_date']; }
+  return wp_insert_post($a);
+};
+$allowed_gen = 1; $status_ids = [];
+foreach (['draft','pending','future','private'] as $st){
+  $sid = $mkStatusPost($st); $status_ids[] = $sid;
+  $es = (new SeoMetaGenerator($store, $mkResolver($okStub)))->generate([$sid], ['actor'=>[]]);
+  if ( 1 !== count($es['created']) ) { $allowed_gen = 0; }
+}
+$out['allowed_status_generates'] = $allowed_gen;
+// Disallowed: a trashed post is skipped with reason unsupported_status, no draft.
+$trashId = $mkStatusPost('publish'); wp_trash_post($trashId);
+$et = (new SeoMetaGenerator($store, $mkResolver($okStub)))->generate([$trashId], ['actor'=>[]]);
+$out['trash_skipped'] = ( 0 === count($et['created']) && 'unsupported_status' === ($et['skipped'][0]['reason'] ?? '') ) ? 1 : 0;
+// cleanup status-matrix proposals + posts (keep $after_drafts count stable below)
+foreach ($status_ids as $sid){ foreach ($store->list(['target_id'=>(string)$sid,'operation_id'=>'seo_manage']) as $r){ $store->dismiss($r['proposal_id']); } wp_delete_post($sid, true); }
+wp_delete_post($trashId, true);
+
 $after_drafts = $store->count(['operation_id'=>'seo_manage','status'=>'draft']);
 
 // cleanup
@@ -182,6 +204,8 @@ PHP
 	assert_eq "envelope action seo_meta_generate" "seo_meta_generate" "$(getj action)"
 	assert_eq "draft operation_id seo_manage"  "seo_manage" "$(getj op)"
 	assert_eq "draft action seo_update"        "seo_update" "$(getj act)"
+	assert_eq "allowed statuses (draft/pending/future/private) generate a draft" "1" "$(getj allowed_status_generates)"
+	assert_eq "trashed content skipped (unsupported_status)" "1" "$(getj trash_skipped)"
 	assert_eq "payload action seo_update"      "seo_update" "$(getj pl_action)"
 	assert_eq "payload content_id matches"     "1" "$(getj pl_cid)"
 	assert_eq "payload carries suggested title" "Stub Title" "$(getj pl_title)"

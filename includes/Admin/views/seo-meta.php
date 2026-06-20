@@ -244,7 +244,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'wp-command-center' ) ); ?>,
 		genNoProvider: <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so nothing was generated. Add an Anthropic API key in AI Integrations.', 'wp-command-center' ) ); ?>,
 		genNoPlugin:   <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'wp-command-center' ) ); ?>,
-		genNotPub:     <?php echo wp_json_encode( esc_html__( 'Only published content can receive SEO suggestions.', 'wp-command-center' ) ); ?>,
+		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive SEO suggestions (e.g. trashed or auto-draft) and were skipped. Draft, pending, scheduled, private, and published content are all supported.', 'wp-command-center' ) ); ?>,
 		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'wp-command-center' ) ); ?>,
 		// Bulk-action result summary (wpcc_seo_bulk redirect).
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
@@ -964,7 +964,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 			exists:      [ 'notice-info',    STR.genExists ],
 			no_provider: [ 'notice-warning', STR.genNoProvider, AI_URL, STR.aiIntegrations ],
 			no_plugin:   [ 'notice-warning', STR.genNoPlugin ],
-			not_published:[ 'notice-warning', STR.genNotPub ],
+			unsupported_status:[ 'notice-warning', STR.genUnsupported ],
 			failed:      [ 'notice-error',   STR.genFailed ]
 		};
 		const m = map[ code ]; if ( ! m ) { return; }
@@ -986,7 +986,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 			if ( r === 'no_provider' ) { msg = STR.genNoProvider; extraUrl = AI_URL; extraLabel = STR.aiIntegrations; }
 			else if ( r === 'no_seo_plugin' ) { msg = STR.genNoPlugin; }
 			else if ( r === 'has_open_proposal' ) { msg = STR.bulkAllExist; cls = 'notice-info'; }
-			else if ( r === 'not_published' ) { msg = STR.genNotPub; }
+			else if ( r === 'unsupported_status' ) { msg = STR.genUnsupported; }
 			else { msg = STR.bulkNone; }
 		}
 		el.className = 'notice inline ' + cls;

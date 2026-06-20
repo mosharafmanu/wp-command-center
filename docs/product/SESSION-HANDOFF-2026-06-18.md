@@ -734,6 +734,39 @@ Modal opens (`role=dialog` / `aria-modal=true`); loading → real `claude-sonnet
 > **Deploy update:** released to production via pull-cron this session — prod HEAD = **`343d720`** (`git describe` v0.109.0-26-g343d720), plugin active, invariants 34/23/40/40/2.5.0, 14 tables, no fatals; SEO Builder build-flag OFF → row action **and** Quick Panel asset hidden on prod (expected); homepage 200, SEO routes 401. The `343d720` feature commit is the new production baseline (this docs-stamp commit advances git HEAD only).
 
 ---
+
+# GA#2 SEO Suggestions for Draft / Pending / Scheduled / Private content — committed this session
+
+> Product decision: SEO suggestions should be available **before publishing**. Replaces the published-only gate across the whole contextual path with a shared editable-status allow-list. Committed on `main` this session; production stamp below. Baseline before this work: **`343d720`**.
+
+## What changed (behavior)
+The row action, Quick Panel, WP bulk action, and REST `generate` path now offer/accept SEO suggestion generation for **editable** statuses — **publish · draft · pending · future · private** — instead of published-only. Disallowed statuses (**trash · auto-draft · inherit** [revisions/attachments] · anything else) are skipped with reason **`unsupported_status`** (renamed from `not_published`). Still **propose-only** (drafts); no apply/undo/rollback/SEO-write changes.
+
+## Architecture decision — one shared allow-list (no UI/generator drift)
+Single source of truth on the generator: `SeoMetaGenerator::SUPPORTED_STATUSES` + `SeoMetaGenerator::is_supported_status()`. `SeoRowActions` (row action visibility) and `SeoMetaGenerator` (skip logic) both consult it, so the UI never offers an action the generator would then skip. The REST `generate` and WP bulk paths inherit it automatically (both call the same generator) — **no AdminRestApi change**.
+
+## Files changed (7)
+- `includes/Seo/SeoMetaGenerator.php` — `SUPPORTED_STATUSES` const + `is_supported_status()`; skip `unsupported_status` (was `'publish' !== status` → `not_published`).
+- `includes/Admin/SeoRowActions.php` — row-action gate uses `SeoMetaGenerator::is_supported_status()`; `outcome_code()` maps `unsupported_status`; localized i18n `unsupportedStatus` (was `notPublished`); doc comment.
+- `includes/Admin/views/seo-meta.php` — entry-notice + bulk-notice map `unsupported_status`; copy `genUnsupported` (clarifies draft/pending/scheduled/private supported).
+- `assets/js/seo-quick-panel.js` — `skipMessage()` maps `unsupported_status` → `unsupportedStatus`.
+- `tests/test-seo-row-actions.sh` — status allow-list matrix (allowed present / disallowed absent) + mixed-status bulk (draft created, trash skipped).
+- `tests/test-seo-generate.sh` — generator status matrix (draft/pending/future/private create a draft; trashed → `unsupported_status`).
+- `tests/test-seo-quick-panel.sh` — rename guards (`unsupportedStatus`/`unsupported_status`; no stale `not_published`/published-only gate).
+
+## Four Guarantees & invariants — intact
+Propose-only (same `ProposalStore::create`); no direct SEO write / apply / rollback; gated apply unchanged in the Builder. Approval/Rollback/Audit/Capability-scoping all unchanged. **No new route / operation / capability / MCP tool / schema. DB_VERSION 2.5.0.** Invariants **34 / 23 / 40 / 40 / 2.5.0**. The 10 contract-backend files (incl. `AdminRestApi`) byte-identical.
+
+## Tests
+- Focused: `test-seo-row-actions.sh` **67/0** · `test-seo-generate.sh` **51/0** · `test-seo-quick-panel.sh` **55/0** · `test-seo-bulk.sh` **36/0**.
+- **T0 `--changed` 426/0 net-new 0** · **T1 `--changed` 523/0 net-new 0**. Full serial **T2** before deploy.
+
+## Visual validation (Playwright, dev: Yoast + live key)
+Draft Posts list → **20** row actions present; Quick Panel opens on a **draft** and renders a real `claude-sonnet-4-6` Current-vs-Suggested comparison with the "saved as a draft — nothing applied" note (no apply/undo/approve). Trash list → **0** row actions (disallowed status correctly hidden).
+
+> **Deploy:** committed this session; releasing via pull-cron — production stamp recorded in the follow-up docs refresh below.
+
+---
 ---
 
 # ✅ CONSOLIDATED PRODUCTION STATE (authoritative — read this first)
@@ -785,8 +818,9 @@ All of the above are **propose-or-governed** — every mutation flows through th
 - ✅ **Contextual SEO Quick Panel (Option B)** — COMPLETE & deployed this session (in-context AJAX modal; propose-only; no backend/route/invariant change).
 - ✅ **Sprint A — Contextual Row Actions** — COMPLETE & deployed (`a69a2d3`).
 - ✅ **Sprint B — Bulk Actions** — COMPLETE & deployed (`15bcd6d`).
+- ✅ **Editable-status support** — COMPLETE & deployed this session. The row action / Quick Panel / bulk / REST generate path now offer suggestions for **publish · draft · pending · future · private** (shared `SeoMetaGenerator::is_supported_status()` allow-list); trash/auto-draft/revisions skipped as `unsupported_status`. (This fixed the "missing on Posts/Products" report — those lists were draft-heavy.)
 
-With the Quick Panel, the SEO Meta Generator is **UX feature-complete**: audit → generate → review/edit → approve & apply → undo → page-scoped bulk → contextual row/bulk entry → in-context Quick Panel. Every surface preserves the Four Guarantees.
+With the Quick Panel, the SEO Meta Generator is **UX feature-complete**: audit → generate (publish/draft/pending/future/private) → review/edit → approve & apply → undo → page-scoped bulk → contextual row/bulk entry → in-context Quick Panel. Every surface preserves the Four Guarantees.
 
 ## Remaining roadmap (ranked by business impact)
 1. **Production Enablement** (configure AI key + flip `WPCC_SEO_META_UI`) — unlocks all shipped value; **gated on the key + validation**.

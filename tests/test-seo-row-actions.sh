@@ -76,7 +76,6 @@ else
 		$admin = get_users(["role"=>"administrator","number"=>1]); $aid = $admin?$admin[0]->ID:1;
 		$pub = wp_insert_post(["post_title"=>"RA pub","post_status"=>"publish","post_type"=>"post","post_content"=>"x"]);
 		$pubpost = get_post($pub);
-		$draftpost = get_post( wp_insert_post(["post_title"=>"RA draft","post_status"=>"draft","post_type"=>"post","post_content"=>"x"]) );
 
 		// Build-flag ON for the allowed cases.
 		add_filter("wpcc_seo_meta_ui","__return_true");
@@ -85,8 +84,21 @@ else
 		wp_set_current_user($aid);
 		$out["admin_published"] = $has_action( $ra->add_row_action( [], $pubpost ) ) ? 1 : 0;
 
-		// (b) non-published -> absent.
-		$out["non_published_absent"] = $has_action( $ra->add_row_action( [], $draftpost ) ) ? 0 : 1;
+		// (b) status allow-list (clone + override status — deterministic, no WP coercion).
+		// Allowed: publish/draft/pending/future/private -> present.
+		$allowed_ok = 1;
+		foreach (["publish","draft","pending","future","private"] as $st) {
+			$p = clone $pubpost; $p->post_status = $st;
+			if ( ! $has_action( $ra->add_row_action( [], $p ) ) ) { $allowed_ok = 0; }
+		}
+		$out["allowed_statuses_present"] = $allowed_ok;
+		// Disallowed: trash/auto-draft/inherit (revisions, attachments) -> absent.
+		$blocked_ok = 1;
+		foreach (["trash","auto-draft","inherit"] as $st) {
+			$p = clone $pubpost; $p->post_status = $st;
+			if ( $has_action( $ra->add_row_action( [], $p ) ) ) { $blocked_ok = 0; }
+		}
+		$out["blocked_statuses_absent"] = $blocked_ok;
 
 		// (c) unsupported post type -> absent.
 		$unsupp = clone $pubpost; $unsupp->post_type = "wpcc_unsupported_type";
@@ -139,12 +151,13 @@ else
 		} else { $out["seo_active"] = 0; }
 
 		// cleanup
-		wp_delete_post($pub, true); wp_delete_post($draftpost->ID, true); if (isset($sub)) { wp_delete_user($sub); }
+		wp_delete_post($pub, true); if (isset($sub)) { wp_delete_user($sub); }
 		echo wp_json_encode($out);
 	')"
 	gj() { printf '%s' "$RES" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }
 	assert_eq "admin + flag-on + published -> action present" "1" "$(gj admin_published)"
-	assert_eq "non-published -> action absent"                "1" "$(gj non_published_absent)"
+	assert_eq "allowed statuses (publish/draft/pending/future/private) -> present" "1" "$(gj allowed_statuses_present)"
+	assert_eq "disallowed statuses (trash/auto-draft/inherit) -> absent"          "1" "$(gj blocked_statuses_absent)"
 	assert_eq "unsupported post type -> action absent"        "1" "$(gj unsupported_type_absent)"
 	assert_eq "FeatureGate OFF -> action absent"              "1" "$(gj featuregate_off_absent)"
 	assert_eq "subscriber (no cap) -> action absent"          "1" "$(gj subscriber_absent)"
@@ -226,9 +239,18 @@ if command -v wp >/dev/null 2>&1; then
 			parse_str((string)parse_url($url2, PHP_URL_QUERY), $q2);
 			$out["dup_all_skipped"] = ( (int)($q2["c"]??-1)===0 && ($q2["r"]??"")==="has_open_proposal" ) ? 1 : 0;
 
+			// Mixed-status bulk: 1 draft (allowed -> created) + 1 trashed (disallowed
+			// -> skipped). Aggregate counts must reflect created=1, skipped>=1.
+			$mixDraft = wp_insert_post(["post_title"=>"Bulk mix draft","post_status"=>"draft","post_type"=>"post","post_content"=>"x"]);
+			$mixTrash = wp_insert_post(["post_title"=>"Bulk mix trash","post_status"=>"publish","post_type"=>"post","post_content"=>"x"]); wp_trash_post($mixTrash);
+			$urlm = $ra->handle_bulk("HOME","wpcc_seo_generate",[$mixDraft,$mixTrash]);
+			parse_str((string)parse_url($urlm, PHP_URL_QUERY), $qm);
+			$out["mixed_draft_created"] = ( (int)($qm["c"]??0) === 1 ) ? 1 : 0;
+			$out["mixed_trash_skipped"] = ( (int)($qm["s"]??0) >= 1 ) ? 1 : 0;
+
 			// cleanup: drafts for these posts + the posts.
 			global $wpdb; $t=$wpdb->prefix."wpcc_proposals";
-			foreach ($pids as $pid){ $wpdb->query($wpdb->prepare("DELETE FROM $t WHERE target_id=%s AND operation_id=%s",(string)$pid,"seo_manage")); wp_delete_post($pid,true); }
+			foreach (array_merge($pids,[$mixDraft,$mixTrash]) as $pid){ $wpdb->query($wpdb->prepare("DELETE FROM $t WHERE target_id=%s AND operation_id=%s",(string)$pid,"seo_manage")); wp_delete_post($pid,true); }
 		}
 
 		// Not-allowed (subscriber) -> redirect unchanged, no generation.
@@ -252,6 +274,8 @@ if command -v wp >/dev/null 2>&1; then
 		assert_eq "draft proposals created via bulk"    "1" "$(bj drafts_exist)"
 		assert_eq "NO SEO meta written (propose-only)"  "1" "$(bj no_meta_written)"
 		assert_eq "duplicate bulk -> all has_open_proposal" "1" "$(bj dup_all_skipped)"
+		assert_eq "mixed bulk: draft created"           "1" "$(bj mixed_draft_created)"
+		assert_eq "mixed bulk: trashed skipped"         "1" "$(bj mixed_trash_skipped)"
 	else
 		echo "  NOTE: no SEO plugin active — bulk propose-only round-trip skipped."
 	fi

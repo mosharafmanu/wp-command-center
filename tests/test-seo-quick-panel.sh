@@ -61,6 +61,11 @@ has  "enqueues the JS asset"                   "assets/js/seo-quick-panel.js" "$
 has  "enqueues the CSS asset"                  "assets/css/seo-quick-panel.css" "$SRC"
 has  "localizes REST base"                     "rest_url( 'wp-command-center/v1' )" "$SRC"
 has  "localizes a wp_rest nonce"               "wp_create_nonce( 'wp_rest' )" "$SRC"
+has  "localizes unsupportedStatus i18n"        "'unsupportedStatus'"          "$SRC"
+# Status allow-list shared with the row action: the panel trigger (the quickgen
+# anchor) renders for editable statuses, so the modal opens for draft/pending/etc.
+has  "row action gates on shared status allow-list" "SeoMetaGenerator::is_supported_status" "$SRC"
+lacks "no stale published-only gate"           "'publish' !== \$post->post_status" "$SRC"
 
 echo
 echo "== 3. Drafts only — no apply / rollback / new surface (PHP) =="
@@ -78,6 +83,8 @@ has  "JS GETs existing proposal route"          "/admin/proposals/"           "$
 has  "JS sends the wp_rest nonce header"        "X-WP-Nonce"                   "$JS"
 has  "JS final_payload-first read"              "final_payload"               "$JS"
 has  "JS actions only navigate (suggestUrl)"    "suggestUrl"                   "$JS"
+has  "JS handles unsupported_status skip"       "unsupported_status"           "$JS"
+lacks "JS no stale not_published reason"        "not_published"                "$JS"
 lacks "JS never calls apply route"              "/apply"                       "$JS"
 lacks "JS never calls dismiss route"            "/dismiss"                     "$JS"
 lacks "JS never calls history rollback"         "/history/"                    "$JS"

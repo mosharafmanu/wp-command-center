@@ -248,8 +248,8 @@
 				return { msg: t( 'noProvider' ), allowOpen: false };
 			case 'no_seo_plugin':
 				return { msg: t( 'noPlugin' ), allowOpen: false };
-			case 'not_published':
-				return { msg: t( 'notPublished' ), allowOpen: false };
+			case 'unsupported_status':
+				return { msg: t( 'unsupportedStatus' ), allowOpen: false };
 			default:
 				return { msg: t( 'failed' ), allowOpen: false };
 		}
