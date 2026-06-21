@@ -31,6 +31,16 @@ final class Plugin {
 		add_filter( 'cron_schedules', [ $this, 'add_cron_schedules' ] );
 		add_action( \WPCommandCenter\Operations\OperationWorker::CRON_HOOK, [ new \WPCommandCenter\Operations\OperationWorker(), 'handle_cron' ] );
 
+		// Performance: OperationRegistry memoizes the operation catalogue per request
+		// (it otherwise re-probes WP-CLI/plugin availability — a ~200ms shell_exec —
+		// on every lookup). Bust that memo exactly when availability can change, so a
+		// request that activates/deactivates a plugin or switches theme and then runs
+		// an operation still sees fresh availability (preserves pre-memo behavior).
+		$wpcc_reset_catalogue = [ \WPCommandCenter\Operations\OperationRegistry::class, 'reset_cache' ];
+		add_action( 'activated_plugin', $wpcc_reset_catalogue );
+		add_action( 'deactivated_plugin', $wpcc_reset_catalogue );
+		add_action( 'switch_theme', $wpcc_reset_catalogue );
+
 		( new RestApi() )->init();
 		( new McpRestApi() )->init();
 		( new AdminRestApi() )->init();

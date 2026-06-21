@@ -24,6 +24,32 @@ defined( 'ABSPATH' ) || exit;
 final class OperationRegistry {
 
 	/**
+	 * Per-request memo of the built catalogue. get_operations() rebuilds a ~40-entry
+	 * literal AND runs availability probes (incl. WpCliBridge::is_available(), which
+	 * shells out ~200ms) on every call; list formatters call get_operation() once
+	 * per row, so an uncached registry spawns dozens of shell probes per page. The
+	 * catalogue (and availability) is stable within a request, so building it once
+	 * and reusing it is behavior-preserving. In-memory only (no transient).
+	 *
+	 * @var array<int,array<string,mixed>>|null
+	 */
+	private static ?array $catalogue_cache = null;
+
+	/**
+	 * Per-request id => operation index, derived once from $catalogue_cache so
+	 * get_operation() is O(1) instead of an O(N) scan that rebuilt the catalogue.
+	 *
+	 * @var array<string,array<string,mixed>>|null
+	 */
+	private static ?array $by_id_cache = null;
+
+	/** Reset the per-request memos (test isolation only). */
+	public static function reset_cache(): void {
+		self::$catalogue_cache = null;
+		self::$by_id_cache     = null;
+	}
+
+	/**
 	 * Get all registered operations with their current availability status.
 	 *
 	 * @return array<int, array{
@@ -38,6 +64,10 @@ final class OperationRegistry {
 	 * }>
 	 */
 	public function get_operations(): array {
+		if ( null !== self::$catalogue_cache ) {
+			return self::$catalogue_cache;
+		}
+
 		$operations = [
 			[
 				'id'                => 'system_info',
@@ -1044,7 +1074,7 @@ final class OperationRegistry {
 
 		// Some entries above use string keys (e.g. 'acf_manage') for readability;
 		// re-index to a plain list so the REST response serializes as a JSON array.
-		return array_values( $operations );
+		return self::$catalogue_cache = array_values( $operations );
 	}
 
 	/**
@@ -1054,13 +1084,14 @@ final class OperationRegistry {
 	 * @return array|null
 	 */
 	public function get_operation( string $id ): ?array {
-		foreach ( $this->get_operations() as $op ) {
-			if ( $op['id'] === $id ) {
-				return $op;
+		if ( null === self::$by_id_cache ) {
+			self::$by_id_cache = [];
+			foreach ( $this->get_operations() as $op ) {
+				self::$by_id_cache[ (string) $op['id'] ] = $op;
 			}
 		}
 
-		return null;
+		return self::$by_id_cache[ $id ] ?? null;
 	}
 
 	private function is_plugin_active( string $plugin_file ): bool {

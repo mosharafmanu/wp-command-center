@@ -15,11 +15,36 @@ final class WpCliBridge {
 
 	private WpCliCommandRegistry $registry;
 
+	/**
+	 * Per-request memo for is_available(). WP-CLI availability cannot change within
+	 * a single request, but is_available() shells out (`wp --version`, ~200ms) and
+	 * is called once per operation when the catalogue probes availability — so an
+	 * uncached probe is spawned dozens of times per page. Caching the result once
+	 * per request collapses that to a single shell call with no behavior change.
+	 * In-memory only (no transient). Reset via reset_cache() for test isolation.
+	 *
+	 * @var bool|null
+	 */
+	private static ?bool $available_cache = null;
+
 	public function __construct() {
 		$this->registry = new WpCliCommandRegistry();
 	}
 
 	public function is_available(): bool {
+		if ( null !== self::$available_cache ) {
+			return self::$available_cache;
+		}
+		return self::$available_cache = $this->probe_available();
+	}
+
+	/** Reset the per-request availability memo (test isolation only). */
+	public static function reset_cache(): void {
+		self::$available_cache = null;
+	}
+
+	/** The actual availability probe (unchanged logic; called once, then memoized). */
+	private function probe_available(): bool {
 		$disabled = array_filter( array_map( 'trim', explode( ',', (string) ini_get( 'disable_functions' ) ) ) );
 
 		if ( ! function_exists( 'shell_exec' ) && ! function_exists( 'proc_open' ) ) {
