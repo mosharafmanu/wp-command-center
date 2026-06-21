@@ -143,6 +143,9 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		</table>
 		<div id="wpcc-seo-ap-pager" class="wpcc-seo-pager"></div>
 	</div>
+
+	<?php // Trust polish (Fix B) — post-apply confirmation toast (reversible · audited · Undo). ?>
+	<div id="wpcc-seo-toast" class="wpcc-seo-toast" role="status" aria-live="polite" style="display:none;"></div>
 </div>
 
 <style>
@@ -189,6 +192,18 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 .wpcc-seo-link { background:none;border:none;color:#2271b1;cursor:pointer;padding:0;font-size:13px;text-decoration:underline; }
 .wpcc-seo-link:hover { color:#135e96; }
 .wpcc-seo-segbar { display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 6px; }
+.wpcc-seo-toast { position:fixed;right:24px;bottom:24px;z-index:99999;max-width:400px;background:#1d2327;color:#fff;border-radius:6px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:13px; }
+.wpcc-seo-toast-row { display:flex;align-items:center;gap:10px;flex-wrap:wrap; }
+.wpcc-seo-toast-msg { flex:1 1 auto; }
+.wpcc-seo-toast-actions { display:flex;align-items:center;gap:8px; }
+.wpcc-seo-chip { display:inline-block;font-size:11px;border-radius:10px;padding:1px 8px;background:#3c434a;color:#f0f0f1;margin-left:4px; }
+.wpcc-seo-chip--good { background:#0a7c2f;color:#fff; }
+.wpcc-seo-toast-view { color:#72aee6;text-decoration:underline;cursor:pointer;font-size:12px; }
+.wpcc-seo-toast-x { background:none;border:none;color:#c3c4c7;cursor:pointer;font-size:16px;line-height:1;padding:0 2px; }
+.wpcc-seo-toast-status:empty { display:none; }
+.wpcc-seo-toast-status { font-size:12px;color:#c3c4c7;margin-top:6px; }
+@media (prefers-reduced-motion: no-preference) { .wpcc-seo-toast { animation:wpcc-toast-in .18s ease-out; } }
+@keyframes wpcc-toast-in { from { opacity:0;transform:translateY(8px); } to { opacity:1;transform:none; } }
 </style>
 
 <script>
@@ -308,7 +323,15 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'wp-command-center' ) ); ?>,
 		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'wp-command-center' ) ); ?>,
 		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'wp-command-center' ) ); ?>,
-		colActions:<?php echo wp_json_encode( esc_html__( 'Actions', 'wp-command-center' ) ); ?>
+		colActions:<?php echo wp_json_encode( esc_html__( 'Actions', 'wp-command-center' ) ); ?>,
+		// Trust polish — post-apply confirmation toast (reversibility + audit affordances).
+		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'wp-command-center' ) ); ?>,
+		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'wp-command-center' ) ); ?>,
+		chipReversible: <?php echo wp_json_encode( esc_html__( 'Reversible', 'wp-command-center' ) ); ?>,
+		chipAudited:    <?php echo wp_json_encode( esc_html__( 'Audited', 'wp-command-center' ) ); ?>,
+		toastView:      <?php echo wp_json_encode( esc_html__( 'View in Applied', 'wp-command-center' ) ); ?>,
+		toastUndone:    <?php echo wp_json_encode( esc_html__( 'Reverted', 'wp-command-center' ) ); ?>,
+		toastClose:     <?php echo wp_json_encode( esc_html__( 'Dismiss notification', 'wp-command-center' ) ); ?>
 	};
 	const MAX_BATCH = 25;
 
@@ -708,6 +731,22 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		);
 	}
 
+	// Trust fix A: build the governed final_payload from the row's CURRENTLY VISIBLE
+	// (possibly unsaved) field values, and persist it via the EXISTING PUT route.
+	// Shared by Save AND Apply so Apply can never ignore an unsaved edit.
+	function rowFinalPayload( row, tid ) {
+		return { action: 'seo_update', content_id: tid, seo: {
+			title: row.querySelector( '.wpcc-seo-et' ).value,
+			description: row.querySelector( '.wpcc-seo-ed' ).value
+		} };
+	}
+	function persistRow( id, row, tid ) {
+		return api( '/proposals/' + encodeURIComponent( id ), {
+			method: 'PUT', headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify( { final_payload: rowFinalPayload( row, tid ) } )
+		} );
+	}
+
 	// Live char counts.
 	document.addEventListener( 'input', function ( e ) {
 		const row = e.target.closest ? e.target.closest( '#wpcc-seo-sg-rows tr[data-id]' ) : null;
@@ -720,9 +759,8 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		const id = row.getAttribute( 'data-id' ), tid = parseInt( row.getAttribute( 'data-tid' ) || '0', 10 );
 		const msg = row.querySelector( '.wpcc-seo-rowmsg' );
 		if ( t.classList.contains( 'wpcc-seo-save' ) ) {
-			const final_payload = { action: 'seo_update', content_id: tid, seo: { title: row.querySelector( '.wpcc-seo-et' ).value, description: row.querySelector( '.wpcc-seo-ed' ).value } };
 			if ( msg ) { msg.textContent = '…'; }
-			api( '/proposals/' + encodeURIComponent( id ), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { final_payload: final_payload } ) } )
+			persistRow( id, row, tid )
 				.then( ( res ) => { if ( msg ) { msg.textContent = res.ok ? STR.saved : ( ( res.data && res.data.message ) || STR.error ); } } )
 				.catch( () => { if ( msg ) { msg.textContent = STR.error; } } );
 		} else if ( t.classList.contains( 'wpcc-seo-dismiss' ) ) {
@@ -731,15 +769,31 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 				.catch( () => { if ( msg ) { msg.textContent = STR.error; } } );
 		} else if ( t.classList.contains( 'wpcc-seo-apply' ) ) {
 			// Approve & Apply (developer) / Submit for approval (client/enterprise).
-			// Reuses the EXISTING proposal apply route; outcome is driven by the API
-			// response (applied | pending_approval), never assumed from the label.
+			// Trust fix A: PERSIST the visible (possibly unsaved) field values as
+			// final_payload via the EXISTING governed PUT route BEFORE applying, so
+			// Apply never silently applies a stale AI suggestion. ProposalApplyService
+			// then applies that final_payload — Propose ≠ Apply preserved; no bypass.
+			// Outcome is driven by the API response (applied | pending_approval), never
+			// assumed from the label.
 			t.disabled = true;
 			if ( msg ) { msg.textContent = '…'; }
-			api( '/proposals/' + encodeURIComponent( id ) + '/apply', { method: 'POST' } )
+			persistRow( id, row, tid )
+				.then( ( saveRes ) => {
+					if ( ! saveRes.ok ) {
+						t.disabled = false;
+						if ( msg ) { msg.textContent = ( saveRes.data && saveRes.data.message ) || STR.error; }
+						return null; // do NOT apply stale data if the edit could not be persisted
+					}
+					return api( '/proposals/' + encodeURIComponent( id ) + '/apply', { method: 'POST' } );
+				} )
 				.then( ( res ) => {
-					const st = ( res.data && res.data.status ) || '';
+					if ( ! res ) { return; } // persist failed; already surfaced
+					const st  = ( res.data && res.data.status ) || '';
+					const cid = ( res.data && res.data.change_id ) || '';
 					if ( st === 'applied' || st === 'pending_approval' ) {
 						if ( row.parentNode ) { row.parentNode.removeChild( row ); } // moves to Applied tab
+						showApplyToast( st, cid ); // Trust fix B — confirmation + reversibility
+						updateTabCounts();
 					} else {
 						t.disabled = false;
 						if ( msg ) { msg.textContent = STR.cantApply; }
@@ -849,6 +903,43 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 	// (status flips to "Reverted" on reload); client/enterprise → pending_approval
 	// ("Undo sent for approval"). No bulk, no cross-page selection, no direct
 	// executor call, no direct seo write.
+	// SINGLE governed rollback path — reused by BOTH the Applied-tab per-item Undo and
+	// the post-apply toast Undo (Fix B). Reuses ONLY the existing rollback route; there
+	// is no second rollback path. change_history → seo_restore (capability + approval +
+	// audit + rollback all inherited).
+	function rollbackChange( cid ) {
+		return fetch( API + '/history/' + encodeURIComponent( cid ) + '/rollback', { method: 'POST', headers: { 'X-WP-Nonce': NONCE } } )
+			.then( ( r ) => r.json().then( ( d ) => ( { ok: r.ok, data: d } ), () => ( { ok: r.ok, data: {} } ) ) );
+	}
+	function rollbackOutcome( res ) {
+		const inner = ( res.data && res.data.result ) || {};
+		if ( inner.status === 'pending_approval' ) { return 'pending'; } // gated → sent for approval
+		if ( res.ok && res.data && res.data.success === true && inner.status !== 'confirmation_required' ) { return 'reverted'; }
+		return 'failed';
+	}
+
+	// Fix B — post-apply confirmation toast: "Applied successfully · Reversible ·
+	// Audited" with an inline Undo (developer/applied + change_id) that calls the shared
+	// rollbackChange(). Gated apply → "Submitted for approval · Audited" (no Undo yet).
+	function showApplyToast( status, cid ) {
+		const el = $( 'wpcc-seo-toast' );
+		if ( ! el ) { return; }
+		const applied = ( status === 'applied' );
+		let h = '<div class="wpcc-seo-toast-row">';
+		h += '<span class="wpcc-seo-toast-msg"><strong>' + esc( applied ? STR.toastApplied : STR.toastSubmitted ) + '</strong>';
+		if ( applied ) { h += '<span class="wpcc-seo-chip wpcc-seo-chip--good">' + esc( STR.chipReversible ) + '</span>'; }
+		h += '<span class="wpcc-seo-chip">' + esc( STR.chipAudited ) + '</span></span>';
+		h += '<span class="wpcc-seo-toast-actions">';
+		if ( applied && cid ) {
+			h += '<button type="button" class="button button-small wpcc-seo-toast-undo" data-cid="' + esc( cid ) + '">' + esc( STR.undo ) + '</button>';
+		}
+		h += '<a href="#" class="wpcc-seo-toast-view" data-go="applied">' + esc( STR.toastView ) + '</a>';
+		h += '<button type="button" class="wpcc-seo-toast-x" aria-label="' + esc( STR.toastClose ) + '">×</button>';
+		h += '</span></div><div class="wpcc-seo-toast-status"></div>';
+		el.innerHTML = h;
+		el.style.display = 'block';
+	}
+
 	document.addEventListener( 'click', function ( e ) {
 		const t = e.target;
 		if ( ! t.classList || ! t.classList.contains( 'wpcc-seo-undo' ) ) { return; }
@@ -859,20 +950,48 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		const msg = row.querySelector( '.wpcc-seo-rowmsg' );
 		t.disabled = true; // disable while the request is in flight
 		if ( msg ) { msg.textContent = '…'; }
-		fetch( API + '/history/' + encodeURIComponent( cid ) + '/rollback', { method: 'POST', headers: { 'X-WP-Nonce': NONCE } } )
-			.then( ( r ) => r.json().then( ( d ) => ( { ok: r.ok, data: d } ), () => ( { ok: r.ok, data: {} } ) ) )
+		rollbackChange( cid )
 			.then( ( res ) => {
-				const inner = ( res.data && res.data.result ) || {};
-				if ( inner.status === 'pending_approval' ) {
-					if ( msg ) { msg.textContent = STR.undoSent; } // gated → sent for approval, row stays
-				} else if ( res.ok && res.data && res.data.success === true && inner.status !== 'confirmation_required' ) {
-					loadApplied(); // success → reload; rollback-aware status flips to "Reverted"
-				} else {
-					t.disabled = false; // non-fatal: let the operator retry
-					if ( msg ) { msg.textContent = STR.cantUndo; }
-				}
+				const out = rollbackOutcome( res );
+				if ( out === 'pending' ) { if ( msg ) { msg.textContent = STR.undoSent; } } // gated → sent for approval, row stays
+				else if ( out === 'reverted' ) { loadApplied(); } // success → reload; status flips to "Reverted"
+				else { t.disabled = false; if ( msg ) { msg.textContent = STR.cantUndo; } } // non-fatal: let the operator retry
 			} )
 			.catch( () => { t.disabled = false; if ( msg ) { msg.textContent = STR.cantUndo; } } );
+	} );
+
+	// Fix B — toast actions: Undo (shared rollback path), "View in Applied" deep link,
+	// and Dismiss. Delegated; the toast is a single replace-on-each-apply element.
+	document.addEventListener( 'click', function ( e ) {
+		const el = $( 'wpcc-seo-toast' );
+		if ( ! el || el.style.display === 'none' ) { return; }
+		const t = e.target;
+		if ( t.classList && t.classList.contains( 'wpcc-seo-toast-x' ) ) { el.style.display = 'none'; el.innerHTML = ''; return; }
+		const view = t.closest ? t.closest( '.wpcc-seo-toast-view[data-go]' ) : null;
+		if ( view ) { e.preventDefault(); switchTab( view.getAttribute( 'data-go' ) ); el.style.display = 'none'; el.innerHTML = ''; return; }
+		if ( t.classList && t.classList.contains( 'wpcc-seo-toast-undo' ) ) {
+			const cid = t.getAttribute( 'data-cid' ); if ( ! cid ) { return; }
+			const st = el.querySelector( '.wpcc-seo-toast-status' );
+			t.disabled = true; if ( st ) { st.textContent = '…'; }
+			rollbackChange( cid )
+				.then( ( res ) => {
+					const out = rollbackOutcome( res );
+					if ( out === 'reverted' ) {
+						if ( st ) { st.textContent = STR.toastUndone; }
+						t.style.display = 'none';
+						updateTabCounts();
+						const ap = $( 'wpcc-seo-panel-applied' );
+						if ( ap && ap.style.display !== 'none' ) { loadApplied(); } // refresh if Applied tab is open
+					} else if ( out === 'pending' ) {
+						if ( st ) { st.textContent = STR.undoSent; }
+						t.style.display = 'none';
+					} else {
+						t.disabled = false;
+						if ( st ) { st.textContent = STR.cantUndo; }
+					}
+				} )
+				.catch( () => { t.disabled = false; if ( st ) { st.textContent = STR.cantUndo; } } );
+		}
 	} );
 
 	function switchTab( which ) {

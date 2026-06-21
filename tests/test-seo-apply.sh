@@ -202,6 +202,80 @@ else
 fi
 
 echo
+echo "== 4d. Trust fix A — Apply persists VISIBLE field values before applying =="
+# A freshly created draft is applied AFTER its final_payload is overwritten via the
+# EXISTING PUT route with NEW values — proving Apply uses the persisted current values,
+# not the stale original AI payload. This mirrors the UI flow: edit field → Apply (no
+# manual Save) → persistRow() PUT → /apply.
+if command -v wp >/dev/null 2>&1; then
+	UE="$(wpe '
+		$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1);
+		$prev = get_option("wpcc_security_mode","developer"); update_option("wpcc_security_mode","developer");
+		$store = new WPCommandCenter\Proposals\ProposalStore();
+		$out = [];
+		if ( \WPCommandCenter\Operations\SeoProvider::NONE === \WPCommandCenter\Operations\SeoProvider::detect() ) { $out["skip"]="no_seo_plugin"; echo wp_json_encode($out); return; }
+		$pid = wp_insert_post(["post_title"=>"WPCC unsaved-edit test","post_status"=>"publish","post_type"=>"post","post_content"=>"x"]);
+		// Original AI draft (what an unfixed Apply would have written).
+		$p = $store->create([
+			"operation_id"=>"seo_manage","action"=>"seo_update","target_type"=>"post","target_id"=>(string)$pid,
+			"payload"=>["action"=>"seo_update","content_id"=>$pid,"seo"=>["title"=>"ORIGINAL AI Title","description"=>"Original AI meta description that is plenty long for the test."]],
+			"prior"=>["title"=>"","description"=>""],"provider"=>"anthropic","model"=>"m","batch_id"=>wp_generate_uuid4(),
+		]);
+		$pidp = $p["proposal_id"];
+		// UI persistRow() — PUT the EDITED (visible) values as final_payload (no manual Save step).
+		$put = new WP_REST_Request("PUT","/wp-command-center/v1/admin/proposals/".$pidp);
+		$put->set_header("content-type","application/json");
+		$put->set_body(wp_json_encode(["final_payload"=>["action"=>"seo_update","content_id"=>$pid,"seo"=>["title"=>"EDITED Title","description"=>"Edited meta description that is also plenty long enough for the test."]]]));
+		rest_do_request($put);
+		// Apply via the EXISTING route.
+		$ap = new WP_REST_Request("POST","/wp-command-center/v1/admin/proposals/".$pidp."/apply");
+		$ad = rest_do_request($ap)->get_data();
+		$out["resp_status"] = (string)($ad["status"] ?? "");
+		$out["change_id_present"] = !empty($ad["change_id"]) ? 1 : 0; // toast Undo needs this
+		$prov = \WPCommandCenter\Operations\SeoProvider::detect();
+		$seo = \WPCommandCenter\Operations\SeoProvider::read($pid, $prov);
+		$out["edited_applied"]  = ( ($seo["title"]??"") === "EDITED Title" ) ? 1 : 0;
+		$out["original_avoided"]= ( ($seo["title"]??"") !== "ORIGINAL AI Title" ) ? 1 : 0;
+		update_option("wpcc_security_mode",$prev);
+		wp_delete_post($pid, true);
+		echo wp_json_encode($out);
+	')"
+	uj() { printf '%s' "$UE" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }
+	if [ "$(uj skip)" = "no_seo_plugin" ]; then
+		echo "  NOTE: no SEO plugin active — unsaved-edit functional path skipped."
+	else
+		assert_eq "apply still succeeds after persist"           "applied" "$(uj resp_status)"
+		assert_eq "EDITED (visible) values are applied"          "1" "$(uj edited_applied)"
+		assert_eq "stale ORIGINAL AI values are NOT applied"     "1" "$(uj original_avoided)"
+		assert_eq "apply response carries change_id (toast Undo)" "1" "$(uj change_id_present)"
+	fi
+else
+	echo "  SKIP: wp-cli not available — static checks only."
+fi
+
+echo
+echo "== 4e. Trust fix A/B — view wiring (persist-before-apply + toast + single rollback) =="
+# Fix A: a shared persistRow() PUTs final_payload, used by BOTH Save and Apply.
+has  "persistRow helper present"             "function persistRow"        "$VIEW"
+has  "persistRow uses governed PUT route"    "method: 'PUT'"              "$VIEW"
+has  "Apply persists before applying"        "persistRow( id, row, tid )" "$VIEW"
+has  "Apply still uses existing /apply route" "/apply'"                   "$VIEW"
+has  "no apply on persist failure"           "do NOT apply stale data"    "$VIEW"
+# Fix B: post-apply toast with reversibility + audit + Undo via the SHARED rollback path.
+has  "toast region present"                  "wpcc-seo-toast"             "$VIEW"
+has  "showApplyToast called after apply"     "showApplyToast( st, cid )"  "$VIEW"
+has  "toast Applied label"                   "toastApplied"               "$VIEW"
+has  "toast Reversible chip"                 "chipReversible"             "$VIEW"
+has  "toast Audited chip"                    "chipAudited"                "$VIEW"
+has  "toast Undo reuses shared rollback"     "function rollbackChange"    "$VIEW"
+has  "shared rollback outcome parser"        "function rollbackOutcome"   "$VIEW"
+# Exactly ONE rollback fetch (single governed path; no second rollback path added).
+assert_eq "exactly one rollback fetch in view" "1" "$(grep -c "/history/' + encodeURIComponent( cid ) + '/rollback'" "$VIEW")"
+lacks "no direct seo_manage call in view (still)" "seo_manage'"           "$VIEW"
+lacks "no OperationExecutor in view (still)"      "OperationExecutor"      "$VIEW"
+lacks "no SeoProvider::write in view (still)"     "SeoProvider::write"     "$VIEW"
+
+echo
 echo "== 5. Invariants unchanged =="
 assert_eq "OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
