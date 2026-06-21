@@ -37,7 +37,17 @@
 	--wpcc-amber-700: #996800;
 	--wpcc-amber-soft: #fcf3e6;
 	--wpcc-red-600: #d63638;
+	--wpcc-red-700: #b32d2e;
 	--wpcc-red-soft: #fcf0f1;
+	--wpcc-teal-600: #2a8a8a;
+	--wpcc-teal-700: #1f6b6b;
+	--wpcc-teal-soft: #e7f5f5;
+	--wpcc-orange-600: #cc5500;
+	--wpcc-orange-700: #a34400;
+	--wpcc-orange-soft: #fcefe6;
+	--wpcc-purple-600: #7a40bf;
+	--wpcc-purple-700: #5e2e96;
+	--wpcc-purple-soft: #f4ecfc;
 
 	/* Spacing — 4pt base. */
 	--wpcc-space-1: 2px;
@@ -97,6 +107,31 @@
 	--wpcc-state-danger-fg: var( --wpcc-red-600 );
 	--wpcc-state-danger-bg: var( --wpcc-red-soft );
 
+	/* Risk tiers — semantic, NOT decorative (WPCC's signature). fg/bg/border per tier. */
+	--wpcc-risk-diagnostic-fg: var( --wpcc-green-700 );
+	--wpcc-risk-diagnostic-bg: var( --wpcc-green-soft );
+	--wpcc-risk-low-fg: var( --wpcc-teal-700 );
+	--wpcc-risk-low-bg: var( --wpcc-teal-soft );
+	--wpcc-risk-medium-fg: var( --wpcc-amber-700 );
+	--wpcc-risk-medium-bg: var( --wpcc-amber-soft );
+	--wpcc-risk-high-fg: var( --wpcc-orange-700 );
+	--wpcc-risk-high-bg: var( --wpcc-orange-soft );
+	--wpcc-risk-critical-fg: var( --wpcc-red-700 );
+	--wpcc-risk-critical-bg: var( --wpcc-red-soft );
+
+	/* Actor identity — distinct, consistent hues (human / system / agent). */
+	--wpcc-actor-human-fg: var( --wpcc-blue-600 );
+	--wpcc-actor-human-bg: var( --wpcc-blue-soft );
+	--wpcc-actor-system-fg: var( --wpcc-gray-700 );
+	--wpcc-actor-system-bg: var( --wpcc-gray-50 );
+	--wpcc-actor-agent-fg: var( --wpcc-purple-700 );
+	--wpcc-actor-agent-bg: var( --wpcc-purple-soft );
+
+	/* Mode theming — density bound to Builder vs Engineer (set via [data-wpcc-density]). */
+	--wpcc-density-row: 40px;       /* comfortable (Builder) */
+	--wpcc-density-cell-y: 10px;
+	--wpcc-density-gap: 16px;
+
 	/* ── Tier 3 — Component (panel-scoped) ───────────────────────────────────── */
 	--wpcc-panel-bg: var( --wpcc-surface-card );
 	--wpcc-panel-radius: var( --wpcc-radius-md );
@@ -104,4 +139,11 @@
 	--wpcc-panel-max-width: 720px;
 	--wpcc-chip-bg: var( --wpcc-gray-100 );
 	--wpcc-chip-fg: var( --wpcc-text-primary );
+}
+
+/* Engineer mode = compact density. Builder mode keeps the comfortable defaults. */
+[data-wpcc-density="compact"] {
+	--wpcc-density-row: 32px;
+	--wpcc-density-cell-y: 6px;
+	--wpcc-density-gap: 12px;
 }

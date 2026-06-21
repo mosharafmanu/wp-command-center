@@ -1,0 +1,738 @@
+/**
+ * WP Command Center — Command Design System (CDS) component layer.
+ *
+ * The shared, token-driven component substrate for the Experience Layer: the
+ * branded App Shell (5-C navigation), cards, KPI tiles, trust chips, risk/status/
+ * actor pills, the activity timeline, and empty/loading states. Built ENTIRELY on
+ * the wpcc-tokens.css 3-tier variables (primitives → semantic → component) so the
+ * whole future plugin family re-skins from one --wpcc-brand-accent.
+ *
+ * Naming discipline (collision-safe): every component class is prefixed
+ * `wpcc-cds-*`; the shell chrome uses `wpcc-shell__*` / `wpcc-app`. None of these
+ * names exist in admin.css or the legacy views, so wrapping the existing surfaces
+ * in the shell canvas does not restyle them.
+ *
+ * Color carries MEANING (risk, status, actor), never decoration.
+ */
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * App Shell — branded header + 5-C section rail + sub-tab bar + canvas.
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-app {
+	max-width: 1200px;
+	font-family: var( --wpcc-font-sans );
+	color: var( --wpcc-text-primary );
+}
+
+.wpcc-shell__bar {
+	display: flex;
+	align-items: center;
+	gap: var( --wpcc-space-5 );
+	flex-wrap: wrap;
+	padding: var( --wpcc-space-5 ) var( --wpcc-space-6 );
+	margin: var( --wpcc-space-5 ) 0 0;
+	background: var( --wpcc-surface-card );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-md ) var( --wpcc-radius-md ) 0 0;
+}
+
+.wpcc-shell__brand {
+	display: flex;
+	align-items: center;
+	gap: var( --wpcc-space-3 );
+	font-size: var( --wpcc-fs-h1 );
+	font-weight: 600;
+	margin: 0;
+	line-height: 1.2;
+}
+
+.wpcc-shell__brand-mark {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: var( --wpcc-radius-sm );
+	background: var( --wpcc-brand-accent );
+	color: var( --wpcc-white );
+	font-size: 15px;
+}
+
+.wpcc-shell__brand-section {
+	font-size: var( --wpcc-fs-small );
+	font-weight: 400;
+	color: var( --wpcc-text-secondary );
+}
+
+.wpcc-shell__brand-section::before {
+	content: "/";
+	margin: 0 var( --wpcc-space-3 ) 0 var( --wpcc-space-2 );
+	color: var( --wpcc-border-strong );
+}
+
+.wpcc-shell__tools {
+	display: flex;
+	align-items: center;
+	gap: var( --wpcc-space-3 );
+	margin-left: auto;
+	flex-wrap: wrap;
+}
+
+/* Builder/Engineer disclosure toggle (segmented control). */
+.wpcc-shell__modes {
+	display: inline-flex;
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-pill );
+	overflow: hidden;
+	background: var( --wpcc-surface-sunken );
+}
+
+.wpcc-shell__mode {
+	appearance: none;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	font-size: var( --wpcc-fs-small );
+	padding: var( --wpcc-space-2 ) var( --wpcc-space-5 );
+	color: var( --wpcc-text-secondary );
+	line-height: 1.8;
+}
+
+.wpcc-shell__mode[aria-pressed="true"] {
+	background: var( --wpcc-brand-accent );
+	color: var( --wpcc-white );
+	font-weight: 600;
+}
+
+.wpcc-shell__mode:focus-visible {
+	outline: 2px solid var( --wpcc-border-focus );
+	outline-offset: -2px;
+}
+
+/* ⌘K command palette trigger + help. */
+.wpcc-shell__cmdk,
+.wpcc-shell__help {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wpcc-space-2 );
+	border: 1px solid var( --wpcc-border-subtle );
+	background: var( --wpcc-surface-sunken );
+	border-radius: var( --wpcc-radius-sm );
+	padding: var( --wpcc-space-2 ) var( --wpcc-space-4 );
+	font-size: var( --wpcc-fs-small );
+	color: var( --wpcc-text-secondary );
+	cursor: pointer;
+	text-decoration: none;
+	line-height: 1.8;
+}
+
+.wpcc-shell__cmdk:hover,
+.wpcc-shell__help:hover {
+	border-color: var( --wpcc-border-strong );
+	color: var( --wpcc-text-primary );
+}
+
+.wpcc-shell__cmdk kbd {
+	font-family: var( --wpcc-font-mono );
+	font-size: var( --wpcc-fs-caption );
+	background: var( --wpcc-surface-card );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: 3px;
+	padding: 0 4px;
+}
+
+/* Sub-tab bar (views within a section). */
+.wpcc-shell__tabs {
+	display: flex;
+	gap: var( --wpcc-space-1 );
+	flex-wrap: wrap;
+	padding: 0 var( --wpcc-space-6 );
+	background: var( --wpcc-surface-card );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-top: 0;
+	border-radius: 0 0 var( --wpcc-radius-md ) var( --wpcc-radius-md );
+}
+
+.wpcc-shell__tab {
+	position: relative;
+	padding: var( --wpcc-space-4 ) var( --wpcc-space-5 );
+	font-size: var( --wpcc-fs-body );
+	color: var( --wpcc-text-secondary );
+	text-decoration: none;
+	border-bottom: 2px solid transparent;
+	white-space: nowrap;
+}
+
+.wpcc-shell__tab:hover {
+	color: var( --wpcc-text-primary );
+}
+
+.wpcc-shell__tab.is-active {
+	color: var( --wpcc-text-accent );
+	font-weight: 600;
+	border-bottom-color: var( --wpcc-brand-accent );
+}
+
+.wpcc-shell__tab:focus-visible {
+	outline: 2px solid var( --wpcc-border-focus );
+	outline-offset: -2px;
+}
+
+.wpcc-shell__canvas {
+	margin-top: var( --wpcc-space-6 );
+}
+
+/* Neutralize the nested legacy `.wrap` so hosted views sit flush in the canvas. */
+.wpcc-shell__canvas > .wrap,
+.wpcc-shell__canvas > .wpcc-wrap {
+	margin: 0;
+	max-width: none;
+}
+
+/* The hosted view's own top <h1> is redundant with the shell brand/tabs — hide it
+ * visually but keep it for screen-reader document structure. */
+.wpcc-shell__canvas > .wrap > h1:first-child {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect( 1px, 1px, 1px, 1px );
+	white-space: nowrap;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Cards + KPI tiles.
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-cds-cards {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 260px, 1fr ) );
+	gap: var( --wpcc-density-gap );
+	margin: var( --wpcc-space-5 ) 0;
+	align-items: start;
+}
+
+.wpcc-cds-card {
+	background: var( --wpcc-surface-card );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-md );
+	padding: var( --wpcc-space-6 );
+}
+
+.wpcc-cds-card__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var( --wpcc-space-3 );
+	margin-bottom: var( --wpcc-space-4 );
+}
+
+.wpcc-cds-card__title {
+	font-size: var( --wpcc-fs-h2 );
+	font-weight: 600;
+	margin: 0;
+}
+
+.wpcc-cds-card__link {
+	font-size: var( --wpcc-fs-small );
+	text-decoration: none;
+}
+
+.wpcc-cds-metrics {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.wpcc-cds-metrics li {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: var( --wpcc-space-3 );
+	padding: var( --wpcc-space-3 ) 0;
+	border-bottom: 1px solid var( --wpcc-border-subtle );
+	font-size: var( --wpcc-fs-body );
+}
+
+.wpcc-cds-metrics li:last-child {
+	border-bottom: 0;
+}
+
+.wpcc-cds-metrics li span {
+	color: var( --wpcc-text-secondary );
+}
+
+.wpcc-cds-metrics li b {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.wpcc-cds-metrics li.is-attn b {
+	color: var( --wpcc-state-danger-fg );
+}
+
+/* KPI strip (invariants / at-a-glance numbers). */
+.wpcc-cds-kpis {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var( --wpcc-space-3 );
+	margin: var( --wpcc-space-4 ) 0;
+}
+
+.wpcc-cds-kpi {
+	flex: 1 1 110px;
+	min-width: 100px;
+	background: var( --wpcc-surface-card );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-sm );
+	padding: var( --wpcc-space-4 ) var( --wpcc-space-5 );
+}
+
+.wpcc-cds-kpi__value {
+	display: block;
+	font-size: var( --wpcc-fs-x );
+	font-weight: 600;
+	line-height: 1.1;
+	font-variant-numeric: tabular-nums;
+}
+
+.wpcc-cds-kpi__label {
+	display: block;
+	font-size: var( --wpcc-fs-small );
+	color: var( --wpcc-text-secondary );
+	margin-top: var( --wpcc-space-1 );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Needs-attention hero (action-first).
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-cds-attn {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var( --wpcc-space-5 );
+	padding: var( --wpcc-space-6 );
+	border-radius: var( --wpcc-radius-md );
+	border: 1px solid var( --wpcc-border-subtle );
+	background: var( --wpcc-surface-card );
+	margin: var( --wpcc-space-5 ) 0;
+}
+
+.wpcc-cds-attn.is-clear {
+	border-color: var( --wpcc-state-success-border );
+	background: var( --wpcc-state-success-bg );
+}
+
+.wpcc-cds-attn.is-action {
+	border-color: var( --wpcc-state-warning-border );
+	background: var( --wpcc-state-warning-bg );
+}
+
+.wpcc-cds-attn__icon {
+	font-size: 22px;
+	line-height: 1;
+}
+
+.wpcc-cds-attn__body {
+	flex: 1 1 240px;
+}
+
+.wpcc-cds-attn__title {
+	font-size: var( --wpcc-fs-h1 );
+	font-weight: 600;
+	margin: 0 0 var( --wpcc-space-2 );
+}
+
+.wpcc-cds-attn__detail {
+	font-size: var( --wpcc-fs-body );
+	color: var( --wpcc-text-secondary );
+	margin: 0;
+}
+
+.wpcc-cds-attn__actions {
+	display: flex;
+	gap: var( --wpcc-space-3 );
+	flex-wrap: wrap;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Chips & pills — trust chips, risk tiers, status, actor identity.
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-cds-chip,
+.wpcc-cds-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wpcc-space-2 );
+	font-size: var( --wpcc-fs-small );
+	font-weight: 600;
+	line-height: 1.5;
+	padding: 1px var( --wpcc-space-4 );
+	border-radius: var( --wpcc-radius-pill );
+	background: var( --wpcc-chip-bg );
+	color: var( --wpcc-chip-fg );
+	white-space: nowrap;
+}
+
+.wpcc-cds-pill::before {
+	content: "";
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: currentColor;
+	opacity: 0.85;
+}
+
+/* Trust chips — reversible / audited / approval-gated / scoped. */
+.wpcc-cds-chip--reversible { background: var( --wpcc-state-success-bg ); color: var( --wpcc-state-success-fg ); }
+.wpcc-cds-chip--audited    { background: var( --wpcc-actor-human-bg );   color: var( --wpcc-actor-human-fg ); }
+.wpcc-cds-chip--approval   { background: var( --wpcc-state-warning-bg ); color: var( --wpcc-state-warning-fg ); }
+.wpcc-cds-chip--scoped     { background: var( --wpcc-actor-agent-bg );   color: var( --wpcc-actor-agent-fg ); }
+.wpcc-cds-chip--irreversible { background: var( --wpcc-state-danger-bg ); color: var( --wpcc-state-danger-fg ); }
+
+/* Risk tiers. */
+.wpcc-cds-pill--diagnostic { background: var( --wpcc-risk-diagnostic-bg ); color: var( --wpcc-risk-diagnostic-fg ); }
+.wpcc-cds-pill--low        { background: var( --wpcc-risk-low-bg );        color: var( --wpcc-risk-low-fg ); }
+.wpcc-cds-pill--medium     { background: var( --wpcc-risk-medium-bg );     color: var( --wpcc-risk-medium-fg ); }
+.wpcc-cds-pill--high       { background: var( --wpcc-risk-high-bg );       color: var( --wpcc-risk-high-fg ); }
+.wpcc-cds-pill--critical   { background: var( --wpcc-risk-critical-bg );   color: var( --wpcc-risk-critical-fg ); }
+
+/* Status pills. */
+.wpcc-cds-pill--success { background: var( --wpcc-state-success-bg ); color: var( --wpcc-state-success-fg ); }
+.wpcc-cds-pill--warning { background: var( --wpcc-state-warning-bg ); color: var( --wpcc-state-warning-fg ); }
+.wpcc-cds-pill--danger  { background: var( --wpcc-state-danger-bg );  color: var( --wpcc-state-danger-fg ); }
+.wpcc-cds-pill--neutral { background: var( --wpcc-gray-50 );          color: var( --wpcc-text-muted ); }
+
+/* Actor chips (provenance: human / system / agent). */
+.wpcc-cds-actor {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wpcc-space-2 );
+	font-size: var( --wpcc-fs-small );
+	padding: 1px var( --wpcc-space-4 );
+	border-radius: var( --wpcc-radius-pill );
+}
+
+.wpcc-cds-actor__dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+.wpcc-cds-actor--human  { background: var( --wpcc-actor-human-bg );  color: var( --wpcc-actor-human-fg ); }
+.wpcc-cds-actor--system { background: var( --wpcc-actor-system-bg ); color: var( --wpcc-actor-system-fg ); }
+.wpcc-cds-actor--agent  { background: var( --wpcc-actor-agent-bg );  color: var( --wpcc-actor-agent-fg ); }
+
+/* Security posture pill (shell header). */
+.wpcc-shell__posture {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wpcc-space-2 );
+	font-size: var( --wpcc-fs-small );
+	font-weight: 600;
+	padding: var( --wpcc-space-2 ) var( --wpcc-space-4 );
+	border-radius: var( --wpcc-radius-pill );
+	background: var( --wpcc-surface-accent-soft );
+	color: var( --wpcc-text-accent );
+	border: 1px solid var( --wpcc-border-accent );
+}
+
+.wpcc-shell__posture::before {
+	content: "";
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: currentColor;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Activity timeline (provenance, reversibility, cross-links).
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-cds-timeline {
+	list-style: none;
+	margin: var( --wpcc-space-5 ) 0;
+	padding: 0;
+	position: relative;
+}
+
+.wpcc-cds-timeline__item {
+	position: relative;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var( --wpcc-space-3 );
+	padding: var( --wpcc-density-cell-y ) 0 var( --wpcc-density-cell-y ) var( --wpcc-space-7 );
+	border-bottom: 1px solid var( --wpcc-border-subtle );
+}
+
+.wpcc-cds-timeline__item::before {
+	content: "";
+	position: absolute;
+	left: 4px;
+	top: 14px;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: var( --wpcc-brand-accent );
+	box-shadow: 0 0 0 3px var( --wpcc-surface-accent-soft );
+}
+
+.wpcc-cds-timeline__time {
+	font-size: var( --wpcc-fs-small );
+	color: var( --wpcc-text-secondary );
+	min-width: 120px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wpcc-cds-timeline__main {
+	flex: 1 1 240px;
+	font-size: var( --wpcc-fs-body );
+}
+
+.wpcc-cds-timeline__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var( --wpcc-space-2 );
+	align-items: center;
+}
+
+.wpcc-cds-mono {
+	font-family: var( --wpcc-font-mono );
+	font-size: var( --wpcc-fs-caption );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Readiness / Setup Assistant.
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-cds-readiness {
+	background: var( --wpcc-surface-card );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-md );
+	padding: var( --wpcc-space-5 ) var( --wpcc-space-6 );
+	margin: var( --wpcc-space-5 ) 0;
+}
+
+.wpcc-cds-readiness__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var( --wpcc-space-3 );
+	flex-wrap: wrap;
+}
+
+.wpcc-cds-readiness__bar {
+	height: 8px;
+	border-radius: var( --wpcc-radius-pill );
+	background: var( --wpcc-surface-sunken );
+	overflow: hidden;
+	margin: var( --wpcc-space-4 ) 0;
+}
+
+.wpcc-cds-readiness__fill {
+	height: 100%;
+	background: var( --wpcc-brand-accent );
+	border-radius: var( --wpcc-radius-pill );
+	transition: width var( --wpcc-motion-panel ) ease;
+}
+
+.wpcc-cds-readiness__steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var( --wpcc-space-3 );
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.wpcc-cds-readiness__step {
+	display: inline-flex;
+	align-items: center;
+	gap: var( --wpcc-space-2 );
+	font-size: var( --wpcc-fs-small );
+	color: var( --wpcc-text-secondary );
+	padding: var( --wpcc-space-2 ) var( --wpcc-space-4 );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-pill );
+}
+
+.wpcc-cds-readiness__step.is-done {
+	color: var( --wpcc-state-success-fg );
+	border-color: var( --wpcc-state-success-border );
+	background: var( --wpcc-state-success-bg );
+}
+
+.wpcc-cds-readiness__step .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Empty / loading states.
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-cds-empty {
+	text-align: center;
+	padding: var( --wpcc-space-8 ) var( --wpcc-space-6 );
+	background: var( --wpcc-surface-sunken );
+	border: 1px dashed var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-md );
+	color: var( --wpcc-text-secondary );
+}
+
+.wpcc-cds-empty__icon {
+	font-size: 28px;
+	color: var( --wpcc-border-strong );
+}
+
+.wpcc-cds-empty__title {
+	font-size: var( --wpcc-fs-h2 );
+	font-weight: 600;
+	color: var( --wpcc-text-primary );
+	margin: var( --wpcc-space-3 ) 0 var( --wpcc-space-2 );
+}
+
+.wpcc-cds-loading {
+	display: flex;
+	align-items: center;
+	gap: var( --wpcc-space-3 );
+	color: var( --wpcc-text-secondary );
+	font-size: var( --wpcc-fs-body );
+	padding: var( --wpcc-space-5 ) 0;
+}
+
+.wpcc-cds-skeleton {
+	background: linear-gradient( 90deg, var( --wpcc-gray-50 ) 25%, var( --wpcc-gray-100 ) 37%, var( --wpcc-gray-50 ) 63% );
+	background-size: 400% 100%;
+	border-radius: var( --wpcc-radius-sm );
+	animation: wpcc-cds-shimmer 1.4s ease infinite;
+	height: 14px;
+}
+
+@keyframes wpcc-cds-shimmer {
+	0% { background-position: 100% 50%; }
+	100% { background-position: 0 50%; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Builder / Engineer disclosure — hide engineer-only detail in Builder mode.
+ * ────────────────────────────────────────────────────────────────────────── */
+[data-wpcc-mode="builder"] .wpcc-engineer-only { display: none !important; }
+[data-wpcc-mode="engineer"] .wpcc-builder-only { display: none !important; }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Command palette (⌘K) — navigate-only overlay.
+ * ────────────────────────────────────────────────────────────────────────── */
+.wpcc-cmdk {
+	position: fixed;
+	inset: 0;
+	z-index: var( --wpcc-z-modal );
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding-top: 12vh;
+	background: var( --wpcc-overlay-scrim );
+}
+
+.wpcc-cmdk[hidden] { display: none; }
+
+.wpcc-cmdk__panel {
+	width: min( 560px, 92vw );
+	background: var( --wpcc-surface-card );
+	border-radius: var( --wpcc-radius-md );
+	box-shadow: var( --wpcc-shadow-modal );
+	overflow: hidden;
+}
+
+.wpcc-cmdk__input {
+	width: 100%;
+	border: 0;
+	border-bottom: 1px solid var( --wpcc-border-subtle );
+	padding: var( --wpcc-space-6 );
+	font-size: var( --wpcc-fs-h1 );
+	box-sizing: border-box;
+}
+
+.wpcc-cmdk__input:focus { outline: none; }
+
+.wpcc-cmdk__list {
+	list-style: none;
+	margin: 0;
+	padding: var( --wpcc-space-2 );
+	max-height: 50vh;
+	overflow: auto;
+}
+
+.wpcc-cmdk__opt {
+	display: flex;
+	align-items: center;
+	gap: var( --wpcc-space-3 );
+	padding: var( --wpcc-space-4 ) var( --wpcc-space-5 );
+	font-size: var( --wpcc-fs-body );
+	border-radius: var( --wpcc-radius-sm );
+	cursor: pointer;
+	color: var( --wpcc-text-primary );
+	text-decoration: none;
+}
+
+.wpcc-cmdk__opt small {
+	color: var( --wpcc-text-secondary );
+	margin-left: auto;
+}
+
+.wpcc-cmdk__opt.is-active,
+.wpcc-cmdk__opt:hover {
+	background: var( --wpcc-surface-accent-soft );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Responsive — mobile-first behavior for narrow viewports / touch.
+ * ────────────────────────────────────────────────────────────────────────── */
+@media ( max-width: 782px ) {
+	.wpcc-app { max-width: 100%; }
+
+	.wpcc-shell__bar {
+		padding: var( --wpcc-space-4 );
+		gap: var( --wpcc-space-3 );
+	}
+
+	.wpcc-shell__tools {
+		margin-left: 0;
+		width: 100%;
+		justify-content: flex-start;
+	}
+
+	/* Horizontal scroll for the sub-tab bar instead of wrapping/overflow. */
+	.wpcc-shell__tabs {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.wpcc-shell__tab {
+		/* Touch-friendly hit target. */
+		padding: var( --wpcc-space-5 );
+	}
+
+	.wpcc-cds-cards {
+		grid-template-columns: 1fr;
+	}
+
+	.wpcc-cds-timeline__time {
+		min-width: 0;
+		flex-basis: 100%;
+	}
+
+	/* Buttons span full width so primary actions are thumb-reachable. */
+	.wpcc-cds-attn__actions .button {
+		flex: 1 1 auto;
+		text-align: center;
+	}
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.wpcc-cds-skeleton,
+	.wpcc-cds-readiness__fill {
+		animation: none;
+		transition: none;
+	}
+}
