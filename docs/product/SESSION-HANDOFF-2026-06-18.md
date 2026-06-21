@@ -1077,3 +1077,69 @@ or enable the Builder UI on prod unless explicitly asked.
 ```
 
 *Handoff consolidated; documentation only — no code, no commits, no deploy in this update.*
+
+---
+
+# Experience Layer + Performance quick-win — DEPLOYED to production (2026-06-21)
+
+Two workstreams landed as three clean commits on `main`, pushed, and deployed via the
+Hostinger pull-cron. **Production HEAD = `df7a806`** (`git describe` = `v0.109.0-40-gdf7a806`);
+`origin/main == prod`. Deploy log: `2026-06-21T16:53:07Z DEPLOYED b057385 -> df7a806 active=yes`.
+
+## Commits (in order)
+1. **`8dd4cfe`** — `perf(admin): memoize operation catalogue and WP-CLI availability`
+   `includes/Operations/OperationRegistry.php`, `includes/Operations/WpCliBridge.php`,
+   `includes/Core/Plugin.php`. Per-request static memo of `get_operations()` + O(1)
+   `get_operation()` id-index + memoized `WpCliBridge::is_available()`; memo busted on
+   `activated_plugin`/`deactivated_plugin`/`switch_theme`. In-memory only (NO transient).
+   Behavior-preserving (catalogue byte-identical cold/warm/rebuilt; unknown-op → null).
+2. **`445483f`** — `feat(cds): add Command Design System token + component foundation`
+   `assets/css/wpcc-tokens.css` (additive tiers: risk/actor/density), `assets/css/wpcc-cds.css`
+   (new), `assets/js/wpcc-cds.js` (new). Dormant: unreferenced until enqueued.
+3. **`df7a806`** — `feat(admin): Experience Layer — 5-C navigation, unified Home, CDS shell`
+   `AppShell.php` (new), `AdminMenu.php`, `Assets.php`, `views/command-home.php` (new),
+   `views/dashboard.php` (relocated/trimmed → Operate › Runtime), `views/dashboard-overview.php`
+   (deleted), + 11 test/infra files (`test-experience-layer.sh` new; sibling admin suites
+   repointed to AppShell; `regression-map.tsv` +experience group; `run.sh` pipefail/grep-q fix).
+
+## What shipped (functional summary)
+- **5-C IA**: ~12 flat submenus collapsed to Overview · Operate · Audit · Access · Connect,
+  rendered by `AppShell` over the existing views via `?wpcc_tab=`; legacy slugs 302-redirect
+  in (args preserved) — redirect runs on **`admin_menu` priority 0** (core 403s unregistered
+  slugs before `admin_init`).
+- **Unified Command Center Home** (`command-home.php`) replaces the two-dashboard conflict;
+  legacy operational dashboard relocated to Operate › Runtime, trimmed of the op-request/queue
+  write panels (now owned by the Approval Center).
+- **CDS** tokens + components + runtime, enqueued in the HEAD (so body view scripts can use
+  `window.WPCC` and never hang on "Loading").
+- **Perf**: `get_operation()` ×25 4937ms→199ms (dev); `/admin/approvals/history` 5.91s→0.80s,
+  `/admin/dashboard` 1.60s→0.83s (dev HTTP).
+
+## Production verification (SSH wp-cli + anonymous HTTP, 2026-06-21)
+- prod HEAD `df7a806` == origin == local; plugin **active**; no fatals / no `debug.log` issues.
+- Anonymous: homepage **200**, `/wp-json/` **200**, REST ns `wp-command-center/v1` **200**,
+  `/admin/dashboard` + `/admin/approvals/summary` **401**, admin page **302** (login) — no
+  customer-facing exposure.
+- Invariants **34 / 23 / 40 / 40 / 2.5.0**; DB_VERSION **2.5.0**; **14** `wpcc_*` tables (unchanged).
+- **Dormant**: build flags `WPCC_ALT_TEXT_UI`/`WPCC_SEO_META_UI`/`WPCC_AI_CONTENT_UI`/
+  `WPCC_PROPOSALS_DEV_UI` all **undefined** → AI surfaces hidden (Operate tabs =
+  approvals/operations/runtime only). **AI key NOT set.** **Security mode = developer** (unchanged).
+- Experience Layer smoke (server render via wp-cli): all 5 sections render with shell chrome,
+  no fatals; File Access renders; legacy redirects fire (`wpcc-tokens&tab=capabilities` →
+  `wpcc-access&wpcc_tab=tokens&tab=capabilities`, `wpcc-file-access&path=themes` →
+  `wpcc-connect&wpcc_tab=files&path=themes`, `wpcc-change-history` → `wpcc-audit&wpcc_tab=changes`)
+  — **no 403** on Capabilities/Operation Map. **`approvals_history(25)` on prod = 7ms** (was ~5s).
+- No route/operation/capability/MCP/schema growth.
+
+## Status & known follow-ups (NOT started; no roadmap-priority change)
+- **Dormant**: nothing enabled, no AI key, security mode unchanged. Do NOT enable without direction.
+- Follow-ups (deferred, report-first when picked up):
+  1. **Runtime lazy-load** — Operate › Runtime still renders ~6s (40 synchronous queries +
+     `information_schema` size query + registry build on render); lazy-load its metric cards / cache the size query.
+  2. **Optional transient WP-CLI availability cache** — would shave the remaining single ~200ms
+     probe off dashboard/operations; deliberately NOT added (per-request memo only) — report-first.
+  3. **`operation_results` (59MB / 22.7k) + `change_log` (40MB / 69k) retention/rotation**
+     (mirror AuditLog rotation); add `LIMIT` to the two `LIMIT`-less SELECTs.
+  4. **Minor a11y focus-on-open polish** in the shell/home if still relevant.
+
+*Production baseline now `df7a806`. Documentation update only in this commit.*
