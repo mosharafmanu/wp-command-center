@@ -79,12 +79,20 @@ final class ContentManager {
 		$before = $record['before_state'];
 		$id     = (int) $record['content_id'];
 
-		$updated = wp_update_post( [
+		$restore = [
 			'ID'          => $id,
 			'post_title'  => $before['title'] ?? '',
 			'post_status' => $before['status'] ?? 'draft',
 			'post_content'=> $before['content'] ?? '',
-		], true );
+		];
+		// Only restore the excerpt when the snapshot actually captured it. Records
+		// written before the excerpt snapshot (and non-update reversals that never
+		// carry an excerpt) are left untouched — never wipe an excerpt we did not save.
+		if ( array_key_exists( 'excerpt', $before ) ) {
+			$restore['post_excerpt'] = $before['excerpt'];
+		}
+
+		$updated = wp_update_post( $restore, true );
 
 		if ( is_wp_error( $updated ) ) {
 			return new \WP_Error( 'wpcc_content_rollback_failed', $updated->get_error_message() );
@@ -204,7 +212,10 @@ final class ContentManager {
 
 	private function update_content( int $id, array $params, array $context ): array|\WP_Error {
 		$post    = get_post( $id );
-		$before  = [ 'title' => $post->post_title, 'status' => $post->post_status, 'content' => $post->post_content ];
+		// Capture excerpt too so an excerpt-only update is reversible (Rollback
+		// guarantee for Excerpt Generation). Additive: older records simply omit
+		// this key and rollback_content() skips restoring it (see below).
+		$before  = [ 'title' => $post->post_title, 'status' => $post->post_status, 'content' => $post->post_content, 'excerpt' => $post->post_excerpt ];
 
 		$data = [ 'ID' => $id ];
 		if ( isset( $params['title'] ) ) {

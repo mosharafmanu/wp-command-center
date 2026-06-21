@@ -28,6 +28,7 @@ use WPCommandCenter\AltText\AltTextScanQuery;
 use WPCommandCenter\AltText\AltTextGenerator;
 use WPCommandCenter\Seo\SeoAuditQuery;
 use WPCommandCenter\Seo\SeoMetaGenerator;
+use WPCommandCenter\Content\ContentFieldGenerator;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -508,8 +509,24 @@ final class AdminRestApi {
 		return new \WP_REST_Response( $proposal, 200 );
 	}
 
-	/** POST /admin/proposals — create a draft (manual seed). */
+	/**
+	 * POST /admin/proposals — create a draft.
+	 *
+	 * Two modes on the ONE existing route (no new route is added):
+	 *  - Manual seed (default, unchanged): the caller supplies operation_id/action/
+	 *    payload directly and ProposalStore::create() persists the draft verbatim.
+	 *  - Server-side generation (Option 1, additive): when an optional
+	 *    `generate:{ kind:'title'|'excerpt', post_id:int }` is present, the AI
+	 *    ContentFieldGenerator produces the draft (drafts only). This is the ONLY
+	 *    new behavior; it is FeatureGate-aware per kind and reuses ProposalStore::
+	 *    create as its single write. SEO and Alt Text keep their own generate routes.
+	 */
 	public function proposals_create( \WP_REST_Request $request ): \WP_REST_Response {
+		$generate = $request->get_param( 'generate' );
+		if ( is_array( $generate ) && isset( $generate['kind'] ) ) {
+			return $this->proposals_generate_content( $generate );
+		}
+
 		$args = [
 			'operation_id' => sanitize_text_field( (string) $request->get_param( 'operation_id' ) ),
 			'action'       => sanitize_text_field( (string) $request->get_param( 'action' ) ),
@@ -527,6 +544,42 @@ final class AdminRestApi {
 
 		$created = ( new ProposalStore() )->create( $args );
 		return $this->proposal_write_response( $created, 201 );
+	}
+
+	/**
+	 * Server-side AI generation branch for POST /admin/proposals (Option 1).
+	 *
+	 * Produces a governed DRAFT for a single WordPress core content field
+	 * (post_title / post_excerpt) via the existing ContentFieldGenerator → the
+	 * existing content_manage/content_update operation. Drafts only — it never
+	 * applies, never calls OperationExecutor/ProposalApplyService, and never writes
+	 * anything but the proposal row (through ProposalStore, inside the generator).
+	 *
+	 * Gating: the route already requires manage_options (check_proposals_permission);
+	 * here we additionally require the per-kind FeatureGate so this AI capability can
+	 * be edition-gated independently of manual proposal seeding. Returns the same
+	 * { created, skipped, failed, … } envelope the SEO/Alt generate routes return,
+	 * so one client (the Governed Action Panel) consumes every generator identically.
+	 *
+	 * @param array $generate { kind: 'title'|'excerpt', post_id: int }
+	 */
+	private function proposals_generate_content( array $generate ): \WP_REST_Response {
+		$kind    = sanitize_key( (string) ( $generate['kind'] ?? '' ) );
+		$post_id = (int) ( $generate['post_id'] ?? 0 );
+
+		$feature = [ 'title' => 'title_generator', 'excerpt' => 'excerpt_generator' ][ $kind ] ?? '';
+		if ( '' === $feature ) {
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_generate_kind', 'message' => __( 'Unsupported content generation kind.', 'wp-command-center' ) ], 400 );
+		}
+		if ( ! FeatureGate::allows( $feature ) ) {
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_feature_unavailable', 'message' => __( 'This feature is not available in the current edition.', 'wp-command-center' ) ], 403 );
+		}
+		if ( $post_id <= 0 ) {
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_post_id', 'message' => __( 'A valid post id is required.', 'wp-command-center' ) ], 400 );
+		}
+
+		$result = ( new ContentFieldGenerator() )->generate( $post_id, $kind, [ 'actor' => $this->admin_actor() ] );
+		return new \WP_REST_Response( $result, 200 );
 	}
 
 	/** PATCH /admin/proposals/{id} — edit final_payload (draft only). */
