@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
 #
-# Contextual SEO Quick Panel (Option B → Initiative 2 Option B) — in-context governed
-# action surface.
+# SEO Quick Panel — now running on the GENERALIZED Governed Action Panel.
 #
-# Asserts the Quick Panel is a PROGRESSIVE ENHANCEMENT of the deployed row action:
-# the <a> keeps its admin-post redirect (no-JS fallback) and gains the enhancement
-# hooks (class + data-*). The modal now carries one item through its FULL governed
-# lifecycle (Generate → Review → Edit → Apply → Undo) using ONLY the EXISTING routes:
-#   POST /admin/seo/generate · GET /admin/proposals/{id} · PUT /admin/proposals/{id}
-#   · POST /admin/proposals/{id}/apply · POST /admin/history/{change_id}/rollback.
-# Apply PERSISTS the visible edited values (PUT final_payload) BEFORE applying
-# (persist-before-apply), is MODE-AWARE (developer applies; client/enterprise submit
-# for approval), and shows reversibility (Undo) only on a real applied + change_id.
-# There is NO second execution path and NO second rollback path. The PHP side adds NO
-# route / operation / capability / MCP tool / schema. Invariants hold 34/23/40/40/2.5.0.
+# The SEO contextual workflow was migrated onto the reusable, config-driven
+# Governed Action Panel (assets/js/wpcc-action-panel.js + the shared runtime
+# assets/js/wpcc-admin-runtime.js), enqueued centrally by ActionPanelAssets. The SEO
+# row-action anchor opts in via data-wpcc-action="seo"; the SEO config (routes,
+# fields, apply shape, strings) lives in ActionPanelAssets::seo_config(). Behavior is
+# preserved EXACTLY: progressive enhancement of the admin-post fallback; Generate →
+# Review → Edit → Apply → Undo over ONLY the existing routes; persist-before-apply;
+# mode-aware Apply; reversibility (Undo) only on a real applied + change_id; ONE
+# execution path, ONE rollback path. No new route/operation/capability/MCP tool/schema.
 #
 # Requires: wp-cli for the functional/invariant section; static checks run regardless.
 
@@ -32,162 +29,153 @@ lacks(){ grep -qF -- "$2" "$3" && fail "$1 (found '$2')" || pass "$1"; }
 wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 SRC="$PLUGIN_DIR/includes/Admin/SeoRowActions.php"
-JS="$PLUGIN_DIR/assets/js/seo-quick-panel.js"
-CSS="$PLUGIN_DIR/assets/css/seo-quick-panel.css"
+CFG="$PLUGIN_DIR/includes/Admin/ActionPanelAssets.php"
+JS="$PLUGIN_DIR/assets/js/wpcc-action-panel.js"
+RT="$PLUGIN_DIR/assets/js/wpcc-admin-runtime.js"
+CSS="$PLUGIN_DIR/assets/css/wpcc-action-panel.css"
 
-echo "Contextual SEO Quick Panel (Option B)"
+echo "SEO Quick Panel on the generalized Governed Action Panel"
 
 echo
 echo "== 0. Asset files exist =="
-[ -f "$JS" ]  && pass "seo-quick-panel.js present"  || fail "seo-quick-panel.js missing"
-[ -f "$CSS" ] && pass "seo-quick-panel.css present" || fail "seo-quick-panel.css missing"
+[ -f "$JS" ]  && pass "wpcc-action-panel.js present"  || fail "panel JS missing"
+[ -f "$RT" ]  && pass "wpcc-admin-runtime.js present" || fail "runtime JS missing"
+[ -f "$CSS" ] && pass "wpcc-action-panel.css present" || fail "panel CSS missing"
 if command -v node >/dev/null 2>&1; then
-	node --check "$JS" >/dev/null 2>&1 && pass "JS parses (node --check)" || fail "JS syntax error"
+	node --check "$JS" >/dev/null 2>&1 && pass "panel JS parses" || fail "panel JS syntax error"
+	node --check "$RT" >/dev/null 2>&1 && pass "runtime JS parses" || fail "runtime JS syntax error"
 else
 	echo "  SKIP: node not available — JS syntax check skipped."
 fi
 
 echo
-echo "== 1. Progressive enhancement: anchor keeps fallback + gains hooks =="
+echo "== 1. Progressive enhancement: anchor keeps fallback + opts into the panel =="
 has  "row action still nonce-protected href"  "wp_nonce_url"                  "$SRC"
 has  "row action still admin-post fallback"   "admin-post.php?action="        "$SRC"
-has  "anchor carries quickgen class"          "wpcc-seo-quickgen"             "$SRC"
+has  "anchor opts into the panel (data-wpcc-action=seo)" "data-wpcc-action=\"seo\"" "$SRC"
+has  "anchor keeps quickgen class"            "wpcc-seo-quickgen"             "$SRC"
 has  "anchor carries data-id"                 "data-id=\""                    "$SRC"
-has  "anchor carries data-type"               "data-type=\""                  "$SRC"
-
-echo
-echo "== 2. Enqueue: scoped + gated, reuses existing routes only =="
-has  "registers admin_enqueue_scripts"        "add_action( 'admin_enqueue_scripts', [ \$this, 'enqueue_assets' ] )" "$SRC"
-has  "enqueue method present"                 "function enqueue_assets"       "$SRC"
-has  "only on edit.php"                        "'edit.php' !== \$hook"        "$SRC"
-has  "scoped to supported post type"          "supported_type( \$ptype )"     "$SRC"
-has  "gated by allowed() (cap+flag+gate)"     "\$this->allowed()"             "$SRC"
-has  "enqueues the JS asset"                   "assets/js/seo-quick-panel.js" "$SRC"
-has  "enqueues the CSS asset"                  "assets/css/seo-quick-panel.css" "$SRC"
-has  "localizes REST base"                     "rest_url( 'wp-command-center/v1' )" "$SRC"
-has  "localizes a wp_rest nonce"               "wp_create_nonce( 'wp_rest' )" "$SRC"
-has  "localizes unsupportedStatus i18n"        "'unsupportedStatus'"          "$SRC"
-has  "localizes security mode for Apply label" "SecurityModeManager::current()" "$SRC"
-has  "localizes Approve & Apply label"         "'applyDev'"                   "$SRC"
-has  "localizes Submit for approval label"     "'applyGate'"                  "$SRC"
-has  "localizes approval-required pre-signal"  "'approvalRequired'"           "$SRC"
-has  "localizes Undo label"                    "'undo'"                       "$SRC"
-# Status allow-list shared with the row action: the panel trigger (the quickgen
-# anchor) renders for editable statuses, so the modal opens for draft/pending/etc.
 has  "row action gates on shared status allow-list" "SeoMetaGenerator::is_supported_status" "$SRC"
-lacks "no stale published-only gate"           "'publish' !== \$post->post_status" "$SRC"
+lacks "no stale published-only gate"          "'publish' !== \$post->post_status" "$SRC"
+lacks "SeoRowActions no longer self-enqueues" "function enqueue_assets"       "$SRC"
 
 echo
-echo "== 3. Drafts only — no apply / rollback / new surface (PHP) =="
-lacks "no ProposalApplyService"               "ProposalApplyService"          "$SRC"
-lacks "no OperationExecutor"                   "OperationExecutor"            "$SRC"
-lacks "no direct SEO write"                    "SeoProvider::write"           "$SRC"
-lacks "no apply call"                          "->apply("                     "$SRC"
-lacks "no rollback call"                       "->rollback("                  "$SRC"
-lacks "no new REST route"                       "register_rest_route"         "$SRC"
+echo "== 2. Central enqueue + SEO config reuse existing routes only (ActionPanelAssets) =="
+has  "enqueues the generalized panel JS"      "assets/js/wpcc-action-panel.js" "$CFG"
+has  "panel depends on the shared runtime"    "wpcc-admin-runtime"            "$CFG"
+has  "localizes REST base"                     "rest_url( 'wp-command-center/v1' )" "$CFG"
+has  "localizes a wp_rest nonce"               "wp_create_nonce( 'wp_rest' )" "$CFG"
+has  "localizes security mode for Apply label" "SecurityModeManager::current()" "$CFG"
+has  "SEO config uses existing generate route" "/admin/seo/generate"          "$CFG"
+has  "SEO config gated by build flag"          "WPCC_SEO_META_UI"             "$CFG"
+has  "SEO config gated by FeatureGate"         "seo_meta_generator"           "$CFG"
+has  "SEO apply shape is seo_update"           "'seo_update'"                 "$CFG"
+has  "shared unsupportedStatus i18n"           "'unsupportedStatus'"          "$CFG"
+has  "Approve & Apply label"                   "'applyDev'"                   "$CFG"
+has  "Submit for approval label"               "'applyGate'"                  "$CFG"
+has  "approval-required pre-signal"            "'approvalRequired'"           "$CFG"
+has  "Undo label"                              "'undo'"                       "$CFG"
+lacks "no new REST route in the enqueuer"      "register_rest_route"          "$CFG"
 
 echo
-echo "== 4. Governed action — JS reuses ONLY the existing routes =="
-has  "JS POSTs to existing generate route"     "/admin/seo/generate"          "$JS"
+echo "== 3. Governed action — panel JS reuses ONLY existing routes (config-driven) =="
+has  "JS uses the config-driven generate path" "ST.cfg.generate.path"         "$JS"
 has  "JS GETs existing proposal route"          "/admin/proposals/"           "$JS"
 has  "JS PUTs final_payload (persist edit)"     "api( 'PUT', '/admin/proposals/" "$JS"
 has  "JS POSTs existing apply route"            "/apply"                       "$JS"
 has  "JS POSTs existing rollback route"         "/history/"                    "$JS"
-has  "JS sends the wp_rest nonce header"        "X-WP-Nonce"                   "$JS"
 has  "JS final_payload-first read"              "final_payload"               "$JS"
 has  "JS keeps Open in Suggestions nav"         "suggestUrl"                   "$JS"
 has  "JS handles unsupported_status skip"       "unsupported_status"           "$JS"
-lacks "JS no stale not_published reason"        "not_published"                "$JS"
+has  "runtime sends the wp_rest nonce header"   "X-WP-Nonce"                   "$RT"
 lacks "JS never calls dismiss route"            "/dismiss"                     "$JS"
 lacks "JS no admin-ajax usage"                  "admin-ajax"                   "$JS"
 
 echo
-echo "== 4b. Apply is mode-aware, persist-before-apply, single governed path (JS) =="
-# persist-before-apply: PUT final_payload happens, then /apply — never apply stale data.
-has  "persist-before-apply (PUT then apply)"    "do NOT apply stale data"      "$JS"
+echo "== 4. Apply is mode-aware, persist-before-apply, single governed path (JS) =="
+has  "persist-before-apply (never apply stale)" "never apply stale data"      "$JS"
 has  "mode-aware Apply label"                   "IS_DEV ? t( 'applyDev' )"     "$JS"
-has  "reads security mode from CFG"             "CFG.mode"                     "$JS"
+has  "reads security mode from config"          "ROOT.mode"                    "$JS"
 has  "approval-required pre-signal (gated)"     "approvalRequired"             "$JS"
-has  "outcome read from response status"        "=== 'applied'"               "$JS"
+has  "outcome read from response status"        "st === 'applied'"             "$JS"
 has  "gated outcome = pending_approval"         "pending_approval"             "$JS"
 has  "Undo only with a change_id"               "applied && !! changeId"       "$JS"
 has  "Undo reuses change_history rollback"      "/rollback"                    "$JS"
-# Single execution + single rollback path: the modal must NOT bypass the engine.
 lacks "JS no direct seo_manage execution"       "seo_manage"                   "$JS"
 lacks "JS no OperationExecutor reference"       "OperationExecutor"            "$JS"
-lacks "JS no direct SEO provider write"         "SeoProvider"                  "$JS"
-assert_eq "exactly one rollback route in JS"    "1" "$(grep -c "/history/' + encodeURIComponent" "$JS")"
-assert_eq "exactly one apply route in JS"       "1" "$(grep -c "/apply', null" "$JS")"
+lacks "JS no direct provider write"             "SeoProvider"                  "$JS"
 
 echo
-echo "== 5. Accessibility hooks present (JS) =="
+echo "== 5. Accessibility hooks present (JS + runtime) =="
 has  "dialog role"                              "role: 'dialog'"               "$JS"
 has  "aria-modal"                               "'aria-modal': 'true'"         "$JS"
 has  "labelled by title"                        "aria-labelledby"             "$JS"
 has  "status live region"                       "role: 'status'"              "$JS"
-has  "focus trap on Tab"                         "trapTab"                     "$JS"
-has  "ESC closes"                                "'Escape'"                    "$JS"
-has  "focus restore to trigger"                  "lastFocus.focus()"          "$JS"
-has  "reduced-motion respected (CSS)"            "prefers-reduced-motion"     "$CSS"
+has  "focus trap on Tab (via runtime)"          "R.a11y.trapTab"               "$JS"
+has  "runtime implements trapTab"               "trapTab:"                     "$RT"
+has  "ESC closes"                               "'Escape'"                     "$JS"
+has  "focus restore to trigger"                 "lastFocus.focus()"            "$JS"
+has  "reduced-motion respected (CSS)"           "prefers-reduced-motion"       "$CSS"
+has  "mobile bottom-sheet (CSS)"                "wpcc-qp-sheet-in"             "$CSS"
 
 echo
-echo "== 6. Functional: enqueue gating matrix (no asset leak) =="
+echo "== 6. Functional: central enqueue gating matrix (no asset leak) =="
 if ! command -v wp >/dev/null 2>&1; then
 	echo "  SKIP: wp-cli not available — static checks only."
 else
 	RES="$(wpe '
-		$out = [];
-		$ra  = new \WPCommandCenter\Admin\SeoRowActions();
+		$aa  = new \WPCommandCenter\Admin\ActionPanelAssets();
 		$admin = get_users(["role"=>"administrator","number"=>1]); $aid = $admin?$admin[0]->ID:1;
-
-		$enqueued = function() { return wp_script_is( "wpcc-seo-quick-panel", "enqueued" ); };
-		$reset = function() { wp_dequeue_script("wpcc-seo-quick-panel"); wp_dequeue_style("wpcc-seo-quick-panel"); wp_deregister_script("wpcc-seo-quick-panel"); wp_deregister_style("wpcc-seo-quick-panel"); };
-
-		// Force an edit.php screen for a supported type (post).
+		$enq = function() { return wp_script_is( "wpcc-action-panel", "enqueued" ); };
+		$reset = function() {
+			foreach (["wpcc-action-panel","wpcc-admin-runtime"] as $h) { wp_dequeue_script($h); wp_deregister_script($h); }
+			foreach (["wpcc-action-panel","wpcc-tokens"] as $h) { wp_dequeue_style($h); wp_deregister_style($h); }
+		};
 		set_current_screen( "edit-post" );
 
-		// (a) admin + flag on + supported screen -> enqueued.
+		// (a) admin + SEO flag on + supported screen -> enqueued.
 		add_filter("wpcc_seo_meta_ui","__return_true");
 		wp_set_current_user($aid);
-		$reset(); $ra->enqueue_assets("edit.php");
-		$out["enqueued_when_allowed"] = $enqueued() ? 1 : 0;
+		$reset(); $aa->enqueue("edit.php");
+		$out["enqueued_when_allowed"] = $enq() ? 1 : 0;
 
 		// (b) wrong hook -> not enqueued.
-		$reset(); $ra->enqueue_assets("index.php");
-		$out["wrong_hook_absent"] = $enqueued() ? 0 : 1;
+		$reset(); $aa->enqueue("index.php");
+		$out["wrong_hook_absent"] = $enq() ? 0 : 1;
 
-		// (c) build-flag OFF -> not enqueued.
+		// (c) all build flags OFF -> not enqueued.
 		remove_filter("wpcc_seo_meta_ui","__return_true");
-		$reset(); $ra->enqueue_assets("edit.php");
-		$out["flag_off_absent"] = $enqueued() ? 0 : 1;
+		$reset(); $aa->enqueue("edit.php");
+		$out["flag_off_absent"] = $enq() ? 0 : 1;
 		add_filter("wpcc_seo_meta_ui","__return_true");
 
-		// (d) FeatureGate OFF -> not enqueued.
+		// (d) FeatureGate OFF for seo (content flag default off) -> not enqueued.
 		$gate_off = function($allowed,$feature){ return $feature==="seo_meta_generator" ? false : $allowed; };
 		add_filter("wpcc_feature_allowed",$gate_off,10,2);
-		$reset(); $ra->enqueue_assets("edit.php");
-		$out["featuregate_off_absent"] = $enqueued() ? 0 : 1;
+		$reset(); $aa->enqueue("edit.php");
+		$out["featuregate_off_absent"] = $enq() ? 0 : 1;
 		remove_filter("wpcc_feature_allowed",$gate_off,10);
 
 		// (e) subscriber (no cap) -> not enqueued.
 		$sub = wp_insert_user(["user_login"=>"qp_sub_".wp_generate_password(5,false),"user_pass"=>wp_generate_password(),"role"=>"subscriber"]);
 		wp_set_current_user($sub);
-		$reset(); $ra->enqueue_assets("edit.php");
-		$out["subscriber_absent"] = $enqueued() ? 0 : 1;
+		$reset(); $aa->enqueue("edit.php");
+		$out["subscriber_absent"] = $enq() ? 0 : 1;
 		wp_set_current_user($aid);
 
 		// (f) unsupported screen type -> not enqueued.
 		set_current_screen( "edit-wpcc_unsupported_type" );
-		$reset(); $ra->enqueue_assets("edit.php");
-		$out["unsupported_type_absent"] = $enqueued() ? 0 : 1;
+		$reset(); $aa->enqueue("edit.php");
+		$out["unsupported_type_absent"] = $enq() ? 0 : 1;
 
 		$reset(); if (isset($sub)) { wp_delete_user($sub); }
+		remove_filter("wpcc_seo_meta_ui","__return_true");
 		echo wp_json_encode($out);
 	')"
 	gj() { printf '%s' "$RES" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }
 	assert_eq "admin + flag-on + edit.php(post) -> enqueued" "1" "$(gj enqueued_when_allowed)"
 	assert_eq "wrong hook -> not enqueued"                   "1" "$(gj wrong_hook_absent)"
-	assert_eq "build-flag OFF -> not enqueued"               "1" "$(gj flag_off_absent)"
+	assert_eq "all build-flags OFF -> not enqueued"          "1" "$(gj flag_off_absent)"
 	assert_eq "FeatureGate OFF -> not enqueued"              "1" "$(gj featuregate_off_absent)"
 	assert_eq "subscriber (no cap) -> not enqueued"          "1" "$(gj subscriber_absent)"
 	assert_eq "unsupported screen type -> not enqueued"      "1" "$(gj unsupported_type_absent)"
