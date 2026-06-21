@@ -67,7 +67,11 @@ while IFS=$'\t' read -r group trigger primary suites; do
   case "$group" in ''|\#*) continue;; esac
   match=0
   if [ -n "$RUNTIMES" ] && echo " $RUNTIMES " | grep -qw "$group"; then match=1; fi
-  if [ "$match" = 0 ] && [ -n "$SIGNAL" ] && printf '%s' "$SIGNAL" | grep -qE "$trigger"; then match=1; fi
+  # NB: here-string, NOT `printf ... | grep -q`. Under `set -o pipefail`, grep -q
+  # exits early on a match near the top of the (large) signal and SIGPIPEs printf,
+  # whose 141 exit then fails the whole pipeline → a false "no match" for any group
+  # that matches early. A here-string has no pipe and avoids that.
+  if [ "$match" = 0 ] && [ -n "$SIGNAL" ] && grep -qE "$trigger" <<<"$SIGNAL"; then match=1; fi
   if [ "$match" = 1 ]; then
     MATCHED_GROUPS="$MATCHED_GROUPS $group"
     SELECTED="$SELECTED ${suites//,/ }"

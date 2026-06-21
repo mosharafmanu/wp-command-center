@@ -116,22 +116,11 @@ if ( isset( $_POST['wpcc_action'] ) && check_admin_referer( 'wpcc_dashboard_acti
 
 	if ( $id ) {
 		switch ( $action ) {
-			case 'approve_request':
-				$op_manager->approve_request( $id, [ 'actor' => wp_get_current_user()->user_login ] );
-				break;
-			case 'reject_request':
-				$op_manager->reject_request( $id, [ 'actor' => wp_get_current_user()->user_login ] );
-				break;
-			case 'run_queue':
-				$run_res = $op_queue->run_item( $id, $wpcc_actor_context );
-				if ( is_wp_error( $run_res ) ) {
-					$sr_error = $run_res->get_error_message();
-				} else {
-					$sr_success_msg = __( 'Operation executed successfully.', 'wp-command-center' );
-				}
-				break;
-			// For plan approval, we would need a PlanManager, but we do it directly via DB or we can skip actual logic for V1 UI if it's too complex.
-			// Let's implement a simple plan status update.
+			// Operation-request approve/reject and manual queue-run were relocated to
+			// the Approval Center (Operate › Approvals); the Runtime view keeps only
+			// the controls unique to it (Safe Search & Replace, agent plans).
+			//
+			// For plan approval, we update the plan status directly and sync it.
 			case 'approve_plan':
 				$wpdb->update( "{$wpdb->prefix}wpcc_agent_plans", [ 'status' => 'approved' ], [ 'plan_id' => $id ] );
 				( new \WPCommandCenter\Security\AuditLog() )->record( 'plan.approved', [ 'plan_id' => $id, 'actor' => wp_get_current_user()->user_login ] );
@@ -216,7 +205,7 @@ if ( isset( $_POST['wpcc_sr_action'] ) && check_admin_referer( 'wpcc_sr_action' 
 			} else {
 				$sr_success_msg = sprintf(
 					/* translators: %s: operation request ID */
-					__( 'Live Search & Replace request "%s" created and is pending review. Approve it in "Pending Operation Requests", then run it from "Queued Operations" (or wait for the background worker).', 'wp-command-center' ),
+					__( 'Live Search & Replace request "%s" created and is pending review. Approve and run it from the Approval Center (Operate › Approvals), or wait for the background worker.', 'wp-command-center' ),
 					$req['request_id']
 				);
 			}
@@ -603,7 +592,7 @@ $sr_preview_js = $sr_preview ? [
 						<tr><th><?php esc_html_e( 'Affected Rows', 'wp-command-center' ); ?></th><td id="wpcc-confirm-rows"></td></tr>
 						<tr><th><?php esc_html_e( 'Risk Level', 'wp-command-center' ); ?></th><td><span id="wpcc-confirm-risk" class="wpcc-risk-badge"></span></td></tr>
 					</table>
-					<p><?php esc_html_e( 'This creates a pending operation request only — no data changes until it is approved (Pending Operation Requests) and executed (Queued Operations / background worker).', 'wp-command-center' ); ?></p>
+					<p><?php esc_html_e( 'This creates a pending operation request only — no data changes until it is approved and executed from the Approval Center (Operate › Approvals), or by the background worker.', 'wp-command-center' ); ?></p>
 					<div class="wpcc-modal-actions">
 						<button type="button" class="button" id="wpcc-sr-confirm-cancel"><?php esc_html_e( 'Cancel', 'wp-command-center' ); ?></button>
 						<button type="submit" class="button button-primary" name="wpcc_sr_action" value="run" form="wpcc-sr-form" id="wpcc-sr-confirm-submit"><?php esc_html_e( 'Confirm & Create Request', 'wp-command-center' ); ?></button>
@@ -785,67 +774,34 @@ $sr_preview_js = $sr_preview ? [
 			</div>
 			<?php else : ?><div class="wpcc-panel"><div class="wpcc-empty-state"><?php esc_html_e( 'No plans are waiting for approval.', 'wp-command-center' ); ?></div></div><?php endif; ?>
 
-			<!-- Pending Operation Requests -->
-			<?php if ( ! empty( $pending_requests ) ) : ?>
+			<?php
+			// Operation-request approval and the operation queue moved to the
+			// Approval Center (Operate › Approvals). Surface a pointer when either
+			// has items pending so Runtime operators know where they went.
+			$wpcc_runtime_pending = $pending_req_cnt + count( $queued_ops );
+			if ( $wpcc_runtime_pending > 0 ) : ?>
 			<div class="wpcc-panel">
-				<h2 class="wpcc-panel-header">Pending Operation Requests</h2>
 				<div class="wpcc-panel-body">
-					<table class="wp-list-table widefat fixed striped">
-						<thead><tr><th>Operation</th><th>Risk</th><th>Actions</th></tr></thead>
-						<tbody>
-							<?php foreach ( $pending_requests as $req ) : ?>
-							<tr>
-								<td><strong><?php echo esc_html( $req['operation_id'] ); ?></strong></td>
-								<td><span class="wpcc-status-badge wpcc-status-<?php echo esc_attr( $req['risk_level'] ); ?>"><?php echo esc_html( $req['risk_level'] ); ?></span></td>
-								<td>
-									<form method="post" style="display:inline-block;">
-										<?php wp_nonce_field( 'wpcc_dashboard_action' ); ?>
-										<input type="hidden" name="id" value="<?php echo esc_attr( $req['request_id'] ); ?>">
-										<button type="submit" name="wpcc_action" value="approve_request" class="button button-primary wpcc-action-btn">Approve</button>
-										<button type="submit" name="wpcc_action" value="reject_request" class="button">Reject</button>
-									</form>
-								</td>
-							</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
+					<p>
+						<?php
+						printf(
+							/* translators: %d: number of pending operation requests + queued operations */
+							esc_html__( '%d operation request(s) / queued operation(s) are waiting. Review and run them in the Approval Center.', 'wp-command-center' ),
+							(int) $wpcc_runtime_pending
+						);
+						?>
+						<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals' ) ); ?>"><?php esc_html_e( 'Open Approval Center', 'wp-command-center' ); ?></a>
+					</p>
 				</div>
 			</div>
-			<?php else : ?><div class="wpcc-panel"><div class="wpcc-empty-state"><?php esc_html_e( 'No operation requests are awaiting review.', 'wp-command-center' ); ?></div></div><?php endif; ?>
-
-			<!-- Queued Operations -->
-			<?php if ( ! empty( $queued_ops ) ) : ?>
-			<div class="wpcc-panel">
-				<h2 class="wpcc-panel-header">Queued Operations</h2>
-				<div class="wpcc-panel-body">
-					<table class="wp-list-table widefat fixed striped">
-						<thead><tr><th>Operation</th><th>Status</th><th>Actions</th></tr></thead>
-						<tbody>
-							<?php foreach ( $queued_ops as $op ) : ?>
-							<tr>
-								<td><strong><?php echo esc_html( $op['operation_id'] ); ?></strong></td>
-								<td><span class="wpcc-status-badge wpcc-status-<?php echo esc_attr( $op['status'] ); ?>"><?php echo esc_html( $op['status'] ); ?></span></td>
-								<td>
-									<form method="post" style="display:inline-block;">
-										<?php wp_nonce_field( 'wpcc_dashboard_action' ); ?>
-										<input type="hidden" name="id" value="<?php echo esc_attr( $op['queue_id'] ); ?>">
-										<button type="submit" name="wpcc_action" value="run_queue" class="button wpcc-action-btn">Run Manually</button>
-									</form>
-								</td>
-							</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
-				</div>
-			</div>
-			<?php else : ?><div class="wpcc-panel"><div class="wpcc-empty-state"><?php esc_html_e( 'The operation queue is empty.', 'wp-command-center' ); ?></div></div><?php endif; ?>
+			<?php endif; ?>
 
 			<div class="wpcc-panel" id="operation-results">
 				<h2 class="wpcc-panel-header"><?php esc_html_e( 'Recent Operation Results', 'wp-command-center' ); ?></h2>
 				<div class="wpcc-panel-body">
 				<?php if ( empty( $wpcc_recent_results ) ) : ?><div class="wpcc-empty-state"><?php esc_html_e( 'No operation results recorded yet.', 'wp-command-center' ); ?></div>
 				<?php else : ?><table class="wp-list-table widefat fixed striped"><thead><tr><th><?php esc_html_e( 'Operation', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Result', 'wp-command-center' ); ?></th></tr></thead><tbody>
-				<?php foreach ( $wpcc_recent_results as $result ) : ?><tr><td><?php echo esc_html( $result['operation_id'] ); ?></td><td><span class="wpcc-status-badge wpcc-status-<?php echo esc_attr( $result['status'] ); ?>"><?php echo esc_html( $result['status'] ); ?></span></td><td><a href="<?php echo esc_url( add_query_arg( [ 'page' => 'wp-command-center', 'result_id' => $result['result_id'] ], admin_url( 'admin.php' ) ) . '#operation-results' ); ?>"><?php esc_html_e( 'View result', 'wp-command-center' ); ?></a></td></tr><?php endforeach; ?>
+				<?php foreach ( $wpcc_recent_results as $result ) : ?><tr><td><?php echo esc_html( $result['operation_id'] ); ?></td><td><span class="wpcc-status-badge wpcc-status-<?php echo esc_attr( $result['status'] ); ?>"><?php echo esc_html( $result['status'] ); ?></span></td><td><a href="<?php echo esc_url( add_query_arg( [ 'page' => 'wpcc-operate', 'wpcc_tab' => 'runtime', 'result_id' => $result['result_id'] ], admin_url( 'admin.php' ) ) . '#operation-results' ); ?>"><?php esc_html_e( 'View result', 'wp-command-center' ); ?></a></td></tr><?php endforeach; ?>
 				</tbody></table><?php endif; ?>
 				<?php if ( $wpcc_selected_result ) : ?><hr><h3><?php esc_html_e( 'Selected Result', 'wp-command-center' ); ?></h3><p><code><?php echo esc_html( $wpcc_selected_result['result_id'] ); ?></code></p><pre style="white-space:pre-wrap;max-height:260px;overflow:auto;background:#f6f7f7;padding:12px;"><?php echo esc_html( wp_json_encode( $wpcc_selected_result, JSON_PRETTY_PRINT ) ); ?></pre><?php endif; ?>
 				</div>
@@ -859,7 +815,8 @@ $sr_preview_js = $sr_preview ? [
 				<h2 class="wpcc-panel-header">Recent Agent Activity</h2>
 				<div class="wpcc-panel-body">
 					<form method="get" class="wpcc-timeline-filters">
-						<input type="hidden" name="page" value="wp-command-center">
+						<input type="hidden" name="page" value="wpcc-operate">
+						<input type="hidden" name="wpcc_tab" value="runtime">
 						<select name="timeline_type"><option value=""><?php esc_html_e( 'All event types', 'wp-command-center' ); ?></option><?php foreach ( [ 'session', 'task', 'action', 'plan', 'patch', 'recommendation', 'operation', 'health', 'system', 'workflow' ] as $type ) : ?><option value="<?php echo esc_attr( $type ); ?>" <?php selected( $wpcc_timeline_type, $type ); ?>><?php echo esc_html( ucfirst( $type ) ); ?></option><?php endforeach; ?></select>
 						<select name="timeline_status"><option value=""><?php esc_html_e( 'All statuses', 'wp-command-center' ); ?></option><?php foreach ( [ 'open', 'pending_review', 'approved', 'queued', 'running', 'completed', 'resolved', 'failed', 'rejected', 'dismissed' ] as $status ) : ?><option value="<?php echo esc_attr( $status ); ?>" <?php selected( $wpcc_timeline_status, $status ); ?>><?php echo esc_html( ucfirst( str_replace( '_', ' ', $status ) ) ); ?></option><?php endforeach; ?></select>
 						<button class="button"><?php esc_html_e( 'Filter', 'wp-command-center' ); ?></button>
@@ -880,7 +837,7 @@ $sr_preview_js = $sr_preview ? [
 							<?php endforeach; ?>
 						</ul>
 					<?php endif; ?>
-					<div class="wpcc-pagination"><span><?php echo esc_html( sprintf( __( 'Page %1$d of %2$d', 'wp-command-center' ), $wpcc_timeline_page, $wpcc_timeline_total_pages ) ); ?></span><span><?php if ( $wpcc_timeline_page > 1 ) : ?><a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'wp-command-center', 'timeline_type' => $wpcc_timeline_type, 'timeline_status' => $wpcc_timeline_status, 'timeline_page' => $wpcc_timeline_page - 1 ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Previous', 'wp-command-center' ); ?></a><?php endif; ?> <?php if ( $wpcc_timeline_page < $wpcc_timeline_total_pages ) : ?><a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'wp-command-center', 'timeline_type' => $wpcc_timeline_type, 'timeline_status' => $wpcc_timeline_status, 'timeline_page' => $wpcc_timeline_page + 1 ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Next', 'wp-command-center' ); ?></a><?php endif; ?></span></div>
+					<div class="wpcc-pagination"><span><?php echo esc_html( sprintf( __( 'Page %1$d of %2$d', 'wp-command-center' ), $wpcc_timeline_page, $wpcc_timeline_total_pages ) ); ?></span><span><?php if ( $wpcc_timeline_page > 1 ) : ?><a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'wpcc-operate', 'wpcc_tab' => 'runtime', 'timeline_type' => $wpcc_timeline_type, 'timeline_status' => $wpcc_timeline_status, 'timeline_page' => $wpcc_timeline_page - 1 ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Previous', 'wp-command-center' ); ?></a><?php endif; ?> <?php if ( $wpcc_timeline_page < $wpcc_timeline_total_pages ) : ?><a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => 'wpcc-operate', 'wpcc_tab' => 'runtime', 'timeline_type' => $wpcc_timeline_type, 'timeline_status' => $wpcc_timeline_status, 'timeline_page' => $wpcc_timeline_page + 1 ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Next', 'wp-command-center' ); ?></a><?php endif; ?></span></div>
 				</div>
 			</div>
 		</div>

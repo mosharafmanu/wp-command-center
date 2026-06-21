@@ -35,6 +35,7 @@ VIEW="$PLUGIN_DIR/includes/Admin/views/change-history.php"
 RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Admin/ChangeHistoryAdminQuery.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
+SHELL="$PLUGIN_DIR/includes/Admin/AppShell.php"
 DIFFR="$PLUGIN_DIR/includes/Admin/DiffRenderer.php"
 PATCHES="$PLUGIN_DIR/includes/Admin/views/patches.php"
 
@@ -90,13 +91,17 @@ has "query is read-only (no INSERT/UPDATE/DELETE)" "GROUP BY session_id"     "$Q
 lacks "query performs no writes"          "INSERT INTO|UPDATE .* SET|DELETE FROM" "$QUERY"
 
 echo
-echo "== 5. Menu: Change History present; legacy Rollback merged (105.3 swap) =="
-has "menu: Change History submenu"  "wpcc-change-history" "$MENU"
-has "menu: render_change_history"   "render_change_history" "$MENU"
-lacks "menu: Rollback submenu removed" "add_submenu_page.*wpcc-rollback" "$MENU"
-lacks "menu: render_rollback removed"  "function render_rollback" "$MENU"
-has "menu: legacy rollback redirect present" "redirect_legacy_rollback" "$MENU"
-has "menu: redirect targets Change History"  "page=wpcc-change-history" "$MENU"
+echo "== 5. App Shell hosts Change History as Audit › Changes; legacy slugs redirect =="
+# Experience Layer: Change History became the Audit › Changes tab (105.3 Rollback
+# merge preserved); the 5-C App Shell routes the change-history view via
+# ?wpcc_tab=changes, and both the legacy change-history AND rollback slugs redirect in.
+has "Changes tab renders change-history view" "'view' => 'change-history'" "$SHELL"
+has "Changes tab gated by change_history feature" "'feature' => 'change_history'" "$SHELL"
+has "legacy change-history slug redirects (map)" "'wpcc-change-history'     => \[ 'wpcc-audit', 'changes' \]" "$SHELL"
+has "legacy rollback slug merged into Changes" "'wpcc-rollback'           => \[ 'wpcc-audit', 'changes' \]" "$SHELL"
+lacks "no standalone rollback submenu"  "add_submenu_page.*wpcc-rollback" "$MENU"
+has "consolidated legacy redirect handler" "function redirect_legacy_slugs" "$MENU"
+has "Audit section registered"          "'wpcc-audit'"               "$MENU"
 [ -f "$PLUGIN_DIR/includes/Admin/views/rollback.php" ] && fail "legacy rollback view deleted" || pass "legacy rollback view deleted"
 
 echo
@@ -339,7 +344,7 @@ has  "FeatureGate in Admin namespace"    "namespace WPCommandCenter.Admin" "$GAT
 has  "FeatureGate exposes wpcc_feature_allowed filter" "wpcc_feature_allowed" "$GATE"
 has  "REST history routes use the feature-gated permission" "check_history_permission" "$RESTAPI"
 has  "history surface maps to FeatureGate key (C1 consolidated gate)" "'change_history'\s*=> 'change_history'" "$RESTAPI"
-has  "menu gates Change History via FeatureGate" "FeatureGate::allows\( 'change_history' \)" "$MENU"
+has  "menu gates Change History via FeatureGate" "FeatureGate::allows" "$SHELL"
 
 GATEFN=$(wpe "
 \$on  = \WPCommandCenter\Admin\FeatureGate::allows( 'change_history' );

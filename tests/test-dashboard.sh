@@ -40,11 +40,15 @@ WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 # shellcheck source=/dev/null
 [ -f "$PLUGIN_DIR/wpcc-env.sh" ] && source "$PLUGIN_DIR/wpcc-env.sh"
 
-VIEW="$PLUGIN_DIR/includes/Admin/views/dashboard-overview.php"
+# Experience Layer: the read-only Dashboard Overview was folded into the unified
+# Command Center Home (views/command-home.php) and the 5-C App Shell. This suite
+# now validates the DATA LAYER (the /admin/dashboard route + DashboardAdminQuery +
+# the W2 FeatureGate coherence + invariants), which the Experience Layer left
+# unchanged. The home view + 5-C IA + shell are covered by test-experience-layer.sh.
+VIEW="$PLUGIN_DIR/includes/Admin/views/command-home.php"
 RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Admin/DashboardAdminQuery.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
-LEGACY="$PLUGIN_DIR/includes/Admin/views/dashboard.php"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -106,89 +110,6 @@ has "recent_activity projection method"  "function recent_activity"            "
 SESS_CALLS="$(rg -c -e "->sessions\(" "$QUERY" 2>/dev/null || echo 0)"
 assert_eq "sessions() roll-up fetched once (reused)" "1" "$SESS_CALLS"
 has "feed bounded by RECENT_LIMIT"       "RECENT_LIMIT"                        "$QUERY"
-
-echo
-echo "== 4. Menu: gated submenu added; legacy Dashboard untouched =="
-has "submenu: Dashboard Overview"        "Dashboard Overview"                  "$MENU"
-has "menu slug wpcc-dashboard-overview"  "'wpcc-dashboard-overview'"           "$MENU"
-has "menu FeatureGate-gated"             "FeatureGate::allows\( 'dashboard_overview' \)" "$MENU"
-has "render method present"              "function render_dashboard_overview"  "$MENU"
-has "legacy Dashboard submenu retained"  "function render_dashboard\b"         "$MENU"
-has "legacy dashboard view untouched"    "wpcc_action"                         "$LEGACY"
-
-echo
-echo "== 5. View is read-only + escaped + aggregating =="
-has "HTML escaper present"               "function escHtml"                    "$VIEW"
-has "uses REST nonce"                     "X-WP-Nonce"                          "$VIEW"
-has "fetches /dashboard"                  "/dashboard'"                         "$VIEW"
-has "renders security posture"            "renderPosture"                       "$VIEW"
-has "renders invariants strip"            "renderInvariants"                    "$VIEW"
-has "renders subsystem cards"             "renderCards"                         "$VIEW"
-has "card: Approval Center"               "cardApprovals"                       "$VIEW"
-has "card: Operations Explorer"           "cardOps"                             "$VIEW"
-has "card: Tokens & Capabilities"         "cardTokens"                          "$VIEW"
-has "card: Change History"                "cardHistory"                         "$VIEW"
-has "cards drill out to surfaces"         "wpcc-approval-center"                "$VIEW"
-has "role=status live region"             "role=\"status\""                     "$VIEW"
-has "aria-live polite on live regions"    "aria-live=\"polite\""                "$VIEW"
-# No execution / write affordance on this surface.
-lacks "no run/execute control"            "wpcc_action|Execute|execute_request|method: 'POST'|method: 'DELETE'" "$VIEW"
-
-echo
-echo "== 5d. STEP 109.2 — recent activity feed + depth + deep links (view) =="
-has "recent activity section present"     "wpcc-dash-activity"                  "$VIEW"
-has "recent activity renderer"            "function renderActivity"             "$VIEW"
-has "activity timestamp formatter"        "function fmtTime"                    "$VIEW"
-has "activity rows deep-link to session"  "function sessionUrl"                 "$VIEW"
-has "session deep link targets timeline"  "tab=timeline&session_id="            "$VIEW"
-has "operations risk distribution"        "function riskDist"                   "$VIEW"
-has "risk dist consumes by_risk"          "op.by_risk"                          "$VIEW"
-has "approvals deep-link to queue tab"    "approvals_queue"                     "$VIEW"
-has "deep link: approvals pending tab"    "tab=pending"                         "$VIEW"
-has "deep link: tokens tab"               "tab=tokens"                          "$VIEW"
-has "deep link: change history sessions"  "tab=sessions"                        "$VIEW"
-has "activity empty state"                "i18n.actEmpty"                       "$VIEW"
-has "activity table uses scope=col"       "scope=\"col\""                       "$VIEW"
-has "activity row uses scope=row"         "scope=\"row\">' \+ escHtml\( fmtTime" "$VIEW"
-
-echo
-echo "== 5e. STEP 109.3 — filter + accessibility + states polish (view) =="
-# Filter: a client-side "reversible only" toggle over the cached feed (read-only,
-# no new route, no new source of truth — it filters already-fetched rows).
-has "reversible-only filter control"      "id=\"wpcc-dash-reversible\""          "$VIEW"
-has "filter has a visible label"          "Reversible only"                     "$VIEW"
-has "filter references the panel (aria-controls)" "aria-controls=\"wpcc-dash-activity\"" "$VIEW"
-has "filter apply function"               "function applyActivityFilter"        "$VIEW"
-has "filter is client-side (cached rows)"  "allActivity.filter"                  "$VIEW"
-has "filter wired to change event"        "addEventListener\( 'change', applyActivityFilter" "$VIEW"
-# Live count region for the filter (a11y).
-has "filter count live region (role=status)" "id=\"wpcc-dash-activity-count\" class=\"wpcc-dash-activity-count\" role=\"status\"" "$VIEW"
-has "filter count format string"          "actCountFmt"                         "$VIEW"
-# Heading hierarchy h1 -> h2 -> h3 (page / sections / cards), no skips.
-has "page heading h1"                     "<h1>"                                "$VIEW"
-has "section headings h2"                 "<h2>"                                "$VIEW"
-has "card headings h3 (under section h2)"  "<h3>' \+ escHtml\( title"            "$VIEW"
-lacks "no heading-level skip (no h4+)"     "<h4|<h5|<h6"                         "$VIEW"
-# Live regions across the surface.
-has "posture is a live region"            "id=\"wpcc-dash-posture\".*role=\"status\"" "$VIEW"
-has "invariants is a live region"         "id=\"wpcc-dash-invariants\".*role=\"status\"" "$VIEW"
-# States: distinct empty (nothing recorded) vs filter-no-match vs load failure.
-has "activity empty (nothing recorded)"   "i18n.actEmpty"                       "$VIEW"
-has "activity filter-no-match state"      "i18n.actNoMatch"                     "$VIEW"
-has "unified load-failure path"           "function showLoadFail"               "$VIEW"
-
-echo
-echo "== 5b. i18n completeness (no raw user-facing JS strings) =="
-RAW_STRINGS="$(awk '/<script>/,/<\/script>/' "$VIEW" \
-	| rg -v "wp-command-center'" \
-	| rg -n "'[A-Za-z]+ [A-Za-z]+ [A-Za-z]+" \
-	| rg -v "wpcc-|aria-|scope=|class=|widefat|encodeURIComponent" || true)"
-if [ -z "$RAW_STRINGS" ]; then pass "no un-localized user-facing JS string literals"; else fail "un-localized strings: $RAW_STRINGS"; fi
-
-echo
-echo "== 5c. empty / error states present =="
-has "load failure state"                  "i18n.loadFail"                       "$VIEW"
-has "fetch failure is caught"             "\.catch\( showLoadFail \)"           "$VIEW"
 
 echo
 echo "== 6. Functional: overview envelope over the real surfaces =="

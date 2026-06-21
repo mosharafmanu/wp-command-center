@@ -35,25 +35,23 @@ VIEW_SRC="$(cat "$VIEW")"
 # mistaken for real PHP calls.
 VIEW_PHP="$(awk '/<script>/{s=1} /<\/script>/{s=0;next} !s' "$VIEW" | grep -vE '^[[:space:]]*(\*|/\*|//|#)')"
 
-# ── Menu gating: OFF by default, ON via the dev switch ───────────────────────
+# ── Tab gating: OFF by default, ON via the dev switch ────────────────────────
+# Experience Layer: Governed Drafts (Dev) is the Operate › drafts tab in the 5-C
+# App Shell, present only when the dev switch is on (and proposal_store allowed).
 DEFAULT_REG="$(wpe '
-$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1);
-global $submenu; $submenu=[];
-(new WPCommandCenter\Admin\AdminMenu())->register_menu();
-$f=isset($submenu["wp-command-center"])?array_filter($submenu["wp-command-center"],fn($s)=>$s[2]==="wpcc-proposals"):[];
-echo empty($f)?"no":"yes";
+remove_all_filters("wpcc_proposals_dev_ui");
+$s=\WPCommandCenter\Admin\AppShell::sections();
+echo isset($s["wpcc-operate"]["tabs"]["drafts"])?"yes":"no";
 ')"
-assert_eq "submenu OFF by default (real users)" "no" "$DEFAULT_REG"
+assert_eq "tab OFF by default (real users)" "no" "$DEFAULT_REG"
 
 FILTER_REG="$(wpe '
-$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1);
 add_filter("wpcc_proposals_dev_ui","__return_true");
-global $submenu; $submenu=[];
-(new WPCommandCenter\Admin\AdminMenu())->register_menu();
-$f=isset($submenu["wp-command-center"])?array_filter($submenu["wp-command-center"],fn($s)=>$s[2]==="wpcc-proposals"):[];
-echo empty($f)?"no":"yes";
+$s=\WPCommandCenter\Admin\AppShell::sections();
+remove_all_filters("wpcc_proposals_dev_ui");
+echo isset($s["wpcc-operate"]["tabs"]["drafts"])?"yes":"no";
 ')"
-assert_eq "submenu ON when dev switch enabled" "yes" "$FILTER_REG"
+assert_eq "tab ON when dev switch enabled" "yes" "$FILTER_REG"
 
 # ── View renders with developer framing ──────────────────────────────────────
 RENDERED="$(wpe '

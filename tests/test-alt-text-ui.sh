@@ -27,23 +27,24 @@ cat > "$BATT" <<'PHP'
 <?php
 $a=get_users(['role'=>'administrator','number'=>1]); wp_set_current_user($a?$a[0]->ID:1);
 $out=[]; $emit=function($d,$ok,$x='')use(&$out){ $out[]=$d."\t".($ok?'PASS':'FAIL')."\t".$x; };
-$reg=function(){ global $submenu; $submenu=[]; (new WPCommandCenter\Admin\AdminMenu())->register_menu();
-  $f=isset($submenu['wp-command-center'])?array_filter($submenu['wp-command-center'],fn($s)=>$s[2]==='wpcc-alt-text'):[]; return !empty($f)?reset($f):null; };
+// Experience Layer: AI Alt Text is the Operate › alt_text tab in the 5-C App Shell
+// (added only when the build flag is on AND the FeatureGate allows ai_alt_text).
+$reg=function(){ $s=\WPCommandCenter\Admin\AppShell::sections(); return $s['wpcc-operate']['tabs']['alt_text'] ?? null; };
 
 // 1. hidden by default
 remove_all_filters('wpcc_alt_text_ui');
-$emit('submenu hidden by default', $reg()===null);
+$emit('tab hidden by default', $reg()===null);
 
 // 2. visible when build flag on AND FeatureGate allows ai_alt_text
 add_filter('wpcc_alt_text_ui','__return_true');
 $item=$reg();
-$emit('submenu visible when flag on + FeatureGate allows', $item!==null && $item[2]==='wpcc-alt-text');
-$emit('submenu title is "AI Alt Text"', $item!==null && wp_strip_all_tags($item[0])==='AI Alt Text');
+$emit('tab visible when flag on + FeatureGate allows', $item!==null && ($item['view']??'')==='ai-alt-text');
+$emit('tab title is "AI Alt Text"', $item!==null && wp_strip_all_tags($item['label']??'')==='AI Alt Text');
 
 // 2b. AND-gating: build flag on but FeatureGate('ai_alt_text') OFF -> hidden
 $deny=function($allow,$feature){ return $feature==='ai_alt_text' ? false : $allow; };
 add_filter('wpcc_feature_allowed',$deny,10,2);
-$emit('submenu hidden when FeatureGate denies ai_alt_text', $reg()===null);
+$emit('tab hidden when FeatureGate denies ai_alt_text', $reg()===null);
 remove_filter('wpcc_feature_allowed',$deny,10);
 
 // 3. view renders with required markers

@@ -39,6 +39,7 @@ VIEW="$PLUGIN_DIR/includes/Admin/views/operations-explorer.php"
 RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Admin/OperationExplorerAdminQuery.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
+SHELL="$PLUGIN_DIR/includes/Admin/AppShell.php"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -106,11 +107,15 @@ lacks "no audit/change writes"           "->record\(|ChangeRecorder"    "$QUERY"
 lacks "no policy mutation"               "->assign\(|->remove\(|->create\(|->revoke\(|->delete\(" "$QUERY"
 
 echo
-echo "== 4. Menu: gated submenu added =="
-has "submenu: Operations Explorer"       "Operations Explorer"          "$MENU"
-has "menu slug wpcc-operations"          "'wpcc-operations'"            "$MENU"
-has "menu FeatureGate-gated"             "FeatureGate::allows\( 'operations_explorer' \)" "$MENU"
-has "render method present"              "function render_operations_explorer" "$MENU"
+echo "== 4. App Shell hosts Operations Explorer as Operate › Operations =="
+# Experience Layer: the standalone submenu became the Operate › Operations tab,
+# routed by the 5-C App Shell via ?wpcc_tab=operations; legacy slug redirects in.
+has "Operations tab labeled in shell"    "'Operations'"                 "$SHELL"
+has "Operations tab renders explorer view" "'view' => 'operations-explorer'" "$SHELL"
+has "Operations tab gated by operations_explorer feature" "'feature' => 'operations_explorer'" "$SHELL"
+has "FeatureGate gates the Operations tab" "FeatureGate::allows"        "$SHELL"
+has "legacy operations slug redirects (map)" "'wpcc-operations'         => \[ 'wpcc-operate', 'operations' \]" "$SHELL"
+has "Operate section registered"         "'wpcc-operate'"               "$MENU"
 
 echo
 echo "== 5. View is read-only + escaped + filterable =="

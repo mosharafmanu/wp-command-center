@@ -52,6 +52,7 @@ VIEW="$PLUGIN_DIR/includes/Admin/views/token-capability-manager.php"
 RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Admin/TokenCapabilityAdminQuery.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
+SHELL="$PLUGIN_DIR/includes/Admin/AppShell.php"
 SETTINGS="$PLUGIN_DIR/includes/Admin/views/settings.php"
 REGISTRY="$PLUGIN_DIR/includes/Operations/CapabilityRegistry.php"
 
@@ -151,11 +152,15 @@ has   "audit trail reads AuditLog tail"  "->tail\("                 "$QUERY"
 lacks "no audit writes (record)"         "AuditLog\(\)\)?->record\(|->record\(" "$QUERY"
 
 echo
-echo "== 4. Menu: gated submenu added =="
-has "submenu: Tokens & Capabilities"  "Tokens & Capabilities"     "$MENU"
-has "menu slug wpcc-tokens"           "'wpcc-tokens'"             "$MENU"
-has "menu FeatureGate-gated"          "FeatureGate::allows\( 'token_capability_manager' \)" "$MENU"
-has "render method present"           "function render_token_capability_manager" "$MENU"
+echo "== 4. App Shell hosts Tokens & Capabilities as Access › Tokens =="
+# Experience Layer: the standalone submenu became the Access › Tokens tab, routed
+# by the 5-C App Shell via ?wpcc_tab=tokens; the legacy slug redirects in.
+has "Tokens tab labeled in shell"     "'Tokens & Capabilities'"   "$SHELL"
+has "Tokens tab renders the manager view" "'view' => 'token-capability-manager'" "$SHELL"
+has "Tokens tab gated by token_capability_manager feature" "'feature' => 'token_capability_manager'" "$SHELL"
+has "FeatureGate gates the Tokens tab" "FeatureGate::allows"      "$SHELL"
+has "legacy tokens slug redirects (map)" "'wpcc-tokens'             => \[ 'wpcc-access', 'tokens' \]" "$SHELL"
+has "Access section registered"        "'wpcc-access'"             "$MENU"
 
 echo
 echo "== 5. View is read-only + escaped =="
@@ -198,10 +203,10 @@ lacks "settings.php: no AuthTokens:: calls" "AuthTokens::"         "$SETTINGS"
 lacks "settings.php: no token POST handlers" "create_token|revoke_token|delete_token" "$SETTINGS"
 has   "settings.php: links to new manager"  "wpcc-tokens"          "$SETTINGS"
 has   "settings.php: retains Security Mode"  "set_security_mode"    "$SETTINGS"
-# Legacy redirect compatibility (106.4 pattern).
-has   "menu: redirect_legacy_tokens"        "function redirect_legacy_tokens" "$MENU"
-has   "menu: admin_init hook for redirect"  "'redirect_legacy_tokens'" "$MENU"
-has   "menu: redirects to wpcc-tokens"      "page=wpcc-tokens"     "$MENU"
+# Legacy redirect compatibility (Experience Layer consolidated handler).
+has   "menu: consolidated redirect handler" "function redirect_legacy_slugs" "$MENU"
+has   "menu: admin_init hook for redirect"  "'redirect_legacy_slugs'" "$MENU"
+has   "menu: settings token section -> Access/Tokens" "redirect_to\( 'wpcc-access', 'tokens' \)" "$MENU"
 
 echo
 echo "== 5c. STEP 107.5 — accessibility sweep =="
@@ -230,7 +235,7 @@ echo "== 5e. STEP 107.5 — i18n completeness (no raw user-facing JS strings) ==
 RAW="$(grep -nE "'(>| )[A-Z][a-z]{3,}" "$VIEW" | grep -vE "i18n\.|escHtml|className|getElementById|querySelector|createElement|addEventListener|wpcc-|encodeURIComponent|Content-Type|X-WP-Nonce|JSON|Object|Array|Promise|wp-command-center|'POST'|'DELETE'|'GET'" || true)"
 if [ -z "$RAW" ]; then pass "no raw user-facing strings in view JS"; else fail "raw user-facing strings found: $RAW"; fi
 has "FeatureGate key (REST gate, via C1 map)" "'tokens'\s*=> 'token_capability_manager'" "$RESTAPI"
-has "FeatureGate key (menu gate)"     "FeatureGate::allows\( 'token_capability_manager' \)" "$MENU"
+has "FeatureGate key (menu gate)"     "FeatureGate::allows" "$SHELL"
 
 echo
 echo "== 6. Functional (wp-cli, real bootstrap path) =="
@@ -510,27 +515,29 @@ assert_eq "gated off: FeatureGate::allows false"  "0" "$(getf gate_allows_off)"
 assert_eq "filter removed: manager permitted again" "1" "$(getf restored)"
 
 echo
-echo "== 6f. Functional — legacy redirect (settings token section -> manager) =="
-# Positive: ?page=wpcc-settings&section=tokens 302s to wpcc-tokens (captured via
-# the wp_redirect filter before exit). Negative: no token section -> no redirect.
+echo "== 6f. Functional — legacy redirect (settings token section -> Access › Tokens) =="
+# Experience Layer: the consolidated redirect_legacy_slugs() maps the old Settings
+# token deep-link to Access › Tokens, and plain Settings to Access › Security.
+# Token deep-link -> Access section + wpcc_tab=tokens.
 POS="$(wpe '
 	if ( ! defined( "WP_ADMIN" ) ) { define( "WP_ADMIN", true ); }
 	$admin = get_users( ["role"=>"administrator","number"=>1] ); wp_set_current_user( $admin[0]->ID );
 	add_filter( "wp_redirect", function( $loc ) { echo "REDIRECT:" . $loc; return false; }, 1 );
 	$_GET = [ "page" => "wpcc-settings", "section" => "tokens" ];
-	( new \WPCommandCenter\Admin\AdminMenu() )->redirect_legacy_tokens();
+	( new \WPCommandCenter\Admin\AdminMenu() )->redirect_legacy_slugs();
 	echo "NO_REDIRECT";
 ')"
+# Plain Settings -> Access › Security (still redirected, but NOT to the tokens tab).
 NEG="$(wpe '
 	if ( ! defined( "WP_ADMIN" ) ) { define( "WP_ADMIN", true ); }
 	$admin = get_users( ["role"=>"administrator","number"=>1] ); wp_set_current_user( $admin[0]->ID );
 	add_filter( "wp_redirect", function( $loc ) { echo "REDIRECT:" . $loc; return false; }, 1 );
 	$_GET = [ "page" => "wpcc-settings" ];
-	( new \WPCommandCenter\Admin\AdminMenu() )->redirect_legacy_tokens();
+	( new \WPCommandCenter\Admin\AdminMenu() )->redirect_legacy_slugs();
 	echo "NO_REDIRECT";
 ')"
-case "$POS" in *"REDIRECT:"*"page=wpcc-tokens"*) pass "legacy token deep-link redirects to wpcc-tokens";; *) fail "legacy redirect (positive) got: $POS";; esac
-case "$NEG" in *"NO_REDIRECT"*) pass "plain Settings page does NOT redirect";; *) fail "legacy redirect (negative) got: $NEG";; esac
+case "$POS" in *"REDIRECT:"*"page=wpcc-access"*"wpcc_tab=tokens"*) pass "legacy token deep-link redirects to Access › Tokens";; *) fail "legacy redirect (positive) got: $POS";; esac
+case "$NEG" in *"REDIRECT:"*"wpcc_tab=security"*) pass "plain Settings redirects to Access › Security (not tokens)";; *) fail "legacy redirect (negative) got: $NEG";; esac
 
 echo
 echo "== 7. Invariants unchanged (no op_map / capability change) =="

@@ -26,6 +26,7 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Seo/SeoAuditQuery.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
+SHELL="$PLUGIN_DIR/includes/Admin/AppShell.php"
 VIEW="$PLUGIN_DIR/includes/Admin/views/seo-meta.php"
 
 echo "STEP 111 — GA#2 Slice 1: read-only SEO audit"
@@ -58,12 +59,14 @@ SEO_HANDLER="$(awk '/function seo_audit/{f=1} f{print} f&&/^\t}/{exit}' "$RESTAP
 if printf '%s' "$SEO_HANDLER" | grep -qE "OperationExecutor|->run\(|->generate\(|->apply\("; then fail "seo_audit handler never executes"; else pass "seo_audit handler never executes (no engine dispatch)"; fi
 
 echo
-echo "== 3. Menu: build-flag OFF by default + FeatureGate =="
-has  "build-flag helper present"           "function seo_meta_ui_enabled" "$MENU"
-has  "build flag defaults OFF (filter false)" "apply_filters( 'wpcc_seo_meta_ui', false )" "$MENU"
-has  "menu FeatureGate-gated"              "FeatureGate::allows( 'seo_meta_generator' )" "$MENU"
-has  "menu slug wpcc-seo"                  "'wpcc-seo'"          "$MENU"
-has  "render method present"               "function render_seo_meta" "$MENU"
+echo "== 3. App Shell: SEO Meta is a build-flagged Operate tab + FeatureGate =="
+# Experience Layer: the build-flagged SEO surface became the Operate › SEO Meta tab,
+# added to the shell only when the build flag is on AND the FeatureGate allows.
+has  "build flag honored (constant + filter)"  "WPCC_SEO_META_UI"   "$SHELL"
+has  "build flag name referenced"          "wpcc_seo_meta_ui"   "$SHELL"
+has  "tab gated by seo_meta_generator FeatureGate" "FeatureGate::allows( 'seo_meta_generator' )" "$SHELL"
+has  "SEO tab renders seo-meta view"       "'view' => 'seo-meta'" "$SHELL"
+has  "legacy seo slug redirects (map)"     "'wpcc-seo'" "$SHELL"
 
 echo
 echo "== 4. View: escaped, paginated; generation = drafts only (Slice 2b) =="
@@ -197,15 +200,17 @@ else
 	fi
 
 	echo
-	echo "== 5b. Menu gating (functional) =="
-	MENU_OFF="$(wpe '$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1); global $submenu; $submenu=[]; remove_all_filters("wpcc_seo_meta_ui"); (new WPCommandCenter\Admin\AdminMenu())->register_menu(); $f=isset($submenu["wp-command-center"])?array_filter($submenu["wp-command-center"],fn($s)=>$s[2]==="wpcc-seo"):[]; echo empty($f)?"hidden":"shown";')"
-	assert_eq "submenu hidden by default" "hidden" "$MENU_OFF"
+	echo "== 5b. Tab gating (functional, via AppShell::sections) =="
+	# Experience Layer: SEO Meta is the Operate › SEO Meta tab; it appears in the
+	# shell only when the build flag is on AND the FeatureGate allows.
+	TAB_OFF="$(wpe 'remove_all_filters("wpcc_seo_meta_ui"); $s=\WPCommandCenter\Admin\AppShell::sections(); echo isset($s["wpcc-operate"]["tabs"]["seo"])?"shown":"hidden";')"
+	assert_eq "tab hidden by default" "hidden" "$TAB_OFF"
 
-	MENU_ON="$(wpe '$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1); global $submenu; $submenu=[]; add_filter("wpcc_seo_meta_ui","__return_true"); (new WPCommandCenter\Admin\AdminMenu())->register_menu(); $f=isset($submenu["wp-command-center"])?array_filter($submenu["wp-command-center"],fn($s)=>$s[2]==="wpcc-seo"):[]; remove_all_filters("wpcc_seo_meta_ui"); echo empty($f)?"hidden":"shown";')"
-	assert_eq "submenu shown when build flag on + FeatureGate allows" "shown" "$MENU_ON"
+	TAB_ON="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-operate"]["tabs"]["seo"])?"shown":"hidden";')"
+	assert_eq "tab shown when build flag on + FeatureGate allows" "shown" "$TAB_ON"
 
-	MENU_DENY="$(wpe '$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1); global $submenu; $submenu=[]; add_filter("wpcc_seo_meta_ui","__return_true"); $d=function($allow,$f){ return $f==="seo_meta_generator"?false:$allow; }; add_filter("wpcc_feature_allowed",$d,10,2); (new WPCommandCenter\Admin\AdminMenu())->register_menu(); $f=isset($submenu["wp-command-center"])?array_filter($submenu["wp-command-center"],fn($s)=>$s[2]==="wpcc-seo"):[]; remove_filter("wpcc_feature_allowed",$d,10); remove_all_filters("wpcc_seo_meta_ui"); echo empty($f)?"hidden":"shown";')"
-	assert_eq "submenu hidden when FeatureGate denies" "hidden" "$MENU_DENY"
+	TAB_DENY="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $d=function($allow,$f){ return $f==="seo_meta_generator"?false:$allow; }; add_filter("wpcc_feature_allowed",$d,10,2); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_filter("wpcc_feature_allowed",$d,10); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-operate"]["tabs"]["seo"])?"shown":"hidden";')"
+	assert_eq "tab hidden when FeatureGate denies" "hidden" "$TAB_DENY"
 fi
 
 echo

@@ -40,6 +40,7 @@ RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Admin/ApprovalAdminQuery.php"
 VIEW="$PLUGIN_DIR/includes/Admin/views/approval-center.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
+SHELL="$PLUGIN_DIR/includes/Admin/AppShell.php"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -157,21 +158,23 @@ has "modal init wired"                   "initModal\(\)"              "$VIEW"
 has "retry init wired"                   "initRetry\(\)"              "$VIEW"
 
 echo
-echo "== 7. Menu renders the Approval Center view =="
-has "approvals page renders approval-center" "render_view\( 'approval-center'" "$MENU"
+echo "== 7. App Shell hosts the Approval Center as Operate › Approvals =="
+# Experience Layer: the standalone submenu became the Operate › Approvals tab; the
+# 5-C App Shell routes the existing approval-center view via ?wpcc_tab=approvals.
+has "Approvals tab renders approval-center view" "'view' => 'approval-center'" "$SHELL"
+has "Approvals tab gated by approval_center feature" "'feature' => 'approval_center'" "$SHELL"
 
 echo
-echo "== 7b. STEP 106.4: rename + redirect + FeatureGate + a11y + i18n =="
+echo "== 7b. STEP 106.4 + Experience Layer: IA placement + redirect + FeatureGate + a11y + i18n =="
 CH="$PLUGIN_DIR/includes/Admin/views/change-history.php"
-# Menu rename + new slug + FeatureGate gate + legacy redirect
-has "menu uses new slug wpcc-approval-center" "'wpcc-approval-center'"   "$MENU"
-has "menu label is Approval Center"          "'Approval Center'"        "$MENU"
-has "menu gated by FeatureGate approval_center" "FeatureGate::allows\( 'approval_center'" "$MENU"
-has "render_approval_center callback"        "function render_approval_center" "$MENU"
-has "legacy redirect handler registered"     "redirect_legacy_approvals" "$MENU"
-has "legacy redirect targets new slug"       "'page' => 'wpcc-approval-center'" "$MENU"
-has "badge href uses new slug"               "page=wpcc-approval-center" "$MENU"
-lacks "old Pending Approvals submenu removed" "'Pending Approvals' \), self::CAPABILITY, 'wpcc-approvals'" "$MENU"
+# Approvals lives under the Operate section; the legacy slug redirects in (deep-link preserved).
+has "Operate section registered"             "'wpcc-operate'"           "$MENU"
+has "Approvals tab labeled in shell"         "'Approvals'"              "$SHELL"
+has "FeatureGate gates the Approvals tab"    "FeatureGate::allows"      "$SHELL"
+has "legacy approval-center slug redirects (map)" "'wpcc-approval-center'    => \[ 'wpcc-operate', 'approvals' \]" "$SHELL"
+has "consolidated legacy redirect handler"   "function redirect_legacy_slugs" "$MENU"
+has "badge href -> Operate/Approvals"        "page=wpcc-operate&wpcc_tab=approvals" "$MENU"
+lacks "no standalone approval-center submenu" "add_submenu_page.*wpcc-approval-center" "$MENU"
 # Obsolete view removed
 [ ! -f "$PLUGIN_DIR/includes/Admin/views/approvals.php" ] && pass "obsolete approvals.php removed" || fail "approvals.php still present"
 # View uses new slug + a11y + i18n
