@@ -170,6 +170,25 @@ final class AdminMenu {
 		if ( $this->seo_meta_ui_enabled() && FeatureGate::allows( 'seo_meta_generator' ) ) {
 			add_submenu_page( 'wp-command-center', __( 'SEO Meta', 'wp-command-center' ), __( 'SEO Meta', 'wp-command-center' ), self::CAPABILITY, 'wpcc-seo', [ $this, 'render_seo_meta' ] );
 		}
+
+		// AI Content (Title & Excerpt) Builder. Same governed pipeline as SEO (drafts →
+		// review/edit → apply → undo); gated by a build flag that defaults OFF AND the
+		// per-kind Free/Pro FeatureGate seam ('title_generator' / 'excerpt_generator').
+		if ( $this->ai_content_ui_enabled() && ( FeatureGate::allows( 'title_generator' ) || FeatureGate::allows( 'excerpt_generator' ) ) ) {
+			add_submenu_page( 'wp-command-center', __( 'AI Content', 'wp-command-center' ), __( 'AI Content', 'wp-command-center' ), self::CAPABILITY, 'wpcc-ai-content', [ $this, 'render_ai_content' ] );
+		}
+	}
+
+	/**
+	 * Build switch for the AI Content (Title/Excerpt) Builder. Defaults OFF (built
+	 * incrementally; must not surface a partial workflow). Enable on a dev site via the
+	 * WPCC_AI_CONTENT_UI constant or the `wpcc_ai_content_ui` filter.
+	 */
+	private function ai_content_ui_enabled(): bool {
+		if ( defined( 'WPCC_AI_CONTENT_UI' ) && WPCC_AI_CONTENT_UI ) {
+			return true;
+		}
+		return (bool) apply_filters( 'wpcc_ai_content_ui', false );
 	}
 
 	/**
@@ -296,6 +315,10 @@ final class AdminMenu {
 
 	public function render_seo_meta(): void {
 		$this->render_view( 'seo-meta' );
+	}
+
+	public function render_ai_content(): void {
+		$this->render_view( 'ai-content' );
 	}
 
 	public function render_approval_center(): void {

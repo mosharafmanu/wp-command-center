@@ -39,6 +39,11 @@ final class Plugin {
 			( new AdminMenu() )->init();
 			( new Assets() )->init();
 			( new \WPCommandCenter\Admin\SeoRowActions() )->init();
+			( new \WPCommandCenter\Admin\ContentRowActions() )->init();
+			( new \WPCommandCenter\Admin\MediaRowActions() )->init();
+			// One generalized Governed Action Panel, shared by every AI content
+			// workflow (SEO / Title / Excerpt / Alt Text), enqueued centrally.
+			( new \WPCommandCenter\Admin\ActionPanelAssets() )->init();
 		}
 	}
 
