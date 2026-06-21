@@ -223,6 +223,9 @@ class SeoRowActions {
 			'nonce'      => wp_create_nonce( 'wp_rest' ),
 			// Where "Open Suggestions" / "Review in WPCC" navigate (the governed Builder).
 			'suggestUrl' => esc_url_raw( admin_url( 'admin.php?page=' . self::MENU . '&tab=suggestions' ) ),
+			// Security mode drives the Apply label + approval-required pre-signal. The
+			// OUTCOME is still read from the apply API response, never assumed here.
+			'mode'       => \WPCommandCenter\Operations\SecurityModeManager::current(),
 			'i18n'       => [
 				'title'        => __( 'Generate SEO Suggestion', 'wp-command-center' ),
 				'generating'   => __( 'Generating suggestion…', 'wp-command-center' ),
@@ -242,6 +245,23 @@ class SeoRowActions {
 				'unsupportedStatus'  => __( 'This content status cannot receive SEO suggestions (e.g. trashed or auto-draft).', 'wp-command-center' ),
 				'failed'       => __( 'Could not generate a suggestion. Please try again.', 'wp-command-center' ),
 				'error'        => __( 'Something went wrong. Please try again.', 'wp-command-center' ),
+				// Initiative 2 (Option B) — in-context governed Apply / Undo.
+				'applyDev'     => __( 'Approve & Apply', 'wp-command-center' ),
+				'applyGate'    => __( 'Submit for approval', 'wp-command-center' ),
+				'applying'     => __( 'Applying…', 'wp-command-center' ),
+				'approvalRequired' => __( 'Approval required — this will be sent for approval, not applied immediately.', 'wp-command-center' ),
+				'appliedTitle' => __( 'Applied successfully', 'wp-command-center' ),
+				'submittedTitle' => __( 'Submitted for approval', 'wp-command-center' ),
+				'appliedNote'  => __( 'The SEO meta was updated. This change is reversible and recorded in the audit log.', 'wp-command-center' ),
+				'submittedNote' => __( 'Submitted for approval and recorded in the audit log. Nothing has been applied yet.', 'wp-command-center' ),
+				'chipReversible' => __( 'Reversible', 'wp-command-center' ),
+				'chipAudited'  => __( 'Audited', 'wp-command-center' ),
+				'undo'         => __( 'Undo', 'wp-command-center' ),
+				'undoing'      => __( 'Undoing…', 'wp-command-center' ),
+				'reverted'     => __( 'Reverted', 'wp-command-center' ),
+				'undoSent'     => __( 'Undo sent for approval', 'wp-command-center' ),
+				'cantApply'    => __( 'Couldn’t apply. Please try again.', 'wp-command-center' ),
+				'cantUndo'     => __( 'Couldn’t undo. Please try again.', 'wp-command-center' ),
 			],
 		] );
 	}

@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 #
-# Contextual SEO Quick Panel (Option B) — in-context AJAX modal.
+# Contextual SEO Quick Panel (Option B → Initiative 2 Option B) — in-context governed
+# action surface.
 #
 # Asserts the Quick Panel is a PROGRESSIVE ENHANCEMENT of the deployed row action:
 # the <a> keeps its admin-post redirect (no-JS fallback) and gains the enhancement
-# hooks (class + data-*). The modal asset reuses ONLY the EXISTING REST routes
-# (POST /admin/seo/generate + GET /admin/proposals/{id}), is DRAFTS ONLY, and never
-# applies / writes meta / rolls back. Enqueue is scoped to edit.php + supported type
-# + the same cap/FeatureGate/build-flag gate as the row action. Adds NO route /
-# operation / capability / MCP tool / schema. Invariants must hold 34/23/40/40/2.5.0.
+# hooks (class + data-*). The modal now carries one item through its FULL governed
+# lifecycle (Generate → Review → Edit → Apply → Undo) using ONLY the EXISTING routes:
+#   POST /admin/seo/generate · GET /admin/proposals/{id} · PUT /admin/proposals/{id}
+#   · POST /admin/proposals/{id}/apply · POST /admin/history/{change_id}/rollback.
+# Apply PERSISTS the visible edited values (PUT final_payload) BEFORE applying
+# (persist-before-apply), is MODE-AWARE (developer applies; client/enterprise submit
+# for approval), and shows reversibility (Undo) only on a real applied + change_id.
+# There is NO second execution path and NO second rollback path. The PHP side adds NO
+# route / operation / capability / MCP tool / schema. Invariants hold 34/23/40/40/2.5.0.
 #
 # Requires: wp-cli for the functional/invariant section; static checks run regardless.
 
@@ -62,6 +67,11 @@ has  "enqueues the CSS asset"                  "assets/css/seo-quick-panel.css" 
 has  "localizes REST base"                     "rest_url( 'wp-command-center/v1' )" "$SRC"
 has  "localizes a wp_rest nonce"               "wp_create_nonce( 'wp_rest' )" "$SRC"
 has  "localizes unsupportedStatus i18n"        "'unsupportedStatus'"          "$SRC"
+has  "localizes security mode for Apply label" "SecurityModeManager::current()" "$SRC"
+has  "localizes Approve & Apply label"         "'applyDev'"                   "$SRC"
+has  "localizes Submit for approval label"     "'applyGate'"                  "$SRC"
+has  "localizes approval-required pre-signal"  "'approvalRequired'"           "$SRC"
+has  "localizes Undo label"                    "'undo'"                       "$SRC"
 # Status allow-list shared with the row action: the panel trigger (the quickgen
 # anchor) renders for editable statuses, so the modal opens for draft/pending/etc.
 has  "row action gates on shared status allow-list" "SeoMetaGenerator::is_supported_status" "$SRC"
@@ -77,18 +87,37 @@ lacks "no rollback call"                       "->rollback("                  "$
 lacks "no new REST route"                       "register_rest_route"         "$SRC"
 
 echo
-echo "== 4. Drafts only — JS reuses existing routes, never applies =="
+echo "== 4. Governed action — JS reuses ONLY the existing routes =="
 has  "JS POSTs to existing generate route"     "/admin/seo/generate"          "$JS"
 has  "JS GETs existing proposal route"          "/admin/proposals/"           "$JS"
+has  "JS PUTs final_payload (persist edit)"     "api( 'PUT', '/admin/proposals/" "$JS"
+has  "JS POSTs existing apply route"            "/apply"                       "$JS"
+has  "JS POSTs existing rollback route"         "/history/"                    "$JS"
 has  "JS sends the wp_rest nonce header"        "X-WP-Nonce"                   "$JS"
 has  "JS final_payload-first read"              "final_payload"               "$JS"
-has  "JS actions only navigate (suggestUrl)"    "suggestUrl"                   "$JS"
+has  "JS keeps Open in Suggestions nav"         "suggestUrl"                   "$JS"
 has  "JS handles unsupported_status skip"       "unsupported_status"           "$JS"
 lacks "JS no stale not_published reason"        "not_published"                "$JS"
-lacks "JS never calls apply route"              "/apply"                       "$JS"
 lacks "JS never calls dismiss route"            "/dismiss"                     "$JS"
-lacks "JS never calls history rollback"         "/history/"                    "$JS"
 lacks "JS no admin-ajax usage"                  "admin-ajax"                   "$JS"
+
+echo
+echo "== 4b. Apply is mode-aware, persist-before-apply, single governed path (JS) =="
+# persist-before-apply: PUT final_payload happens, then /apply — never apply stale data.
+has  "persist-before-apply (PUT then apply)"    "do NOT apply stale data"      "$JS"
+has  "mode-aware Apply label"                   "IS_DEV ? t( 'applyDev' )"     "$JS"
+has  "reads security mode from CFG"             "CFG.mode"                     "$JS"
+has  "approval-required pre-signal (gated)"     "approvalRequired"             "$JS"
+has  "outcome read from response status"        "=== 'applied'"               "$JS"
+has  "gated outcome = pending_approval"         "pending_approval"             "$JS"
+has  "Undo only with a change_id"               "applied && !! changeId"       "$JS"
+has  "Undo reuses change_history rollback"      "/rollback"                    "$JS"
+# Single execution + single rollback path: the modal must NOT bypass the engine.
+lacks "JS no direct seo_manage execution"       "seo_manage"                   "$JS"
+lacks "JS no OperationExecutor reference"       "OperationExecutor"            "$JS"
+lacks "JS no direct SEO provider write"         "SeoProvider"                  "$JS"
+assert_eq "exactly one rollback route in JS"    "1" "$(grep -c "/history/' + encodeURIComponent" "$JS")"
+assert_eq "exactly one apply route in JS"       "1" "$(grep -c "/apply', null" "$JS")"
 
 echo
 echo "== 5. Accessibility hooks present (JS) =="
