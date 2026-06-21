@@ -1011,52 +1011,64 @@ Read docs/product/SESSION-HANDOFF-2026-06-18.md in full, especially the
 "CONSOLIDATED PRODUCTION STATE" and "NEXT SESSION START HERE" sections.
 
 Authoritative state to confirm before any work:
-- Production baseline = 5db577a (git describe v0.109.0-31-g5db577a);
-  origin/main == local == prod; tree clean. (Quick-Panel-First Safe SEO v1 core:
-  Trust Polish d934859 + Quick Panel Apply/Undo Option B 5db577a, on top of the
-  earlier Quick Panel preview 343d720 and draft-status support c87ce08.)
+- Production feature baseline = fc70b2d (git describe v0.109.0-35-gfc70b2d);
+  git HEAD = 5933b84 (a docs-stamp past the feature baseline). origin/main ==
+  local == prod == 5933b84; tree clean. (AI Content Platform 39a678f -> 21ebb45
+  -> dcc9dd1 -> fc70b2d, fast-forward merged on top of Quick-Panel-First Safe SEO
+  v1 5db577a; lineage c87ce08 -> 343d720 -> 5db577a -> fc70b2d.)
 - Invariants FROZEN: OPERATION_MAP 34 · capabilities 23 · catalogue 40 ·
   MCP tools 40 · DB_VERSION 2.5.0 (14 wp_wpcc_* tables, no migration).
 - Deploy = Hostinger pull-cron: `git push origin main` -> live ~1 min.
   SSH: ssh -p 65002 u916998506@72.62.68.183 ;
   prod path ~/domains/mosharafmanu.com/public_html/wp-content/plugins/wp-command-center ;
   prod REST namespace = wp-command-center/v1 ; runbook .ai/DEPLOY.md.
-- SEO Meta Builder + Sprint A row actions + Sprint B bulk actions + the
-  Contextual SEO Quick Panel (now a COMPLETE GOVERNED ACTION: Generate -> Review
-  -> Edit -> Apply -> Undo, mode-aware) + editable-status support
-  (publish/draft/pending/future/private; disallowed -> unsupported_status) are
-  DEPLOYED but build-flag OFF on prod (WPCC_SEO_META_UI undefined) -> DORMANT, no
-  customer-facing exposure. Prod has NO AI key and security_mode=developer;
-  provider=Rank Math. SEO Meta Generator is UX feature-complete + governed
-  in-context. Quick-Panel-First Safe SEO v1 core = deployed but dormant.
-- Local dev enables the Builder via wp-content/mu-plugins/wpcc-dev-seo-meta-ui.php
-  (outside the repo). Tests: tests/run.sh --tier T0|T1 --changed ; gate net-new 0
-  vs tests/regression-baseline.tsv ; full serial T2 before deploy.
+- AI Content Platform DEPLOYED but DORMANT: four governed AI content workflows
+  (SEO, Alt Text, Title, Excerpt) on ONE config-driven Governed Action Panel
+  (assets/js/wpcc-action-panel.js + wpcc-admin-runtime.js + wpcc-tokens.css;
+  Generate -> Review -> Edit -> Apply -> Undo, mode-aware, persist-before-apply,
+  mobile bottom-sheet, a11y) + the AI Content Builder (views/ai-content.php,
+  menu wpcc-ai-content). Title/Excerpt generation rides the EXISTING
+  POST /admin/proposals generate branch ({generate:{kind,post_id}}, Option 1, no
+  new route); SEO uses /admin/seo/generate, Alt uses /admin/alt-text/generate.
+  Contextual entry: ContentRowActions (Title/Excerpt on Posts/Pages/Products),
+  MediaRowActions (Alt Text on the Media Library), SeoRowActions (SEO). All gated
+  by build flags WPCC_SEO_META_UI / WPCC_AI_CONTENT_UI / WPCC_ALT_TEXT_UI (all
+  UNDEFINED on prod -> hidden) + per-surface FeatureGate. Prod has NO AI key and
+  security_mode=developer; provider=Rank Math. One execution path
+  (ProposalApplyService), one rollback path (/admin/history/{id}/rollback).
+- Local dev enables Builders via wp-content/mu-plugins/wpcc-dev-*.php (outside the
+  repo): wpcc-dev-seo-meta-ui.php + wpcc-dev-alt-text-ui.php exist; AI Content
+  (wpcc_ai_content_ui filter) has NO dev enabler -> add one to surface
+  Title/Excerpt. Tests: tests/run.sh --tier T0|T1 --changed ; gate net-new 0 vs
+  tests/regression-baseline.tsv ; full serial T2 before deploy. New suites:
+  test-ai-content, test-ai-content-builder, test-contextual-entry,
+  test-seo-quick-panel (rewritten for the generalized panel).
 - Visual checks: Playwright + Chrome are available; authenticate by minting an
   auth+logged_in cookie for the admin via wp eval (no password). Local site:
   http://localhost/ClientProjects/WordPress/2026/plugins-dev .
 
-NEXT STEP (no new feature without direction): Quick-Panel-First Safe SEO v1 core
-is DEPLOYED but DORMANT (Trust Polish + Quick Panel Apply/Undo). Per Roadmap v3
-(in this doc, priorities unchanged) the next major initiative is CONTROLLED
-PRODUCTION ENABLEMENT (Execution Plan Step 5) — a PRODUCT/CONFIG call, not
-engineering:
-  1. Production Enablement — set WPCC_ANTHROPIC_API_KEY on prod + flip
-     WPCC_SEO_META_UI (controlled, scoped) to surface the already-deployed
-     (dormant) SEO Builder + row/bulk/Quick Panel (Apply/Undo) entry points.
-     The flag is the kill switch.
+NEXT STEP (no new feature without direction): both Quick-Panel-First Safe SEO v1
+(5db577a) AND the AI Content Platform (fc70b2d) are DEPLOYED but DORMANT. Per
+Roadmap v3 (in this doc, priorities unchanged) the next major initiative is
+CONTROLLED PRODUCTION ENABLEMENT (Execution Plan Step 5) — a PRODUCT/CONFIG call,
+not engineering:
+  1. Production Enablement — set WPCC_ANTHROPIC_API_KEY on prod + flip the build
+     flag(s) (WPCC_SEO_META_UI / WPCC_AI_CONTENT_UI / WPCC_ALT_TEXT_UI, controlled,
+     scoped) to surface the already-deployed (dormant) Builders + row/bulk/Quick
+     Panel entry points across SEO/Title/Excerpt/Alt. The flags are the kill switch.
   2. Real-world Validation — prod provider (Rank Math) + real key: generate ->
      approve/apply -> undo round-trips; choose security-mode posture.
 A report-only Controlled Production Enablement plan is ready on request.
-Remaining v1 polish (NOT started): Quick Panel chip polish, mobile bottom-sheet,
-Client Activity Report. Roadmap v3 order after enable: onboarding -> thin premium
-Experience Layer -> agency white-label report -> enable Alt Text -> WooCommerce
-workflow -> Free/Pro seam. EXPLICIT HOLD: do NOT enable the SEO UI or set the AI
-key, and do NOT start remaining v1 polish, WooCommerce workflow, Experience Layer
-implementation, Design System work, Alt Text expansion, or Initiative 3 without
-direction. Preserve the Four Guarantees and frozen invariants 34/23/40/40/2.5.0;
-no new route/admin-ajax/operation/capability/MCP tool/schema without a reviewed
-decision.
+Non-blocking follow-ups (NOT started): a11y polish (move focus into the dialog on
+open), Quick Panel chip polish, Client Activity Report; legacy ai-alt-text.php tab
+page not yet re-skinned onto the tokens/runtime (works as-is). Roadmap v3 order
+after enable: onboarding -> thin premium Experience Layer -> agency white-label
+report -> WooCommerce workflow -> Free/Pro seam. EXPLICIT HOLD: do NOT enable any
+UI or set the AI key, and do NOT start the non-blocking follow-ups, WooCommerce
+workflow, Experience Layer implementation, Design System work, or Initiative 3
+without direction. Preserve the Four Guarantees and frozen invariants
+34/23/40/40/2.5.0; no new route/admin-ajax/operation/capability/MCP tool/schema
+without a reviewed decision.
 
 Work report-first: architecture verification -> implementation -> tests
 (focused + T0/T1 --changed net-new 0) -> Playwright visual -> commit on approval
