@@ -1,0 +1,107 @@
+/**
+ * WP Command Center — thin design tokens.
+ *
+ * The minimal, reusable token foundation for the AI Content Platform surfaces.
+ * NOT the full Command Design System (CDS #20) — only the primitives → semantic →
+ * component variables that real consumers (the Governed Action Panel, and the AI
+ * Content Builder surfaces) actually need today. Extracted from the proven
+ * seo-quick-panel.css so the panel can be re-skinned without forking.
+ *
+ * Three tiers:
+ *   1. Primitives  — raw WP-admin-native palette + scales (never themed per-plugin).
+ *   2. Semantic    — intent aliases the UI references (surface/text/border/state/risk).
+ *   3. Component   — panel-scoped aliases bound to the semantic layer.
+ *
+ * Color carries MEANING (state, risk, actor), never decoration. One per-product
+ * override point is reserved: --wpcc-brand-accent.
+ */
+
+:root {
+	/* ── Tier 1 — Primitives (WP-admin-native palette) ───────────────────────── */
+	--wpcc-white: #fff;
+	--wpcc-gray-0: #f6f7f7;
+	--wpcc-gray-50: #f0f0f1;
+	--wpcc-gray-100: #dcdcde;
+	--wpcc-gray-300: #c3c4c7;
+	--wpcc-gray-500: #8c8f94;
+	--wpcc-gray-600: #646970;
+	--wpcc-gray-700: #50575e;
+	--wpcc-gray-900: #1d2327;
+	--wpcc-blue-600: #2271b1;
+	--wpcc-blue-soft: #f0f6fc;
+	--wpcc-blue-border: #c5d9ed;
+	--wpcc-green-600: #00a32a;
+	--wpcc-green-700: #0a7c2f;
+	--wpcc-green-soft: #edfaef;
+	--wpcc-amber-600: #dba617;
+	--wpcc-amber-700: #996800;
+	--wpcc-amber-soft: #fcf3e6;
+	--wpcc-red-600: #d63638;
+	--wpcc-red-soft: #fcf0f1;
+
+	/* Spacing — 4pt base. */
+	--wpcc-space-1: 2px;
+	--wpcc-space-2: 4px;
+	--wpcc-space-3: 8px;
+	--wpcc-space-4: 10px;
+	--wpcc-space-5: 12px;
+	--wpcc-space-6: 16px;
+	--wpcc-space-7: 20px;
+	--wpcc-space-8: 24px;
+
+	/* Radius. */
+	--wpcc-radius-sm: 4px;
+	--wpcc-radius-md: 6px;
+	--wpcc-radius-pill: 10px;
+
+	/* Type scale (operator-dense). */
+	--wpcc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--wpcc-font-mono: Menlo, Consolas, Monaco, monospace;
+	--wpcc-fs-caption: 11px;
+	--wpcc-fs-small: 12px;
+	--wpcc-fs-body: 13px;
+	--wpcc-fs-h2: 14px;
+	--wpcc-fs-h1: 16px;
+	--wpcc-fs-x: 24px;
+
+	/* Elevation + motion + layering. */
+	--wpcc-shadow-modal: 0 8px 30px rgba( 0, 0, 0, 0.25 );
+	--wpcc-overlay-scrim: rgba( 0, 0, 0, 0.5 );
+	--wpcc-motion-fast: 120ms;
+	--wpcc-motion-panel: 160ms;
+	--wpcc-z-modal: 100000;
+
+	/* ── Tier 2 — Semantic (what the UI references) ──────────────────────────── */
+	--wpcc-brand-accent: var( --wpcc-blue-600 ); /* the ONE per-product override */
+
+	--wpcc-surface-card: var( --wpcc-white );
+	--wpcc-surface-sunken: var( --wpcc-gray-0 );
+	--wpcc-surface-accent-soft: var( --wpcc-blue-soft );
+
+	--wpcc-text-primary: var( --wpcc-gray-900 );
+	--wpcc-text-secondary: var( --wpcc-gray-600 );
+	--wpcc-text-muted: var( --wpcc-gray-700 );
+	--wpcc-text-accent: var( --wpcc-blue-600 );
+
+	--wpcc-border-subtle: var( --wpcc-gray-100 );
+	--wpcc-border-strong: var( --wpcc-gray-500 );
+	--wpcc-border-accent: var( --wpcc-blue-border );
+	--wpcc-border-focus: var( --wpcc-blue-600 );
+
+	--wpcc-state-success-fg: var( --wpcc-green-700 );
+	--wpcc-state-success-bg: var( --wpcc-green-soft );
+	--wpcc-state-success-border: var( --wpcc-green-600 );
+	--wpcc-state-warning-fg: var( --wpcc-amber-700 );
+	--wpcc-state-warning-bg: var( --wpcc-amber-soft );
+	--wpcc-state-warning-border: var( --wpcc-amber-600 );
+	--wpcc-state-danger-fg: var( --wpcc-red-600 );
+	--wpcc-state-danger-bg: var( --wpcc-red-soft );
+
+	/* ── Tier 3 — Component (panel-scoped) ───────────────────────────────────── */
+	--wpcc-panel-bg: var( --wpcc-surface-card );
+	--wpcc-panel-radius: var( --wpcc-radius-md );
+	--wpcc-panel-shadow: var( --wpcc-shadow-modal );
+	--wpcc-panel-max-width: 720px;
+	--wpcc-chip-bg: var( --wpcc-gray-100 );
+	--wpcc-chip-fg: var( --wpcc-text-primary );
+}

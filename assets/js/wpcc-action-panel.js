@@ -1,67 +1,55 @@
 /**
- * Contextual SEO Quick Panel (Option B → Initiative 2 Option B) — in-context
- * governed action surface.
+ * WP Command Center — Governed Action Panel (generalized Quick Panel).
  *
- * Progressive enhancement of the "Generate SEO Suggestion" row action. The anchor
- * stays a working admin-post redirect (the no-JS fallback); when this asset loads it
- * intercepts the click, opens a modal, and carries one item through its FULL governed
- * lifecycle WITHOUT leaving the list — using ONLY the EXISTING governed routes:
+ * The proven SEO Quick Panel, generalized into ONE config-driven, in-context
+ * governed-action surface reusable by every AI content workflow (SEO, Title,
+ * Excerpt, Alt Text). It carries a single item through its FULL governed lifecycle
+ * WITHOUT leaving the list:
  *
- *   POST {restBase}/admin/seo/generate            { post_ids:[id] }      (propose)
- *   GET  {restBase}/admin/proposals/{id}                                 (review)
- *   PUT  {restBase}/admin/proposals/{id}          { final_payload:{…} }  (persist edit)
- *   POST {restBase}/admin/proposals/{id}/apply                           (governed apply)
- *   POST {restBase}/admin/history/{change_id}/rollback                   (governed undo)
+ *   Generate → Review → Edit → Apply → Undo
  *
- * Generate → Review → Edit → Apply → Undo. Every mutation flows through the SAME
- * governed chokepoint as the Builder (propose → approval → execute → audit; rollback
- * via change_history → seo_restore). There is NO second execution path and NO second
- * rollback path. Apply is mode-aware and the OUTCOME is read from the API
+ * It uses ONLY the EXISTING governed routes — there is NO second execution path and
+ * NO second rollback path:
+ *   <generate.path>                                   (propose → draft)
+ *   GET  {restBase}/admin/proposals/{id}              (review)
+ *   PUT  {restBase}/admin/proposals/{id}              (persist edit BEFORE apply)
+ *   POST {restBase}/admin/proposals/{id}/apply        (governed apply, mode-aware)
+ *   POST {restBase}/admin/history/{change_id}/rollback (governed undo)
+ *
+ * Apply persists the VISIBLE edited values first (persist-before-apply) so a stale
+ * AI suggestion can never be silently applied, and the OUTCOME is read from the API
  * response, never assumed from the button label:
  *   - developer  → immediate apply (status `applied`) + one-click Undo.
- *   - client/enterprise → gated (status `pending_approval`); the modal shows
- *     "approval required" BEFORE the click and "submitted" after — never "applied".
- * Edits are persisted via the EXISTING PUT route BEFORE apply (the Trust Polish
- * persist-before-apply pattern), so the visible field values are what get applied —
- * Apply can never silently apply a stale AI suggestion. Server-side permission on the
- * routes is authoritative; the client nonce/gate is convenience.
+ *   - client/enterprise → gated (status `pending_approval`); "approval required"
+ *     pre-signal before the click, "submitted" after — never "applied".
+ *
+ * Each workflow is a DATA-ONLY config under `window.wpccActionPanel.actions[key]`
+ * (no JS per workflow). A list-table anchor carries data-wpcc-action="<key>" +
+ * data-id; clicking it opens the panel for that workflow. Server-side permission on
+ * the routes is authoritative; the client nonce/gate is convenience only. Depends on
+ * window.WPCC (the shared admin runtime).
  */
 ( function () {
 	'use strict';
 
-	var CFG = window.wpccSeoQuickPanel || {};
-	var I18N = CFG.i18n || {};
-	var MODE = CFG.mode || 'developer';
+	var R = window.WPCC || null;
+	var ROOT = window.wpccActionPanel || {};
+	var ACTIONS = ROOT.actions || {};
+	var I18N = ROOT.i18n || {};
+	var MODE = ROOT.mode || 'developer';
 	var IS_DEV = ( MODE === 'developer' );
+
 	var lastFocus = null;
 	var overlay = null;
 	var modal = null;
-	// Per-open governed-action state (the id we propose for, the draft, the change).
-	var ST = { postId: 0, proposalId: '', changeId: '' };
+	// Per-open governed-action state: which workflow, its config, the ids in flight.
+	var ST = { key: '', cfg: null, postId: 0, proposalId: '', changeId: '' };
 
 	function t( key ) {
 		return ( I18N && I18N[ key ] ) || '';
 	}
-
-	/** sprintf-lite: replaces %1$s / %2$s positional tokens. */
-	function fmt( str, a, b ) {
-		return String( str )
-			.replace( '%1$s', a == null ? '' : a )
-			.replace( '%2$s', b == null ? '' : b );
-	}
-
-	function el( tag, attrs, text ) {
-		var node = document.createElement( tag );
-		if ( attrs ) {
-			Object.keys( attrs ).forEach( function ( k ) {
-				node.setAttribute( k, attrs[ k ] );
-			} );
-		}
-		if ( text != null ) {
-			node.textContent = text;
-		}
-		return node;
-	}
+	function el( tag, attrs, text ) { return R.el( tag, attrs, text ); }
+	function fmt( str, a, b ) { return R.fmt( str, a, b ); }
 
 	// ── Modal shell (a11y: role=dialog, aria-modal, labelled, focus trap) ──────
 
@@ -77,7 +65,7 @@
 		} );
 
 		var header = el( 'div', { class: 'wpcc-qp-header' } );
-		header.appendChild( el( 'h2', { id: 'wpcc-qp-title', class: 'wpcc-qp-h' }, t( 'title' ) ) );
+		header.appendChild( el( 'h2', { id: 'wpcc-qp-title', class: 'wpcc-qp-h' }, ST.cfg ? ST.cfg.title : t( 'title' ) ) );
 		var closeX = el( 'button', { type: 'button', class: 'wpcc-qp-x', 'aria-label': t( 'close' ) }, '×' );
 		closeX.addEventListener( 'click', closeModal );
 		header.appendChild( closeX );
@@ -117,35 +105,7 @@
 			return;
 		}
 		if ( e.key === 'Tab' ) {
-			trapTab( e );
-		}
-	}
-
-	function focusable() {
-		return Array.prototype.slice.call(
-			modal.querySelectorAll(
-				'a[href], button:not([disabled]), textarea, input, [tabindex]:not([tabindex="-1"])'
-			)
-		).filter( function ( n ) {
-			return n.offsetParent !== null || n === document.activeElement;
-		} );
-	}
-
-	function trapTab( e ) {
-		var items = focusable();
-		if ( ! items.length ) {
-			e.preventDefault();
-			modal.focus();
-			return;
-		}
-		var first = items[ 0 ];
-		var last = items[ items.length - 1 ];
-		if ( e.shiftKey && document.activeElement === first ) {
-			e.preventDefault();
-			last.focus();
-		} else if ( ! e.shiftKey && document.activeElement === last ) {
-			e.preventDefault();
-			first.focus();
+			R.a11y.trapTab( modal, e );
 		}
 	}
 
@@ -177,20 +137,19 @@
 		return wrap;
 	}
 
-	// Editable Suggested field (title = input, description = textarea). The visible
-	// value here is the source of truth at Apply time (persist-before-apply).
-	function editField( label, value, kind ) {
+	// Editable Suggested field. The visible value here is the source of truth at
+	// Apply time (persist-before-apply). data-key links the input to its field config.
+	function editField( fieldCfg, value ) {
 		var wrap = el( 'div', { class: 'wpcc-qp-field' } );
-		var id = 'wpcc-qp-' + kind;
-		wrap.appendChild( el( 'label', { class: 'wpcc-qp-label', for: id }, label ) );
+		var id = 'wpcc-qp-f-' + fieldCfg.key;
+		wrap.appendChild( el( 'label', { class: 'wpcc-qp-label', for: id }, fieldCfg.label ) );
 		var input;
-		if ( kind === 'ed' ) {
-			input = el( 'textarea', { id: id, class: 'wpcc-qp-input wpcc-qp-ed', rows: '3' } );
-			input.value = value || '';
+		if ( fieldCfg.type === 'textarea' ) {
+			input = el( 'textarea', { id: id, class: 'wpcc-qp-input wpcc-qp-ed', rows: '3', 'data-key': fieldCfg.key } );
 		} else {
-			input = el( 'input', { id: id, type: 'text', class: 'wpcc-qp-input wpcc-qp-et' } );
-			input.value = value || '';
+			input = el( 'input', { id: id, type: 'text', class: 'wpcc-qp-input wpcc-qp-et', 'data-key': fieldCfg.key } );
 		}
+		input.value = value || '';
 		wrap.appendChild( input );
 		return wrap;
 	}
@@ -203,14 +162,15 @@
 
 		var cur = el( 'div', { class: 'wpcc-qp-col' } );
 		cur.appendChild( el( 'h3', { class: 'wpcc-qp-coltitle' }, t( 'current' ) ) );
-		cur.appendChild( field( t( 'metaTitle' ), current.title ) );
-		cur.appendChild( field( t( 'metaDesc' ), current.description ) );
 
 		// Suggested column is EDITABLE — review then refine in context.
 		var sug = el( 'div', { class: 'wpcc-qp-col wpcc-qp-col--suggested' } );
 		sug.appendChild( el( 'h3', { class: 'wpcc-qp-coltitle' }, t( 'suggested' ) ) );
-		sug.appendChild( editField( t( 'metaTitle' ), suggested.title, 'et' ) );
-		sug.appendChild( editField( t( 'metaDesc' ), suggested.description, 'ed' ) );
+
+		ST.cfg.fields.forEach( function ( f ) {
+			cur.appendChild( field( f.label, current[ f.key ] ) );
+			sug.appendChild( editField( f, suggested[ f.key ] ) );
+		} );
 
 		cols.appendChild( cur );
 		cols.appendChild( sug );
@@ -221,8 +181,7 @@
 		}
 		// Trust note: this is a draft, nothing has been applied yet.
 		body.appendChild( el( 'p', { class: 'wpcc-qp-note' }, t( 'draftNote' ) ) );
-		// Approval-required pre-signal (gated modes only) — shown BEFORE the click so
-		// the user knows Apply submits for approval rather than applying immediately.
+		// Approval-required pre-signal (gated modes only) — shown BEFORE the click.
 		if ( ! IS_DEV ) {
 			body.appendChild( el( 'p', { class: 'wpcc-qp-approval', role: 'note' }, t( 'approvalRequired' ) ) );
 		}
@@ -238,7 +197,7 @@
 		if ( m ) { m.textContent = text || ''; }
 	}
 
-	// Footer for the review/edit state: Apply (mode-aware) + Open in Suggestions + Close.
+	// Footer for the review/edit state: Apply (mode-aware) + Open in Builder + Close.
 	function renderActionFooter() {
 		var footer = modal._footer;
 		footer.innerHTML = '';
@@ -247,15 +206,19 @@
 		apply.addEventListener( 'click', function () { applyAction( apply ); } );
 		footer.appendChild( apply );
 
-		if ( CFG.suggestUrl ) {
-			footer.appendChild( el( 'a', { href: CFG.suggestUrl, class: 'button wpcc-qp-open' }, t( 'openSuggest' ) ) );
-		}
+		appendOpen( footer, 'button' );
 		var close = el( 'button', { type: 'button', class: 'button wpcc-qp-close' }, t( 'close' ) );
 		close.addEventListener( 'click', closeModal );
 		footer.appendChild( close );
 
-		// Move focus into the dialog for keyboard users (the primary action).
 		( apply || modal ).focus();
+	}
+
+	function appendOpen( footer, variant ) {
+		var url = ST.cfg.suggestUrl || ROOT.suggestUrl || '';
+		if ( url ) {
+			footer.appendChild( el( 'a', { href: url, class: 'button wpcc-qp-open' }, t( 'openSuggest' ) ) );
+		}
 	}
 
 	function renderMessage( msg, allowOpen ) {
@@ -270,8 +233,9 @@
 	function renderNavFooter( showOpen ) {
 		var footer = modal._footer;
 		footer.innerHTML = '';
-		if ( showOpen && CFG.suggestUrl ) {
-			footer.appendChild( el( 'a', { href: CFG.suggestUrl, class: 'button button-primary wpcc-qp-open' }, t( 'openSuggest' ) ) );
+		var url = ST.cfg.suggestUrl || ROOT.suggestUrl || '';
+		if ( showOpen && url ) {
+			footer.appendChild( el( 'a', { href: url, class: 'button button-primary wpcc-qp-open' }, t( 'openSuggest' ) ) );
 		}
 		var close = el( 'button', { type: 'button', class: 'button wpcc-qp-close' }, t( 'close' ) );
 		close.addEventListener( 'click', closeModal );
@@ -287,8 +251,8 @@
 		modal._footer.innerHTML = '';
 	}
 
-	// Post-apply outcome state — reversibility-as-hero: Applied · Reversible · Audited
-	// (+ Undo) for a developer apply; Submitted · Audited for a gated submit.
+	// Post-apply outcome — reversibility-as-hero: Applied · Reversible · Audited (+
+	// Undo) for a developer apply; Submitted · Audited for a gated submit.
 	function renderApplied( status, changeId ) {
 		var applied = ( status === 'applied' );
 		var body = modal._body;
@@ -303,14 +267,12 @@
 		body.appendChild( head );
 
 		body.appendChild( el( 'p', { class: 'wpcc-qp-note' }, applied ? t( 'appliedNote' ) : t( 'submittedNote' ) ) );
-		// Visible result line for Undo outcomes.
 		body.appendChild( el( 'div', { class: 'wpcc-qp-actionmsg', role: 'status', 'aria-live': 'polite' } ) );
 
 		setStatus( applied ? t( 'appliedTitle' ) : t( 'submittedTitle' ) );
 		renderAppliedFooter( applied && !! changeId );
 	}
 
-	// Footer for the applied state: Undo (developer + change_id) + Open + Close.
 	function renderAppliedFooter( showUndo ) {
 		var footer = modal._footer;
 		footer.innerHTML = '';
@@ -319,9 +281,7 @@
 			undo.addEventListener( 'click', function () { undoAction( undo ); } );
 			footer.appendChild( undo );
 		}
-		if ( CFG.suggestUrl ) {
-			footer.appendChild( el( 'a', { href: CFG.suggestUrl, class: 'button wpcc-qp-open' }, t( 'openSuggest' ) ) );
-		}
+		appendOpen( footer );
 		var close = el( 'button', { type: 'button', class: 'button button-primary wpcc-qp-close' }, t( 'close' ) );
 		close.addEventListener( 'click', closeModal );
 		footer.appendChild( close );
@@ -331,21 +291,7 @@
 	// ── REST calls (existing routes only) ────────────────────────────────────────
 
 	function api( method, path, bodyObj ) {
-		var opts = {
-			method: method,
-			credentials: 'same-origin',
-			headers: { 'X-WP-Nonce': CFG.nonce || '', 'Content-Type': 'application/json' },
-		};
-		if ( bodyObj ) {
-			opts.body = JSON.stringify( bodyObj );
-		}
-		return fetch( CFG.restBase + path, opts ).then( function ( r ) {
-			return r.json().then( function ( data ) {
-				return { ok: r.ok, status: r.status, data: data };
-			}, function () {
-				return { ok: r.ok, status: r.status, data: {} };
-			} );
-		} );
+		return R.api( method, ROOT.restBase + path, ROOT.nonce, bodyObj );
 	}
 
 	function skipMessage( reason ) {
@@ -363,26 +309,54 @@
 		}
 	}
 
+	// ── Config-driven payload mapping (declarative; no per-workflow JS) ──────────
+
+	function generateBody( id ) {
+		var b = ST.cfg.generate.body;
+		if ( b === 'post_ids' ) { return { post_ids: [ id ] }; }
+		if ( b === 'attachment_ids' ) { return { attachment_ids: [ id ] }; }
+		if ( b && b.generate_kind ) { return { generate: { kind: b.generate_kind, post_id: id } }; }
+		return { post_ids: [ id ] };
+	}
+
 	function suggestedFrom( proposal ) {
-		// Mirror the Builder's final_payload-first rule: an edited draft wins, else
-		// the original AI payload. A freshly generated draft has no final_payload.
-		var fp = proposal && proposal.final_payload && proposal.final_payload.seo;
-		var pp = proposal && proposal.payload && proposal.payload.seo;
-		var seo = fp || pp || {};
-		return { title: seo.title || '', description: seo.description || '' };
+		var src = ( proposal && ( proposal.final_payload || proposal.payload ) ) || {};
+		var base = ST.cfg.suggest ? ( src[ ST.cfg.suggest ] || {} ) : src;
+		var out = {};
+		ST.cfg.fields.forEach( function ( f ) { out[ f.key ] = ( base && base[ f.key ] ) || ''; } );
+		return out;
 	}
 
 	function priorFrom( proposal ) {
 		var prior = ( proposal && proposal.prior ) || {};
-		return { title: prior.title || '', description: prior.description || '' };
+		var out = {};
+		ST.cfg.fields.forEach( function ( f ) {
+			var k = f.prior || f.key;
+			out[ f.key ] = ( prior && prior[ k ] ) || '';
+		} );
+		return out;
 	}
+
+	function buildFinalPayload( values ) {
+		var ap = ST.cfg.apply;
+		var fp = { action: ap.action };
+		fp[ ap.idKey ] = ST.postId;
+		if ( ap.nest ) {
+			fp[ ap.nest ] = values;
+		} else {
+			Object.keys( values ).forEach( function ( k ) { fp[ k ] = values[ k ]; } );
+		}
+		return fp;
+	}
+
+	// ── Lifecycle ────────────────────────────────────────────────────────────────
 
 	function generate( postId ) {
 		ST.postId = postId;
 		ST.proposalId = '';
 		ST.changeId = '';
 		renderLoading();
-		api( 'POST', '/admin/seo/generate', { post_ids: [ postId ] } )
+		api( 'POST', ST.cfg.generate.path, generateBody( postId ) )
 			.then( function ( res ) {
 				if ( ! res.ok || ! res.data || res.data.error ) {
 					renderMessage( t( 'error' ), false );
@@ -410,7 +384,6 @@
 		api( 'GET', '/admin/proposals/' + encodeURIComponent( id ), null )
 			.then( function ( res ) {
 				if ( ! res.ok || ! res.data || res.data.error ) {
-					// The draft exists; steer the user to Suggestions to review it.
 					renderMessage( t( 'exists' ), true );
 					return;
 				}
@@ -423,22 +396,17 @@
 			} );
 	}
 
-	// Apply = persist the VISIBLE edited values (PUT final_payload) THEN apply — the
-	// Trust Polish persist-before-apply pattern, so an unsaved edit can never be
-	// silently discarded. Reuses the existing governed routes; outcome read from the
-	// response (applied | pending_approval), never assumed from the label.
+	// Apply = persist the VISIBLE edited values (PUT final_payload) THEN apply.
+	// Outcome read from the response (applied | pending_approval), never the label.
 	function applyAction( btn ) {
 		if ( ! ST.proposalId ) { return; }
-		var titleEl = modal._body.querySelector( '.wpcc-qp-et' );
-		var descEl = modal._body.querySelector( '.wpcc-qp-ed' );
-		var fp = {
-			action: 'seo_update',
-			content_id: ST.postId,
-			seo: {
-				title: titleEl ? titleEl.value : '',
-				description: descEl ? descEl.value : '',
-			},
-		};
+		var values = {};
+		ST.cfg.fields.forEach( function ( f ) {
+			var input = modal._body.querySelector( '.wpcc-qp-input[data-key="' + f.key + '"]' );
+			values[ f.key ] = input ? input.value : '';
+		} );
+		var fp = buildFinalPayload( values );
+
 		btn.disabled = true;
 		setStatus( t( 'applying' ) );
 		actionMsg( t( 'applying' ) );
@@ -447,12 +415,12 @@
 				if ( ! saveRes.ok ) {
 					btn.disabled = false;
 					actionMsg( ( saveRes.data && saveRes.data.message ) || t( 'cantApply' ) );
-					return null; // do NOT apply stale data if the edit could not be persisted
+					return null; // never apply stale data if the edit could not be persisted
 				}
 				return api( 'POST', '/admin/proposals/' + encodeURIComponent( ST.proposalId ) + '/apply', null );
 			} )
 			.then( function ( res ) {
-				if ( ! res ) { return; } // persist failed; already surfaced
+				if ( ! res ) { return; }
 				var st = ( res.data && res.data.status ) || '';
 				var cid = ( res.data && res.data.change_id ) || '';
 				if ( st === 'applied' || st === 'pending_approval' ) {
@@ -469,8 +437,8 @@
 			} );
 	}
 
-	// Undo = the EXISTING governed rollback route only (change_history → seo_restore).
-	// Developer → immediate revert; client/enterprise → "Undo sent for approval".
+	// Undo = the EXISTING governed rollback route only (change_history → runtime
+	// rollback). Developer → immediate revert; gated → "Undo sent for approval".
 	function undoAction( btn ) {
 		if ( ! ST.changeId ) { return; }
 		btn.disabled = true;
@@ -480,12 +448,12 @@
 			.then( function ( res ) {
 				var inner = ( res.data && res.data.result ) || {};
 				if ( inner.status === 'pending_approval' ) {
-					actionMsg( t( 'undoSent' ) ); // gated → sent for approval; keep disabled
+					actionMsg( t( 'undoSent' ) );
 				} else if ( res.ok && res.data && res.data.success === true && inner.status !== 'confirmation_required' ) {
-					actionMsg( t( 'reverted' ) ); // success → reverted
+					actionMsg( t( 'reverted' ) );
 					btn.textContent = t( 'reverted' );
 				} else {
-					btn.disabled = false; // non-fatal: let the operator retry
+					btn.disabled = false;
 					actionMsg( t( 'cantUndo' ) );
 				}
 			} )
@@ -498,9 +466,14 @@
 	// ── Bind (delegated — list tables re-render / paginate) ──────────────────────
 
 	function onClick( e ) {
-		var link = e.target.closest && e.target.closest( 'a.wpcc-seo-quickgen' );
+		var link = e.target.closest && e.target.closest( 'a[data-wpcc-action]' );
 		if ( ! link ) {
 			return;
+		}
+		var key = link.getAttribute( 'data-wpcc-action' );
+		var cfg = ACTIONS[ key ];
+		if ( ! cfg ) {
+			return; // unknown workflow — let the href fallback run
 		}
 		var id = parseInt( link.getAttribute( 'data-id' ), 10 );
 		if ( ! id ) {
@@ -508,12 +481,14 @@
 		}
 		e.preventDefault();
 		lastFocus = link;
+		ST.key = key;
+		ST.cfg = cfg;
 		buildModal();
 		generate( id );
 	}
 
-	if ( ! CFG.restBase || ! CFG.nonce ) {
-		return; // not configured — leave the <a> redirect fallback intact
+	if ( ! R || ! ROOT.restBase || ! ROOT.nonce ) {
+		return; // runtime missing or not configured — leave the <a> redirect fallback intact
 	}
 	document.addEventListener( 'click', onClick );
 } )();
