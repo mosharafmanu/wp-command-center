@@ -16,6 +16,16 @@ defined( 'ABSPATH' ) || exit;
 final class TimelineBuilder {
 
 	/**
+	 * Upper bound on baseline rows pulled per source table. Set far above any single
+	 * page the timeline ever requests (the Runtime screen asks for 300; the REST default
+	 * is 100), so it does not change output at current scale, while capping work and
+	 * memory as the agent/patch tables grow. The newest rows (by auto-increment id) are
+	 * kept and presented in ascending id order — the same order an unbounded full scan
+	 * returned — so output is byte-identical whenever a table is within the cap.
+	 */
+	private const BASELINE_LIMIT = 5000;
+
+	/**
 	 * Build the unified timeline.
 	 *
 	 * @param array{
@@ -57,10 +67,26 @@ final class TimelineBuilder {
 		}
 
 		// 2. Supplement with events from the database (e.g. legacy sessions/tasks created before logging).
+		//
+		// Duplicate detection bucketed by identity key. An audit event and a DB baseline
+		// event are "the same" when they share type + label + every id field AND their
+		// timestamps fall within a 5s window. The previous implementation compared each
+		// DB event against the entire collected list (O(db * events)); on a mature site
+		// that is tens of millions of comparisons. Bucketing the timestamps already seen
+		// for each identity key collapses the per-event check to the (tiny) bucket for that
+		// key, which is behaviour-identical — same boolean decision, same retained events,
+		// same insertion order — but runs in ~O(db + events). See is_duplicate().
+		$seen_timestamps = [];
+		foreach ( $events as $existing ) {
+			$seen_timestamps[ $this->event_identity_key( $existing ) ][] = (int) $existing['timestamp'];
+		}
+
 		$db_events = $this->get_db_baseline_events();
 		foreach ( $db_events as $event ) {
-			if ( ! $this->is_duplicate( $event, $events ) ) {
-				$events[] = $event;
+			$key = $this->event_identity_key( $event );
+			if ( ! $this->is_duplicate( $event, $seen_timestamps[ $key ] ?? [] ) ) {
+				$events[]                  = $event;
+				$seen_timestamps[ $key ][] = (int) $event['timestamp'];
 			}
 		}
 
@@ -808,9 +834,18 @@ final class TimelineBuilder {
 	private function get_db_baseline_events(): array {
 		global $wpdb;
 		$events = [];
+		$limit  = self::BASELINE_LIMIT;
 
-		// Sessions
-		$sessions = $wpdb->get_results( "SELECT session_id, label, status, source, created_at FROM {$wpdb->prefix}wpcc_agent_sessions", ARRAY_A );
+		// Sessions — newest rows by primary key, restored to ascending id order so the
+		// result is byte-identical to the previous unordered full scan whenever the table
+		// is within the cap (InnoDB full scans return clustered-index / id-ascending order).
+		$sessions = $wpdb->get_results(
+			"SELECT session_id, label, status, source, created_at FROM (
+				SELECT id, session_id, label, status, source, created_at
+				FROM {$wpdb->prefix}wpcc_agent_sessions ORDER BY id DESC LIMIT {$limit}
+			) t ORDER BY id ASC",
+			ARRAY_A
+		);
 		foreach ( $sessions ?: [] as $s ) {
 			$events[] = [
 				'timestamp'  => (int) $s['created_at'],
@@ -827,8 +862,14 @@ final class TimelineBuilder {
 			];
 		}
 
-		// Tasks
-		$tasks = $wpdb->get_results( "SELECT task_id, session_id, user_prompt, status, created_at FROM {$wpdb->prefix}wpcc_agent_tasks", ARRAY_A );
+		// Tasks — same bounded/ordered pattern as sessions.
+		$tasks = $wpdb->get_results(
+			"SELECT task_id, session_id, user_prompt, status, created_at FROM (
+				SELECT id, task_id, session_id, user_prompt, status, created_at
+				FROM {$wpdb->prefix}wpcc_agent_tasks ORDER BY id DESC LIMIT {$limit}
+			) t ORDER BY id ASC",
+			ARRAY_A
+		);
 		foreach ( $tasks ?: [] as $t ) {
 			$events[] = [
 				'timestamp'  => (int) $t['created_at'],
@@ -845,8 +886,15 @@ final class TimelineBuilder {
 			];
 		}
 
-		// Patches (created, approved, applied, rolled back)
-		$patches = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}wpcc_patches", ARRAY_A );
+		// Patches (created, approved, applied, rolled back) — explicit column list (no
+		// SELECT *; only these columns are consumed below), bounded and ordered as above.
+		$patches = $wpdb->get_results(
+			"SELECT patch_id, source, risk_level, created_at, approved_at, applied_at, rolled_back_at, session_id, task_id, plan_id FROM (
+				SELECT id, patch_id, source, risk_level, created_at, approved_at, applied_at, rolled_back_at, session_id, task_id, plan_id
+				FROM {$wpdb->prefix}wpcc_patches ORDER BY id DESC LIMIT {$limit}
+			) t ORDER BY id ASC",
+			ARRAY_A
+		);
 		foreach ( $patches ?: [] as $p ) {
 			$base = [
 				'session_id' => $p['session_id'],
@@ -901,25 +949,39 @@ final class TimelineBuilder {
 		return $events;
 	}
 
-	private function is_duplicate( array $event, array $existing_events ): bool {
-		foreach ( $existing_events as $existing ) {
-			// A "duplicate" is an event of the same type and label for the same entity
-			// occurring within a 5-second window (compensating for time() drift).
-			if ( $event['type'] === $existing['type'] &&
-				$event['label'] === $existing['label'] &&
-				abs( $event['timestamp'] - $existing['timestamp'] ) <= 5
-			) {
-				// Check IDs
-				$match = true;
-				foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id', 'patch_id' ] as $id_key ) {
-					if ( $event[ $id_key ] !== $existing[ $id_key ] ) {
-						$match = false;
-						break;
-					}
-				}
-				if ( $match ) {
-					return true;
-				}
+	/**
+	 * Stable identity key for duplicate detection: event type + label + every id field.
+	 *
+	 * Two events can only be duplicates if these all match exactly, so events sharing a key
+	 * are the only pairs the timestamp-window test in is_duplicate() ever needs to compare.
+	 * null ids are encoded distinctly from the empty string and the unit-separator delimiter
+	 * keeps the parts unambiguous, so this matches the previous strict (!==) per-field
+	 * comparison exactly (all id fields are string|null and type/label are fixed-vocabulary).
+	 */
+	private function event_identity_key( array $event ): string {
+		$parts = [ (string) $event['type'], (string) $event['label'] ];
+		foreach ( [ 'session_id', 'task_id', 'action_id', 'plan_id', 'patch_id' ] as $id_key ) {
+			$value   = $event[ $id_key ] ?? null;
+			$parts[] = null === $value ? "\0NULL" : (string) $value;
+		}
+		return implode( "\x1f", $parts );
+	}
+
+	/**
+	 * Whether $event duplicates an already-collected event of the same identity key.
+	 *
+	 * Identity (type + label + all id fields) is established by the caller bucketing on
+	 * event_identity_key(); this only applies the 5-second timestamp window (compensating
+	 * for time() drift between the audit log and the DB rows) against the timestamps already
+	 * seen for that key. Behaviour-identical to the previous full-list scan.
+	 *
+	 * @param array<int,int> $existing_timestamps Timestamps already collected for this event's identity key.
+	 */
+	private function is_duplicate( array $event, array $existing_timestamps ): bool {
+		$timestamp = (int) $event['timestamp'];
+		foreach ( $existing_timestamps as $existing_timestamp ) {
+			if ( abs( $timestamp - $existing_timestamp ) <= 5 ) {
+				return true;
 			}
 		}
 		return false;
