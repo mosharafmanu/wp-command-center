@@ -847,3 +847,51 @@
 	color: var( --wpcc-text-secondary );
 	font-size: var( --wpcc-fs-small );
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Phase 2 — Info status pill + inline notice.
+ * Rounds out the status/notice family for read-only view adoption. Additive.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* Info status pill (completes success / warning / danger / neutral). */
+.wpcc-cds-pill--info { background: var( --wpcc-state-info-bg ); color: var( --wpcc-state-info-fg ); }
+
+/* Inline notice — status-colored, distinct from WP's .notice. Used by the
+ * server-rendered read-only views; pairs with .wpcc-cds-empty / .wpcc-cds-error. */
+.wpcc-cds-notice {
+	display: flex;
+	gap: var( --wpcc-space-3 );
+	padding: var( --wpcc-space-4 ) var( --wpcc-space-6 );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-left-width: 4px;
+	border-radius: var( --wpcc-radius-sm );
+	margin: var( --wpcc-space-5 ) 0;
+	background: var( --wpcc-surface-card );
+	font-size: var( --wpcc-fs-body );
+}
+
+.wpcc-cds-notice p { margin: 0; }
+
+.wpcc-cds-notice--success {
+	border-left-color: var( --wpcc-state-success-border );
+	background: var( --wpcc-state-success-bg );
+	color: var( --wpcc-state-success-fg );
+}
+
+.wpcc-cds-notice--info {
+	border-left-color: var( --wpcc-state-info-border );
+	background: var( --wpcc-state-info-bg );
+	color: var( --wpcc-state-info-fg );
+}
+
+.wpcc-cds-notice--warning {
+	border-left-color: var( --wpcc-state-warning-border );
+	background: var( --wpcc-state-warning-bg );
+	color: var( --wpcc-state-warning-fg );
+}
+
+.wpcc-cds-notice--danger {
+	border-left-color: var( --wpcc-state-danger-fg );
+	background: var( --wpcc-state-danger-bg );
+	color: var( --wpcc-state-danger-fg );
+}
