@@ -166,13 +166,50 @@
 		chip: function ( kind, label ) {
 			return '<span class="wpcc-cds-chip wpcc-cds-chip--' + WPCC.escHtml( kind ) + '">' + WPCC.escHtml( label ) + '</span>';
 		},
-		/** A status/risk pill: variant in success|warning|danger|neutral|<risk tier>. */
-		pill: function ( variant, label ) {
-			return '<span class="wpcc-cds-pill wpcc-cds-pill--' + WPCC.escHtml( variant ) + '">' + WPCC.escHtml( label ) + '</span>';
+		/** A status/risk pill: variant in success|warning|danger|neutral|<risk tier>.
+		 * Optional ariaLabel adds an accessible label when the visible text alone
+		 * lacks column context. */
+		pill: function ( variant, label, ariaLabel ) {
+			return '<span class="wpcc-cds-pill wpcc-cds-pill--' + WPCC.escHtml( variant ) + '"'
+				+ ( ariaLabel ? ' aria-label="' + WPCC.escHtml( ariaLabel ) + '"' : '' )
+				+ '>' + WPCC.escHtml( label ) + '</span>';
 		},
-		riskPill: function ( tier, label ) {
+		riskPill: function ( tier, label, ariaLabel ) {
 			var v = RISK[ tier ] || 'neutral';
-			return '<span class="wpcc-cds-pill wpcc-cds-pill--' + v + '">' + WPCC.escHtml( label || tier ) + '</span>';
+			return '<span class="wpcc-cds-pill wpcc-cds-pill--' + v + '"'
+				+ ( ariaLabel ? ' aria-label="' + WPCC.escHtml( ariaLabel ) + '"' : '' )
+				+ '>' + WPCC.escHtml( label || tier ) + '</span>';
+		},
+		/** Status pill: maps a known status token to a pill variant (then delegates
+		 * to pill). Keeps status colors consistent across every surface. */
+		statusPill: function ( status, label, ariaLabel ) {
+			var map = {
+				success: 'success', applied: 'success', available: 'success', ok: 'success', active: 'success',
+				warning: 'warning', required: 'warning', pending: 'warning', awaiting: 'warning',
+				danger: 'danger', failed: 'danger', error: 'danger',
+				neutral: 'neutral', notreq: 'neutral', inactive: 'neutral', unavailable: 'neutral'
+			};
+			return WPCC.cds.pill( map[ status ] || 'neutral', label == null ? status : label, ariaLabel );
+		},
+		/** Metadata tag (e.g. a capability id or enum value); mono optional. */
+		tag: function ( label, mono ) {
+			return '<span class="wpcc-cds-tag' + ( mono ? ' wpcc-cds-tag--mono' : '' ) + '">' + WPCC.escHtml( label ) + '</span>';
+		},
+		/** Button (HTML string). opts: { label, variant, id, type, disabled, attrs }.
+		 * Emits WP's `.button` baseline + the `.wpcc-cds-btn` token hook so it is
+		 * visually native today and CDS-themed as Phase 2 lands. */
+		button: function ( opts ) {
+			opts = opts || {};
+			var html = '<button type="' + WPCC.escHtml( opts.type || 'button' ) + '"'
+				+ ' class="button wpcc-cds-btn wpcc-cds-btn--' + WPCC.escHtml( opts.variant || 'secondary' ) + '"';
+			if ( opts.id ) { html += ' id="' + WPCC.escHtml( opts.id ) + '"'; }
+			if ( opts.disabled ) { html += ' disabled'; }
+			if ( opts.attrs ) {
+				Object.keys( opts.attrs ).forEach( function ( k ) {
+					html += ' ' + k + '="' + WPCC.escHtml( opts.attrs[ k ] ) + '"';
+				} );
+			}
+			return html + '>' + WPCC.escHtml( opts.label == null ? '' : opts.label ) + '</button>';
 		},
 		/** Actor provenance chip: type in human|system|agent. */
 		actorChip: function ( type, label ) {
@@ -195,6 +232,13 @@
 		loading: function ( label ) {
 			return '<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span>'
 				+ '<span>' + WPCC.escHtml( label ) + '</span></div>';
+		},
+		/** Error state (companion to empty/loading) — role=alert for assistive tech. */
+		error: function ( title, detail ) {
+			return '<div class="wpcc-cds-error" role="alert">'
+				+ '<span class="wpcc-cds-error__title">' + WPCC.escHtml( title ) + '</span>'
+				+ ( detail ? '<span class="wpcc-cds-error__detail">' + WPCC.escHtml( detail ) + '</span>' : '' )
+				+ '</div>';
 		},
 	};
 

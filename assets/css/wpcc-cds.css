@@ -736,3 +736,114 @@
 		transition: none;
 	}
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Phase 0 — Button / Field / Table / Tag / Error component layer.
+ * Additive: every rule is token-driven and namespaced `wpcc-cds-*`; it coexists
+ * with WP-native `.button` / `.widefat` (no override of core surfaces).
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* Buttons. `.wpcc-cds-btn` layers on WP's `.button` (keeps the native baseline)
+ * and adds a consistent, token-driven focus ring; variants restyle on purpose. */
+.wpcc-cds-btn {
+	border-radius: var( --wpcc-btn-radius );
+	font-size: var( --wpcc-btn-font-size );
+	cursor: pointer;
+}
+
+.wpcc-cds-btn:focus-visible {
+	outline: var( --wpcc-focus-ring-width ) solid transparent;
+	box-shadow: var( --wpcc-focus-ring );
+}
+
+.wpcc-cds-btn[disabled],
+.wpcc-cds-btn:disabled {
+	cursor: default;
+	opacity: 0.6;
+}
+
+.wpcc-cds-btn--primary {
+	background: var( --wpcc-btn-primary-bg );
+	color: var( --wpcc-btn-primary-fg );
+	border: 1px solid var( --wpcc-btn-primary-border );
+}
+
+.wpcc-cds-btn--secondary {
+	background: var( --wpcc-btn-secondary-bg );
+	color: var( --wpcc-btn-secondary-fg );
+	border: 1px solid var( --wpcc-btn-secondary-border );
+}
+
+.wpcc-cds-btn--ghost {
+	background: transparent;
+	color: var( --wpcc-btn-ghost-fg );
+	border: 1px solid transparent;
+}
+
+.wpcc-cds-btn--danger {
+	background: var( --wpcc-btn-danger-bg );
+	color: var( --wpcc-btn-danger-fg );
+	border: 1px solid var( --wpcc-btn-danger-border );
+}
+
+/* Form fields — a consistent focus ring layered over WP-native inputs/selects. */
+.wpcc-cds-field:focus,
+.wpcc-cds-field:focus-visible {
+	border-color: var( --wpcc-field-focus-border );
+	box-shadow: var( --wpcc-focus-ring );
+	outline: none;
+}
+
+/* Metadata tag (capability ids, enum values) — distinct from the trust chips. */
+.wpcc-cds-tag {
+	display: inline-block;
+	font-size: var( --wpcc-badge-font-size );
+	line-height: 1.6;
+	background: var( --wpcc-tag-bg );
+	color: var( --wpcc-tag-fg );
+	border: 1px solid var( --wpcc-tag-border );
+	border-radius: var( --wpcc-badge-radius );
+	padding: var( --wpcc-badge-pad-y ) var( --wpcc-badge-pad-x );
+}
+
+.wpcc-cds-tag--mono { font-family: var( --wpcc-font-mono ); }
+
+/* Light table treatment — token-driven; layers on `.widefat` without replacing
+ * it. This is NOT the Phase 3 Data Grid; only a consistent header/hover/cell
+ * rhythm so list views share one look ahead of the real grid. */
+.wpcc-cds-table th { color: var( --wpcc-table-header-fg ); }
+
+.wpcc-cds-table tbody td,
+.wpcc-cds-table tbody th {
+	padding-top: var( --wpcc-table-cell-y );
+	padding-bottom: var( --wpcc-table-cell-y );
+	vertical-align: middle;
+}
+
+.wpcc-cds-table tbody tr:hover td,
+.wpcc-cds-table tbody tr:hover th { background: var( --wpcc-table-hover-bg ); }
+
+.wpcc-cds-mono-sm {
+	font-family: var( --wpcc-font-mono );
+	font-size: var( --wpcc-fs-caption );
+	color: var( --wpcc-text-secondary );
+}
+
+/* Error state (companion to `.wpcc-cds-empty` / `.wpcc-cds-loading`). */
+.wpcc-cds-error {
+	display: flex;
+	flex-direction: column;
+	gap: var( --wpcc-space-3 );
+	padding: var( --wpcc-space-6 );
+	background: var( --wpcc-state-danger-bg );
+	border: 1px solid var( --wpcc-state-danger-fg );
+	border-radius: var( --wpcc-radius-md );
+	color: var( --wpcc-state-danger-fg );
+}
+
+.wpcc-cds-error__title { font-weight: 600; }
+
+.wpcc-cds-error__detail {
+	color: var( --wpcc-text-secondary );
+	font-size: var( --wpcc-fs-small );
+}

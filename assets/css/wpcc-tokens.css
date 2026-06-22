@@ -139,6 +139,63 @@
 	--wpcc-panel-max-width: 720px;
 	--wpcc-chip-bg: var( --wpcc-gray-100 );
 	--wpcc-chip-fg: var( --wpcc-text-primary );
+
+	/* ── Phase 0 (CDS) — component-token foundation for Phase 1 adoption ──────
+	 * Additive + backward-compatible: every value resolves to an existing
+	 * semantic/primitive token, and nothing here restyles a surface until a
+	 * `wpcc-cds-*` component class consumes it. Staged so Phases 1–3 (buttons,
+	 * fields, the Data Grid) bind to tokens, never to hardcoded values. */
+
+	/* State — info (completes success / warning / danger). */
+	--wpcc-state-info-fg: var( --wpcc-blue-600 );
+	--wpcc-state-info-bg: var( --wpcc-blue-soft );
+	--wpcc-state-info-border: var( --wpcc-blue-border );
+
+	/* Focus ring — ONE accessible focus treatment for every interactive CDS part. */
+	--wpcc-focus-ring-width: 2px;
+	--wpcc-focus-ring: 0 0 0 1px var( --wpcc-surface-card ), 0 0 0 3px var( --wpcc-border-focus );
+
+	/* Buttons. */
+	--wpcc-btn-radius: var( --wpcc-radius-sm );
+	--wpcc-btn-pad-y: var( --wpcc-space-3 );
+	--wpcc-btn-pad-x: var( --wpcc-space-5 );
+	--wpcc-btn-font-size: var( --wpcc-fs-body );
+	--wpcc-btn-primary-bg: var( --wpcc-brand-accent );
+	--wpcc-btn-primary-fg: var( --wpcc-white );
+	--wpcc-btn-primary-border: var( --wpcc-brand-accent );
+	--wpcc-btn-secondary-bg: var( --wpcc-surface-card );
+	--wpcc-btn-secondary-fg: var( --wpcc-text-accent );
+	--wpcc-btn-secondary-border: var( --wpcc-border-strong );
+	--wpcc-btn-ghost-fg: var( --wpcc-text-secondary );
+	--wpcc-btn-danger-bg: var( --wpcc-red-600 );
+	--wpcc-btn-danger-fg: var( --wpcc-white );
+	--wpcc-btn-danger-border: var( --wpcc-red-700 );
+
+	/* Form fields. */
+	--wpcc-field-bg: var( --wpcc-surface-card );
+	--wpcc-field-fg: var( --wpcc-text-primary );
+	--wpcc-field-border: var( --wpcc-border-strong );
+	--wpcc-field-radius: var( --wpcc-radius-sm );
+	--wpcc-field-pad-y: var( --wpcc-space-3 );
+	--wpcc-field-pad-x: var( --wpcc-space-4 );
+	--wpcc-field-focus-border: var( --wpcc-border-focus );
+
+	/* Badges / metadata tags (distinct from the semantic trust chips). */
+	--wpcc-badge-radius: var( --wpcc-radius-pill );
+	--wpcc-badge-pad-y: 1px;
+	--wpcc-badge-pad-x: var( --wpcc-space-4 );
+	--wpcc-badge-font-size: var( --wpcc-fs-caption );
+	--wpcc-tag-bg: var( --wpcc-gray-50 );
+	--wpcc-tag-fg: var( --wpcc-text-muted );
+	--wpcc-tag-border: var( --wpcc-border-subtle );
+
+	/* Table / Data-Grid preparation — tokens only (the full grid is Phase 3). */
+	--wpcc-table-header-bg: var( --wpcc-surface-sunken );
+	--wpcc-table-header-fg: var( --wpcc-text-secondary );
+	--wpcc-table-row-border: var( --wpcc-border-subtle );
+	--wpcc-table-hover-bg: var( --wpcc-surface-accent-soft );
+	--wpcc-table-cell-y: var( --wpcc-density-cell-y );
+	--wpcc-table-cell-x: var( --wpcc-space-5 );
 }
 
 /* Engineer mode = compact density. Builder mode keeps the comfortable defaults. */
@@ -146,4 +203,5 @@
 	--wpcc-density-row: 32px;
 	--wpcc-density-cell-y: 6px;
 	--wpcc-density-gap: 12px;
+	--wpcc-btn-pad-y: var( --wpcc-space-2 );
 }
