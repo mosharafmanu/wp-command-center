@@ -30,18 +30,11 @@ class SeoRowActions {
 	private const FEATURE = 'seo_meta_generator';
 
 	public function init(): void {
-		// Row actions: `post_row_actions` covers posts AND custom post types (incl.
-		// WooCommerce products); `page_row_actions` covers pages. One handler serves all.
-		add_filter( 'post_row_actions', [ $this, 'add_row_action' ], 10, 2 );
-		add_filter( 'page_row_actions', [ $this, 'add_row_action' ], 10, 2 );
+		// The contextual SEO row action is now consolidated into the single "✨ AI
+		// Assist" entry (AiAssistRowActions); the SEO panel config lives in
+		// AiActionRegistry. This class retains only the no-JS admin-post fallback
+		// handler + native Bulk Actions (bulk consolidation is deferred).
 		add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
-
-		// Quick Panel — progressive enhancement. The row action stays a working
-		// admin-post <a> (no-JS fallback = the redirect handler above); when the
-		// generalized Governed Action Panel asset loads it intercepts the click (via
-		// the anchor's data-wpcc-action="seo") and carries the item through its full
-		// governed lifecycle in-context. The panel asset is enqueued centrally by
-		// ActionPanelAssets (one panel shared by every AI content workflow).
 
 		// Sprint B — native WordPress Bulk Actions (per-screen hooks). WP core verifies
 		// the bulk-action nonce before `handle_bulk_actions-*` runs.
@@ -87,46 +80,6 @@ class SeoRowActions {
 		return current_user_can( 'manage_options' )
 			&& $this->ui_enabled()
 			&& FeatureGate::allows( self::FEATURE );
-	}
-
-	/** Whether a single post type is supported. */
-	private function supported_type( string $type ): bool {
-		return in_array( $type, $this->supported_types(), true );
-	}
-
-	/**
-	 * @param array<string,string> $actions
-	 * @param mixed                $post
-	 * @return array<string,string>
-	 */
-	public function add_row_action( array $actions, $post ): array {
-		if ( ! $post instanceof \WP_Post ) {
-			return $actions;
-		}
-		if ( ! $this->allowed() || ! $this->supported_type( $post->post_type ) ) {
-			return $actions;
-		}
-		// Offer the action only for statuses the generator will actually accept — the
-		// shared allow-list (publish/draft/pending/future/private); never on
-		// trash/auto-draft/revisions. Single source of truth = SeoMetaGenerator.
-		if ( ! SeoMetaGenerator::is_supported_status( (string) $post->post_status ) ) {
-			return $actions;
-		}
-
-		$url = wp_nonce_url(
-			admin_url( 'admin-post.php?action=' . self::ACTION . '&post=' . (int) $post->ID ),
-			self::ACTION . '_' . (int) $post->ID
-		);
-		// `wpcc-seo-quickgen` + data-* are the progressive-enhancement hooks the Quick
-		// Panel asset binds to. With no JS the href still redirects (the fallback path).
-		$actions[ self::ACTION ] = '<a href="' . esc_url( $url ) . '"'
-			. ' class="wpcc-seo-quickgen"'
-			. ' data-wpcc-action="seo"'
-			. ' data-id="' . (int) $post->ID . '"'
-			. ' data-type="' . esc_attr( $post->post_type ) . '">'
-			. esc_html__( 'Generate SEO Suggestion', 'wp-command-center' ) . '</a>';
-
-		return $actions;
 	}
 
 	/**
@@ -184,12 +137,12 @@ class SeoRowActions {
 		exit;
 	}
 
-	// ── Quick Panel — the in-context modal asset is enqueued centrally ─────────
-	// by ActionPanelAssets (the generalized Governed Action Panel shared by every
-	// AI content workflow). The row-action anchor opts in via data-wpcc-action="seo";
-	// the SEO panel config (routes, fields, apply shape, strings) lives there. This
-	// class keeps only the no-JS fallback (the admin-post redirect handler above) and
-	// the contextual row/bulk entry points.
+	// ── Governed Action Panel — enqueued centrally by ActionPanelAssets ────────
+	// (the panel shared by every AI workflow). The contextual SEO entry is now the
+	// consolidated ✨ AI Assist row action (AiAssistRowActions), whose chooser opens
+	// this panel; the SEO panel config (routes, fields, apply shape) lives in
+	// AiActionRegistry. This class keeps only the no-JS admin-post fallback handler
+	// (above) and the native Bulk Actions (below).
 
 	// ── Sprint B — native WordPress Bulk Actions ──────────────────────────────
 

@@ -25,19 +25,21 @@ lacks(){ grep -qF -- "$2" "$3" && fail "$1 (found '$2')" || pass "$1"; }
 wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 SRC="$PLUGIN_DIR/includes/Admin/SeoRowActions.php"
+AAR="$PLUGIN_DIR/includes/Admin/AiAssistRowActions.php"
 BOOT="$PLUGIN_DIR/includes/Core/Plugin.php"
 VIEW="$PLUGIN_DIR/includes/Admin/views/seo-meta.php"
 
 echo "Contextual SEO entry points — row actions"
 
 echo
-echo "== 1. SeoRowActions: thin admin wiring, propose-only =="
-has  "registers post row action"            "add_filter( 'post_row_actions'"  "$SRC"
-has  "registers page row action"            "add_filter( 'page_row_actions'"  "$SRC"
-has  "admin_post handler"                    "admin_post_' . self::ACTION"    "$SRC"
-has  "row action label"                      "Generate SEO Suggestion"        "$SRC"
-has  "nonce on the URL"                      "wp_nonce_url"                   "$SRC"
+echo "== 1. SeoRowActions: retains no-JS fallback + bulk (row link consolidated) =="
+# The contextual SEO row link is now the consolidated ✨ AI Assist anchor
+# (AiAssistRowActions); SeoRowActions keeps only its nonce-checked admin-post fallback.
+has  "AI Assist anchor present"              "wpcc_ai_assist"                 "$AAR"
+has  "AI Assist offers SEO via the registry" "fallback_url"                   "$AAR"
+has  "admin_post fallback handler retained"  "admin_post_' . self::ACTION"    "$SRC"
 has  "nonce verified in handler"             "check_admin_referer"            "$SRC"
+lacks "row link consolidated (no per-kind anchor)" "data-wpcc-action"         "$SRC"
 has  "capability gate"                       "current_user_can( 'manage_options' )" "$SRC"
 has  "FeatureGate gate"                      "FeatureGate::allows( self::FEATURE )" "$SRC"
 has  "build-flag gate (const)"               "WPCC_SEO_META_UI"               "$SRC"
@@ -69,9 +71,15 @@ if ! command -v wp >/dev/null 2>&1; then
 	echo "  SKIP: wp-cli not available — static checks only."
 else
 	RES="$(wpe '
-		$ra = new \WPCommandCenter\Admin\SeoRowActions();
+		// The SEO contextual entry is now the consolidated AI Assist anchor. "Has the
+		// SEO action" = the single anchor exists AND lists "seo" in data-actions.
+		$ra = new \WPCommandCenter\Admin\AiAssistRowActions();
 		$out = [];
-		$has_action = function( $actions ) { return isset( $actions["wpcc_seo_generate"] ) && strpos( $actions["wpcc_seo_generate"], "Generate SEO Suggestion" ) !== false; };
+		$has_action = function( $actions ) {
+			if ( ! isset( $actions["wpcc_ai_assist"] ) ) { return false; }
+			if ( ! preg_match( "/data-actions=\"([^\"]*)\"/", $actions["wpcc_ai_assist"], $m ) ) { return false; }
+			return in_array( "seo", explode( ",", $m[1] ), true );
+		};
 
 		$admin = get_users(["role"=>"administrator","number"=>1]); $aid = $admin?$admin[0]->ID:1;
 		$pub = wp_insert_post(["post_title"=>"RA pub","post_status"=>"publish","post_type"=>"post","post_content"=>"x"]);
@@ -82,43 +90,43 @@ else
 
 		// (a) admin + flag-on + published -> action present.
 		wp_set_current_user($aid);
-		$out["admin_published"] = $has_action( $ra->add_row_action( [], $pubpost ) ) ? 1 : 0;
+		$out["admin_published"] = $has_action( $ra->add( [], $pubpost ) ) ? 1 : 0;
 
 		// (b) status allow-list (clone + override status — deterministic, no WP coercion).
 		// Allowed: publish/draft/pending/future/private -> present.
 		$allowed_ok = 1;
 		foreach (["publish","draft","pending","future","private"] as $st) {
 			$p = clone $pubpost; $p->post_status = $st;
-			if ( ! $has_action( $ra->add_row_action( [], $p ) ) ) { $allowed_ok = 0; }
+			if ( ! $has_action( $ra->add( [], $p ) ) ) { $allowed_ok = 0; }
 		}
 		$out["allowed_statuses_present"] = $allowed_ok;
 		// Disallowed: trash/auto-draft/inherit (revisions, attachments) -> absent.
 		$blocked_ok = 1;
 		foreach (["trash","auto-draft","inherit"] as $st) {
 			$p = clone $pubpost; $p->post_status = $st;
-			if ( $has_action( $ra->add_row_action( [], $p ) ) ) { $blocked_ok = 0; }
+			if ( $has_action( $ra->add( [], $p ) ) ) { $blocked_ok = 0; }
 		}
 		$out["blocked_statuses_absent"] = $blocked_ok;
 
 		// (c) unsupported post type -> absent.
 		$unsupp = clone $pubpost; $unsupp->post_type = "wpcc_unsupported_type";
-		$out["unsupported_type_absent"] = $has_action( $ra->add_row_action( [], $unsupp ) ) ? 0 : 1;
+		$out["unsupported_type_absent"] = $has_action( $ra->add( [], $unsupp ) ) ? 0 : 1;
 
 		// (d) FeatureGate OFF -> absent.
 		$gate_off = function($allowed,$feature){ return $feature==="seo_meta_generator" ? false : $allowed; };
 		add_filter("wpcc_feature_allowed",$gate_off,10,2);
-		$out["featuregate_off_absent"] = $has_action( $ra->add_row_action( [], $pubpost ) ) ? 0 : 1;
+		$out["featuregate_off_absent"] = $has_action( $ra->add( [], $pubpost ) ) ? 0 : 1;
 		remove_filter("wpcc_feature_allowed",$gate_off,10);
 
 		// (e) non-admin (subscriber) -> absent.
 		$sub = wp_insert_user(["user_login"=>"ra_sub_".wp_generate_password(5,false),"user_pass"=>wp_generate_password(),"role"=>"subscriber"]);
 		wp_set_current_user($sub);
-		$out["subscriber_absent"] = $has_action( $ra->add_row_action( [], $pubpost ) ) ? 0 : 1;
+		$out["subscriber_absent"] = $has_action( $ra->add( [], $pubpost ) ) ? 0 : 1;
 		wp_set_current_user($aid);
 
 		// (f) build-flag OFF -> absent.
 		remove_filter("wpcc_seo_meta_ui","__return_true");
-		$out["flag_off_absent"] = $has_action( $ra->add_row_action( [], $pubpost ) ) ? 0 : 1;
+		$out["flag_off_absent"] = $has_action( $ra->add( [], $pubpost ) ) ? 0 : 1;
 		add_filter("wpcc_seo_meta_ui","__return_true");
 
 		// --- Propose-only round-trip via the EXISTING generator (stub provider, no network) ---

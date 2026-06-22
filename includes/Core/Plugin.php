@@ -48,9 +48,14 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new AdminMenu() )->init();
 			( new Assets() )->init();
+			// Per-feature classes retain their no-JS admin-post fallback handlers + Bulk
+			// Actions; their row links are consolidated into the single AI Assist entry.
 			( new \WPCommandCenter\Admin\SeoRowActions() )->init();
 			( new \WPCommandCenter\Admin\ContentRowActions() )->init();
 			( new \WPCommandCenter\Admin\MediaRowActions() )->init();
+			// One consolidated "✨ AI Assist" row action (Posts/Pages/Products/Media),
+			// reading AiActionRegistry; opens the shared Governed Action Panel chooser.
+			( new \WPCommandCenter\Admin\AiAssistRowActions() )->init();
 			// One generalized Governed Action Panel, shared by every AI content
 			// workflow (SEO / Title / Excerpt / Alt Text), enqueued centrally.
 			( new \WPCommandCenter\Admin\ActionPanelAssets() )->init();

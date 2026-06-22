@@ -43,7 +43,8 @@
 	var overlay = null;
 	var modal = null;
 	// Per-open governed-action state: which workflow, its config, the ids in flight.
-	var ST = { key: '', cfg: null, postId: 0, proposalId: '', changeId: '' };
+	// `heading` overrides the modal title for the chooser step (no cfg yet).
+	var ST = { key: '', cfg: null, postId: 0, proposalId: '', changeId: '', heading: '' };
 
 	function t( key ) {
 		return ( I18N && I18N[ key ] ) || '';
@@ -65,7 +66,8 @@
 		} );
 
 		var header = el( 'div', { class: 'wpcc-qp-header' } );
-		header.appendChild( el( 'h2', { id: 'wpcc-qp-title', class: 'wpcc-qp-h' }, ST.cfg ? ST.cfg.title : t( 'title' ) ) );
+		var heading = ST.heading || ( ST.cfg ? ST.cfg.title : t( 'title' ) );
+		header.appendChild( el( 'h2', { id: 'wpcc-qp-title', class: 'wpcc-qp-h' }, heading ) );
 		var closeX = el( 'button', { type: 'button', class: 'wpcc-qp-x', 'aria-label': t( 'close' ) }, '×' );
 		closeX.addEventListener( 'click', closeModal );
 		header.appendChild( closeX );
@@ -463,6 +465,163 @@
 			} );
 	}
 
+	// ── Chooser (AI Assist → pick which action to run for this object) ───────────
+
+	// Resolve which action ids apply: prefer the server-computed data-actions list
+	// (per-object: type + enabled + status/eligibility), else fall back to filtering
+	// the localized actions by object type.
+	function resolveAssistIds( link, type ) {
+		var listed = ( link.getAttribute( 'data-actions' ) || '' )
+			.split( ',' )
+			.map( function ( s ) { return s.trim(); } )
+			.filter( function ( k ) { return k && ACTIONS[ k ]; } );
+		if ( listed.length ) {
+			return listed;
+		}
+		return Object.keys( ACTIONS ).filter( function ( k ) {
+			var ot = ACTIONS[ k ].objectTypes || [];
+			return ot.indexOf( type ) >= 0;
+		} );
+	}
+
+	// Begin one action's governed lifecycle (shared by the chooser and single-action path).
+	function startAction( key, id ) {
+		ST.key = key;
+		ST.cfg = ACTIONS[ key ];
+		var h = modal ? modal.querySelector( '#wpcc-qp-title' ) : null;
+		if ( h ) { h.textContent = ( ST.cfg && ST.cfg.title ) || t( 'title' ); }
+		generate( id );
+	}
+
+	// ── Row dropdown chooser (compact menu off the ✨ WPCC AI row action) ─────────
+	// A small WAI-ARIA menu anchored to the row action — NOT the big modal. Picking an
+	// item then opens the existing Governed Action Panel for that action. Keyboard:
+	// Up/Down/Home/End move, Enter/Space select, Esc closes (returns focus to trigger),
+	// Tab/outside-click close.
+
+	var dropdown = null; // { el, trigger }
+	var closeTimer = null; // hover-intent close delay (prevents flicker crossing the gap)
+
+	function cancelClose() { if ( closeTimer ) { clearTimeout( closeTimer ); closeTimer = null; } }
+
+	// Close after a short grace period — cancelled if the pointer re-enters the trigger
+	// or the menu, and skipped while keyboard focus is inside the menu.
+	function scheduleClose() {
+		cancelClose();
+		closeTimer = setTimeout( function () {
+			if ( dropdown && ( dropdown.el.contains( document.activeElement ) || document.activeElement === dropdown.trigger ) ) { return; }
+			closeDropdown( false );
+		}, 220 );
+	}
+
+	function closeDropdown( returnFocus ) {
+		cancelClose();
+		if ( ! dropdown ) { return; }
+		document.removeEventListener( 'click', onDocClick, true );
+		document.removeEventListener( 'keydown', onMenuKeydown, true );
+		var trigger = dropdown.trigger;
+		if ( trigger ) { trigger.setAttribute( 'aria-expanded', 'false' ); }
+		// Release the row's native action strip back to WP's hover behavior.
+		if ( dropdown.rowActions ) { dropdown.rowActions.classList.remove( 'wpcc-ai-keep-open' ); }
+		if ( dropdown.el && dropdown.el.parentNode ) { dropdown.el.parentNode.removeChild( dropdown.el ); }
+		dropdown = null;
+		if ( returnFocus && trigger && typeof trigger.focus === 'function' ) { trigger.focus(); }
+	}
+
+	function menuItems() {
+		return dropdown ? Array.prototype.slice.call( dropdown.el.querySelectorAll( '.wpcc-ai-menu__item' ) ) : [];
+	}
+
+	function onDocClick( e ) {
+		if ( dropdown && ! dropdown.el.contains( e.target ) && e.target !== dropdown.trigger ) {
+			closeDropdown( false );
+		}
+	}
+
+	function onMenuKeydown( e ) {
+		if ( ! dropdown ) { return; }
+		var items = menuItems();
+		var idx = items.indexOf( document.activeElement );
+		if ( e.key === 'Escape' ) { e.preventDefault(); closeDropdown( true ); }
+		else if ( e.key === 'ArrowDown' ) { e.preventDefault(); ( items[ ( idx + 1 ) % items.length ] || items[ 0 ] ).focus(); }
+		else if ( e.key === 'ArrowUp' ) { e.preventDefault(); ( items[ ( idx - 1 + items.length ) % items.length ] || items[ 0 ] ).focus(); }
+		else if ( e.key === 'Home' ) { e.preventDefault(); items[ 0 ] && items[ 0 ].focus(); }
+		else if ( e.key === 'End' ) { e.preventDefault(); items[ items.length - 1 ] && items[ items.length - 1 ].focus(); }
+		else if ( e.key === 'Tab' ) { closeDropdown( false ); }
+	}
+
+	function positionDropdown( menu, trigger ) {
+		var r = trigger.getBoundingClientRect();
+		var sx = window.pageXOffset || document.documentElement.scrollLeft;
+		var sy = window.pageYOffset || document.documentElement.scrollTop;
+		menu.style.position = 'absolute';
+		menu.style.top = ( sy + r.bottom + 2 ) + 'px';
+		menu.style.left = ( sx + r.left ) + 'px';
+		menu.style.zIndex = '100000';
+	}
+
+	// Pick an action from the menu → close it, then open the governed panel for it.
+	function chooseFromMenu( key, id ) {
+		var trigger = dropdown ? dropdown.trigger : lastFocus;
+		closeDropdown( false );
+		lastFocus = trigger; // panel restores focus here when it closes
+		ST.heading = '';
+		ST.cfg = ACTIONS[ key ];
+		buildModal();
+		startAction( key, id );
+	}
+
+	function openDropdown( trigger, ids, id, focusFirst ) {
+		closeDropdown( false );
+		var menu = el( 'div', { class: 'wpcc-ai-menu', role: 'menu', 'aria-label': t( 'chooserTitle' ) } );
+		ids.forEach( function ( key ) {
+			var cfg = ACTIONS[ key ];
+			if ( ! cfg ) { return; }
+			var item = el( 'button', { type: 'button', class: 'wpcc-ai-menu__item', role: 'menuitem', tabindex: '-1', 'data-action-id': key } );
+			if ( cfg.icon ) {
+				item.appendChild( el( 'span', { class: 'dashicons ' + cfg.icon + ' wpcc-ai-menu__ic', 'aria-hidden': 'true' } ) );
+			}
+			item.appendChild( el( 'span', { class: 'wpcc-ai-menu__label' }, cfg.label || cfg.title ) );
+			item.addEventListener( 'click', function ( ev ) { ev.preventDefault(); chooseFromMenu( key, id ); } );
+			menu.appendChild( item );
+		} );
+		// Keep the menu open while the pointer is in it; close (debounced) when it leaves.
+		menu.addEventListener( 'mouseenter', cancelClose );
+		menu.addEventListener( 'mouseleave', scheduleClose );
+		document.body.appendChild( menu );
+		// Pin the row's native action strip (Edit | Quick Edit | Trash | …) visible while
+		// the menu is open — the menu lives on <body>, so the pointer leaves the row and
+		// WP would otherwise hide the hover-only strip. Released in closeDropdown().
+		var rowActions = trigger.closest ? trigger.closest( '.row-actions' ) : null;
+		if ( rowActions ) { rowActions.classList.add( 'wpcc-ai-keep-open' ); }
+		dropdown = { el: menu, trigger: trigger, rowActions: rowActions };
+		positionDropdown( menu, trigger );
+		trigger.setAttribute( 'aria-expanded', 'true' );
+		document.addEventListener( 'click', onDocClick, true );
+		document.addEventListener( 'keydown', onMenuKeydown, true );
+		if ( focusFirst ) {
+			var first = menu.querySelector( '.wpcc-ai-menu__item' );
+			if ( first ) { first.focus(); }
+		}
+	}
+
+	// Resolve a trigger to {ids,id}; returns null when nothing applies (href fallback).
+	function triggerActions( trigger ) {
+		var id = parseInt( trigger.getAttribute( 'data-id' ), 10 );
+		if ( ! id ) { return null; }
+		var ids = resolveAssistIds( trigger, trigger.getAttribute( 'data-type' ) || '' );
+		return ids.length ? { ids: ids, id: id } : null;
+	}
+
+	// Hover / focus opens the MENU only (never the heavy panel) and only when there is a
+	// real choice (>1 action); a single-action row is left to click/keyboard to open its panel.
+	function hoverOpen( trigger ) {
+		cancelClose();
+		if ( dropdown && dropdown.trigger === trigger ) { return; }
+		var a = triggerActions( trigger );
+		if ( a && a.ids.length > 1 ) { openDropdown( trigger, a.ids, a.id, false ); }
+	}
+
 	// ── Bind (delegated — list tables re-render / paginate) ──────────────────────
 
 	function onClick( e ) {
@@ -471,24 +630,104 @@
 			return;
 		}
 		var key = link.getAttribute( 'data-wpcc-action' );
-		var cfg = ACTIONS[ key ];
-		if ( ! cfg ) {
-			return; // unknown workflow — let the href fallback run
-		}
 		var id = parseInt( link.getAttribute( 'data-id' ), 10 );
 		if ( ! id ) {
 			return; // let the href fallback run
 		}
+
+		// Consolidated "✨ WPCC AI" entry.
+		if ( key === 'assist' ) {
+			// Already open (hover/focus opened it on mousedown) → keep it open; the menu
+			// closes on Esc / outside click / pointer-leave / selecting an action.
+			if ( dropdown && dropdown.trigger === link ) { e.preventDefault(); return; }
+			var a = triggerActions( link );
+			if ( ! a ) {
+				return; // nothing applicable — let the href fallback (Builder) run
+			}
+			e.preventDefault();
+			lastFocus = link;
+			// Exactly one applicable action → skip the menu, open its panel directly.
+			if ( a.ids.length === 1 ) {
+				ST.heading = '';
+				ST.cfg = ACTIONS[ a.ids[ 0 ] ];
+				buildModal();
+				startAction( a.ids[ 0 ], id );
+				return;
+			}
+			// Multiple → compact row dropdown (focus the first item for keyboard/click).
+			openDropdown( link, a.ids, id, true );
+			return;
+		}
+
+		// Back-compat: a specific per-action data-wpcc-action key (legacy anchors).
+		var cfg = ACTIONS[ key ];
+		if ( ! cfg ) {
+			return; // unknown workflow — let the href fallback run
+		}
 		e.preventDefault();
 		lastFocus = link;
+		ST.heading = '';
 		ST.key = key;
 		ST.cfg = cfg;
 		buildModal();
 		generate( id );
 	}
 
+	// Hover opens the menu; leaving the trigger debounce-closes it (cancelled if the
+	// pointer lands in the menu — see openDropdown's mouseenter/leave).
+	function onMouseOver( e ) {
+		var link = e.target.closest && e.target.closest( 'a.wpcc-ai-assist[data-wpcc-action="assist"]' );
+		if ( link ) { hoverOpen( link ); }
+	}
+	function onMouseOut( e ) {
+		if ( ! dropdown ) { return; }
+		var link = e.target.closest && e.target.closest( 'a.wpcc-ai-assist[data-wpcc-action="assist"]' );
+		if ( ! link || link !== dropdown.trigger ) { return; }
+		var to = e.relatedTarget;
+		var stillInside = to && to.closest && ( to === dropdown.trigger || ( to.closest && to.closest( '.wpcc-ai-menu' ) ) );
+		if ( ! stillInside ) { scheduleClose(); }
+	}
+
+	// Keyboard focus on the trigger opens the menu (focus stays on the trigger; ArrowDown
+	// moves into it). Focus leaving both trigger and menu closes it.
+	function onFocusIn( e ) {
+		var link = e.target.closest && e.target.closest( 'a.wpcc-ai-assist[data-wpcc-action="assist"]' );
+		if ( link ) { hoverOpen( link ); }
+	}
+	function onFocusOut() {
+		if ( ! dropdown ) { return; }
+		setTimeout( function () {
+			var ae = document.activeElement;
+			if ( dropdown && ! dropdown.el.contains( ae ) && ae !== dropdown.trigger ) { closeDropdown( false ); }
+		}, 0 );
+	}
+
+	// Space / ArrowDown on the trigger opens + enters the menu (Enter fires native click).
+	function onTriggerKeydown( e ) {
+		var link = e.target.closest && e.target.closest( 'a.wpcc-ai-assist[data-wpcc-action="assist"]' );
+		if ( ! link ) { return; }
+		// Already open for this trigger → let the menu's own key handler navigate.
+		if ( dropdown && dropdown.trigger === link ) { return; }
+		if ( e.key === ' ' || e.key === 'Spacebar' || e.key === 'ArrowDown' || e.key === 'Enter' ) {
+			var a = triggerActions( link );
+			if ( ! a ) { return; }
+			e.preventDefault();
+			lastFocus = link;
+			if ( a.ids.length === 1 ) {
+				ST.heading = ''; ST.cfg = ACTIONS[ a.ids[ 0 ] ]; buildModal(); startAction( a.ids[ 0 ], a.id );
+			} else {
+				openDropdown( link, a.ids, a.id, true );
+			}
+		}
+	}
+
 	if ( ! R || ! ROOT.restBase || ! ROOT.nonce ) {
 		return; // runtime missing or not configured — leave the <a> redirect fallback intact
 	}
 	document.addEventListener( 'click', onClick );
+	document.addEventListener( 'mouseover', onMouseOver );
+	document.addEventListener( 'mouseout', onMouseOut );
+	document.addEventListener( 'focusin', onFocusIn );
+	document.addEventListener( 'focusout', onFocusOut, true );
+	document.addEventListener( 'keydown', onTriggerKeydown );
 } )();

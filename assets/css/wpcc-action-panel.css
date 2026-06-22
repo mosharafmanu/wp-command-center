@@ -16,10 +16,12 @@
 	inset: 0;
 	background: var( --wpcc-overlay-scrim );
 	display: flex;
-	align-items: flex-start;
+	/* Center the modal in the viewport (premium, balanced). Mobile (≤600px) overrides
+	   to a bottom sheet below. overflow-y keeps very tall panels reachable. */
+	align-items: center;
 	justify-content: center;
 	z-index: var( --wpcc-z-modal );
-	padding: 6vh 16px 16px;
+	padding: 16px;
 	overflow-y: auto;
 }
 
@@ -29,6 +31,9 @@
 	box-shadow: var( --wpcc-panel-shadow );
 	width: 100%;
 	max-width: var( --wpcc-panel-max-width );
+	/* Keep a tall panel from exceeding the viewport while staying centered. */
+	max-height: calc( 100vh - 32px );
+	overflow-y: auto;
 	outline: none;
 	animation: wpcc-qp-in var( --wpcc-motion-panel ) ease-out;
 }
@@ -229,6 +234,8 @@ textarea.wpcc-qp-ed { resize: vertical; }
 		border-bottom-left-radius: 0;
 		border-bottom-right-radius: 0;
 		max-height: 92vh;
+		/* The body scrolls on mobile (below); the sheet itself must not double-scroll. */
+		overflow-y: visible;
 		display: flex;
 		flex-direction: column;
 		animation: wpcc-qp-sheet-in var( --wpcc-motion-panel ) ease-out;
@@ -255,4 +262,59 @@ textarea.wpcc-qp-ed { resize: vertical; }
 
 @media ( prefers-reduced-motion: reduce ) {
 	.wpcc-qp-modal { animation: none; }
+}
+
+/* ✨ WPCC AI — compact row dropdown menu (anchored off the row action; NOT the modal). */
+.wpcc-ai-menu {
+	min-width: 200px;
+	padding: 4px;
+	background: var( --wpcc-surface-card, #fff );
+	border: 1px solid var( --wpcc-border-strong, #c3c4c7 );
+	border-radius: 8px;
+	box-shadow: 0 6px 24px rgba( 0, 0, 0, 0.16 );
+}
+.wpcc-ai-menu__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	text-align: left;
+	padding: 8px 10px;
+	border: 0;
+	border-radius: 6px;
+	background: transparent;
+	color: var( --wpcc-text-primary, #1d2327 );
+	font-size: 13px;
+	line-height: 1.4;
+	cursor: pointer;
+}
+.wpcc-ai-menu__item:hover,
+.wpcc-ai-menu__item:focus {
+	background: var( --wpcc-surface-accent-soft, #f0f6fc );
+	outline: none;
+}
+.wpcc-ai-menu__ic {
+	color: var( --wpcc-brand-accent, #2271b1 );
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+}
+.wpcc-ai-menu__label {
+	font-weight: 500;
+}
+
+/* The consolidated row-action anchor (inherits WP row-action styling; sparkle is decorative). */
+.wpcc-ai-assist {
+	white-space: nowrap;
+}
+
+/* While the WPCC AI menu is open, keep the row's native action strip visible — the menu
+   lives on <body>, so the pointer leaves the <tr> and WP's hover-only strip would hide.
+   WP core hides the strip by pushing it off-screen ( .row-actions { position: relative;
+   left: -9999em } ) and reveals it with `position: static` (the same mechanism as WP's
+   own `.row-actions.visible`). So we MUST override position/left — visibility/opacity have
+   no effect. !important guards against core specificity across WP versions. */
+.row-actions.wpcc-ai-keep-open {
+	position: static !important;
+	left: auto !important;
 }

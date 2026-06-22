@@ -30,6 +30,8 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 SRC="$PLUGIN_DIR/includes/Admin/SeoRowActions.php"
 CFG="$PLUGIN_DIR/includes/Admin/ActionPanelAssets.php"
+REG="$PLUGIN_DIR/includes/Admin/AiActionRegistry.php"
+AAR="$PLUGIN_DIR/includes/Admin/AiAssistRowActions.php"
 JS="$PLUGIN_DIR/assets/js/wpcc-action-panel.js"
 RT="$PLUGIN_DIR/assets/js/wpcc-admin-runtime.js"
 CSS="$PLUGIN_DIR/assets/css/wpcc-action-panel.css"
@@ -49,15 +51,18 @@ else
 fi
 
 echo
-echo "== 1. Progressive enhancement: anchor keeps fallback + opts into the panel =="
-has  "row action still nonce-protected href"  "wp_nonce_url"                  "$SRC"
-has  "row action still admin-post fallback"   "admin-post.php?action="        "$SRC"
-has  "anchor opts into the panel (data-wpcc-action=seo)" "data-wpcc-action=\"seo\"" "$SRC"
-has  "anchor keeps quickgen class"            "wpcc-seo-quickgen"             "$SRC"
-has  "anchor carries data-id"                 "data-id=\""                    "$SRC"
-has  "row action gates on shared status allow-list" "SeoMetaGenerator::is_supported_status" "$SRC"
-lacks "no stale published-only gate"          "'publish' !== \$post->post_status" "$SRC"
-lacks "SeoRowActions no longer self-enqueues" "function enqueue_assets"       "$SRC"
+echo "== 1. Consolidated entry: SEO row link folded into ✨ AI Assist; fallback retained =="
+# The SEO row link is now the single AI Assist anchor (AiAssistRowActions) bound to the
+# panel chooser. SeoRowActions keeps only its nonce-checked no-JS admin-post fallback + bulk.
+has  "AI Assist anchor opts into the panel chooser" "data-wpcc-action=\"assist\"" "$AAR"
+has  "AI Assist carries the applicable action ids"  "data-actions=\""             "$AAR"
+has  "AI Assist offers a no-JS fallback href"       "fallback_url"                "$AAR"
+has  "WPCC-branded visible label"                "WPCC AI"                     "$AAR"
+has  "SEO panel config (route) lives in the registry" "/admin/seo/generate"       "$REG"
+has  "SEO status allow-list in the registry"        "SeoMetaGenerator::is_supported_status" "$REG"
+has  "SeoRowActions retains nonce-checked fallback" "check_admin_referer"         "$SRC"
+has  "SeoRowActions retains admin-post handler"     "admin_post_"                 "$SRC"
+lacks "SeoRowActions no longer emits a per-kind row anchor" "data-wpcc-action="   "$SRC"
 
 echo
 echo "== 2. Central enqueue + SEO config reuse existing routes only (ActionPanelAssets) =="
@@ -66,10 +71,11 @@ has  "panel depends on the shared runtime"    "wpcc-admin-runtime"            "$
 has  "localizes REST base"                     "rest_url( 'wp-command-center/v1' )" "$CFG"
 has  "localizes a wp_rest nonce"               "wp_create_nonce( 'wp_rest' )" "$CFG"
 has  "localizes security mode for Apply label" "SecurityModeManager::current()" "$CFG"
-has  "SEO config uses existing generate route" "/admin/seo/generate"          "$CFG"
-has  "SEO config gated by build flag"          "WPCC_SEO_META_UI"             "$CFG"
-has  "SEO config gated by FeatureGate"         "seo_meta_generator"           "$CFG"
-has  "SEO apply shape is seo_update"           "'seo_update'"                 "$CFG"
+has  "reads the AI action registry"            "AiActionRegistry"             "$CFG"
+has  "SEO config (route) in the registry"      "/admin/seo/generate"          "$REG"
+has  "SEO config gated by build flag (registry)" "WPCC_SEO_META_UI"           "$REG"
+has  "SEO config gated by FeatureGate (registry)" "seo_meta_generator"        "$REG"
+has  "SEO apply shape is seo_update (registry)" "'seo_update'"                "$REG"
 has  "shared unsupportedStatus i18n"           "'unsupportedStatus'"          "$CFG"
 has  "Approve & Apply label"                   "'applyDev'"                   "$CFG"
 has  "Submit for approval label"               "'applyGate'"                  "$CFG"
@@ -126,6 +132,11 @@ else
 	RES="$(wpe '
 		$aa  = new \WPCommandCenter\Admin\ActionPanelAssets();
 		$admin = get_users(["role"=>"administrator","number"=>1]); $aid = $admin?$admin[0]->ID:1;
+		// Isolate the SEO workflow: force the OTHER UI flags off (priority 99 wins over
+		// any dev mu-plugin enablers) so this matrix tests SEO gating alone regardless
+		// of which Builders the dev env happens to enable.
+		add_filter("wpcc_ai_content_ui","__return_false",99);
+		add_filter("wpcc_alt_text_ui","__return_false",99);
 		$enq = function() { return wp_script_is( "wpcc-action-panel", "enqueued" ); };
 		$reset = function() {
 			foreach (["wpcc-action-panel","wpcc-admin-runtime"] as $h) { wp_dequeue_script($h); wp_deregister_script($h); }

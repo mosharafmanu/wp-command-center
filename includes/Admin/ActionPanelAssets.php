@@ -28,15 +28,6 @@ final class ActionPanelAssets {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
 	}
 
-	/** Post types the contextual content/SEO workflows apply to (Products when Woo is active). */
-	private function supported_types(): array {
-		$types = [ 'post', 'page' ];
-		if ( class_exists( 'WooCommerce' ) ) {
-			$types[] = 'product';
-		}
-		return $types;
-	}
-
 	/**
 	 * Enqueue the panel + localize the enabled workflows for the current admin screen.
 	 *
@@ -64,8 +55,10 @@ final class ActionPanelAssets {
 	}
 
 	/**
-	 * Build the enabled-workflow config map for this screen. Each workflow is gated by
-	 * capability + its build flag + its FeatureGate; only enabled ones appear.
+	 * Build the enabled-action config map for this screen by reading AiActionRegistry.
+	 * The screen determines the object type (edit.php → the list table's post type;
+	 * upload.php → attachment); the registry decides which actions are enabled + apply
+	 * to that type. Each action stays gated by capability + build flag + FeatureGate.
 	 *
 	 * @return array<string,array<string,mixed>>
 	 */
@@ -73,104 +66,28 @@ final class ActionPanelAssets {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return [];
 		}
-		$actions = [];
 
+		$type = '';
 		if ( 'edit.php' === $hook ) {
 			$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-			$ptype  = $screen ? (string) $screen->post_type : '';
-			if ( ! in_array( $ptype, $this->supported_types(), true ) ) {
-				return [];
-			}
-			if ( $this->flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
-				$actions['seo'] = $this->seo_config();
-			}
-			if ( $this->flag( 'WPCC_AI_CONTENT_UI', 'wpcc_ai_content_ui' ) ) {
-				if ( FeatureGate::allows( 'title_generator' ) ) {
-					$actions['title'] = $this->content_config( 'title' );
-				}
-				if ( FeatureGate::allows( 'excerpt_generator' ) ) {
-					$actions['excerpt'] = $this->content_config( 'excerpt' );
-				}
-			}
+			$type   = $screen ? (string) $screen->post_type : '';
+		} elseif ( 'upload.php' === $hook ) {
+			$type = 'attachment';
+		}
+		if ( '' === $type ) {
+			return [];
 		}
 
-		if ( 'upload.php' === $hook
-			&& $this->flag( 'WPCC_ALT_TEXT_UI', 'wpcc_alt_text_ui' )
-			&& FeatureGate::allows( 'ai_alt_text' ) ) {
-			$actions['alt_text'] = $this->alt_text_config();
-		}
-
-		return $actions;
-	}
-
-	/** Build-flag check: constant OR filter (mirrors the per-surface UI flags). */
-	private function flag( string $const, string $filter ): bool {
-		if ( defined( $const ) && constant( $const ) ) {
-			return true;
-		}
-		return (bool) apply_filters( $filter, false );
-	}
-
-	// ── Per-workflow declarative configs (data only; the panel interprets them) ──
-
-	private function seo_config(): array {
-		return [
-			'title'      => __( 'Generate SEO Suggestion', 'wp-command-center' ),
-			'generate'   => [ 'path' => '/admin/seo/generate', 'body' => 'post_ids' ],
-			'apply'      => [ 'action' => 'seo_update', 'idKey' => 'content_id', 'nest' => 'seo' ],
-			'suggest'    => 'seo',
-			'fields'     => [
-				[ 'key' => 'title', 'label' => __( 'SEO title', 'wp-command-center' ), 'type' => 'text', 'prior' => 'title' ],
-				[ 'key' => 'description', 'label' => __( 'Meta description', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'description' ],
-			],
-			'suggestUrl' => esc_url_raw( admin_url( 'admin.php?page=wpcc-seo&tab=suggestions' ) ),
-		];
-	}
-
-	/**
-	 * Title / Excerpt config. Generation rides the EXISTING generic proposals route's
-	 * additive generate branch ({ generate:{ kind, post_id } }); apply targets the
-	 * existing content_manage/content_update operation (top-level field, no nest).
-	 */
-	private function content_config( string $kind ): array {
-		$is_title = ( 'title' === $kind );
-		$field    = $is_title ? 'title' : 'excerpt';
-		return [
-			'title'      => $is_title ? __( 'Generate Title Suggestion', 'wp-command-center' ) : __( 'Generate Excerpt Suggestion', 'wp-command-center' ),
-			'generate'   => [ 'path' => '/admin/proposals', 'body' => [ 'generate_kind' => $kind ] ],
-			'apply'      => [ 'action' => 'content_update', 'idKey' => 'content_id' ],
-			'suggest'    => null,
-			'fields'     => [
-				$is_title
-					? [ 'key' => 'title', 'label' => __( 'Title', 'wp-command-center' ), 'type' => 'text', 'prior' => 'title' ]
-					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
-			],
-			'suggestUrl' => esc_url_raw( admin_url( 'admin.php?page=wpcc-ai-content&tab=suggestions&kind=' . $kind ) ),
-		];
-	}
-
-	/**
-	 * Alt Text config. Generation rides the EXISTING /admin/alt-text/generate route;
-	 * apply targets the existing media_manage/media_update operation (alt is a top-level
-	 * field keyed by media_id). Undo rides the same history rollback route.
-	 */
-	private function alt_text_config(): array {
-		return [
-			'title'      => __( 'Generate Alt Text', 'wp-command-center' ),
-			'generate'   => [ 'path' => '/admin/alt-text/generate', 'body' => 'attachment_ids' ],
-			'apply'      => [ 'action' => 'media_update', 'idKey' => 'media_id' ],
-			'suggest'    => null,
-			'fields'     => [
-				[ 'key' => 'alt', 'label' => __( 'Alt text', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'alt' ],
-			],
-			'suggestUrl' => esc_url_raw( admin_url( 'admin.php?page=wpcc-alt-text' ) ),
-		];
+		$registry = new AiActionRegistry();
+		return $registry->localized( $registry->enabled_for_type( $type ) );
 	}
 
 	/** One shared i18n block consumed by every workflow (field labels live per field). */
 	private function shared_i18n(): array {
 		return [
 			'title'            => __( 'Generate Suggestion', 'wp-command-center' ),
+			'chooserTitle'     => __( 'WPCC AI', 'wp-command-center' ),
+			'chooserIntro'     => __( 'Choose what to generate for this item.', 'wp-command-center' ),
 			'generating'       => __( 'Generating suggestion…', 'wp-command-center' ),
 			'current'          => __( 'Current', 'wp-command-center' ),
 			'suggested'        => __( 'Suggested', 'wp-command-center' ),

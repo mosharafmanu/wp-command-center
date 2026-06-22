@@ -5,8 +5,8 @@
  * Adds "Generate Alt Text" to the Media Library list-table row actions (and a
  * matching Bulk Action) on image attachments. Each ONLY creates a governed DRAFT via
  * the existing AltTextGenerator (Propose != Apply) and redirects to the AI Alt Text
- * Builder for review/apply — the same in-context Governed Action Panel
- * (data-wpcc-action="alt_text") that SEO / Title / Excerpt use.
+ * Builder for review/apply — the same in-context Governed Action Panel that SEO /
+ * Title / Excerpt use (now opened from the consolidated ✨ AI Assist chooser).
  *
  * Propose-only: it NEVER applies, NEVER writes attachment meta, NEVER bypasses
  * approval / rollback / audit / capability scoping, and adds NO REST route /
@@ -30,7 +30,9 @@ class MediaRowActions {
 	private const MAX_BATCH = 25;
 
 	public function init(): void {
-		add_filter( 'media_row_actions', [ $this, 'add_row_action' ], 10, 2 );
+		// The Media row action is now consolidated into the single "✨ AI Assist" entry
+		// (AiAssistRowActions); the Alt Text panel config lives in AiActionRegistry.
+		// This class retains only the no-JS admin-post fallback handler + Bulk Actions.
 		add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
 		add_filter( 'bulk_actions-upload', [ $this, 'add_bulk_action' ] );
 		add_filter( 'handle_bulk_actions-upload', [ $this, 'handle_bulk' ], 10, 3 );
@@ -60,34 +62,6 @@ class MediaRowActions {
 		return current_user_can( 'manage_options' )
 			&& $this->ui_enabled()
 			&& FeatureGate::allows( self::FEATURE );
-	}
-
-	/** Only offer the action for image attachments. */
-	private function eligible( $post ): bool {
-		return $post instanceof \WP_Post
-			&& 'attachment' === $post->post_type
-			&& wp_attachment_is_image( $post->ID );
-	}
-
-	/**
-	 * @param array<string,string> $actions
-	 * @param mixed                $post
-	 * @return array<string,string>
-	 */
-	public function add_row_action( array $actions, $post ): array {
-		if ( ! $this->allowed() || ! $this->eligible( $post ) ) {
-			return $actions;
-		}
-		$url = wp_nonce_url(
-			admin_url( 'admin-post.php?action=' . self::ACTION . '&attachment=' . (int) $post->ID ),
-			self::ACTION . '_' . (int) $post->ID
-		);
-		$actions[ self::ACTION ] = '<a href="' . esc_url( $url ) . '"'
-			. ' class="wpcc-altgen"'
-			. ' data-wpcc-action="alt_text"'
-			. ' data-id="' . (int) $post->ID . '">'
-			. esc_html__( 'Generate Alt Text', 'wp-command-center' ) . '</a>';
-		return $actions;
 	}
 
 	/** admin_post handler (no-JS fallback): create a draft, redirect to the Builder. */

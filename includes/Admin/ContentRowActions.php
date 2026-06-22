@@ -12,7 +12,7 @@
  * rollback / audit / capability scoping, and adds NO REST route / operation /
  * capability / MCP tool / schema. The drafts target the existing content_manage /
  * content_update operation; review + apply + undo happen through the governed panel
- * (data-wpcc-action) or the Builder. Thin admin wiring only.
+ * (opened from the ✨ AI Assist chooser) or the Builder. Thin admin wiring only.
  *
  * Mirrors SeoRowActions; build flag WPCC_AI_CONTENT_UI gates visibility, the per-kind
  * FeatureGate ('title_generator' / 'excerpt_generator') gates availability.
@@ -37,8 +37,9 @@ class ContentRowActions {
 	private const FEATURE = [ 'title' => 'title_generator', 'excerpt' => 'excerpt_generator' ];
 
 	public function init(): void {
-		add_filter( 'post_row_actions', [ $this, 'add_row_actions' ], 10, 2 );
-		add_filter( 'page_row_actions', [ $this, 'add_row_actions' ], 10, 2 );
+		// Row actions are now consolidated into the single "✨ AI Assist" entry
+		// (AiAssistRowActions). This class retains only the no-JS admin-post fallback
+		// handler + the native Bulk Actions (bulk consolidation is deferred).
 		add_action( 'admin_post_' . self::ACTION, [ $this, 'handle' ] );
 
 		foreach ( $this->supported_types() as $type ) {
@@ -89,42 +90,6 @@ class ContentRowActions {
 
 	private function supported_type( string $type ): bool {
 		return in_array( $type, $this->supported_types(), true );
-	}
-
-	/**
-	 * @param array<string,string> $actions
-	 * @param mixed                $post
-	 * @return array<string,string>
-	 */
-	public function add_row_actions( array $actions, $post ): array {
-		if ( ! $post instanceof \WP_Post || ! $this->supported_type( $post->post_type ) ) {
-			return $actions;
-		}
-		if ( ! ContentFieldGenerator::is_supported_status( (string) $post->post_status ) ) {
-			return $actions;
-		}
-
-		$labels = [
-			'title'   => __( 'Generate Title Suggestion', 'wp-command-center' ),
-			'excerpt' => __( 'Generate Excerpt Suggestion', 'wp-command-center' ),
-		];
-		foreach ( ContentFieldGenerator::KINDS as $kind ) {
-			if ( ! $this->allowed( $kind ) ) {
-				continue;
-			}
-			$url = wp_nonce_url(
-				admin_url( 'admin-post.php?action=' . self::ACTION . '&kind=' . $kind . '&post=' . (int) $post->ID ),
-				self::ACTION . '_' . $kind . '_' . (int) $post->ID
-			);
-			$actions[ self::ACTION . '_' . $kind ] = '<a href="' . esc_url( $url ) . '"'
-				. ' class="wpcc-content-quickgen"'
-				. ' data-wpcc-action="' . esc_attr( $kind ) . '"'
-				. ' data-id="' . (int) $post->ID . '"'
-				. ' data-type="' . esc_attr( $post->post_type ) . '">'
-				. esc_html( $labels[ $kind ] ) . '</a>';
-		}
-
-		return $actions;
 	}
 
 	/**
