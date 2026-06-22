@@ -34,7 +34,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 ?>
 <div class="wrap wpcc-wrap">
 	<h1><?php esc_html_e( 'Approval Center', 'wp-command-center' ); ?>
-		<span id="wpcc-pending-badge" style="display:none;margin-left:8px;background:#d63638;color:#fff;font-size:12px;border-radius:10px;padding:2px 8px;vertical-align:middle;"></span>
+		<span id="wpcc-pending-badge" style="display:none;margin-left:8px;background:var(--wpcc-red-600);color:var(--wpcc-white);font-size:12px;border-radius:10px;padding:2px 8px;vertical-align:middle;"></span>
 	</h1>
 
 	<p class="description">
@@ -44,7 +44,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			'<strong>' . esc_html( $security_mode ) . '</strong>'
 		); ?>
 		<?php if ( $human_only ) : ?>
-			<br><span class="dashicons dashicons-lock" style="color:#646970;" aria-hidden="true"></span>
+			<br><span class="dashicons dashicons-lock" style="color:var(--wpcc-gray-600);" aria-hidden="true"></span>
 			<?php esc_html_e( 'A WordPress administrator must approve gated operations — API tokens cannot self-approve in this mode.', 'wp-command-center' ); ?>
 		<?php endif; ?>
 	</p>
@@ -104,73 +104,79 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 </div>
 
 <style>
+/* CDS Scope 2 — risk/state/structural colors are token-driven (wpcc-tokens.css,
+ * enqueued before this view). Risk tiers use the CDS risk semantic (diagnostic=
+ * green · low=teal · medium=amber · high=orange · critical=red); this is the
+ * intended reconciliation of the former ad-hoc approval palette. The dark
+ * code/diff surface (#1e1e1e / #e6e6e6 / #7ee787 / #ff9492) is deliberately kept
+ * literal — no dark-surface token exists and remapping would hurt diff legibility. */
 .wpcc-summary-bar { margin:12px 0; display:flex; gap:10px; flex-wrap:wrap; }
-.wpcc-summary-chip { background:#fff; border:1px solid #dcdcde; border-radius:4px; padding:8px 14px; font-size:13px; min-width:90px; }
+.wpcc-summary-chip { background:var(--wpcc-white); border:1px solid var(--wpcc-gray-100); border-radius:4px; padding:8px 14px; font-size:13px; min-width:90px; }
 .wpcc-summary-chip strong { display:block; font-size:20px; line-height:1.2; }
-.wpcc-summary-chip.alert strong { color:#d63638; }
-.wpcc-approval-card { background:#fff; border:1px solid #ddd; border-left:4px solid #8c8f94; border-radius:4px; padding:16px 20px; margin:12px 0; max-width:820px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
-.wpcc-approval-card.risk-critical { border-left-color:#d63638; }
-.wpcc-approval-card.risk-high { border-left-color:#dba617; }
-.wpcc-approval-card.risk-medium { border-left-color:#72aee6; }
-.wpcc-approval-card.risk-low { border-left-color:#00a32a; }
-.wpcc-approval-card.risk-diagnostic { border-left-color:#8c8f94; }
-.wpcc-risk-badge { display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px;color:#fff;text-transform:uppercase; }
-.wpcc-risk-badge.risk-critical { background:#d63638; }
-.wpcc-risk-badge.risk-high { background:#dba617; color:#1e1e1e; }
-.wpcc-risk-badge.risk-medium { background:#72aee6; color:#1e1e1e; }
-.wpcc-risk-badge.risk-low { background:#00a32a; }
-.wpcc-risk-badge.risk-diagnostic { background:#8c8f94; }
+.wpcc-summary-chip.alert strong { color:var(--wpcc-state-danger-fg); }
+.wpcc-approval-card { background:var(--wpcc-white); border:1px solid var(--wpcc-gray-100); border-left:4px solid var(--wpcc-gray-500); border-radius:4px; padding:16px 20px; margin:12px 0; max-width:820px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.wpcc-approval-card.risk-critical { border-left-color:var(--wpcc-risk-critical-fg); }
+.wpcc-approval-card.risk-high { border-left-color:var(--wpcc-risk-high-fg); }
+.wpcc-approval-card.risk-medium { border-left-color:var(--wpcc-risk-medium-fg); }
+.wpcc-approval-card.risk-low { border-left-color:var(--wpcc-risk-low-fg); }
+.wpcc-approval-card.risk-diagnostic { border-left-color:var(--wpcc-risk-diagnostic-fg); }
+.wpcc-risk-badge { display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px;color:var(--wpcc-white);text-transform:uppercase; }
+.wpcc-risk-badge.risk-critical { background:var(--wpcc-risk-critical-fg); }
+.wpcc-risk-badge.risk-high { background:var(--wpcc-risk-high-fg); }
+.wpcc-risk-badge.risk-medium { background:var(--wpcc-risk-medium-fg); }
+.wpcc-risk-badge.risk-low { background:var(--wpcc-risk-low-fg); }
+.wpcc-risk-badge.risk-diagnostic { background:var(--wpcc-risk-diagnostic-fg); }
 .wpcc-card-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px; }
 .wpcc-card-title { font-size:15px;font-weight:600;margin:0; }
-.wpcc-card-meta { font-size:13px;color:#50575e;margin:6px 0; }
+.wpcc-card-meta { font-size:13px;color:var(--wpcc-gray-700);margin:6px 0; }
 .wpcc-card-meta td { padding:3px 12px 3px 0;vertical-align:top; }
 .wpcc-card-meta td:first-child { font-weight:500;white-space:nowrap; }
-.wpcc-card-reason { background:#f6f7f7;border-left:3px solid #ddd;padding:8px 12px;margin:10px 0;font-size:13px;color:#3c434a;font-style:italic; }
+.wpcc-card-reason { background:var(--wpcc-gray-0);border-left:3px solid var(--wpcc-gray-100);padding:8px 12px;margin:10px 0;font-size:13px;color:var(--wpcc-gray-700);font-style:italic; }
 .wpcc-card-actions { margin-top:14px; }
-.wpcc-approve-btn { background:#00a32a;color:#fff;border-color:#00a32a; }
-.wpcc-approve-btn:hover { background:#008a20;border-color:#008a20;color:#fff; }
-.wpcc-reject-btn { background:#d63638;color:#fff;border-color:#d63638; }
-.wpcc-reject-btn:hover { background:#b32d2e;border-color:#b32d2e;color:#fff; }
+.wpcc-approve-btn { background:var(--wpcc-green-600);color:var(--wpcc-white);border-color:var(--wpcc-green-600); }
+.wpcc-approve-btn:hover { background:var(--wpcc-green-700);border-color:var(--wpcc-green-700);color:var(--wpcc-white); }
+.wpcc-reject-btn { background:var(--wpcc-red-600);color:var(--wpcc-white);border-color:var(--wpcc-red-600); }
+.wpcc-reject-btn:hover { background:var(--wpcc-red-700);border-color:var(--wpcc-red-700);color:var(--wpcc-white); }
 .wpcc-card-result { margin-top:10px;padding:8px 12px;border-radius:3px;font-size:13px; }
-.wpcc-card-result.success { background:#edfaef;border:1px solid #00a32a;color:#1e1e1e; }
-.wpcc-card-result.error { background:#fce9e9;border:1px solid #d63638;color:#1e1e1e; }
-.wpcc-card-destructive { background:#fcf0f1;border:1px solid #d63638;color:#8a1f1f;border-radius:3px;padding:8px 12px;margin:8px 0 10px;font-size:13px;font-weight:600; }
-.wpcc-status-pill { display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px;text-transform:uppercase;background:#f0f0f1;color:#3c434a; }
-.wpcc-status-pill.executed,.wpcc-status-pill.completed,.wpcc-status-pill.approved { background:#edfaef;color:#1e6e2e; }
-.wpcc-status-pill.failed,.wpcc-status-pill.rejected { background:#fce9e9;color:#a02222; }
-.wpcc-status-pill.cancelled { background:#f0f0f1;color:#646970; }
-.wpcc-status-pill.running,.wpcc-status-pill.queued { background:#eef4fb;color:#1f5a8a; }
+.wpcc-card-result.success { background:var(--wpcc-state-success-bg);border:1px solid var(--wpcc-green-600);color:var(--wpcc-gray-900); }
+.wpcc-card-result.error { background:var(--wpcc-state-danger-bg);border:1px solid var(--wpcc-state-danger-fg);color:var(--wpcc-gray-900); }
+.wpcc-card-destructive { background:var(--wpcc-state-danger-bg);border:1px solid var(--wpcc-state-danger-fg);color:var(--wpcc-red-700);border-radius:3px;padding:8px 12px;margin:8px 0 10px;font-size:13px;font-weight:600; }
+.wpcc-status-pill { display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px;text-transform:uppercase;background:var(--wpcc-gray-50);color:var(--wpcc-gray-700); }
+.wpcc-status-pill.executed,.wpcc-status-pill.completed,.wpcc-status-pill.approved { background:var(--wpcc-state-success-bg);color:var(--wpcc-state-success-fg); }
+.wpcc-status-pill.failed,.wpcc-status-pill.rejected { background:var(--wpcc-state-danger-bg);color:var(--wpcc-red-700); }
+.wpcc-status-pill.cancelled { background:var(--wpcc-gray-50);color:var(--wpcc-gray-600); }
+.wpcc-status-pill.running,.wpcc-status-pill.queued { background:var(--wpcc-state-info-bg);color:var(--wpcc-state-info-fg); }
 .wpcc-loadmore { margin:12px 0; }
-.wpcc-detail-section { background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:14px 18px;margin:12px 0;max-width:980px; }
+.wpcc-detail-section { background:var(--wpcc-white);border:1px solid var(--wpcc-gray-100);border-radius:4px;padding:14px 18px;margin:12px 0;max-width:980px; }
 .wpcc-detail-section h2 { font-size:14px;margin:0 0 10px;padding:0; }
 .wpcc-detail-meta td { padding:4px 14px 4px 0;font-size:13px;vertical-align:top; }
-.wpcc-detail-meta td:first-child { font-weight:600;white-space:nowrap;color:#2c3338; }
+.wpcc-detail-meta td:first-child { font-weight:600;white-space:nowrap;color:var(--wpcc-gray-900); }
 .wpcc-detail-head { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px; }
 .wpcc-detail-head .wpcc-detail-title { font-size:18px;font-weight:600; }
-.wpcc-changeset { background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:10px 14px;font-size:13px; }
-.wpcc-changeset .hi { color:#b32d2e;font-weight:600; }
+.wpcc-changeset { background:var(--wpcc-gray-0);border:1px solid var(--wpcc-gray-100);border-radius:4px;padding:10px 14px;font-size:13px; }
+.wpcc-changeset .hi { color:var(--wpcc-red-700);font-weight:600; }
 .wpcc-payload pre { background:#1e1e1e;color:#e6e6e6;padding:12px 14px;border-radius:4px;overflow:auto;max-height:340px;font-size:12px;line-height:1.5; }
 .wpcc-audit-trail { list-style:none;margin:0;padding:0; }
-.wpcc-audit-trail li { padding:6px 0;border-top:1px solid #f0f0f1;font-size:13px;display:flex;gap:10px;flex-wrap:wrap; }
+.wpcc-audit-trail li { padding:6px 0;border-top:1px solid var(--wpcc-gray-50);font-size:13px;display:flex;gap:10px;flex-wrap:wrap; }
 .wpcc-audit-trail li:first-child { border-top:none; }
-.wpcc-audit-when { color:#646970;min-width:120px; }
-.wpcc-audit-action { font-weight:600;color:#2c3338; }
-.wpcc-audit-actor { color:#50575e; }
+.wpcc-audit-when { color:var(--wpcc-gray-600);min-width:120px; }
+.wpcc-audit-action { font-weight:600;color:var(--wpcc-gray-900); }
+.wpcc-audit-actor { color:var(--wpcc-gray-700); }
 .wpcc-detail-link { font-size:12px;text-decoration:none; }
-.wpcc-diff-summary { background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:10px 14px;margin:10px 0;max-width:980px;font-size:13px; }
+.wpcc-diff-summary { background:var(--wpcc-gray-0);border:1px solid var(--wpcc-gray-100);border-radius:4px;padding:10px 14px;margin:10px 0;max-width:980px;font-size:13px; }
 .wpcc-diff-stat { font-weight:600;margin-right:10px; }
-.wpcc-diff-add { color:#0a7c2f; }
-.wpcc-diff-del { color:#b32d2e; }
+.wpcc-diff-add { color:var(--wpcc-green-700); }
+.wpcc-diff-del { color:var(--wpcc-red-700); }
 .wpcc-diff-filelist { margin:8px 0 0;padding-left:0;list-style:none; }
 .wpcc-diff-filelist li { font-size:12px;padding:2px 0; }
-.wpcc-diff-file { max-width:980px;margin:8px 0;border:1px solid #e0e0e0;border-radius:4px;background:#fff; }
+.wpcc-diff-file { max-width:980px;margin:8px 0;border:1px solid var(--wpcc-gray-100);border-radius:4px;background:var(--wpcc-white); }
 .wpcc-diff-file > summary { cursor:pointer;padding:8px 12px;font-size:13px;user-select:none; }
 .wpcc-diff { background:#1e1e1e;color:#e6e6e6;padding:12px 14px;margin:0;border-radius:0 0 4px 4px;overflow:auto;font-size:12px;line-height:1.5; }
 .wpcc-diff .wpcc-diff-add { color:#7ee787; }
 .wpcc-diff .wpcc-diff-del { color:#ff9492; }
-.wpcc-diff-truncated { color:#646970;font-style:italic; }
-.wpcc-modal-backdrop { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center; }
-.wpcc-modal { background:#fff;border-radius:6px;padding:20px 24px;max-width:520px;width:92%;box-shadow:0 6px 28px rgba(0,0,0,.3); }
+.wpcc-diff-truncated { color:var(--wpcc-gray-600);font-style:italic; }
+.wpcc-modal-backdrop { position:fixed;inset:0;background:var(--wpcc-overlay-scrim);z-index:100000;display:flex;align-items:center;justify-content:center; }
+.wpcc-modal { background:var(--wpcc-white);border-radius:6px;padding:20px 24px;max-width:520px;width:92%;box-shadow:0 6px 28px rgba(0,0,0,.3); }
 .wpcc-modal h2 { margin-top:0;font-size:16px; }
 .wpcc-retry-btn { font-size:12px; }
 </style>

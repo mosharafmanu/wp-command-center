@@ -376,6 +376,14 @@ assert_eq "retry human-approver guard blocks token in client mode" "yes" "$(pj "
 assert_eq "FeatureGate ungated by default (approval_center)" "yes" "$(pj "$RESULT" '.fg_default')"
 assert_eq "FeatureGate filter can gate approval_center"     "no"  "$(pj "$RESULT" '.fg_gated')"
 
+# CDS Scope 2 — risk colors must stay token-driven (no hardcoded risk hex).
+# Scoped to markup + inline <style>; the byte-identical <script> block keeps
+# muted-grey JS literals that are NOT risk colors and are intentionally retained.
+RISK_HEX="$(awk '/^<script>/{s=1} /^<\/script>/{s=0;next} !s{print}' "$VIEW" | grep -ciE '#d63638|#dba617|#72aee6|#00a32a|#b32d2e' || true)"
+assert_eq "no hardcoded risk hex in approval-center.php (CDS Scope 2)" "0" "$RISK_HEX"
+RISK_TOKENS="$(grep -cE 'var\(--wpcc-risk-(critical|high|medium|low|diagnostic)-fg\)' "$VIEW" || true)"
+assert_true "risk tiers use CDS risk-semantic tokens" "$([ "${RISK_TOKENS:-0}" -ge 5 ] && echo true || echo false)"
+
 echo
 echo "========================================"
 echo "  RESULTS: $PASS passed, $FAIL failed"
