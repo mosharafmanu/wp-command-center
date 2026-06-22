@@ -1274,9 +1274,9 @@ UI-only consolidation of the contextual AI entry points, deployed dormant.
 
 ---
 
-# CDS Adoption Program — Phase 0 + Phase 1 + Phase 2 — COMMITTED locally, NOT pushed, NOT deployed
+# CDS Adoption Program — Phase 0 + Phase 1 + Phase 2 — DEPLOYED to production (2026-06-22)
 
-> UI-only Command Design System adoption. Four committed-locally commits on `main` over the production baseline `fe78efb` (HEAD was the docs-stamp `a2ae815`). **Nothing pushed, nothing deployed.** Production remains at **`fe78efb`** with all AI surfaces dormant. No handoff/strategy doc other than this file was modified.
+> UI-only Command Design System adoption. Four commits on `main` over the prior production baseline `fe78efb` (HEAD was the docs-stamp `a2ae815`). **PUSHED + DEPLOYED 2026-06-22** — see the "CDS Phase 0–2 — DEPLOYED to production" record at the end of this file. Production is now at **`797fcbf`**; all AI surfaces remain dormant.
 
 ## Commits (in order, on `main`)
 1. **`854fda4`** — `feat(cds): Phase 0 foundation tokens and primitives` — additive component tokens (button/field/table-prep/tag/focus-ring/state-info) in `wpcc-tokens.css`; component classes (`.wpcc-cds-btn/-field/-tag/-table/-error`) in `wpcc-cds.css`; `WPCC.cds.button/statusPill/tag/error` + optional aria-label on `pill`/`riskPill` in `wpcc-cds.js`; new `test-cds-foundation.sh`; regression-map `+cds`.
@@ -1302,9 +1302,9 @@ OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **4
 - Phase 2 `--changed`: T0 113/0, T1 210/0 (net-new 0). **Phase 2 serial T2: 5578 passed, 32 failed, net-new 8, attributable 0.**
 - Every net-new in both T2s triaged to **0 attributable** (none reference the changed files; flakes pass clean standalone).
 
-## Deployment / enablement posture (UNCHANGED)
-- **NOT pushed, NOT deployed.** Production = `fe78efb`.
-- **AI surfaces still dormant** (`WPCC_SEO_META_UI` / `WPCC_AI_CONTENT_UI` / `WPCC_ALT_TEXT_UI` all OFF). **No AI key set. No flags flipped. No production enablement.** Security mode = developer (unchanged).
+## Deployment / enablement posture (UPDATED 2026-06-22)
+- **PUSHED + DEPLOYED.** Production = `797fcbf` (was `fe78efb`). See the DEPLOYED record at end of file.
+- **AI surfaces still dormant** (`WPCC_SEO_META_UI` / `WPCC_AI_CONTENT_UI` / `WPCC_ALT_TEXT_UI` all OFF — live-verified on prod). **No AI key set. No flags flipped. No production enablement.** Security mode = developer (unchanged).
 
 ## Known non-blocking issues (carry forward — do NOT fix without direction)
 - **Stale `tests/regression-baseline.tsv` entry for `test-admin-ux.sh`** (baseline 0 vs the already-deployed `df7a806` dashboard trim) — causes a perpetual net-new 1 in T2 unrelated to CDS; references `dashboard.php`. Refresh deferred (explicitly NOT done this session).
@@ -1316,3 +1316,26 @@ OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **4
 Decision point — either (a) **push** the four CDS commits `854fda4..5e5127b` (pull-cron deploys ~1 min; all UI-only, dormant-safe, net-new attributable 0), or (b) continue the roadmap with **CDS Phase 3 (Data Grid)** or **Phase 4 (modal unification — higher risk, touches approval/rollback-adjacent UI)** — report-first, on explicit direction. Do NOT push/deploy/enable without explicit instruction.
 
 *Documentation-only update. The four CDS commits above are code; this handoff edit is a separate working-tree change recording them.*
+
+---
+
+# CDS Phase 0–2 — DEPLOYED to production (2026-06-22)
+
+> Deployment record for the CDS Adoption Program (Phase 0 + 1 + 2). Supersedes the "COMMITTED locally, NOT pushed, NOT deployed" status above: the four CDS commits are now **live in production**.
+
+## Push & deploy
+- **Pushed:** `a2ae815..797fcbf  main -> main` (push exit 0; origin == local == `797fcbf`, 0 ahead / 0 behind).
+- **Deployed:** Hostinger pull-cron picked up the push and advanced the server from `a2ae815` → **`797fcbf`** (`git describe` = `v0.109.0-50-g797fcbf`).
+- Pre-push gates all green: working tree clean · 5 ahead / 0 behind · invariants 34/23/40/40/2.5.0 · no route/op/cap/MCP/schema drift (only assets/views/tests/docs changed) · UI flags guard-only (no `define(...,true)` in repo) · no key hardcoded.
+
+## Production verification (SSH wp-cli + anonymous HTTP)
+- **Prod HEAD = `797fcbf`** (== local == origin); plugin **active**.
+- **Invariants (live on prod):** OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** (emitted 1:1 from `get_operations()`) · DB_VERSION **2.5.0**.
+- **Health:** homepage `200` · REST namespace `wp-command-center/v1` `200` · `/admin/dashboard` anon **401** · `/admin/approvals/summary` anon **401** · **no `wp-content/debug.log`, no fatals.**
+- **AI dormant (live-verified):** `WPCC_SEO_META_UI` OFF · `WPCC_AI_CONTENT_UI` OFF · `WPCC_ALT_TEXT_UI` OFF · Anthropic key **UNSET** · security mode `developer`.
+- **Migrated-view smoke (deployed bytes):** `php -l` clean on all four; admin-context render OK (non-empty HTML, no Fatal/Parse) — operations-explorer 19,560 B · site-intelligence 8,174 B · diagnostics 2,496 B · file-access 1,721 B; anon admin-page HTTP `302` (auth redirect, not 500) for `wpcc-operations` / `wpcc-diagnostics` / `wpcc-site-intelligence` / `wpcc-file-access`.
+
+## Posture (unchanged by this deploy)
+UI-only, dormant-safe. No AI enabled, no key set, no flags flipped, no route/op/cap/MCP/schema change. CDS adoption now 5 of 16 views, live. Four Guarantees intact. **Phase 3 NOT started.**
+
+*This handoff edit is the post-deploy docs-stamp recording the push/deploy above; no code changed in it.*
