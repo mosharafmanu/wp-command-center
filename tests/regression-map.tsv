@@ -60,3 +60,4 @@ contextual_entry	ContentRowActions|MediaRowActions|ActionPanelAssets|AiActionReg
 experience	AppShell|command-home|wpcc-cds|wpcc-shell|AdminMenu|wpcc-tokens|wpcc_tab|legacy_map|test-experience-layer|nav_map	test-experience-layer.sh	test-experience-layer.sh,test-dashboard.sh
 cds	wpcc-tokens|wpcc-cds|wpcc-admin-runtime|wpcc-cds-btn|wpcc-cds-tag|wpcc-cds-table|wpcc-cds-field|wpcc-cds-notice|wpcc-cds-pill|statusPill|test-cds-foundation	test-cds-foundation.sh	test-cds-foundation.sh,test-operations-explorer.sh,test-cds-phase2.sh,test-experience-layer.sh
 operations_explorer	operations-explorer|OperationExplorerAdminQuery|admin/operations|check_operations_permission|operations_explorer|test-operations-explorer	test-operations-explorer.sh	test-operations-explorer.sh
+cds_views	views/diagnostics|views/site-intelligence|views/file-access|wpcc-cds-notice|wpcc-cds-pill--info|test-cds-phase2	test-cds-phase2.sh	test-cds-phase2.sh

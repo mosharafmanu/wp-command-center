@@ -28,15 +28,25 @@ $status_labels = [
 	'info'        => __( 'Info', 'wp-command-center' ),
 ];
 
-$status_badge = static function ( string $status ) use ( $status_labels ): string {
-	$label = $status_labels[ $status ] ?? ucfirst( $status );
+// CDS status pill — color carries meaning (good=success, recommended=warning,
+// critical=danger, info=info). Variant map keeps the diagnostics semantics.
+$status_variant = [
+	'good'        => 'success',
+	'recommended' => 'warning',
+	'critical'    => 'danger',
+	'info'        => 'info',
+];
 
-	return sprintf( '<span class="wpcc-badge wpcc-badge--%s">%s</span>', esc_attr( $status ), esc_html( $label ) );
+$status_badge = static function ( string $status ) use ( $status_labels, $status_variant ): string {
+	$label   = $status_labels[ $status ] ?? ucfirst( $status );
+	$variant = $status_variant[ $status ] ?? 'neutral';
+
+	return sprintf( '<span class="wpcc-cds-pill wpcc-cds-pill--%s">%s</span>', esc_attr( $variant ), esc_html( $label ) );
 };
 
 $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 	?>
-	<table class="widefat striped wpcc-table">
+	<table class="widefat striped wpcc-cds-table wpcc-table">
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Check', 'wp-command-center' ); ?></th>
@@ -95,9 +105,9 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 			$cleared = $log_viewer->clear();
 
 			if ( is_wp_error( $cleared ) ) {
-				printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $cleared->get_error_message() ) );
+				printf( '<div class="wpcc-cds-notice wpcc-cds-notice--danger"><p>%s</p></div>', esc_html( $cleared->get_error_message() ) );
 			} else {
-				printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html__( 'Debug log cleared.', 'wp-command-center' ) );
+				printf( '<div class="wpcc-cds-notice wpcc-cds-notice--success"><p>%s</p></div>', esc_html__( 'Debug log cleared.', 'wp-command-center' ) );
 			}
 		}
 
@@ -145,7 +155,7 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 			</p>
 
 			<?php if ( empty( $result['lines'] ) ) : ?>
-				<p><?php esc_html_e( 'The debug log is empty.', 'wp-command-center' ); ?></p>
+				<div class="wpcc-cds-empty"><div class="wpcc-cds-empty__title"><?php esc_html_e( 'The debug log is empty.', 'wp-command-center' ); ?></div></div>
 			<?php else : ?>
 				<pre class="wpcc-debug-log"><?php foreach ( $result['lines'] as $line ) : ?><span class="wpcc-log-line wpcc-log-line--<?php echo esc_attr( $line['level'] ); ?>"><?php echo esc_html( $line['text'] ); ?>
 </span><?php endforeach; ?></pre>

@@ -12,16 +12,18 @@ if ( isset( $_POST['wpcc_action'] ) && 'refresh_scan' === sanitize_text_field( w
 
 $data = ( new SiteScanner() )->scan( $force_refresh );
 
+// CDS status pill — a boolean fact, not an error: Yes=success, No=neutral
+// (color carries meaning; "No" is informational, not alarming).
 $badge = static function ( bool $value ): string {
-	$label = $value ? __( 'Yes', 'wp-command-center' ) : __( 'No', 'wp-command-center' );
-	$class = $value ? 'wpcc-badge--yes' : 'wpcc-badge--no';
+	$label   = $value ? __( 'Yes', 'wp-command-center' ) : __( 'No', 'wp-command-center' );
+	$variant = $value ? 'success' : 'neutral';
 
-	return sprintf( '<span class="wpcc-badge %s">%s</span>', esc_attr( $class ), esc_html( $label ) );
+	return sprintf( '<span class="wpcc-cds-pill wpcc-cds-pill--%s">%s</span>', esc_attr( $variant ), esc_html( $label ) );
 };
 
 $render_table = static function ( array $rows ): void {
 	?>
-	<table class="widefat striped wpcc-table">
+	<table class="widefat striped wpcc-cds-table wpcc-table">
 		<tbody>
 		<?php foreach ( $rows as $label => $value ) : ?>
 			<tr>
@@ -121,7 +123,7 @@ $debug   = $data['debug'];
 		);
 		?>
 	</h2>
-	<table class="widefat striped wpcc-table">
+	<table class="widefat striped wpcc-cds-table wpcc-table">
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Plugin', 'wp-command-center' ); ?></th>
@@ -197,7 +199,7 @@ $debug   = $data['debug'];
 	?>
 
 	<h2><?php esc_html_e( 'File & Directory Permissions', 'wp-command-center' ); ?></h2>
-	<table class="widefat striped wpcc-table">
+	<table class="widefat striped wpcc-cds-table wpcc-table">
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Path', 'wp-command-center' ); ?></th>

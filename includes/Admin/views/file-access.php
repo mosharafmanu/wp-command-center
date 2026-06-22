@@ -61,11 +61,12 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 
 		<?php if ( is_wp_error( $results ) ) : ?>
 
-			<div class="notice notice-error"><p><?php echo esc_html( $results->get_error_message() ); ?></p></div>
+			<div class="wpcc-cds-notice wpcc-cds-notice--danger"><p><?php echo esc_html( $results->get_error_message() ); ?></p></div>
 
 		<?php elseif ( empty( $results['matches'] ) ) : ?>
 
-			<p>
+			<div class="wpcc-cds-empty">
+				<div class="wpcc-cds-empty__title">
 				<?php
 				printf(
 					/* translators: 1: search term, 2: number of files scanned */
@@ -74,7 +75,8 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 					(int) $results['files_scanned']
 				);
 				?>
-			</p>
+				</div>
+			</div>
 
 		<?php else : ?>
 
@@ -135,7 +137,7 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 
 		<?php if ( $file instanceof \WP_Error ) : ?>
 
-			<div class="notice notice-error"><p><?php echo esc_html( $file->get_error_message() ); ?></p></div>
+			<div class="wpcc-cds-notice wpcc-cds-notice--danger"><p><?php echo esc_html( $file->get_error_message() ); ?></p></div>
 
 		<?php elseif ( is_array( $file ) ) : ?>
 
@@ -162,11 +164,11 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 
 		<?php elseif ( is_wp_error( $listing ) ) : ?>
 
-			<div class="notice notice-error"><p><?php echo esc_html( $listing->get_error_message() ); ?></p></div>
+			<div class="wpcc-cds-notice wpcc-cds-notice--danger"><p><?php echo esc_html( $listing->get_error_message() ); ?></p></div>
 
 		<?php elseif ( is_array( $listing ) ) : ?>
 
-			<table class="widefat striped wpcc-table">
+			<table class="widefat striped wpcc-cds-table wpcc-table">
 				<thead>
 					<tr>
 						<th><?php esc_html_e( 'Name', 'wp-command-center' ); ?></th>
