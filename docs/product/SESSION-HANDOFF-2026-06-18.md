@@ -1143,3 +1143,67 @@ Hostinger pull-cron. **Production HEAD = `df7a806`** (`git describe` = `v0.109.0
   4. **Minor a11y focus-on-open polish** in the shell/home if still relevant.
 
 *Production baseline now `df7a806`. Documentation update only in this commit.*
+
+---
+
+# TimelineBuilder performance fix (Option 1) — DEPLOYED to production (2026-06-22)
+
+Closes deferred follow-up #1 above ("Runtime lazy-load"), but via a **different, higher-leverage
+root-cause fix** than that note assumed. Re-profiling showed the Operate › Runtime ~5–6s was **not**
+"40 queries + `information_schema` + registry build" (those total ~60ms; `information_schema` is 3.5ms,
+the catalogue is already memoized). The entire cost was **one call**: `TimelineBuilder::build(limit:300)`
+= ~95.6% of render, dominated by an **O(n²) duplicate scan over an unbounded DB baseline** (~20M
+comparisons) applied **before** the `limit:300` truncation. Lazy-load was therefore *not* the primary fix.
+
+## Production baseline
+- **Production HEAD = `05f0751`** (`git describe` = `v0.109.0-42-g05f0751`); `origin/main == prod == local`.
+- Deploy: Hostinger pull-cron, `1aeda44 → 05f0751`, landed ~1 min after push (2026-06-22).
+
+## Commit (single, atomic; one file)
+- **`05f0751`** — `perf(timeline): O(1) bucketed dedup + bounded baseline in TimelineBuilder`
+  (`includes/AiAgent/TimelineBuilder.php`, +89/−27; no other files).
+  1. **O(1) bucketed dedup** — dedup keyed by identity (`type + label +` all 5 id fields), with the
+     ±5s timestamp window checked per-bucket. Behaviour-identical boolean per event; ~O(db + events).
+  2. **Bounded + ordered baseline retrieval** — each of the 3 baseline queries wrapped as
+     `SELECT … FROM (… ORDER BY id DESC LIMIT 5000) t ORDER BY id ASC`. `id` is the auto-increment PK,
+     so this reproduces the old unbounded full-scan order exactly whenever a table is within the cap
+     (all are), and caps work/memory under growth.
+  3. **Dropped `SELECT *`** on `wpcc_patches` → explicit 10-column list (exactly the consumed columns).
+- Steps 3–6 of `build()` (filter/sort/redact/paginate) untouched → operate on a provably-identical array.
+- Two callers only: the Runtime view and legacy `AiAgent/RestApi::get_agent_timeline`. Modern Change
+  History is table-backed (`wpcc_change_log`) and does **not** use `TimelineBuilder`.
+
+## Performance result
+- **Dev (heavily seeded — representative of a mature site: 2,973 patches / 69k change_log):**
+  `build(limit:300)` **5,047 ms → 183 ms (27.5×, −96.4%)**; ~20M dedup comparisons → bucketed.
+- **Prod (current dataset small: 3 patches / 275 change_log / 413 operation_results):**
+  `build(limit:300)` = **23–34 ms**, 300 events, correct shape + descending order, no errors. The O(n²)
+  cost was **latent** on prod today; the fix removes it before it manifests as these tables grow (as dev showed).
+- **No behavior drift:** drift-immune frozen-snapshot proof on dev showed the post-merge array
+  byte-identical (14,234 events, same elements + order); prod output shape + ordering verified post-deploy.
+
+## T2 validation summary (pre-deploy, committed tree)
+- Pristine serial **T2: 5485 passed, 30 failed, net-new 6, 3035s** (133 suites).
+- **Net-new attributable to `05f0751` = 0.** The 6: `alt-text` 4 (chronic dev-with-key env; standalone 125/4),
+  `safe-search-replace` 1 (serial-pollution flake; standalone 11/0), `admin-ux` 1 (stale assertion on
+  `dashboard.php`, trimmed by the already-deployed `df7a806`; my diff never touched `dashboard.php`).
+  The other 24 = chronic baseline (net-new 0). Direct suite `test-agent-timeline.sh` 26/0.
+
+## Invariants (live-verified on prod at `05f0751`)
+- OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**
+  (14 `wp_wpcc_*` tables; none added; no migration). No route/operation/capability/MCP/schema growth.
+- **Four Guarantees intact** — read-only display path; only Audit (the log *read*) is in contact, and
+  fidelity is preserved (byte-identical timeline output).
+
+## Dormant status (unchanged)
+- Build flags `WPCC_ALT_TEXT_UI` / `WPCC_SEO_META_UI` / `WPCC_AI_CONTENT_UI` all **OFF**; **AI key unset**;
+  **security mode = developer**. **No customer-facing exposure.** Nothing enabled by this deploy.
+
+## Next recommended initiative (roadmap priorities unchanged)
+- Per Roadmap v3, the next major step remains **Controlled Production Enablement** (product/config call:
+  AI key on prod + live-key/prod-provider validation + security-mode posture) — **on explicit direction only**.
+- Minor, non-blocking housekeeping (separate, report-first): refresh the now-stale `regression-baseline.tsv`
+  entries (`admin-ux` vs the `df7a806` dashboard trim; key/pollution-sensitive `alt-text`/`safe-search-replace`).
+  Deferred follow-ups #2–#4 above remain optional and unchanged.
+
+*Production baseline now `05f0751`. Documentation update only in this commit.*
