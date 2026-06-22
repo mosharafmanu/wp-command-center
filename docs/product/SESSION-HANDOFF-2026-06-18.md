@@ -1271,3 +1271,48 @@ UI-only consolidation of the contextual AI entry points, deployed dormant.
   invariants never move. **Do NOT start CDS implementation without explicit direction.**
 
 *Production baseline now `fe78efb`. Documentation update only in this commit.*
+
+---
+
+# CDS Adoption Program — Phase 0 + Phase 1 + Phase 2 — COMMITTED locally, NOT pushed, NOT deployed
+
+> UI-only Command Design System adoption. Four committed-locally commits on `main` over the production baseline `fe78efb` (HEAD was the docs-stamp `a2ae815`). **Nothing pushed, nothing deployed.** Production remains at **`fe78efb`** with all AI surfaces dormant. No handoff/strategy doc other than this file was modified.
+
+## Commits (in order, on `main`)
+1. **`854fda4`** — `feat(cds): Phase 0 foundation tokens and primitives` — additive component tokens (button/field/table-prep/tag/focus-ring/state-info) in `wpcc-tokens.css`; component classes (`.wpcc-cds-btn/-field/-tag/-table/-error`) in `wpcc-cds.css`; `WPCC.cds.button/statusPill/tag/error` + optional aria-label on `pill`/`riskPill` in `wpcc-cds.js`; new `test-cds-foundation.sh`; regression-map `+cds`.
+2. **`fbc7f49`** — `refactor(ui): adopt CDS in Operations Explorer` — Phase 1 pilot: the read-only Operations Explorer view migrated onto `window.WPCC` (`escHtml`→`WPCC.escHtml`, raw `fetch()`→`WPCC.api`) + CDS render helpers (riskPill/statusPill/tag/kpi/empty/error/button), `.wpcc-cds-table`/`.wpcc-cds-field`, token-only styles. Behavior-preserving (routes/filters/pagination/detail unchanged). `test-operations-explorer.sh` updated; regression-map `+operations_explorer`.
+3. **`8ad1293`** — `feat(cds): Phase 2 info pill and notice components` — `.wpcc-cds-pill--info` + `.wpcc-cds-notice(+variants)` in `wpcc-cds.css` (token-bound); new `test-cds-phase2.sh` (50 assertions); regression-map `cds` group extended.
+4. **`5e5127b`** — `refactor(ui): adopt CDS in diagnostics, site intelligence, and file access` — three low-risk read-only server-rendered views migrated off legacy `.wpcc-badge`/WP `.notice`/bare `.widefat` onto CDS pill/notice/empty/table classes (semantic variant maps; yes/no boolean = success/neutral). Legacy `.wpcc-badge` CSS in `admin.css` PRESERVED for the 4 not-yet-migrated views. regression-map `+cds_views`.
+
+## What was completed
+- **Phase 0 — CDS foundation freeze:** the token/component/runtime substrate is additive, backward-compatible, and asset-only. CDS-adopting views: **1 → 5 of 16** (`command-home` + operations-explorer + diagnostics + site-intelligence + file-access).
+- **Phase 1 — Operations Explorer pilot:** first D1/M2 closure site (per-view `escHtml`/`fetch` removed; uses the shared runtime + CDS helpers).
+- **Phase 2 — read-only utility view adoption:** diagnostics / site-intelligence / file-access standardized; info-pill + inline-notice kit gap filled.
+- **NOT done (deferred, do NOT start without direction):** Phase 3 Data Grid; Phase 4 modal unification (gated — change-history/approval/tokens/dashboard modals touch approval/rollback/capability flows); Phase 5 timeline/empty unification; Phase 6 remaining-view migration + CDS v1 freeze. ~11 views remain pre-CDS.
+
+## Four Guarantees — UNTOUCHED
+All CDS work is presentation-only. No change to OperationExecutor, ProposalApplyService, approval, rollback, audit, capability system, MCP tools, routes, or DB schema. The migrated surfaces (Operations Explorer + the 3 utility views) are read-only and execute nothing (asserted: no `OperationExecutor`/`register_rest_route`/`ProposalApplyService`).
+
+## Invariants (live-verified after each phase, FROZEN)
+OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**. No route/op/cap/MCP/schema drift across all four commits.
+
+## Tests
+- Focused: `test-cds-foundation.sh` 53/0 · `test-operations-explorer.sh` 151/0 · `test-cds-phase2.sh` 50/0.
+- Phase 0/1 `--changed`: T0 113/0, T1 210/0 (net-new 0). **Phase 0/1 serial T2: 5580 passed, 30 failed, net-new 6, attributable 0.**
+- Phase 2 `--changed`: T0 113/0, T1 210/0 (net-new 0). **Phase 2 serial T2: 5578 passed, 32 failed, net-new 8, attributable 0.**
+- Every net-new in both T2s triaged to **0 attributable** (none reference the changed files; flakes pass clean standalone).
+
+## Deployment / enablement posture (UNCHANGED)
+- **NOT pushed, NOT deployed.** Production = `fe78efb`.
+- **AI surfaces still dormant** (`WPCC_SEO_META_UI` / `WPCC_AI_CONTENT_UI` / `WPCC_ALT_TEXT_UI` all OFF). **No AI key set. No flags flipped. No production enablement.** Security mode = developer (unchanged).
+
+## Known non-blocking issues (carry forward — do NOT fix without direction)
+- **Stale `tests/regression-baseline.tsv` entry for `test-admin-ux.sh`** (baseline 0 vs the already-deployed `df7a806` dashboard trim) — causes a perpetual net-new 1 in T2 unrelated to CDS; references `dashboard.php`. Refresh deferred (explicitly NOT done this session).
+- **Chronic dev-key `test-alt-text.sh` failures** (125/4 — Anthropic key present on dev).
+- **Serial flakes:** `test-change-history-rollback.sh` (48/0 standalone), `test-health-verification.sh` (22/0 standalone), `test-safe-search-replace.sh` (11/0 standalone) — cross-suite pollution, clean alone.
+- **Generated artifact `artifacts/step-36-validation/validation-evidence.json`** is regenerated by a test run and left dirty in the working tree — it is **NOT** part of any CDS commit and must **NOT** be committed.
+
+## Next recommended step (tomorrow)
+Decision point — either (a) **push** the four CDS commits `854fda4..5e5127b` (pull-cron deploys ~1 min; all UI-only, dormant-safe, net-new attributable 0), or (b) continue the roadmap with **CDS Phase 3 (Data Grid)** or **Phase 4 (modal unification — higher risk, touches approval/rollback-adjacent UI)** — report-first, on explicit direction. Do NOT push/deploy/enable without explicit instruction.
+
+*Documentation-only update. The four CDS commits above are code; this handoff edit is a separate working-tree change recording them.*
