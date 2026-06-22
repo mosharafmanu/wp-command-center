@@ -1207,3 +1207,67 @@ comparisons) applied **before** the `limit:300` truncation. Lazy-load was theref
   Deferred follow-ups #2–#4 above remain optional and unchanged.
 
 *Production baseline now `05f0751`. Documentation update only in this commit.*
+
+---
+
+# WPCC AI consolidated row dropdown (AI Assist, Slices 0–3) — DEPLOYED to production (2026-06-22)
+
+UI-only consolidation of the contextual AI entry points, deployed dormant.
+
+## Production baseline
+- **Production HEAD = `fe78efb`** (`git describe` = `v0.109.0-44-gfe78efb`); `origin/main == prod == local`.
+- Deploy: Hostinger pull-cron, `05f0751 → fe78efb`, landed ~1 min after push (2026-06-22).
+
+## Commit (single, atomic; 14 files)
+- **`fe78efb`** — `feat(ai): WPCC AI consolidated row dropdown + governed panel (Slices 0-3)`.
+  New: `includes/Admin/AiActionRegistry.php`, `includes/Admin/AiAssistRowActions.php`, `tests/test-ai-assist.sh`.
+  Modified: `ActionPanelAssets.php`, `ContentRowActions.php`, `SeoRowActions.php`, `MediaRowActions.php`,
+  `Core/Plugin.php`, `assets/js/wpcc-action-panel.js`, `assets/css/wpcc-action-panel.css`,
+  `tests/regression-map.tsv`, `tests/test-contextual-entry.sh`, `tests/test-seo-quick-panel.sh`,
+  `tests/test-seo-row-actions.sh`.
+
+## What shipped
+- The separate per-feature AI row links (Generate Title / Excerpt / SEO / Alt Text) are replaced by ONE
+  per-object row action, **“✨ WPCC AI”**, that opens a compact WAI-ARIA dropdown of the applicable AI
+  actions; selecting one opens the existing **Governed Action Panel** (generate → review → edit → apply → undo).
+  Single-applicable rows (e.g. Media → Alt Text) auto-open the panel; zero-applicable rows render no action.
+- **`AiActionRegistry`** = single source of truth (id/label/icon/object_types/build_flag/filter/feature_key/
+  generate/apply/fields/fallback_url + per-object `supports()`); `ActionPanelAssets` reads it (no per-workflow
+  config dup). **`AiAssistRowActions`** emits the one anchor on Posts/Pages/Products/Media; the per-feature
+  classes keep only their no-JS admin-post fallbacks + Bulk Actions (bulk consolidation deferred).
+- Dropdown: hover/focus/click/keyboard open; debounced close (no flicker); native WP row-actions strip kept
+  visible while open (override of WP’s off-screen `position:relative;left:-9999em` via `position:static`);
+  centered governed panel (mobile bottom-sheet preserved); distinct icons (Title=edit, Excerpt=text,
+  SEO=search, Alt=format-image). AI Engine’s separate “Magic Wand” is unaffected.
+- **No new route/operation/capability/MCP tool/schema.** Build-flag + FeatureGate gating, no-JS fallback,
+  security modes, and the Four Guarantees unchanged.
+
+## Dormant status (verified on prod at `fe78efb`)
+- Build flags `WPCC_AI_CONTENT_UI` / `WPCC_SEO_META_UI` / `WPCC_ALT_TEXT_UI` all **OFF** (filter aic=off) →
+  the registry yields no applicable actions → **no `✨ WPCC AI` anchor renders → no customer-facing exposure**.
+  Code (`AiAssistRowActions.php` etc.) **deployed** but inert until a flag is flipped.
+- **AI key unset**; **security mode = developer** (unchanged). Nothing enabled by this deploy.
+
+## Validation (pre-deploy)
+- T0 `--changed` **670/0 net-new 0**; T1 `--changed` **1286/0 net-new 0**.
+- Pristine serial **T2: 5579 passed, 31 failed, net-new 7 → 0 attributable to `fe78efb`**. The 7: `admin-ux` 1
+  (pre-existing stale baseline — asserts `op['status']` in `dashboard.php`, untouched by this commit; trimmed by
+  the deployed `df7a806`), `alt-text` 4 (chronic dev-with-key env; 125/4), `safe-search-replace` 1 (serial flake,
+  11/0 standalone), `final-validation` 1 (serial flake, ALL PASSED standalone). None reference the changed code.
+  The other 24 = chronic baseline (net-new 0). `test-ai-assist.sh` 92/0.
+- Real per-screen filter check: anchor verified on Posts/Pages/Products (`data-actions=title,excerpt,seo`,
+  haspopup=menu) and Media (`alt_text`, haspopup=dialog → auto-advance); native strip preserved; no per-kind links.
+
+## Invariants (live-verified on prod)
+- OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**
+  (14 `wp_wpcc_*` tables; none added). No route/operation/capability/MCP/schema drift.
+
+## Next recommended initiative
+- **CDS Adoption Program — Command Design System Phase 0** (report-first; report already produced this session).
+  The CDS foundation exists (tokens + `wpcc-cds.*` shell/display + `window.WPCC` runtime + Governed Action Panel)
+  but only `command-home.php` consumes it; ~17 views remain pre-CDS (raw `widefat`, inline `<style>/<script>`,
+  reimplemented `esc/api/setHtml/fmtTime`). Phase 0 = freeze/version the foundation + add missing component
+  tokens (button/table/toast/field) + Pro badge; then Phase 1 substrate consolidation (closes D1). UI-only;
+  invariants never move. **Do NOT start CDS implementation without explicit direction.**
+
+*Production baseline now `fe78efb`. Documentation update only in this commit.*
