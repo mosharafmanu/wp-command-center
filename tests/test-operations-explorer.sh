@@ -119,8 +119,9 @@ has "Operate section registered"         "'wpcc-operate'"               "$MENU"
 
 echo
 echo "== 5. View is read-only + escaped + filterable =="
-has "HTML escaper present"               "function escHtml"             "$VIEW"
-has "uses REST nonce"                     "X-WP-Nonce"                   "$VIEW"
+has "escapes via shared WPCC.escHtml runtime" "escHtml = WPCC.escHtml"   "$VIEW"
+lacks "no per-view escHtml definition (D1)" "function escHtml"           "$VIEW"
+has "mints + passes REST nonce to WPCC.api" "apiBase \+ path, nonce"      "$VIEW"
 has "fetches paginated /operations"       "/operations?"                 "$VIEW"
 has "fetches /operations/summary"         "/operations/summary'"         "$VIEW"
 has "text filter present"                 "wpcc-ops-search"              "$VIEW"
@@ -169,8 +170,9 @@ has "filter search has a label"           "for=\"wpcc-ops-search\""      "$VIEW"
 has "filter risk has a label"             "for=\"wpcc-ops-risk\""        "$VIEW"
 has "table column headers use scope=col"  "<th scope=\"col\">"           "$VIEW"
 has "row header uses scope=row"           "<th scope=\"row\">"           "$VIEW"
-has "risk badge carries aria-label"       "aria-label=\"' \+ escHtml\( i18n.colRisk" "$VIEW"
-has "availability badge carries aria-label" "aria-label=\"' \+ escHtml\( i18n.colAvail" "$VIEW"
+# Risk/availability pills pass an accessible label into the CDS helper (3rd arg).
+has "risk pill carries aria context"      "i18n.colRisk \+ ': '"         "$VIEW"
+has "availability pill carries aria context" "i18n.colAvail \+ ': '"     "$VIEW"
 has "live region: filter count (role=status)" "id=\"wpcc-ops-count\" class=\"wpcc-ops-count\" role=\"status\"" "$VIEW"
 has "live region: summary (role=status)"  "id=\"wpcc-ops-summary\".*role=\"status\"" "$VIEW"
 has "aria-live polite on live regions"    "aria-live=\"polite\""         "$VIEW"
@@ -196,6 +198,30 @@ has "detail not-found (404) state"         "i18n.notFound"                "$VIEW
 has "no-parameters empty state"            "i18n.noParams"                "$VIEW"
 has "no-action-breakdown empty state"      "i18n.noActions"               "$VIEW"
 has "fetch failure is caught"              "\.catch\( function\(\)"       "$VIEW"
+
+echo
+echo "== 5f. CDS Phase 1 adoption — shared runtime + CDS helpers (D1/M2 closure) =="
+# Runtime: the view consumes window.WPCC + WPCC.api instead of re-declaring helpers.
+has "uses window.WPCC runtime"            "window.WPCC"                  "$VIEW"
+has "uses WPCC.api for reads"             "WPCC.api"                     "$VIEW"
+lacks "no raw fetch() in the view (M2)"   "fetch\("                      "$VIEW"
+lacks "no duplicated escHtml DOM builder" "createTextNode"               "$VIEW"
+# Render: badges/status/tags/states come from the shared CDS helpers, not per-view HTML.
+has "risk via CDS risk pill"              "cds\.riskPill"                "$VIEW"
+has "status via CDS status pill"          "cds\.statusPill"              "$VIEW"
+has "capability via CDS tag"              "cds\.tag"                     "$VIEW"
+has "summary via CDS kpi"                 "cds\.kpi"                     "$VIEW"
+has "empty state via CDS helper"          "cds\.empty"                   "$VIEW"
+has "error state via CDS helper"          "cds\.error"                   "$VIEW"
+has "pager via CDS button helper"         "cds\.button"                  "$VIEW"
+# Styling: CDS classes + tokens replace the local badge/chip/empty CSS.
+has "table adopts CDS table treatment"    "wpcc-cds-table"               "$VIEW"
+has "fields adopt CDS focus-ring class"   "wpcc-cds-field"               "$VIEW"
+has "loading state via CDS class"         "wpcc-cds-loading"             "$VIEW"
+has "view styles bind to CDS tokens"      "var\(--wpcc-"                 "$VIEW"
+lacks "no hardcoded hex colors in view"   "#[0-9a-fA-F]{6}"              "$VIEW"
+lacks "legacy local badge class removed"  "wpcc-badge"                   "$VIEW"
+lacks "legacy local chip class removed"   "class=\"wpcc-chip"            "$VIEW"
 
 echo
 echo "== 6. Functional: catalogue join over the real registries =="

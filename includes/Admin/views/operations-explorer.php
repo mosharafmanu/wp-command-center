@@ -39,17 +39,17 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 			<a href="<?php echo $list_url; ?>">&larr; <?php esc_html_e( 'Back to all operations', 'wp-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-op-detail" data-op-id="<?php echo esc_attr( $view_id ); ?>">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading operation…', 'wp-command-center' ); ?></p>
+			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operation…', 'wp-command-center' ); ?></span></div>
 		</div>
 	<?php else : ?>
 		<div id="wpcc-ops-summary" class="wpcc-ops-summary" role="status" aria-live="polite"></div>
 
 		<div class="wpcc-ops-filters">
 			<label class="screen-reader-text" for="wpcc-ops-search"><?php esc_html_e( 'Filter operations', 'wp-command-center' ); ?></label>
-			<input type="search" id="wpcc-ops-search" class="regular-text" placeholder="<?php esc_attr_e( 'Filter by name, id, or capability…', 'wp-command-center' ); ?>" aria-controls="wpcc-ops-panel" />
+			<input type="search" id="wpcc-ops-search" class="regular-text wpcc-cds-field" placeholder="<?php esc_attr_e( 'Filter by name, id, or capability…', 'wp-command-center' ); ?>" aria-controls="wpcc-ops-panel" />
 
 			<label class="screen-reader-text" for="wpcc-ops-risk"><?php esc_html_e( 'Filter by risk', 'wp-command-center' ); ?></label>
-			<select id="wpcc-ops-risk" aria-controls="wpcc-ops-panel">
+			<select id="wpcc-ops-risk" class="wpcc-cds-field" aria-controls="wpcc-ops-panel">
 				<option value=""><?php esc_html_e( 'All risk levels', 'wp-command-center' ); ?></option>
 				<option value="diagnostic"><?php esc_html_e( 'Diagnostic', 'wp-command-center' ); ?></option>
 				<option value="low"><?php esc_html_e( 'Low', 'wp-command-center' ); ?></option>
@@ -64,7 +64,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		<div id="wpcc-ops-count" class="wpcc-ops-count" role="status" aria-live="polite"></div>
 
 		<div id="wpcc-ops-panel">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading operations…', 'wp-command-center' ); ?></p>
+			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operations…', 'wp-command-center' ); ?></span></div>
 		</div>
 
 		<div id="wpcc-ops-pager" class="wpcc-ops-pager"></div>
@@ -72,40 +72,29 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 </div>
 
 <style>
-.wpcc-operations .wpcc-spin { float:none;margin:0 6px 0 0;vertical-align:middle; }
-.wpcc-ops-summary { display:flex;flex-wrap:wrap;gap:8px;margin:12px 0; }
-.wpcc-ops-stat { background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:8px 14px;min-width:96px; }
-.wpcc-ops-stat b { display:block;font-size:20px;line-height:1.2; }
-.wpcc-ops-stat span { font-size:12px;color:#50575e; }
-.wpcc-ops-filters { display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0; }
-.wpcc-ops-count { font-size:12px;color:#646970;margin:4px 0 8px; }
-.wpcc-ops-pager { display:flex;align-items:center;gap:10px;margin:12px 0;max-width:1100px; }
-.wpcc-ops-pager .wpcc-pageinfo { font-size:12px;color:#646970; }
-.wpcc-ops-table { max-width:1100px;margin-top:4px; }
-.wpcc-ops-table td,.wpcc-ops-table th { vertical-align:middle; }
-.wpcc-ops-table .wpcc-op-id { font-family:Menlo,Consolas,monospace;font-size:11px;color:#646970; }
-.wpcc-ops-table .wpcc-op-desc { color:#50575e;font-size:12px; }
-.wpcc-chip { display:inline-block;font-size:11px;background:#f0f0f1;border:1px solid #dcdcde;border-radius:10px;padding:1px 8px;color:#3c434a; }
-.wpcc-chip-mono { font-family:Menlo,Consolas,monospace; }
-.wpcc-badge { display:inline-block;font-size:11px;border-radius:10px;padding:1px 8px; }
-.wpcc-badge--good { background:#edfaef;border:1px solid #00a32a;color:#0a7c2f; }
-.wpcc-badge--neutral { background:#f0f0f1;border:1px solid #c3c4c7;color:#50575e; }
-.wpcc-badge--warn { background:#fcf3e6;border:1px solid #dba617;color:#996800; }
-.wpcc-badge--critical { background:#fce9e9;border:1px solid #d63638;color:#b32d2e; }
-.wpcc-empty { background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:18px;max-width:1100px;color:#50575e; }
-.wpcc-op-detail-table { max-width:820px;margin:8px 0 18px; }
-.wpcc-op-detail-table th { text-align:left;width:200px;color:#50575e; }
-.wpcc-op-detail-table td,.wpcc-op-detail-table th { padding:6px 12px;border-bottom:1px solid #f0f0f1;vertical-align:top; }
-.wpcc-op-section { margin:18px 0; }
-.wpcc-op-section h2 { font-size:14px;margin:0 0 6px; }
+/* Operations Explorer — layout only. Badges, chips, empty/error/loading states,
+ * KPI tiles and table chrome are now CDS components (wpcc-cds.css); what remains
+ * here is view-specific layout, re-pointed onto CDS tokens (no hardcoded color). */
+.wpcc-ops-filters { display:flex;align-items:center;gap:var(--wpcc-space-6);flex-wrap:wrap;margin:var(--wpcc-space-4) 0; }
+.wpcc-ops-count { font-size:var(--wpcc-fs-small);color:var(--wpcc-text-secondary);margin:var(--wpcc-space-2) 0 var(--wpcc-space-3); }
+.wpcc-ops-pager { display:flex;align-items:center;gap:var(--wpcc-space-4);margin:var(--wpcc-space-5) 0;max-width:1100px; }
+.wpcc-ops-pager .wpcc-pageinfo { font-size:var(--wpcc-fs-small);color:var(--wpcc-text-secondary); }
+.wpcc-ops-table { max-width:1100px;margin-top:var(--wpcc-space-2); }
+.wpcc-ops-table .wpcc-op-id { font-family:var(--wpcc-font-mono);font-size:var(--wpcc-fs-caption);color:var(--wpcc-text-secondary); }
+.wpcc-ops-table .wpcc-op-desc { color:var(--wpcc-text-muted);font-size:var(--wpcc-fs-small); }
+.wpcc-op-detail-table { max-width:820px;margin:var(--wpcc-space-3) 0 var(--wpcc-space-7); }
+.wpcc-op-detail-table th { text-align:left;width:200px;color:var(--wpcc-text-muted); }
+.wpcc-op-detail-table td,.wpcc-op-detail-table th { padding:var(--wpcc-space-3) var(--wpcc-space-5);border-bottom:1px solid var(--wpcc-border-subtle);vertical-align:top; }
+.wpcc-op-section { margin:var(--wpcc-space-7) 0; }
+.wpcc-op-section h3 { font-size:var(--wpcc-fs-h2);margin:0 0 var(--wpcc-space-3); }
 .wpcc-op-params-table,.wpcc-op-actions-table { max-width:1000px; }
 .wpcc-op-params-table td,.wpcc-op-actions-table td,.wpcc-op-params-table th,.wpcc-op-actions-table th { vertical-align:top; }
-.wpcc-op-desc-full { max-width:1000px;color:#3c434a; }
-.wpcc-op-note { background:#f0f6fc;border:1px solid #72aee6;border-radius:4px;padding:10px 14px;margin:8px 0;max-width:1000px;font-size:13px; }
-.wpcc-op-note--warn { background:#fcf3e6;border-color:#dba617; }
-.wpcc-req { color:#b32d2e;font-weight:600; }
-.wpcc-opt { color:#646970; }
-.wpcc-op-name { font-family:Menlo,Consolas,monospace;font-size:12px; }
+.wpcc-op-desc-full { max-width:1000px;color:var(--wpcc-text-primary); }
+.wpcc-op-note { background:var(--wpcc-surface-accent-soft);border:1px solid var(--wpcc-border-accent);border-radius:var(--wpcc-radius-sm);padding:var(--wpcc-space-4) var(--wpcc-space-6);margin:var(--wpcc-space-3) 0;max-width:1000px;font-size:var(--wpcc-fs-body); }
+.wpcc-op-note--warn { background:var(--wpcc-state-warning-bg);border-color:var(--wpcc-state-warning-border); }
+.wpcc-req { color:var(--wpcc-state-danger-fg);font-weight:600; }
+.wpcc-opt { color:var(--wpcc-text-secondary); }
+.wpcc-op-name { font-family:var(--wpcc-font-mono);font-size:var(--wpcc-fs-small); }
 </style>
 
 <script>
@@ -180,17 +169,17 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 	// S2.1 — server-side pagination state (no client-side load-all).
 	var pg = { limit: 20, offset: 0, total: 0, returned: 0, hasMore: false };
 
-	function escHtml( s ) {
-		var d = document.createElement('div');
-		d.appendChild( document.createTextNode( String( s === null || s === undefined ? '' : s ) ) );
-		return d.innerHTML;
-	}
+	// D1/M2 closure: HTML escaping + the nonce-authenticated JSON fetch come from
+	// the shared window.WPCC runtime (enqueued in the head), not a per-view copy.
+	// CDS render helpers (badges/pills/tags/states/kpis) come from WPCC.cds.
+	var WPCC = window.WPCC;
+	var cds  = WPCC.cds;
+	var escHtml = WPCC.escHtml;
 	function apiFetch( path ) {
-		return fetch( apiBase + path, { headers: { 'X-WP-Nonce': nonce } } ).then( function(r) {
-			return r.json().then(
-				function(j) { return { ok: r.ok, status: r.status, body: j }; },
-				function()  { return { ok: r.ok, status: r.status, body: {} }; }
-			);
+		// GET-only read surface — delegates to WPCC.api and maps {data}→{body}
+		// so the existing call sites stay unchanged.
+		return WPCC.api( 'GET', apiBase + path, nonce ).then( function( r ) {
+			return { ok: r.ok, status: r.status, body: r.data };
 		} );
 	}
 	function setHtml( id, html ) {
@@ -206,40 +195,40 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 	function detailUrl( id ) {
 		return state.pageUrl + '?page=' + encodeURIComponent( state.page ) + '&view=' + encodeURIComponent( id );
 	}
+	// Risk tier → CDS risk pill (semantic, 5-tier). aria-label keeps column context.
 	function riskBadge( risk ) {
-		var cls = 'wpcc-badge--neutral';
-		if ( risk === 'critical' || risk === 'high' ) { cls = 'wpcc-badge--critical'; }
-		else if ( risk === 'medium' ) { cls = 'wpcc-badge--warn'; }
-		else if ( risk === 'diagnostic' ) { cls = 'wpcc-badge--good'; }
-		return '<span class="wpcc-badge ' + cls + '" aria-label="' + escHtml( i18n.colRisk + ': ' + risk ) + '">' + escHtml( risk ) + '</span>';
+		return cds.riskPill( risk, risk, i18n.colRisk + ': ' + risk );
 	}
+	// Availability → CDS status pill (success / neutral).
 	function availBadge( ok ) {
 		var text = ok ? i18n.available : i18n.unavailable;
-		var cls  = ok ? 'wpcc-badge--good' : 'wpcc-badge--neutral';
-		return '<span class="wpcc-badge ' + cls + '" aria-label="' + escHtml( i18n.colAvail + ': ' + text ) + '">' + escHtml( text ) + '</span>';
+		return cds.statusPill( ok ? 'available' : 'unavailable', text, i18n.colAvail + ': ' + text );
+	}
+	// Approval requirement → CDS status pill (required = warning, otherwise neutral).
+	function approvalBadge( req ) {
+		var text = req ? i18n.required : i18n.notReq;
+		return cds.statusPill( req ? 'required' : 'notreq', text, i18n.colApproval + ': ' + text );
 	}
 	function capCell( op ) {
 		if ( ! op.required_capability ) {
-			var ro = op.read_only_scope ? ' <span class="wpcc-chip">' + escHtml( i18n.readOnly ) + '</span>' : '';
+			var ro = op.read_only_scope ? ' ' + cds.tag( i18n.readOnly ) : '';
 			return '<em>' + escHtml( i18n.unrestricted ) + '</em>' + ro;
 		}
-		return '<span class="wpcc-chip wpcc-chip-mono">' + escHtml( op.required_capability ) + '</span>'
-			+ ( op.read_only_scope ? ' <span class="wpcc-chip">' + escHtml( i18n.readOnly ) + '</span>' : '' );
+		return cds.tag( op.required_capability, true )
+			+ ( op.read_only_scope ? ' ' + cds.tag( i18n.readOnly ) : '' );
 	}
 
 	function renderSummary( s ) {
 		if ( ! s ) { setHtml( 'wpcc-ops-summary', '' ); return; }
 		var mode = ( s.security_mode && s.security_mode.label ) ? s.security_mode.label : '';
-		var html = ''
-			+ stat( s.total, i18n.statTotal )
-			+ stat( s.available, i18n.statAvail )
-			+ stat( s.requires_approval_count, i18n.statApprove )
-			+ stat( s.unmapped_count, i18n.statUnrest )
-			+ '<div class="wpcc-ops-stat"><b>' + escHtml( mode ) + '</b><span>' + escHtml( i18n.statMode ) + '</span></div>';
+		var html = '<div class="wpcc-cds-kpis">'
+			+ cds.kpi( s.total, i18n.statTotal )
+			+ cds.kpi( s.available, i18n.statAvail )
+			+ cds.kpi( s.requires_approval_count, i18n.statApprove )
+			+ cds.kpi( s.unmapped_count, i18n.statUnrest )
+			+ cds.kpi( mode, i18n.statMode )
+			+ '</div>';
 		setHtml( 'wpcc-ops-summary', html );
-	}
-	function stat( n, label ) {
-		return '<div class="wpcc-ops-stat"><b>' + escHtml( n ) + '</b><span>' + escHtml( label ) + '</span></div>';
 	}
 
 	// S2.1 — build the server query string from the current filter controls.
@@ -259,7 +248,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 	function loadPage() {
 		apiFetch( currentQuery() ).then( function( res ) {
 			if ( ! res.ok || ! res.body || ! Array.isArray( res.body.items ) ) {
-				setHtml( 'wpcc-ops-panel', '<div class="wpcc-empty">' + escHtml( i18n.loadFail ) + '</div>' );
+				setHtml( 'wpcc-ops-panel', cds.error( i18n.loadFail ) );
 				setHtml( 'wpcc-ops-pager', '' );
 				return;
 			}
@@ -270,7 +259,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 			setHtml( 'wpcc-ops-count', escHtml( sprintf2( i18n.countFmt, pg.returned, pg.total ) ) );
 			renderPager();
 		} ).catch( function() {
-			setHtml( 'wpcc-ops-panel', '<div class="wpcc-empty">' + escHtml( i18n.loadFail ) + '</div>' );
+			setHtml( 'wpcc-ops-panel', cds.error( i18n.loadFail ) );
 			setHtml( 'wpcc-ops-pager', '' );
 		} );
 	}
@@ -282,11 +271,9 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		if ( pg.total <= pg.limit && pg.offset === 0 ) { setHtml( 'wpcc-ops-pager', '' ); return; }
 		var from = pg.total ? ( pg.offset + 1 ) : 0;
 		var to   = pg.offset + pg.returned;
-		var prevDis = pg.offset <= 0 ? ' disabled' : '';
-		var nextDis = pg.hasMore ? '' : ' disabled';
-		var html = '<button type="button" class="button" id="wpcc-ops-prev"' + prevDis + '>' + escHtml( i18n.prev ) + '</button>'
+		var html = cds.button( { label: i18n.prev, id: 'wpcc-ops-prev', disabled: pg.offset <= 0 } )
 			+ '<span class="wpcc-pageinfo">' + escHtml( sprintf2( i18n.countFmt, from + '–' + to, pg.total ) ) + '</span>'
-			+ '<button type="button" class="button" id="wpcc-ops-next"' + nextDis + '>' + escHtml( i18n.next ) + '</button>';
+			+ cds.button( { label: i18n.next, id: 'wpcc-ops-next', disabled: ! pg.hasMore } );
 		setHtml( 'wpcc-ops-pager', html );
 		var prev = document.getElementById( 'wpcc-ops-prev' );
 		var next = document.getElementById( 'wpcc-ops-next' );
@@ -296,10 +283,10 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 
 	function renderTable( rows ) {
 		if ( ! rows.length ) {
-			setHtml( 'wpcc-ops-panel', '<div class="wpcc-empty">' + escHtml( i18n.empty ) + '</div>' );
+			setHtml( 'wpcc-ops-panel', cds.empty( i18n.empty ) );
 			return;
 		}
-		var h = '<table class="widefat striped wpcc-ops-table"><thead><tr>'
+		var h = '<table class="widefat striped wpcc-cds-table wpcc-ops-table"><thead><tr>'
 			+ '<th scope="col">' + escHtml( i18n.colOp ) + '</th>'
 			+ '<th scope="col">' + escHtml( i18n.colRisk ) + '</th>'
 			+ '<th scope="col">' + escHtml( i18n.colCap ) + '</th>'
@@ -314,7 +301,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 					+ ( op.summary ? '<div class="wpcc-op-desc">' + escHtml( op.summary ) + '</div>' : '' ) + '</th>'
 				+ '<td>' + riskBadge( op.risk_level ) + '</td>'
 				+ '<td>' + capCell( op ) + '</td>'
-				+ '<td>' + escHtml( op.requires_approval ? i18n.required : i18n.notReq ) + '</td>'
+				+ '<td>' + approvalBadge( op.requires_approval ) + '</td>'
 				+ '<td>' + availBadge( op.available ) + '</td>'
 				+ '</tr>';
 		} );
@@ -354,7 +341,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 			authInner = '<p><em>' + escHtml( i18n.unrestricted ) + '</em></p>' + note( i18n.unrestrictedNote );
 		} else {
 			authInner = '<table class="wpcc-op-detail-table"><tbody>'
-				+ row( i18n.dReqCap, '<span class="wpcc-chip wpcc-chip-mono">' + escHtml( auth.required_capability ) + '</span>' )
+				+ row( i18n.dReqCap, cds.tag( auth.required_capability, true ) )
 				+ row( i18n.dReadOnly, escHtml( auth.read_only_scope ? i18n.yes : i18n.no ) + ' — ' + escHtml( auth.read_only_scope ? i18n.readOnlyYes : i18n.readOnlyNo ) )
 				+ '</tbody></table>';
 			if ( auth.unlocked_by_admin ) { authInner += note( i18n.adminUnlocks ); }
@@ -378,7 +365,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		if ( ! params.length ) {
 			paramsInner = '<p class="description">' + escHtml( i18n.noParams ) + '</p>';
 		} else {
-			paramsInner = '<table class="widefat striped wpcc-op-params-table"><thead><tr>'
+			paramsInner = '<table class="widefat striped wpcc-cds-table wpcc-op-params-table"><thead><tr>'
 				+ '<th scope="col">' + escHtml( i18n.colName ) + '</th>'
 				+ '<th scope="col">' + escHtml( i18n.colType ) + '</th>'
 				+ '<th scope="col">' + escHtml( i18n.colReq ) + '</th>'
@@ -387,7 +374,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 				+ '</tr></thead><tbody>';
 			params.forEach( function( p ) {
 				var enumVals = ( Array.isArray( p.enum ) && p.enum.length )
-					? p.enum.map( function( v ) { return '<span class="wpcc-chip wpcc-chip-mono">' + escHtml( v ) + '</span>'; } ).join( ' ' )
+					? p.enum.map( function( v ) { return cds.tag( v, true ); } ).join( ' ' )
 					: '';
 				paramsInner += '<tr>'
 					+ '<td><span class="wpcc-op-name">' + escHtml( p.name ) + '</span></td>'
@@ -406,7 +393,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		if ( ! actions.length ) {
 			actionsInner = '<p class="description">' + escHtml( i18n.noActions ) + '</p>';
 		} else {
-			actionsInner = '<table class="widefat striped wpcc-op-actions-table"><thead><tr>'
+			actionsInner = '<table class="widefat striped wpcc-cds-table wpcc-op-actions-table"><thead><tr>'
 				+ '<th scope="col">' + escHtml( i18n.colAction ) + '</th>'
 				+ '<th scope="col">' + escHtml( i18n.colRisk ) + '</th>'
 				+ '<th scope="col">' + escHtml( i18n.colApproval ) + '</th>'
@@ -415,7 +402,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 				actionsInner += '<tr>'
 					+ '<td><span class="wpcc-op-name">' + escHtml( a.action ) + '</span></td>'
 					+ '<td>' + riskBadge( a.risk_level ) + '</td>'
-					+ '<td>' + escHtml( a.requires_approval ? i18n.required : i18n.notReq ) + '</td>'
+					+ '<td>' + approvalBadge( a.requires_approval ) + '</td>'
 					+ '</tr>';
 			} );
 			actionsInner += '</tbody></table>';
@@ -439,16 +426,16 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 
 		apiFetch( '/operations/' + encodeURIComponent( id ) ).then( function( res ) {
 			if ( res.status === 404 ) {
-				setHtml( 'wpcc-op-detail', '<div class="wpcc-empty">' + escHtml( i18n.notFound ) + '</div>' );
+				setHtml( 'wpcc-op-detail', cds.empty( i18n.notFound ) );
 				return;
 			}
 			if ( ! res.ok || ! res.body || ! res.body.operation ) {
-				setHtml( 'wpcc-op-detail', '<div class="wpcc-empty">' + escHtml( i18n.loadFail ) + '</div>' );
+				setHtml( 'wpcc-op-detail', cds.error( i18n.loadFail ) );
 				return;
 			}
 			renderDetail( res.body );
 		} ).catch( function() {
-			setHtml( 'wpcc-op-detail', '<div class="wpcc-empty">' + escHtml( i18n.loadFail ) + '</div>' );
+			setHtml( 'wpcc-op-detail', cds.error( i18n.loadFail ) );
 		} );
 	}
 
