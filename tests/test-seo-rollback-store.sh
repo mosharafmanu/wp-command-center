@@ -72,7 +72,10 @@ else
 		$rid = (string)($u["rollback_id"] ?? "");
 		$out["got_rollback_id"]   = ( "" !== $rid ) ? 1 : 0;
 		$rec = get_post_meta($pid, $prefix.$rid, true);
-		$out["meta_row_created"]  = ( is_array($rec) && ($rec["id"]??"")===$rid && ($rec["before_state"]["title"]??"")==="Original Title" ) ? 1 : 0;
+		// Phase 3 (F-1): record is now a field-scoped delta (version 2, `fields` map) —
+		// no full `before_state`. The touched title field stores its backing-key prior.
+		$tkey = \WPCommandCenter\Operations\SeoProvider::meta_key("title", $prov);
+		$out["meta_row_created"]  = ( is_array($rec) && ($rec["id"]??"")===$rid && (int)($rec["version"]??0)===2 && (($rec["fields"]["title"]["keys"][$tkey]["prior"]??"")==="Original Title") ) ? 1 : 0;
 		$out["meta_applied_false"]= ( empty($rec["rollback_applied"]) ) ? 1 : 0;
 		$out["option_not_grown"]  = ( count(get_option("wpcc_seo_rollbacks", [])) === $opt_cnt_before ) ? 1 : 0;
 
@@ -114,7 +117,11 @@ else
 		$cnt_on_post = (int) $wpdb->get_var( $wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE post_id=%d AND meta_key LIKE %s", $cpid, $wpdb->esc_like($prefix)."%") );
 		$out["no_evict_103_rows"] = ( $cnt_on_post === 103 ) ? 1 : 0;     // legacy store would cap at 100
 		$rfirst = $mgr->run(["action"=>"seo_restore","rollback_id"=>$first_rid], []);
-		$out["oldest_still_restorable"] = ( !empty($rfirst["restored"]) ) ? 1 : 0; // first record NOT evicted
+		// Phase 3 (F-1): the oldest record is NOT evicted, so it still RESOLVES. Because
+		// 102 newer changes touched the same (title) field, a field-scoped restore now
+		// correctly reports drift (conflict) instead of clobbering — a not-found code
+		// would mean eviction. Resolvability (not clean restore) is the no-evict proof.
+		$out["oldest_still_resolvable"] = ( ($rfirst["code"]??"") !== "wpcc_rollback_not_found" ) ? 1 : 0;
 
 		// === 2f. no autoload-option dependency: option count unchanged by new writes ===
 		// (2d added exactly one legacy seed; new 4c writes must not have grown it further.)
@@ -133,7 +140,7 @@ else
 		echo "  NOTE: no SEO plugin active on this env — store functional path skipped."
 	else
 		assert_eq "seo_update returns rollback_id"               "1" "$(gj got_rollback_id)"
-		assert_eq "per-post meta row created with before_state"  "1" "$(gj meta_row_created)"
+		assert_eq "per-post meta row created (v2 delta, field prior)" "1" "$(gj meta_row_created)"
 		assert_eq "new record rollback_applied=false"            "1" "$(gj meta_applied_false)"
 		assert_eq "legacy option NOT grown by new write"         "1" "$(gj option_not_grown)"
 		assert_eq "restore by rollback_id alone succeeds"        "1" "$(gj restore_ok)"
@@ -145,7 +152,7 @@ else
 		assert_eq "legacy before_state restored"                 "1" "$(gj legacy_before_restored)"
 		assert_eq "legacy record marked applied in option"       "1" "$(gj legacy_marked_applied)"
 		assert_eq "no eviction: 103 meta rows on one post"       "1" "$(gj no_evict_103_rows)"
-		assert_eq "oldest (1st) rollback still restorable"       "1" "$(gj oldest_still_restorable)"
+		assert_eq "oldest (1st) rollback still resolvable (no evict)" "1" "$(gj oldest_still_resolvable)"
 		assert_eq "new writes never grow the autoloaded option"  "1" "$(gj option_only_seed_growth)"
 	fi
 fi

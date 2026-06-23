@@ -114,6 +114,49 @@ final class SeoProvider {
 	}
 
 	/**
+	 * Phase 3 (F-1) — the backing post-meta key(s) for a unified field, provider-
+	 * correct. Scalars map to their single key; `robots` expands to the provider's
+	 * storage shape (Rank Math: one array meta; Yoast: three split keys). Read-only
+	 * accessor over the existing maps — adds no behaviour. Used by the field-scoped
+	 * delta rollback to capture/restore exactly the keys an operation touched.
+	 *
+	 * @return string[]
+	 */
+	public static function backing_keys( string $field, string $provider ): array {
+		if ( self::NONE === $provider ) {
+			return [];
+		}
+		if ( 'robots' === $field ) {
+			if ( self::RANKMATH === $provider ) {
+				return [ 'rank_math_robots' ];
+			}
+			return [
+				'_yoast_wpseo_meta-robots-noindex',
+				'_yoast_wpseo_meta-robots-nofollow',
+				'_yoast_wpseo_meta-robots-adv',
+			];
+		}
+		$key = self::meta_key( $field, $provider );
+		return '' === $key ? [] : [ $key ];
+	}
+
+	/**
+	 * Phase 3 (F-1) — read a single unified field's current value (scalar string, or
+	 * the normalized robots array). Used for drift detection during field-scoped
+	 * rollback: the value is compared, the same way `seo_update` produced it, against
+	 * the `after` value recorded when the field was applied.
+	 *
+	 * @return mixed string for scalar fields, string[] for robots.
+	 */
+	public static function read_field( int $post_id, string $field, string $provider ) {
+		if ( 'robots' === $field ) {
+			return self::read_robots( $post_id, $provider );
+		}
+		$key = self::meta_key( $field, $provider );
+		return '' === $key ? '' : (string) get_post_meta( $post_id, $key, true );
+	}
+
+	/**
 	 * Read all unified SEO fields for a post.
 	 *
 	 * @return array<string,mixed>

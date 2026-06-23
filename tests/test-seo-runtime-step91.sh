@@ -89,10 +89,18 @@ R=$(seo_mcp "$(jq -n --argjson id "$PID" '{jsonrpc:"2.0",id:1,method:"tools/call
 assert_eq "MCP seo_get: provider" "yoast" "$(echo "$R" | jq -r '.provider')"
 assert_eq "MCP seo_get: title" "Updated Widgets Title" "$(echo "$R" | jq -r '.seo.title')"
 
-echo "== 9. Rollback restores the pre-update SEO state =="
-seo "$(jq -n --arg rid "$RID" '{action:"seo_restore",rollback_id:$rid}')" >/dev/null
-assert_eq "rollback: title restored to original (empty)" "" "$(wpe 'echo get_post_meta('"$PID"',"_yoast_wpseo_title",true);')"
-assert_eq "rollback: already-applied guard" "wpcc_rollback_already_applied" "$(seo "$(jq -n --arg rid "$RID" '{action:"seo_restore",rollback_id:$rid}')" | jq -r '.code // "none"')"
+echo "== 9. Rollback is field-scoped + drift-aware (F-1) =="
+# RID (section 2) set several SEO fields; section 4 then changed ONLY the title, so on
+# rollback the untouched fields restore cleanly while the drifted title is skipped — a
+# field-scoped PARTIAL rollback that must NOT clobber the newer title (the F-1 fix).
+DRIFT=$(seo "$(jq -n --arg rid "$RID" '{action:"seo_restore",rollback_id:$rid}')")
+assert_eq "rollback: drifted RID not a clean restore" "false" "$(echo "$DRIFT" | jq -r '.restored')"
+assert_eq "rollback: drifted title reported skipped" "title" "$(echo "$DRIFT" | jq -r '(.skipped_fields // []) | index("title") // empty | "title"')"
+assert_eq "rollback: newer title preserved (no clobber)" "Updated Widgets Title" "$(seo "$(jq -n --argjson id "$PID" '{action:"seo_get",content_id:$id}')" | jq -r '.seo.title')"
+# A fresh (non-drifted) rollback restores cleanly and is idempotency-guarded.
+FRID=$(seo "$(jq -n --argjson id "$PID" '{action:"seo_update",content_id:$id,seo:{title:"Temp Rollback Title"}}')" | jq -r '.rollback_id')
+assert_eq "rollback: fresh restore complete" "complete" "$(seo "$(jq -n --arg rid "$FRID" '{action:"seo_restore",rollback_id:$rid}')" | jq -r '.status // "none"')"
+assert_eq "rollback: already-applied guard" "wpcc_rollback_already_applied" "$(seo "$(jq -n --arg rid "$FRID" '{action:"seo_restore",rollback_id:$rid}')" | jq -r '.code // "none"')"
 
 echo
 echo "================================================"

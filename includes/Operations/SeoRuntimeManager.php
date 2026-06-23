@@ -95,15 +95,22 @@ final class SeoRuntimeManager {
 			return $this->error( 'wpcc_seo_invalid_field', implode( ' ', array_map( static fn( $i ) => $i['message'], $errors ) ) );
 		}
 
-		$before      = SeoProvider::read( $post->ID, $provider );
-		$rollback_id = $this->store_rollback( $post->ID, $provider, $before, $context );
+		// Phase 3 (F-1) — capture ONLY the backing meta keys this update touches, each
+		// with its prior raw value and prior existence, BEFORE the write. This replaces
+		// the full-object `before_state` snapshot that caused layered-rollback corruption.
+		$prior = $this->capture_prior( $post->ID, array_keys( $fields ), $provider );
 
 		$updated = SeoProvider::write( $post->ID, $fields, $provider );
 
+		// Persist a field-scoped delta record. After-values come from the post-write read
+		// ($updated) so drift detection can later compare live values against them.
+		$rollback_id = $this->store_rollback( $post->ID, $provider, array_keys( $fields ), $prior, $updated, $context );
+
 		$this->audit->record( 'seo.updated', [
-			'post_id'  => $post->ID,
-			'provider' => $provider,
-			'fields'   => array_keys( $fields ),
+			'post_id'         => $post->ID,
+			'provider'        => $provider,
+			'fields'          => array_keys( $fields ),
+			'rollback_format' => 'delta',
 		] );
 
 		return [
@@ -202,14 +209,14 @@ final class SeoRuntimeManager {
 				return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
 			}
 
-			SeoProvider::write( (int) $record['post_id'], $record['before_state'], $record['provider'] );
+			// Phase 3 (F-1) — field-scoped, drift-aware restore for v2 delta records.
+			if ( isset( $record['fields'] ) && is_array( $record['fields'] ) ) {
+				return $this->restore_delta( $post_id, $meta_key, $record );
+			}
 
-			$record['rollback_applied'] = true;
-			update_post_meta( $post_id, $meta_key, $record );
-
-			$this->audit->record( 'seo.restored', [ 'post_id' => $record['post_id'], 'rollback_id' => $rollback_id ] );
-
-			return [ 'action' => 'seo_restore', 'post_id' => (int) $record['post_id'], 'rollback_id' => $rollback_id, 'restored' => true ];
+			// Pre-Phase-3 full-snapshot post-meta record: restore unchanged (forward-only,
+			// no destructive migration).
+			return $this->restore_legacy_meta( $post_id, $meta_key, $record, $rollback_id );
 		}
 
 		// Backward-compat: records created before Slice 4c still live in the legacy
@@ -244,9 +251,138 @@ final class SeoRuntimeManager {
 		$rollbacks[ $idx ]['rollback_applied'] = true;
 		update_option( self::LEGACY_ROLLBACK_OPTION, $rollbacks );
 
-		$this->audit->record( 'seo.restored', [ 'post_id' => $record['post_id'], 'rollback_id' => $rollback_id ] );
+		$this->audit->record( 'seo.restored', [ 'post_id' => $record['post_id'], 'rollback_id' => $rollback_id, 'path' => 'legacy' ] );
 
-		return [ 'action' => 'seo_restore', 'post_id' => (int) $record['post_id'], 'rollback_id' => $rollback_id, 'restored' => true ];
+		return [ 'action' => 'seo_restore', 'post_id' => (int) $record['post_id'], 'rollback_id' => $rollback_id, 'restored' => true, 'status' => 'complete', 'path' => 'legacy' ];
+	}
+
+	/**
+	 * Phase 3 (F-1) — restore a pre-Phase-3 full-snapshot post-meta record. Behaviour is
+	 * the unchanged pre-Phase-3 restore (whole `before_state` written back); historical
+	 * records keep their original semantics — no destructive migration.
+	 */
+	private function restore_legacy_meta( int $post_id, string $meta_key, array $record, string $rollback_id ): array {
+		SeoProvider::write( (int) $record['post_id'], $record['before_state'], $record['provider'] );
+
+		$record['rollback_applied'] = true;
+		update_post_meta( $post_id, $meta_key, $record );
+
+		$this->audit->record( 'seo.restored', [ 'post_id' => $record['post_id'], 'rollback_id' => $rollback_id, 'path' => 'legacy' ] );
+
+		return [ 'action' => 'seo_restore', 'post_id' => (int) $record['post_id'], 'rollback_id' => $rollback_id, 'restored' => true, 'status' => 'complete', 'path' => 'legacy' ];
+	}
+
+	/**
+	 * Phase 3 (F-1) — field-scoped, drift-aware delta restore. For each field the
+	 * original update touched, compare the current live value to the recorded `after`.
+	 * If they differ the field has drifted (a later change touched it) — skip it and
+	 * report a conflict rather than clobber a sibling/newer change. Otherwise restore
+	 * that field's backing meta keys to their exact prior raw value and existence
+	 * (existed=false ⇒ delete; existed=true ⇒ write the prior value, even when '').
+	 *
+	 * Only a clean `complete` restore is terminal (marks rollback_applied → idempotency
+	 * guard). `partial`/`conflict` stay retryable so the correct multi-step recovery
+	 * (roll back the newer change first, then retry the older) remains reachable; a retry
+	 * never clobbers because drift always skips.
+	 */
+	private function restore_delta( int $post_id, string $meta_key, array $record ): array {
+		$provider  = (string) $record['provider'];
+		$restored  = [];
+		$skipped   = [];
+		$conflicts = [];
+
+		foreach ( (array) $record['fields'] as $field => $spec ) {
+			$field   = (string) $field;
+			$after   = $spec['after'] ?? '';
+			$current = SeoProvider::read_field( $post_id, $field, $provider );
+
+			if ( ! $this->values_equal( $current, $after, $field ) ) {
+				$skipped[]   = $field;
+				$conflicts[] = [ 'field' => $field, 'reason' => 'drift', 'expected' => $after, 'current' => $current ];
+				continue;
+			}
+
+			foreach ( (array) ( $spec['keys'] ?? [] ) as $key => $meta ) {
+				$key = (string) $key;
+				if ( ! empty( $meta['existed'] ) ) {
+					update_post_meta( $post_id, $key, $meta['prior'] );
+				} elseif ( metadata_exists( 'post', $post_id, $key ) ) {
+					delete_post_meta( $post_id, $key );
+				}
+			}
+			$restored[] = $field;
+		}
+
+		$status      = empty( $skipped ) ? 'complete' : ( empty( $restored ) ? 'conflict' : 'partial' );
+		$rollback_id = (string) ( $record['id'] ?? '' );
+
+		if ( 'complete' === $status ) {
+			$record['rollback_applied'] = true;
+			update_post_meta( $post_id, $meta_key, $record );
+		}
+
+		$this->audit->record( 'seo.restored', [
+			'post_id'         => $post_id,
+			'rollback_id'     => $rollback_id,
+			'path'            => 'delta',
+			'status'          => $status,
+			'restored_fields' => $restored,
+			'skipped_fields'  => $skipped,
+			'conflicts'       => $conflicts,
+		] );
+
+		if ( 'complete' === $status ) {
+			return [
+				'action'          => 'seo_restore',
+				'post_id'         => $post_id,
+				'rollback_id'     => $rollback_id,
+				'restored'        => true,
+				'status'          => 'complete',
+				'path'            => 'delta',
+				'restored_fields' => $restored,
+				'skipped_fields'  => [],
+				'conflicts'       => [],
+			];
+		}
+
+		$code = 'conflict' === $status ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
+		$msg  = 'conflict' === $status
+			? sprintf( __( 'Rollback skipped: every targeted SEO field (%s) changed since this update was applied. No fields were restored.', 'wp-command-center' ), implode( ', ', $skipped ) )
+			: sprintf( __( 'Partial rollback: restored %1$s; skipped %2$s because they changed since this update was applied (drift).', 'wp-command-center' ), implode( ', ', $restored ), implode( ', ', $skipped ) );
+
+		return [
+			'error'           => true,
+			'code'            => $code,
+			'message'         => $msg,
+			'action'          => 'seo_restore',
+			'post_id'         => $post_id,
+			'rollback_id'     => $rollback_id,
+			'restored'        => false,
+			'status'          => $status,
+			'path'            => 'delta',
+			'restored_fields' => $restored,
+			'skipped_fields'  => $skipped,
+			'conflicts'       => $conflicts,
+		];
+	}
+
+	/**
+	 * Phase 3 (F-1) — drift comparison. robots compares normalized directive sets
+	 * (order-insensitive); scalars compare as strings — the same normalization
+	 * seo_update applied when it produced the recorded `after` value.
+	 *
+	 * @param mixed $current
+	 * @param mixed $expected
+	 */
+	private function values_equal( $current, $expected, string $field ): bool {
+		if ( 'robots' === $field ) {
+			$c = is_array( $current ) ? $current : [];
+			$e = is_array( $expected ) ? $expected : [];
+			sort( $c );
+			sort( $e );
+			return $c === $e;
+		}
+		return (string) $current === (string) $expected;
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────
@@ -324,21 +460,61 @@ final class SeoRuntimeManager {
 	}
 
 	/**
-	 * Slice 4c — persist one SEO rollback snapshot as a dedicated protected post-meta
-	 * row keyed by the rollback_id (`_wpcc_seo_rb_{id}`). One row per rollback: no
-	 * global cap, no FIFO eviction, not autoloaded, and free of the shared-option
-	 * lost-update race. New rollbacks NO LONGER write the `wpcc_seo_rollbacks` option
-	 * (seo_restore still reads it for pre-4c records). The rollback_id contract is
-	 * unchanged — the same uuid4 is returned and recorded by ChangeRecorder.
+	 * Phase 3 (F-1) — snapshot the backing meta keys for the touched unified fields,
+	 * each with prior existence + raw value, BEFORE the write. Captures only the keys
+	 * the update touches (one per scalar field, the provider's robots key-set for
+	 * robots) — never the full SEO object.
+	 *
+	 * @param string[] $touched
+	 * @return array<string,array{keys:array<string,array{existed:bool,prior:mixed}>}>
 	 */
-	private function store_rollback( int $post_id, string $provider, array $before, array $context ): string {
+	private function capture_prior( int $post_id, array $touched, string $provider ): array {
+		$out = [];
+		foreach ( $touched as $field ) {
+			$keys = [];
+			foreach ( SeoProvider::backing_keys( (string) $field, $provider ) as $key ) {
+				$keys[ $key ] = [
+					'existed' => metadata_exists( 'post', $post_id, $key ),
+					'prior'   => get_post_meta( $post_id, $key, true ),
+				];
+			}
+			$out[ (string) $field ] = [ 'keys' => $keys ];
+		}
+		return $out;
+	}
+
+	/**
+	 * Phase 3 (F-1) — persist one field-scoped SEO rollback record (format v2) as a
+	 * dedicated protected post-meta row keyed by the rollback_id (`_wpcc_seo_rb_{id}`).
+	 * Stores ONLY the touched fields: each carries the post-write `after` value (for
+	 * drift detection) and its backing meta keys' prior raw value + existence (for a
+	 * faithful, sibling-safe restore). One row per rollback — no cap, no FIFO eviction,
+	 * not autoloaded, no shared-option race. The rollback_id contract is unchanged — the
+	 * same uuid4 is returned and recorded by ChangeRecorder. Slice 4c per-meta storage
+	 * is preserved; only the record *shape* changed (`before_state` → `version`+`fields`).
+	 *
+	 * @param string[]             $touched   Unified field names the update wrote.
+	 * @param array<string,mixed>  $prior     Per-field backing-key prior map (capture_prior).
+	 * @param array<string,mixed>  $after_all Post-write unified read (SeoProvider::write return).
+	 */
+	private function store_rollback( int $post_id, string $provider, array $touched, array $prior, array $after_all, array $context ): string {
 		$rollback_id = wp_generate_uuid4();
+
+		$fields = [];
+		foreach ( $touched as $field ) {
+			$field            = (string) $field;
+			$fields[ $field ] = [
+				'after' => $after_all[ $field ] ?? '',
+				'keys'  => $prior[ $field ]['keys'] ?? [],
+			];
+		}
 
 		$record = [
 			'id'               => $rollback_id,
+			'version'          => 2,
 			'post_id'          => $post_id,
 			'provider'         => $provider,
-			'before_state'     => $before,
+			'fields'           => $fields,
 			'rollback_applied' => false,
 			'created_at'       => time(),
 			'session_id'       => $context['session_id'] ?? null,
