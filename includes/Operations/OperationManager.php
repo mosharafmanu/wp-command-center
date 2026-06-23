@@ -181,6 +181,21 @@ final class OperationManager {
 			return new \WP_Error( 'wpcc_request_not_approved', __( 'Only approved requests can be executed.', 'wp-command-center' ) );
 		}
 
+		// B2-2 execute-once (synchronous path). The status check above blocks a
+		// second execute_request once a request is EXECUTED, but the queue worker
+		// (run_item) executes without finalizing request.status — so a worker-run
+		// request stays 'approved'. Guard against the synchronous path re-running an
+		// operation the worker already executed by consulting the queue ledger.
+		if ( $this->request_already_executed( $request_id ) ) {
+			( new AuditLog() )->record( 'operation.execution.duplicate_suppressed', [
+				'request_id'   => $request_id,
+				'operation_id' => $request['operation_id'],
+				'path'         => 'synchronous',
+				'reason'       => 'already_executed',
+			] );
+			return new \WP_Error( 'wpcc_request_already_executed', __( 'This request has already been executed.', 'wp-command-center' ) );
+		}
+
 		$payload = json_decode( $request['payload'], true ) ?: [];
 		$context = [
 			'session_id' => $request['session_id'],
@@ -226,11 +241,51 @@ final class OperationManager {
 			[ '%s' ]
 		);
 
+		// B2-2 queue supersession. The synchronous path bypassed the queue, so the
+		// item auto-enqueued by approve_request is still runnable; cancel it so the
+		// background worker cannot execute this request a second time. cancel_item
+		// only acts on queued/failed items (running/completed are left untouched),
+		// so this is safe and idempotent.
+		$this->supersede_pending_queue_items( $request_id );
+
 		if ( ! empty( $request['plan_id'] ) ) {
 			( new RecommendationEngine() )->sync_plan_status( $request['plan_id'], 'resolved', $actor );
 		}
 
 		return $result;
+	}
+
+	/**
+	 * B2-2 execute-once ledger. True when this request has already been executed by
+	 * EITHER path — synchronously (request.status === EXECUTED) or by the queue
+	 * worker (a queue item for the request reached running/completed). A `failed`
+	 * request and `queued`/`failed` queue items are NOT "already executed", so
+	 * legitimate failed → retry flows are unaffected.
+	 */
+	public function request_already_executed( string $request_id ): bool {
+		$request = $this->get_request( $request_id );
+		if ( $request && self::STATUS_EXECUTED === $request['status'] ) {
+			return true;
+		}
+		foreach ( ( new OperationQueue() )->list_items( [ 'request_id' => $request_id ] ) as $item ) {
+			if ( in_array( $item['status'], [ OperationQueue::STATUS_RUNNING, OperationQueue::STATUS_COMPLETED ], true ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * B2-2 — cancel any still-runnable (queued/failed) queue item for a request once
+	 * it has been executed synchronously, so the worker will not run it again.
+	 */
+	private function supersede_pending_queue_items( string $request_id ): void {
+		$queue = new OperationQueue();
+		foreach ( $queue->list_items( [ 'request_id' => $request_id ] ) as $item ) {
+			if ( in_array( $item['status'], [ OperationQueue::STATUS_QUEUED, OperationQueue::STATUS_FAILED ], true ) ) {
+				$queue->cancel_item( $item['queue_id'] );
+			}
+		}
 	}
 
 	public function get_request( string $request_id ): ?array {

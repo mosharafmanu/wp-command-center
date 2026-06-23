@@ -105,6 +105,31 @@ final class OperationQueue {
 			return new \WP_Error( 'wpcc_invalid_queue_status', sprintf( __( 'Cannot run queue item in status %s.', 'wp-command-center' ), $item['status'] ) );
 		}
 
+		// B2-2 execute-once (queue path). Do not run a queue item whose request was
+		// already executed synchronously (request EXECUTED) or is no longer eligible
+		// (REJECTED/CANCELLED). This is the leftover item the admin approve+execute
+		// path enqueues but never runs. Supersede it so the worker cannot duplicate
+		// the execution. A request in 'approved' (normal worker path) or 'failed'
+		// (retry) state is still allowed to run.
+		$request = ( new OperationManager() )->get_request( $item['request_id'] );
+		if ( $request && in_array( $request['status'], [ OperationManager::STATUS_EXECUTED, OperationManager::STATUS_REJECTED, OperationManager::STATUS_CANCELLED ], true ) ) {
+			$wpdb->update(
+				$wpdb->prefix . 'wpcc_operation_queue',
+				[ 'status' => self::STATUS_CANCELLED ],
+				[ 'queue_id' => $queue_id ],
+				[ '%s' ],
+				[ '%s' ]
+			);
+			( new AuditLog() )->record( 'operation.execution.duplicate_suppressed', [
+				'request_id'   => $item['request_id'],
+				'operation_id' => $item['operation_id'],
+				'queue_id'     => $queue_id,
+				'path'         => 'queue',
+				'reason'       => 'request_' . $request['status'],
+			] );
+			return new \WP_Error( 'wpcc_request_already_terminal', sprintf( __( 'Skipped queue item: request is already %s.', 'wp-command-center' ), $request['status'] ) );
+		}
+
 		// Mark as running
 		$wpdb->update(
 			$wpdb->prefix . 'wpcc_operation_queue',
