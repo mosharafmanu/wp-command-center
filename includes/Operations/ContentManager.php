@@ -8,10 +8,15 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\ContentFieldAccessor;
 
 defined( 'ABSPATH' ) || exit;
 
 final class ContentManager {
+
+	/** PROGRAM-4 / P4.3 — unified content fields for field-scoped rollback. */
+	private const CONTENT_FIELDS = [ 'title', 'status', 'content', 'excerpt' ];
 
 	private ContentRegistry $registry;
 
@@ -76,6 +81,28 @@ final class ContentManager {
 			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback has already been applied.', 'wp-command-center' ) );
 		}
 
+		// PROGRAM-4 / P4.3 — field-scoped, drift-aware delta restore for v2 update records.
+		// Only complete is terminal; partial/conflict stay retryable and report truthfully.
+		if ( isset( $record['fields'] ) && is_array( $record['fields'] ) ) {
+			$id = (int) $record['content_id'];
+			$o  = RollbackDelta::restore( new ContentFieldAccessor(), $id, $record['fields'] );
+			if ( 'complete' === $o['status'] ) {
+				$records[ $rollback_id ]['rollback_applied'] = true;
+				$records[ $rollback_id ]['applied_at']       = time();
+				update_option( 'wpcc_content_rollbacks', $records );
+			}
+			$this->audit( 'content.rollback', [ 'content_id' => $id, 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ], $context );
+			if ( 'complete' === $o['status'] ) {
+				return [ 'action' => 'content_rollback', 'content_id' => $id, 'status' => 'complete', 'restored_fields' => $o['restored'], 'skipped_fields' => [] ];
+			}
+			$code = 'conflict' === $o['status'] ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
+			$msg  = 'conflict' === $o['status']
+				? __( 'Rollback skipped: every targeted field changed since this update was applied. No fields were restored.', 'wp-command-center' )
+				: __( 'Partial rollback: some fields were restored; others were skipped because they changed since this update was applied (drift).', 'wp-command-center' );
+			return [ 'error' => true, 'code' => $code, 'message' => $msg, 'action' => 'content_rollback', 'content_id' => $id, 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'], 'conflicts' => $o['conflicts'] ];
+		}
+
+		// Legacy full-object update records + action-based delete records — unchanged.
 		$before = $record['before_state'];
 		$id     = (int) $record['content_id'];
 
@@ -211,11 +238,17 @@ final class ContentManager {
 	// ── Update ──
 
 	private function update_content( int $id, array $params, array $context ): array|\WP_Error {
-		$post    = get_post( $id );
-		// Capture excerpt too so an excerpt-only update is reversible (Rollback
-		// guarantee for Excerpt Generation). Additive: older records simply omit
-		// this key and rollback_content() skips restoring it (see below).
-		$before  = [ 'title' => $post->post_title, 'status' => $post->post_status, 'content' => $post->post_content, 'excerpt' => $post->post_excerpt ];
+		// PROGRAM-4 / P4.3 — capture the prior state of ONLY the fields this call touches,
+		// BEFORE the write (field-scoped, drift-aware delta via the RollbackDelta core).
+		// Replaces the full-object {title,status,content,excerpt} snapshot.
+		$accessor = new ContentFieldAccessor();
+		$touched  = [];
+		foreach ( self::CONTENT_FIELDS as $field ) {
+			if ( isset( $params[ $field ] ) ) {
+				$touched[] = $field;
+			}
+		}
+		$prior = RollbackDelta::capture( $accessor, $id, $touched );
 
 		$data = [ 'ID' => $id ];
 		if ( isset( $params['title'] ) ) {
@@ -231,13 +264,19 @@ final class ContentManager {
 			$data['post_status'] = sanitize_key( $params['status'] );
 		}
 
-		$rollback_id = $this->store_rollback( $id, 'update', $before, $context );
-		$result      = wp_update_post( $data, true );
+		$result = wp_update_post( $data, true );
 
 		if ( is_wp_error( $result ) ) {
 			$this->audit( 'content.update.failed', [ 'content_id' => $id ], $context );
 			return $result;
 		}
+
+		// Post-write after-values for drift detection, then persist the field-scoped delta.
+		$after = [];
+		foreach ( $touched as $field ) {
+			$after[ $field ] = $accessor->read_field( $id, $field );
+		}
+		$rollback_id = $this->store_content_delta( $id, $touched, $prior, $after, $context );
 
 		$updated = get_post( $id );
 
@@ -497,6 +536,36 @@ final class ContentManager {
 			'content_id'       => $id,
 			'action'           => $action,
 			'before_state'     => $before,
+			'rollback_applied' => false,
+			'created_at'       => time(),
+			'session_id'       => $context['session_id'] ?? '',
+			'task_id'          => $context['task_id'] ?? '',
+		];
+		update_option( 'wpcc_content_rollbacks', $records );
+		return $rid;
+	}
+
+	/**
+	 * PROGRAM-4 / P4.3 — persist one field-scoped v2 content delta record (touched
+	 * fields only, each with post-write `after` + prior existence/value) in the existing
+	 * wpcc_content_rollbacks option. Legacy full-object before_state records remain readable.
+	 */
+	private function store_content_delta( int $id, array $touched, array $prior, array $after, array $context ): string {
+		$rid    = wp_generate_uuid4();
+		$fields = [];
+		foreach ( $touched as $field ) {
+			$fields[ $field ] = [
+				'after' => $after[ $field ] ?? '',
+				'keys'  => $prior[ $field ]['keys'] ?? [],
+			];
+		}
+		$records         = get_option( 'wpcc_content_rollbacks', [] );
+		$records[ $rid ] = [
+			'id'               => $rid,
+			'content_id'       => $id,
+			'action'           => 'update',
+			'version'          => 2,
+			'fields'           => $fields,
 			'rollback_applied' => false,
 			'created_at'       => time(),
 			'session_id'       => $context['session_id'] ?? '',
