@@ -2,10 +2,15 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\MediaFieldAccessor;
 
 defined( 'ABSPATH' ) || exit;
 
 final class MediaRuntimeManager {
+
+	/** PROGRAM-4 / P4.2 — unified attachment-metadata fields (field-scoped rollback). */
+	private const META_FIELDS = [ 'title', 'caption', 'description', 'alt' ];
 
 	private AuditLog $audit;
 
@@ -271,8 +276,17 @@ final class MediaRuntimeManager {
 			return $this->error( 'wpcc_media_no_fields', __( 'Provide at least one of: title, alt, caption, description.', 'wp-command-center' ) );
 		}
 
-		$before      = $this->format_media( $post );
-		$rollback_id = $this->store_rollback( $media_id, 'update', $before, $context );
+		// PROGRAM-4 / P4.2 — capture the prior state of ONLY the metadata fields this call
+		// touches, BEFORE the write (field-scoped, drift-aware delta via the RollbackDelta
+		// core). Replaces the full-object format_media() snapshot that restored every field.
+		$accessor = new MediaFieldAccessor();
+		$touched  = [];
+		foreach ( self::META_FIELDS as $field ) {
+			if ( array_key_exists( $field, $payload ) ) {
+				$touched[] = $field;
+			}
+		}
+		$prior = RollbackDelta::capture( $accessor, $media_id, $touched );
 
 		$post_update = [ 'ID' => $media_id ];
 		if ( array_key_exists( 'title', $payload ) ) {
@@ -293,6 +307,13 @@ final class MediaRuntimeManager {
 		if ( array_key_exists( 'alt', $payload ) ) {
 			update_post_meta( $media_id, '_wp_attachment_image_alt', sanitize_text_field( (string) $payload['alt'] ) );
 		}
+
+		// After-values (post-write) for drift detection, then persist the field-scoped delta.
+		$after = [];
+		foreach ( $touched as $field ) {
+			$after[ $field ] = $accessor->read_field( $media_id, $field );
+		}
+		$rollback_id = $this->store_metadata_delta( $media_id, $touched, $prior, $after, $context );
 
 		$updated = $this->format_media( get_post( $media_id ) );
 
@@ -433,16 +454,23 @@ final class MediaRuntimeManager {
 		}
 
 		$media_id = $record['media_id'];
-		$before   = $record['before_state'];
+		$before   = $record['before_state'] ?? [];
+
+		// PROGRAM-4 / P4.2 — field-scoped, drift-aware metadata restore (update action),
+		// shared with rollback(). v2 delta or legacy before_state; complete-only terminal.
+		if ( 'update' === $record['action'] ) {
+			$o = $this->restore_metadata_record( $media_id, $record );
+			if ( 'complete' === $o['status'] ) {
+				$rollbacks[ $idx ]['rollback_applied'] = true;
+				update_option( 'wpcc_media_rollbacks', $rollbacks );
+			}
+			$this->audit->record( 'media.restored', [ 'rollback_id' => $rollback_id, 'media_id' => $media_id, 'action' => 'update', 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ] );
+			return $this->metadata_rollback_result( 'media_restore', $rollback_id, $media_id, $o );
+		}
 
 		// Restore from trash if deleted
 		if ( 'delete' === $record['action'] && isset( $before['status'] ) && 'trash' === get_post_status( $media_id ) ) {
 			wp_untrash_post( $media_id );
-		}
-
-		// Restore prior metadata after an update.
-		if ( 'update' === $record['action'] ) {
-			$this->restore_metadata( $media_id, $before );
 		}
 
 		// STEP 100.2 — restore original file bytes + sizes + metadata after a replace.
@@ -551,14 +579,24 @@ final class MediaRuntimeManager {
 
 		$media_id = $record['media_id'];
 		$action   = $record['action'];
-		$before   = $record['before_state'];
+		$before   = $record['before_state'] ?? [];
+
+		// PROGRAM-4 / P4.2 — field-scoped, drift-aware metadata restore (update action).
+		// Handles both v2 delta records and legacy before_state records; only a clean
+		// complete restore is terminal, so partial/conflict stay retryable.
+		if ( 'update' === $action ) {
+			$o = $this->restore_metadata_record( $media_id, $record );
+			if ( 'complete' === $o['status'] ) {
+				$rollbacks[ $idx ]['rollback_applied'] = true;
+				update_option( 'wpcc_media_rollbacks', $rollbacks );
+			}
+			$this->audit->record( 'media.rollback.applied', [ 'rollback_id' => $rollback_id, 'media_id' => $media_id, 'action' => 'update', 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ] );
+			return $this->metadata_rollback_result( 'media_rollback', $rollback_id, $media_id, $o );
+		}
 
 		switch ( $action ) {
 			case 'upload':
 				wp_delete_attachment( $media_id, true );
-				break;
-			case 'update':
-				$this->restore_metadata( $media_id, $before );
 				break;
 			case 'replace':
 				// STEP 100.2 — restore original bytes + sizes + metadata from the
@@ -610,6 +648,71 @@ final class MediaRuntimeManager {
 		] );
 
 		update_post_meta( $media_id, '_wp_attachment_image_alt', (string) ( $before['alt'] ?? '' ) );
+	}
+
+	/**
+	 * PROGRAM-4 / P4.2 — persist one field-scoped v2 metadata delta record (touched
+	 * fields only, each with post-write `after` + prior existence/value) in the existing
+	 * wpcc_media_rollbacks option. Legacy full-object `before_state` records remain readable.
+	 */
+	private function store_metadata_delta( int $media_id, array $touched, array $prior, array $after, array $context ): string {
+		$rollback_id = wp_generate_uuid4();
+
+		$fields = [];
+		foreach ( $touched as $field ) {
+			$fields[ $field ] = [
+				'after' => $after[ $field ] ?? '',
+				'keys'  => $prior[ $field ]['keys'] ?? [],
+			];
+		}
+
+		$rollbacks   = get_option( 'wpcc_media_rollbacks', [] );
+		$rollbacks[] = [
+			'id'               => $rollback_id,
+			'media_id'         => $media_id,
+			'action'           => 'update',
+			'version'          => 2,
+			'fields'           => $fields,
+			'rollback_applied' => false,
+			'created_at'       => time(),
+			'session_id'       => $context['session_id'] ?? null,
+			'task_id'          => $context['task_id'] ?? null,
+		];
+		if ( count( $rollbacks ) > 100 ) {
+			$rollbacks = array_slice( $rollbacks, -100 );
+		}
+		update_option( 'wpcc_media_rollbacks', $rollbacks );
+
+		return $rollback_id;
+	}
+
+	/**
+	 * PROGRAM-4 / P4.2 — restore an attachment's metadata from a rollback record: a
+	 * field-scoped, drift-aware delta (v2 `fields`) via the RollbackDelta core, or a
+	 * legacy full-object `before_state` (unchanged behaviour). Returns the structured
+	 * outcome { status, restored, skipped, conflicts }; the caller owns terminality.
+	 */
+	private function restore_metadata_record( int $media_id, array $record ): array {
+		if ( isset( $record['fields'] ) && is_array( $record['fields'] ) ) {
+			return RollbackDelta::restore( new MediaFieldAccessor(), $media_id, $record['fields'] );
+		}
+		$this->restore_metadata( $media_id, $record['before_state'] ?? [] );
+		return [ 'status' => 'complete', 'restored' => self::META_FIELDS, 'skipped' => [], 'conflicts' => [] ];
+	}
+
+	/**
+	 * PROGRAM-4 / P4.2 — build the response envelope for a metadata delta restore.
+	 * complete → success; partial/conflict → error envelope (not a clean success).
+	 */
+	private function metadata_rollback_result( string $result_action, string $rollback_id, int $media_id, array $o ): array {
+		if ( 'complete' === $o['status'] ) {
+			return [ 'action' => $result_action, 'rollback_id' => $rollback_id, 'media_id' => $media_id, 'restored' => true, 'status' => 'complete', 'restored_fields' => $o['restored'], 'skipped_fields' => [] ];
+		}
+		$code = 'conflict' === $o['status'] ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
+		$msg  = 'conflict' === $o['status']
+			? __( 'Rollback skipped: every targeted media field changed since this update was applied. No fields were restored.', 'wp-command-center' )
+			: __( 'Partial rollback: some media fields were restored; others were skipped because they changed since this update was applied (drift).', 'wp-command-center' );
+		return [ 'error' => true, 'code' => $code, 'message' => $msg, 'action' => $result_action, 'rollback_id' => $rollback_id, 'media_id' => $media_id, 'restored' => false, 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'], 'conflicts' => $o['conflicts'] ];
 	}
 
 	/**
