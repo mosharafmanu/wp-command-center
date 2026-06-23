@@ -4,6 +4,7 @@ namespace WPCommandCenter\Operations;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Rollback\RollbackDelta;
 use WPCommandCenter\Rollback\CommentFieldAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -271,10 +272,7 @@ final class CommentsRuntimeManager {
 				update_option( 'wpcc_comments_rollbacks', $rollbacks );
 			}
 			$this->audit->record( 'comment.rollback.applied', [ 'rollback_id' => $rollback_id, 'comment_id' => $comment_id, 'action' => 'status', 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ] );
-			if ( 'complete' === $o['status'] ) {
-				return [ 'action' => 'comment_rollback', 'rollback_id' => $rollback_id, 'comment_id' => $comment_id, 'restored' => true, 'status' => 'complete', 'restored_fields' => $o['restored'] ];
-			}
-			return [ 'error' => true, 'code' => 'wpcc_rollback_conflict', 'message' => __( 'Rollback skipped: the comment status changed since this action was applied.', 'wp-command-center' ), 'action' => 'comment_rollback', 'rollback_id' => $rollback_id, 'comment_id' => $comment_id, 'restored' => false, 'status' => $o['status'], 'skipped_fields' => $o['skipped'], 'conflicts' => $o['conflicts'] ];
+			return RollbackDelta::result( [ 'action' => 'comment_rollback', 'rollback_id' => $rollback_id, 'comment_id' => $comment_id ], $o );
 		}
 
 		switch ( $action ) {
@@ -326,27 +324,8 @@ final class CommentsRuntimeManager {
 	 */
 	private function store_status_delta( int $comment_id, array $prior, array $after, array $context ): string {
 		$rollback_id = wp_generate_uuid4();
-		$rollbacks   = get_option( 'wpcc_comments_rollbacks', [] );
-		$rollbacks[] = [
-			'id'               => $rollback_id,
-			'comment_id'       => $comment_id,
-			'action'           => 'status',
-			'version'          => 2,
-			'fields'           => [
-				'status' => [
-					'after' => $after['status'] ?? '',
-					'keys'  => $prior['status']['keys'] ?? [],
-				],
-			],
-			'rollback_applied' => false,
-			'created_at'       => time(),
-			'session_id'       => $context['session_id'] ?? null,
-			'task_id'          => $context['task_id'] ?? null,
-		];
-		if ( count( $rollbacks ) > 100 ) {
-			$rollbacks = array_slice( $rollbacks, -100 );
-		}
-		update_option( 'wpcc_comments_rollbacks', $rollbacks );
+		$record      = RollbackDelta::build_record( [ 'status' ], $prior, $after, $context, [ 'id' => $rollback_id, 'comment_id' => $comment_id, 'action' => 'status' ] );
+		( new OptionListRollbackStore( 'wpcc_comments_rollbacks', 100 ) )->persist( $comment_id, $rollback_id, $record );
 		return $rollback_id;
 	}
 

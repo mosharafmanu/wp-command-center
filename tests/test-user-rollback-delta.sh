@@ -19,6 +19,7 @@ has()  { grep -qF -- "$2" "$3" && { PASS=$((PASS+1)); echo "  PASS: $1"; } || { 
 
 SRC="$PLUGIN_DIR/includes/Operations/UserManager.php"
 UFA="$PLUGIN_DIR/includes/Rollback/UserFieldAccessor.php"
+RBD="$PLUGIN_DIR/includes/Rollback/RollbackDelta.php"  # PROGRAM-4B: record/envelope core
 
 echo "PROGRAM-4 / P4.5 — Field-scoped, drift-aware User profile delta rollback"
 echo
@@ -27,11 +28,14 @@ has  "UserFieldAccessor implements FieldAccessor" "class UserFieldAccessor imple
 has  "accessor maps email -> user_email"          "'email'        => 'user_email'," "$UFA"
 has  "accessor writes via wp_update_user"         "wp_update_user( [ 'ID' => (int) \$entity_id, \$key => (string) \$value ] )" "$UFA"
 has  "update captures touched fields via core"    "RollbackDelta::capture( \$accessor, \$user_id, \$touched )" "$SRC"
-has  "store writes v2 delta record"               "'version'          => 2," "$SRC"
+has  "store builds v2 record via core"            "RollbackDelta::build_record( \$touched, \$prior, \$after, \$context," "$SRC"
+has  "store persists via RollbackStore"           "OptionListRollbackStore( 'wpcc_user_rollbacks', 100 ) )->persist" "$SRC"
+has  "v2 record shape in core"                     "'version'          => 2," "$RBD"
 has  "rollback restores via core"                 "RollbackDelta::restore( new UserFieldAccessor(), \$user_id, \$record['fields'] )" "$SRC"
+has  "envelope via core result()"                 "RollbackDelta::result(" "$SRC"
 has  "legacy before_state branch retained"        "case 'update':" "$SRC"
 has  "complete-only terminal"                     "if ( 'complete' === \$o['status'] ) {" "$SRC"
-has  "conflict code"                              "wpcc_rollback_conflict" "$SRC"
+has  "conflict code (core)"                       "wpcc_rollback_conflict" "$RBD"
 
 echo
 echo "== 2. Functional =="
@@ -87,10 +91,11 @@ if ! command -v wp >/dev/null 2>&1; then echo "  SKIP: wp-cli unavailable"; else
 		/* S6 legacy before_state record still restores (display_name via legacy path) */
 		$id=$mk();
 		$rbs=get_option("wpcc_user_rollbacks",[]);
-		$rbs[]=["id"=>"legacy-user-1","user_id"=>$id,"action"=>"update","before_state"=>["email"=>"orig6@e.com","display_name"=>"LEG_DN","first_name"=>"LEG_FN","last_name"=>"LEG_LN"],"rollback_applied"=>false,"created_at"=>time()];
+		$lid="legacy-user-".$id;
+		$rbs[]=["id"=>$lid,"user_id"=>$id,"action"=>"update","before_state"=>["email"=>"orig6@e.com","display_name"=>"LEG_DN","first_name"=>"LEG_FN","last_name"=>"LEG_LN"],"rollback_applied"=>false,"created_at"=>time()];
 		update_option("wpcc_user_rollbacks",$rbs);
 		wp_update_user(["ID"=>$id,"display_name"=>"CHANGED_DN"]);
-		$lr=$rb("legacy-user-1");
+		$lr=$rb($lid);
 		$ok("S6 legacy restore display_name", "LEG_DN"===$dn($id) && empty($lr["error"]));
 		wp_delete_user($id);
 

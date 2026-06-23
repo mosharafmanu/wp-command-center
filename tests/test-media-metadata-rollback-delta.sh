@@ -24,6 +24,7 @@ has()  { grep -qF -- "$2" "$3" && pass "$1" || fail "$1 (missing '$2')"; }
 
 SRC="$PLUGIN_DIR/includes/Operations/MediaRuntimeManager.php"
 MFA="$PLUGIN_DIR/includes/Rollback/MediaFieldAccessor.php"
+RBD="$PLUGIN_DIR/includes/Rollback/RollbackDelta.php"  # PROGRAM-4B: record/envelope core
 
 echo "PROGRAM-4 / P4.2 — Field-scoped, drift-aware Media metadata delta rollback"
 
@@ -34,13 +35,16 @@ has  "accessor dispatches post columns"           "wp_update_post( [ 'ID' => (in
 has  "accessor meta path"                          "update_post_meta( (int) \$entity_id, \$key, \$value )" "$MFA"
 has  "accessor existence for alt (meta)"           "metadata_exists( 'post', (int) \$entity_id, \$key )" "$MFA"
 has  "update captures touched fields via core"     "RollbackDelta::capture( \$accessor, \$media_id, \$touched )" "$SRC"
-has  "store writes v2 delta record"                "'version'          => 2," "$SRC"
+has  "store builds v2 record via core"             "RollbackDelta::build_record( \$touched, \$prior, \$after, \$context," "$SRC"
+has  "store persists via RollbackStore"            "OptionListRollbackStore( 'wpcc_media_rollbacks', 100 ) )->persist" "$SRC"
+has  "v2 record shape in core"                      "'version'          => 2," "$RBD"
 has  "restore via core in shared helper"           "RollbackDelta::restore( new MediaFieldAccessor(), \$media_id, \$record['fields'] )" "$SRC"
 has  "rollback() update early branch"              "restore_metadata_record( \$media_id, \$record )" "$SRC"
 has  "legacy restore_metadata retained"            "function restore_metadata(" "$SRC"
 has  "complete-only terminal"                      "if ( 'complete' === \$o['status'] ) {" "$SRC"
-has  "conflict code"                                "wpcc_rollback_conflict" "$SRC"
-has  "partial code"                                 "wpcc_rollback_partial" "$SRC"
+has  "envelope via core result()"                  "RollbackDelta::result(" "$SRC"
+has  "conflict code (core)"                         "wpcc_rollback_conflict" "$RBD"
+has  "partial code (core)"                          "wpcc_rollback_partial" "$RBD"
 
 echo
 echo "== 2. Functional: fidelity, sibling, drift, out-of-order, legacy, idempotency, both paths =="
@@ -114,13 +118,14 @@ else
 		$ok("S6 title back to ORIG_T (no resurrection)", "ORIG_T"===get_post_field("post_title",$id,"raw"));
 		wp_delete_post($id,true);
 
-		/* S7 — legacy before_state record restores via legacy path */
+		/* S7 — legacy before_state record restores via legacy path (unique id => idempotent) */
 		$id=$mk("LEG_A");
+		$lid="legacy-media-".$id;
 		$rbs=get_option("wpcc_media_rollbacks",[]);
-		$rbs[]=["id"=>"legacy-media-1","media_id"=>$id,"action"=>"update","before_state"=>["title"=>"LEG_T","caption"=>"LEG_C","description"=>"LEG_D","alt"=>"LEG_A"],"rollback_applied"=>false,"created_at"=>time()];
+		$rbs[]=["id"=>$lid,"media_id"=>$id,"action"=>"update","before_state"=>["title"=>"LEG_T","caption"=>"LEG_C","description"=>"LEG_D","alt"=>"LEG_A"],"rollback_applied"=>false,"created_at"=>time()];
 		update_option("wpcc_media_rollbacks",$rbs);
 		wp_update_post(["ID"=>$id,"post_title"=>"CHANGED"]); update_post_meta($id,"_wp_attachment_image_alt","CHANGED");
-		$lr=$rb("legacy-media-1");
+		$lr=$rb($lid);
 		$ok("S7 legacy full restore (title)", "LEG_T"===get_post_field("post_title",$id,"raw"));
 		$ok("S7 legacy full restore (alt)", "LEG_A"===$alt($id));
 		wp_delete_post($id,true);

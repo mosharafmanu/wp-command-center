@@ -24,6 +24,9 @@ has()  { grep -qF -- "$2" "$3" && pass "$1" || fail "$1 (missing '$2')"; }
 
 SRC="$PLUGIN_DIR/includes/Operations/SettingsRuntimeManager.php"
 OPA="$PLUGIN_DIR/includes/Rollback/OptionAccessor.php"
+# PROGRAM-4B — record-building + response envelope were extracted into the RollbackDelta
+# core; these structural guards follow them. Functional assertions are unchanged.
+RBD="$PLUGIN_DIR/includes/Rollback/RollbackDelta.php"
 
 echo "PROGRAM-4 / P4.1 — Field-scoped, drift-aware Settings delta rollback"
 
@@ -36,11 +39,14 @@ has  "OptionAccessor key_delete = delete_option" "delete_option( \$key )" "$OPA"
 has  "Settings captures prior via core"          "RollbackDelta::capture(new OptionAccessor(),0,\$touched)" "$SRC"
 has  "Settings restores via core"                "RollbackDelta::restore(new OptionAccessor(),0,\$rec['fields'])" "$SRC"
 has  "capture happens BEFORE the write"          "\$prior=\$is_mutation?RollbackDelta::capture" "$SRC"
-has  "store writes version 2 delta record"       "'version'=>2,'action'=>\$action,'fields'=>\$fields" "$SRC"
+has  "store builds v2 record via core"           "RollbackDelta::build_record(\$touched,\$prior,\$after,\$cx," "$SRC"
+has  "store persists via RollbackStore"          "OptionListRollbackStore('wpcc_settings_rollbacks',200))->persist" "$SRC"
+has  "v2 record shape in core"                    "'version'          => 2," "$RBD"
 has  "touched-option map present"                "private function option_field_map" "$SRC"
 has  "legacy before_state branch retained"       "(\$rec['before_state']??[])" "$SRC"
-has  "conflict error code"                        "wpcc_rollback_conflict" "$SRC"
-has  "partial error code"                         "wpcc_rollback_partial" "$SRC"
+has  "envelope via core result()"                "RollbackDelta::result(" "$SRC"
+has  "conflict error code (core)"                "wpcc_rollback_conflict" "$RBD"
+has  "partial error code (core)"                 "wpcc_rollback_partial" "$RBD"
 
 echo
 echo "== 2. Functional: defect fix, fidelity, layering, drift, out-of-order, legacy, idempotency =="

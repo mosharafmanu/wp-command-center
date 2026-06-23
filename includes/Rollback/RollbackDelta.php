@@ -103,4 +103,77 @@ final class RollbackDelta {
 			'conflicts' => $conflicts,
 		];
 	}
+
+	/**
+	 * PROGRAM-4B (D1) — build a versioned (v2) field-scoped rollback record from a capture
+	 * + post-write after-values. Produces the field map plus the common scaffolding; the
+	 * runtime supplies its identity head ($head: id, the entity-id key, action, …). Output
+	 * is identical to the per-runtime inline records, so on-disk formats are unchanged.
+	 *
+	 * @param string[]            $touched
+	 * @param array<string,mixed> $prior   capture() output
+	 * @param array<string,mixed> $after   post-write per-field values
+	 * @param array<string,mixed> $context session/task ids
+	 * @param array<string,mixed> $head    runtime identity keys (merged first)
+	 * @return array<string,mixed>
+	 */
+	public static function build_record( array $touched, array $prior, array $after, array $context, array $head = [] ): array {
+		$fields = [];
+		foreach ( $touched as $field ) {
+			$field            = (string) $field;
+			$fields[ $field ] = [
+				'after' => $after[ $field ] ?? '',
+				'keys'  => $prior[ $field ]['keys'] ?? [],
+			];
+		}
+
+		return array_merge( $head, [
+			'version'          => 2,
+			'fields'           => $fields,
+			'rollback_applied' => false,
+			'created_at'       => time(),
+			'session_id'       => $context['session_id'] ?? null,
+			'task_id'          => $context['task_id'] ?? null,
+		] );
+	}
+
+	/**
+	 * PROGRAM-4B (D2) — build the rollback response envelope from a restore() outcome.
+	 * `complete` is a clean success; `partial`/`conflict` are error envelopes (so the
+	 * ACTION_ROLLBACKS dispatcher and callers treat them as a non-clean rollback) that stay
+	 * retryable. `$base` carries the runtime identity (action label, entity-id key,
+	 * rollback_id). Standardises the previously-drifting conflict/partial messages.
+	 *
+	 * @param array<string,mixed> $base
+	 * @param array{status:string,restored:string[],skipped:string[],conflicts:array} $outcome
+	 * @return array<string,mixed>
+	 */
+	public static function result( array $base, array $outcome ): array {
+		$status = $outcome['status'];
+
+		if ( 'complete' === $status ) {
+			return array_merge( $base, [
+				'restored'        => true,
+				'status'          => 'complete',
+				'restored_fields' => $outcome['restored'],
+				'skipped_fields'  => [],
+			] );
+		}
+
+		$code = 'conflict' === $status ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
+		$msg  = 'conflict' === $status
+			? __( 'Rollback skipped: every targeted field changed since this update was applied. No fields were restored.', 'wp-command-center' )
+			: __( 'Partial rollback: some fields were restored; others were skipped because they changed since this update was applied (drift).', 'wp-command-center' );
+
+		return array_merge( $base, [
+			'error'           => true,
+			'code'            => $code,
+			'message'         => $msg,
+			'restored'        => false,
+			'status'          => $status,
+			'restored_fields' => $outcome['restored'],
+			'skipped_fields'  => $outcome['skipped'],
+			'conflicts'       => $outcome['conflicts'],
+		] );
+	}
 }

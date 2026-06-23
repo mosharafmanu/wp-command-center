@@ -10,6 +10,7 @@ namespace WPCommandCenter\Operations;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Rollback\RollbackDelta;
 use WPCommandCenter\Rollback\UserFieldAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -433,29 +434,8 @@ final class UserManager {
 	 */
 	private function store_user_delta( int $user_id, array $touched, array $prior, array $after, array $context ): string {
 		$rollback_id = wp_generate_uuid4();
-		$fields      = [];
-		foreach ( $touched as $field ) {
-			$fields[ $field ] = [
-				'after' => $after[ $field ] ?? '',
-				'keys'  => $prior[ $field ]['keys'] ?? [],
-			];
-		}
-		$rollbacks   = get_option( 'wpcc_user_rollbacks', [] );
-		$rollbacks[] = [
-			'id'               => $rollback_id,
-			'user_id'          => $user_id,
-			'action'           => 'update',
-			'version'          => 2,
-			'fields'           => $fields,
-			'rollback_applied' => false,
-			'created_at'       => time(),
-			'session_id'       => $context['session_id'] ?? null,
-			'task_id'          => $context['task_id'] ?? null,
-		];
-		if ( count( $rollbacks ) > 100 ) {
-			$rollbacks = array_slice( $rollbacks, -100 );
-		}
-		update_option( 'wpcc_user_rollbacks', $rollbacks );
+		$record      = RollbackDelta::build_record( $touched, $prior, $after, $context, [ 'id' => $rollback_id, 'user_id' => $user_id, 'action' => 'update' ] );
+		( new OptionListRollbackStore( 'wpcc_user_rollbacks', 100 ) )->persist( $user_id, $rollback_id, $record );
 		return $rollback_id;
 	}
 
@@ -498,14 +478,7 @@ final class UserManager {
 				update_option( 'wpcc_user_rollbacks', $rollbacks );
 			}
 			$this->audit->record( 'user.rollback.applied', [ 'rollback_id' => $rollback_id, 'user_id' => $user_id, 'action' => 'update', 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ] );
-			if ( 'complete' === $o['status'] ) {
-				return [ 'action' => 'user_rollback', 'rollback_id' => $rollback_id, 'user_id' => $user_id, 'restored' => true, 'status' => 'complete', 'restored_fields' => $o['restored'] ];
-			}
-			$code = 'conflict' === $o['status'] ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
-			$msg  = 'conflict' === $o['status']
-				? __( 'Rollback skipped: every targeted field changed since this update was applied. No fields were restored.', 'wp-command-center' )
-				: __( 'Partial rollback: some fields were restored; others were skipped because they changed since this update was applied (drift).', 'wp-command-center' );
-			return [ 'error' => true, 'code' => $code, 'message' => $msg, 'action' => 'user_rollback', 'rollback_id' => $rollback_id, 'user_id' => $user_id, 'restored' => false, 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'], 'conflicts' => $o['conflicts'] ];
+			return RollbackDelta::result( [ 'action' => 'user_rollback', 'rollback_id' => $rollback_id, 'user_id' => $user_id ], $o );
 		}
 
 		switch ( $action ) {

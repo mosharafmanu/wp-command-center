@@ -4,6 +4,7 @@ namespace WPCommandCenter\Operations;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Rollback\RollbackDelta;
 use WPCommandCenter\Rollback\OptionAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -68,27 +69,25 @@ final class SettingsRuntimeManager {
 	public function rollback(array $p,array $cx=[]):array{
 		$rid=(string)($p['rollback_id']??'');
 		if(''===$rid)return $this->err('wpcc_missing_rb',__('Rollback ID required.','wp-command-center'));
-		$rbs=get_option('wpcc_settings_rollbacks',[]);$rec=null;$idx=null;
-		foreach($rbs as $i=>$r){if(($r['id']??'')===$rid){$rec=$r;$idx=$i;break;}}
-		if(!$rec)return $this->err('wpcc_rb_nf',__('Not found.','wp-command-center'));
+		// PROGRAM-4B — resolve via the shared RollbackStore (consistent storage API).
+		$store=new OptionListRollbackStore('wpcc_settings_rollbacks',200);
+		$resolved=$store->resolve($rid);
+		if(!$resolved)return $this->err('wpcc_rb_nf',__('Not found.','wp-command-center'));
+		$rec=$resolved['record'];
 		if(!empty($rec['rollback_applied']))return $this->err('wpcc_rb_done',__('Already applied.','wp-command-center'));
 
 		// PROGRAM-4 / P4.1 — v2 field-scoped, drift-aware delta restore via the RollbackDelta
 		// core. Only complete is terminal (idempotency); partial/conflict stay retryable.
 		if(isset($rec['fields'])&&is_array($rec['fields'])){
 			$o=RollbackDelta::restore(new OptionAccessor(),0,$rec['fields']);
-			$status=$o['status'];
-			if('complete'===$status){$rbs[$idx]['rollback_applied']=true;update_option('wpcc_settings_rollbacks',$rbs);}
-			$this->audit->record('settings.restored',['rollback_id'=>$rid,'path'=>'delta','status'=>$status,'restored_fields'=>$o['restored'],'skipped_fields'=>$o['skipped']]);
-			if('complete'===$status)return['action'=>'settings_rollback','rollback_id'=>$rid,'restored'=>true,'status'=>'complete','path'=>'delta','restored_fields'=>$o['restored'],'skipped_fields'=>[]];
-			$code='conflict'===$status?'wpcc_rollback_conflict':'wpcc_rollback_partial';
-			$msg='conflict'===$status?__('Rollback skipped: every targeted setting changed since this update was applied. No settings were restored.','wp-command-center'):__('Partial rollback: some settings were restored; others were skipped because they changed since this update was applied (drift).','wp-command-center');
-			return['error'=>true,'code'=>$code,'message'=>$msg,'action'=>'settings_rollback','rollback_id'=>$rid,'restored'=>false,'status'=>$status,'path'=>'delta','restored_fields'=>$o['restored'],'skipped_fields'=>$o['skipped'],'conflicts'=>$o['conflicts']];
+			if('complete'===$o['status']){$rec['rollback_applied']=true;$store->mark_applied(0,$rid,$rec);}
+			$this->audit->record('settings.restored',['rollback_id'=>$rid,'path'=>'delta','status'=>$o['status'],'restored_fields'=>$o['restored'],'skipped_fields'=>$o['skipped']]);
+			return RollbackDelta::result(['action'=>'settings_rollback','rollback_id'=>$rid,'path'=>'delta'],$o);
 		}
 
 		// Legacy pre-P4.1 full-object record: restore the whole before_state unchanged.
 		foreach(($rec['before_state']??[])as $opt=>$val)update_option($opt,$val);
-		$rbs[$idx]['rollback_applied']=true;update_option('wpcc_settings_rollbacks',$rbs);
+		$rec['rollback_applied']=true;$store->mark_applied(0,$rid,$rec);
 		$this->audit->record('settings.restored',['rollback_id'=>$rid,'path'=>'legacy']);
 		return['action'=>'settings_rollback','rollback_id'=>$rid,'restored'=>true,'status'=>'complete','path'=>'legacy'];
 	}
@@ -117,11 +116,8 @@ final class SettingsRuntimeManager {
 	 *  wpcc_settings_rollbacks option. Legacy before_state records remain readable. */
 	private function store_rollback(string $action,array $touched,array $prior,array $after,array $cx):string{
 		$rid=wp_generate_uuid4();
-		$fields=[];foreach($touched as $opt){$fields[$opt]=['after'=>$after[$opt]??'','keys'=>$prior[$opt]['keys']??[]];}
-		$rbs=get_option('wpcc_settings_rollbacks',[]);
-		$rbs[]=['id'=>$rid,'version'=>2,'action'=>$action,'fields'=>$fields,'rollback_applied'=>false,'created_at'=>time(),'session_id'=>$cx['session_id']??null,'task_id'=>$cx['task_id']??null];
-		if(count($rbs)>200)$rbs=array_slice($rbs,-200);
-		update_option('wpcc_settings_rollbacks',$rbs);
+		$rec=RollbackDelta::build_record($touched,$prior,$after,$cx,['id'=>$rid,'action'=>$action]);
+		(new OptionListRollbackStore('wpcc_settings_rollbacks',200))->persist(0,$rid,$rec);
 		return $rid;
 	}
 	private function err(string $code,string $msg):array{return['error'=>true,'code'=>$code,'message'=>$msg];}

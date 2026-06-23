@@ -4,6 +4,7 @@ namespace WPCommandCenter\Operations;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Rollback\RollbackDelta;
 use WPCommandCenter\Rollback\MediaFieldAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -657,32 +658,8 @@ final class MediaRuntimeManager {
 	 */
 	private function store_metadata_delta( int $media_id, array $touched, array $prior, array $after, array $context ): string {
 		$rollback_id = wp_generate_uuid4();
-
-		$fields = [];
-		foreach ( $touched as $field ) {
-			$fields[ $field ] = [
-				'after' => $after[ $field ] ?? '',
-				'keys'  => $prior[ $field ]['keys'] ?? [],
-			];
-		}
-
-		$rollbacks   = get_option( 'wpcc_media_rollbacks', [] );
-		$rollbacks[] = [
-			'id'               => $rollback_id,
-			'media_id'         => $media_id,
-			'action'           => 'update',
-			'version'          => 2,
-			'fields'           => $fields,
-			'rollback_applied' => false,
-			'created_at'       => time(),
-			'session_id'       => $context['session_id'] ?? null,
-			'task_id'          => $context['task_id'] ?? null,
-		];
-		if ( count( $rollbacks ) > 100 ) {
-			$rollbacks = array_slice( $rollbacks, -100 );
-		}
-		update_option( 'wpcc_media_rollbacks', $rollbacks );
-
+		$record      = RollbackDelta::build_record( $touched, $prior, $after, $context, [ 'id' => $rollback_id, 'media_id' => $media_id, 'action' => 'update' ] );
+		( new OptionListRollbackStore( 'wpcc_media_rollbacks', 100 ) )->persist( $media_id, $rollback_id, $record );
 		return $rollback_id;
 	}
 
@@ -705,14 +682,8 @@ final class MediaRuntimeManager {
 	 * complete → success; partial/conflict → error envelope (not a clean success).
 	 */
 	private function metadata_rollback_result( string $result_action, string $rollback_id, int $media_id, array $o ): array {
-		if ( 'complete' === $o['status'] ) {
-			return [ 'action' => $result_action, 'rollback_id' => $rollback_id, 'media_id' => $media_id, 'restored' => true, 'status' => 'complete', 'restored_fields' => $o['restored'], 'skipped_fields' => [] ];
-		}
-		$code = 'conflict' === $o['status'] ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
-		$msg  = 'conflict' === $o['status']
-			? __( 'Rollback skipped: every targeted media field changed since this update was applied. No fields were restored.', 'wp-command-center' )
-			: __( 'Partial rollback: some media fields were restored; others were skipped because they changed since this update was applied (drift).', 'wp-command-center' );
-		return [ 'error' => true, 'code' => $code, 'message' => $msg, 'action' => $result_action, 'rollback_id' => $rollback_id, 'media_id' => $media_id, 'restored' => false, 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'], 'conflicts' => $o['conflicts'] ];
+		// PROGRAM-4B — response envelope built by the shared RollbackDelta::result core.
+		return RollbackDelta::result( [ 'action' => $result_action, 'rollback_id' => $rollback_id, 'media_id' => $media_id ], $o );
 	}
 
 	/**

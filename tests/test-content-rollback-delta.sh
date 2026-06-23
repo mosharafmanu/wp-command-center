@@ -20,6 +20,7 @@ has()  { grep -qF -- "$2" "$3" && pass "$1" || fail "$1 (missing '$2')"; }
 
 SRC="$PLUGIN_DIR/includes/Operations/ContentManager.php"
 CFA="$PLUGIN_DIR/includes/Rollback/ContentFieldAccessor.php"
+RBD="$PLUGIN_DIR/includes/Rollback/RollbackDelta.php"  # PROGRAM-4B: record/envelope core
 
 echo "PROGRAM-4 / P4.3 — Field-scoped, drift-aware Content delta rollback"
 
@@ -28,12 +29,15 @@ echo "== 1. Source =="
 has  "ContentFieldAccessor implements FieldAccessor" "class ContentFieldAccessor implements FieldAccessor" "$CFA"
 has  "accessor writes post columns"                 "wp_update_post( [ 'ID' => (int) \$entity_id, \$key => \$value ] )" "$CFA"
 has  "update captures touched fields via core"      "RollbackDelta::capture( \$accessor, \$id, \$touched )" "$SRC"
-has  "store writes v2 delta record"                 "'version'          => 2," "$SRC"
+has  "store builds v2 record via core"              "RollbackDelta::build_record( \$touched, \$prior, \$after, \$context," "$SRC"
+has  "store persists via keyed RollbackStore"       "OptionKeyedRollbackStore( 'wpcc_content_rollbacks' ) )->persist" "$SRC"
+has  "v2 record shape in core"                       "'version'          => 2," "$RBD"
 has  "rollback restores via core"                   "RollbackDelta::restore( new ContentFieldAccessor(), \$id, \$record['fields'] )" "$SRC"
 has  "legacy before_state branch retained"          "\$before = \$record['before_state'];" "$SRC"
 has  "complete-only terminal"                       "if ( 'complete' === \$o['status'] ) {" "$SRC"
-has  "conflict code"                                 "wpcc_rollback_conflict" "$SRC"
-has  "partial code"                                  "wpcc_rollback_partial" "$SRC"
+has  "envelope via core result()"                   "RollbackDelta::result(" "$SRC"
+has  "conflict code (core)"                          "wpcc_rollback_conflict" "$RBD"
+has  "partial code (core)"                           "wpcc_rollback_partial" "$RBD"
 
 echo
 echo "== 2. Functional =="

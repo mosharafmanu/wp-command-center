@@ -10,6 +10,7 @@ namespace WPCommandCenter\Operations;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Rollback\RollbackDelta;
 use WPCommandCenter\Rollback\ContentFieldAccessor;
+use WPCommandCenter\Rollback\OptionKeyedRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -71,12 +72,13 @@ final class ContentManager {
 			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'wp-command-center' ) );
 		}
 
-		$records = get_option( 'wpcc_content_rollbacks', [] );
-		if ( ! isset( $records[ $rollback_id ] ) ) {
+		// PROGRAM-4B — resolve via the shared keyed RollbackStore (consistent storage API).
+		$store    = new OptionKeyedRollbackStore( 'wpcc_content_rollbacks' );
+		$resolved = $store->resolve( $rollback_id );
+		if ( null === $resolved ) {
 			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
 		}
-
-		$record = $records[ $rollback_id ];
+		$record = $resolved['record'];
 		if ( ! empty( $record['rollback_applied'] ) ) {
 			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback has already been applied.', 'wp-command-center' ) );
 		}
@@ -87,19 +89,12 @@ final class ContentManager {
 			$id = (int) $record['content_id'];
 			$o  = RollbackDelta::restore( new ContentFieldAccessor(), $id, $record['fields'] );
 			if ( 'complete' === $o['status'] ) {
-				$records[ $rollback_id ]['rollback_applied'] = true;
-				$records[ $rollback_id ]['applied_at']       = time();
-				update_option( 'wpcc_content_rollbacks', $records );
+				$record['rollback_applied'] = true;
+				$record['applied_at']       = time();
+				$store->mark_applied( $id, $rollback_id, $record );
 			}
 			$this->audit( 'content.rollback', [ 'content_id' => $id, 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ], $context );
-			if ( 'complete' === $o['status'] ) {
-				return [ 'action' => 'content_rollback', 'content_id' => $id, 'status' => 'complete', 'restored_fields' => $o['restored'], 'skipped_fields' => [] ];
-			}
-			$code = 'conflict' === $o['status'] ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
-			$msg  = 'conflict' === $o['status']
-				? __( 'Rollback skipped: every targeted field changed since this update was applied. No fields were restored.', 'wp-command-center' )
-				: __( 'Partial rollback: some fields were restored; others were skipped because they changed since this update was applied (drift).', 'wp-command-center' );
-			return [ 'error' => true, 'code' => $code, 'message' => $msg, 'action' => 'content_rollback', 'content_id' => $id, 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'], 'conflicts' => $o['conflicts'] ];
+			return RollbackDelta::result( [ 'action' => 'content_rollback', 'content_id' => $id ], $o );
 		}
 
 		// Legacy full-object update records + action-based delete records — unchanged.
@@ -125,9 +120,9 @@ final class ContentManager {
 			return new \WP_Error( 'wpcc_content_rollback_failed', $updated->get_error_message() );
 		}
 
-		$records[ $rollback_id ]['rollback_applied'] = true;
-		$records[ $rollback_id ]['applied_at']        = time();
-		update_option( 'wpcc_content_rollbacks', $records );
+		$record['rollback_applied'] = true;
+		$record['applied_at']       = time();
+		$store->mark_applied( $id, $rollback_id, $record );
 
 		return [
 			'action'      => 'content_rollback',
@@ -552,26 +547,8 @@ final class ContentManager {
 	 */
 	private function store_content_delta( int $id, array $touched, array $prior, array $after, array $context ): string {
 		$rid    = wp_generate_uuid4();
-		$fields = [];
-		foreach ( $touched as $field ) {
-			$fields[ $field ] = [
-				'after' => $after[ $field ] ?? '',
-				'keys'  => $prior[ $field ]['keys'] ?? [],
-			];
-		}
-		$records         = get_option( 'wpcc_content_rollbacks', [] );
-		$records[ $rid ] = [
-			'id'               => $rid,
-			'content_id'       => $id,
-			'action'           => 'update',
-			'version'          => 2,
-			'fields'           => $fields,
-			'rollback_applied' => false,
-			'created_at'       => time(),
-			'session_id'       => $context['session_id'] ?? '',
-			'task_id'          => $context['task_id'] ?? '',
-		];
-		update_option( 'wpcc_content_rollbacks', $records );
+		$record = RollbackDelta::build_record( $touched, $prior, $after, $context, [ 'id' => $rid, 'content_id' => $id, 'action' => 'update' ] );
+		( new OptionKeyedRollbackStore( 'wpcc_content_rollbacks' ) )->persist( $id, $rid, $record );
 		return $rid;
 	}
 

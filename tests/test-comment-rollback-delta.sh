@@ -18,6 +18,7 @@ has()  { grep -qF -- "$2" "$3" && { PASS=$((PASS+1)); echo "  PASS: $1"; } || { 
 
 SRC="$PLUGIN_DIR/includes/Operations/CommentsRuntimeManager.php"
 CFA="$PLUGIN_DIR/includes/Rollback/CommentFieldAccessor.php"
+RBD="$PLUGIN_DIR/includes/Rollback/RollbackDelta.php"  # PROGRAM-4B: record/envelope core
 
 echo "PROGRAM-4 / P4.4 — Field-scoped, drift-aware Comment status delta rollback"
 echo
@@ -25,7 +26,10 @@ echo "== 1. Source =="
 has  "CommentFieldAccessor implements FieldAccessor" "class CommentFieldAccessor implements FieldAccessor" "$CFA"
 has  "accessor writes via wp_update_comment"        "wp_update_comment( [ 'comment_ID' => (int) \$entity_id, \$key => (string) \$value ], true )" "$CFA"
 has  "approve captures status before change"         "RollbackDelta::capture( \$accessor, \$comment_id, [ 'status' ] )" "$SRC"
-has  "store writes v2 status delta"                  "'version'          => 2," "$SRC"
+has  "store builds v2 record via core"               "RollbackDelta::build_record( [ 'status' ], \$prior, \$after, \$context," "$SRC"
+has  "store persists via RollbackStore"              "OptionListRollbackStore( 'wpcc_comments_rollbacks', 100 ) )->persist" "$SRC"
+has  "envelope via core result()"                    "RollbackDelta::result(" "$SRC"
+has  "v2 record shape in core"                        "'version'          => 2," "$RBD"
 has  "rollback restores via core"                    "RollbackDelta::restore( new CommentFieldAccessor(), \$comment_id, \$record['fields'] )" "$SRC"
 has  "trash untrash retained"                         "wp_untrash_comment( \$comment_id )" "$SRC"
 has  "delete unsupported retained"                    "wpcc_rollback_unsupported" "$SRC"
