@@ -1,5 +1,7 @@
 # WP Command Center — Product & UX Audit + Design System
 
+> 🔄 **Production status update (2026-06-23):** prod HEAD = **`7aa7e84`** (governance Phase 1+2+3 deployed: B2-2/B2-1/A-1/A2-1 CLOSED; **Phase 3 F-1 SEO delta rollback CLOSED for SEO**, OPEN systemically for sibling runtimes). UX/design content below is unaffected; invariants **34/23/40/40/2.5.0**; AI UI surfaces remain **dormant** (SEO Meta / AI Content / Alt Text flags OFF, key unset). Current-state authority: [`SESSION-HANDOFF-PHASE-3.md`](SESSION-HANDOFF-PHASE-3.md).
+
 > **Status:** Product-level strategy & design blueprint. **No code, no implementation.**
 > **Date:** 2026-06-18 · **Baseline:** Phase A complete (STEP 104–109, released `v0.109.0`).
 > **Lenses:** AI SaaS Product Designer · WordPress Product Architect · Enterprise UX Designer · Dashboard Information Architect.

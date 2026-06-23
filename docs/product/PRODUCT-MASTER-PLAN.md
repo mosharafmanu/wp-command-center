@@ -1,5 +1,7 @@
 # WP Command Center — Product Master Plan (Post STEP-109)
 
+> 🔄 **Production status update (2026-06-23):** prod HEAD = **`7aa7e84`** — governance remediation **Phase 1+2+3 deployed** (B2-2 execute-once, B2-1 execution-truth unification, A-1 atomic claim, A2-1 exception hardening — all CLOSED; **Phase 3 F-1 SEO delta rollback CLOSED for the SEO runtime**). Invariants unchanged **34/23/40/40/2.5.0**; AI dormant (key unset, SEO Meta/AI Content/Alt Text UI all OFF, security mode `developer`). Open governance debt: **F-1 still OPEN systemically** for sibling runtimes (Media/ACF/Woo/Settings); A2-1 uncatchable-fatal reaper still deferred (Phase 2.x); the live SEO fix's **acceptance gate (serial T2 + Stage-A + prod functional verify) is still outstanding**. Authoritative current-state doc: [`SESSION-HANDOFF-PHASE-3.md`](SESSION-HANDOFF-PHASE-3.md).
+
 > **Status:** Product blueprint — positioning, roadmap, UX strategy, commercial direction. **No code, no implementation details.**
 > **Date:** 2026-06-18 · **Baseline:** Phase A complete (STEP 104–109, released `v0.109.0`).
 > **Companion docs:** [`UX-AUDIT-AND-DESIGN-SYSTEM.md`](UX-AUDIT-AND-DESIGN-SYSTEM.md) · `PRODUCT-STRATEGY-REPORT.md` · the prior architecture release audit.
