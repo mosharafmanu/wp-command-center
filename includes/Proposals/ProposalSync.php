@@ -71,10 +71,29 @@ final class ProposalSync {
 			return $row; // Missing request: defensive no-op, remain pending.
 		}
 
+		// PHASE 2 (B2-1) — durable execution truth first. A terminal
+		// `operation_results` row for this request_id means the operation executed
+		// via SOME path (admin synchronous, queue worker, or MCP). When that durable
+		// result is a success, resolve to applied regardless of request.status — this
+		// heals the worker/MCP path that executes but historically left request.status
+		// at 'approved' (B2-1). `resolve_executed` interprets the durable envelope via
+		// the shared ProposalOutcome (success -> mark_applied with the read-back
+		// change_id; otherwise mark_failed). A non-success durable result falls
+		// through to the request.status switch below, which now reflects 'failed' for
+		// every path (request status is finalized in OperationExecutor::run).
+		if ( $this->has_terminal_result( $request_id ) ) {
+			$outcome = ProposalOutcome::interpret( $this->read_result_envelope( $request_id ) );
+			if ( $outcome->is_success() ) {
+				return $this->resolve_executed( $proposal_id, $request_id );
+			}
+		}
+
 		switch ( (string) $request['status'] ) {
-			// In flight — not yet a terminal outcome.
+			// In flight — not yet a terminal outcome ('executing' is the transient
+			// claim state held by the execution winner before finalization).
 			case 'pending_review':
 			case 'approved':
+			case 'executing':
 				return $row;
 
 			// Human declined / cancelled the request.
@@ -86,14 +105,28 @@ final class ProposalSync {
 			case 'failed':
 				return $this->store->mark_failed( $proposal_id, $this->durable_error( $request_id, 'wpcc_request_failed' ) );
 
-			// Executed — but NOT trusted as applied. Determine the true outcome
-			// from the durable result envelope via the shared interpreter.
+			// Executed — resolve the true outcome from the durable result envelope.
 			case 'executed':
 				return $this->resolve_executed( $proposal_id, $request_id );
 
 			default:
 				return $row; // Unknown status: remain pending.
 		}
+	}
+
+	/**
+	 * PHASE 2 (B2-1) — does a terminal durable execution result exist for this
+	 * request? Any `operation_results` row means the operation ran (success or
+	 * failure are both recorded there), which is the authoritative signal that the
+	 * proposal can be resolved — independent of request.status. Read-only.
+	 */
+	private function has_terminal_result( string $request_id ): bool {
+		global $wpdb;
+		$found = $wpdb->get_var( $wpdb->prepare(
+			"SELECT 1 FROM {$wpdb->prefix}wpcc_operation_results WHERE request_id = %s LIMIT 1",
+			$request_id
+		) );
+		return null !== $found;
 	}
 
 	/**

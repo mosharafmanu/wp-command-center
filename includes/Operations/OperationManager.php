@@ -21,6 +21,10 @@ final class OperationManager {
 	public const STATUS_EXECUTED       = 'executed';
 	public const STATUS_FAILED         = 'failed';
 	public const STATUS_CANCELLED      = 'cancelled';
+	// PHASE 2 (B2-1 / A-1) — transient claim state held by the single execution
+	// winner between the atomic claim and finalization. Not a terminal state;
+	// ProposalSync treats it as in-flight.
+	public const STATUS_EXECUTING      = 'executing';
 
 	/**
 	 * Create a new operation request.
@@ -219,27 +223,16 @@ final class OperationManager {
 		if ( ! empty( $request['plan_id'] ) ) {
 			( new RecommendationEngine() )->sync_plan_status( $request['plan_id'], 'executing', $actor );
 		}
+		// PHASE 2 (B2-1) — request status is now finalized inside OperationExecutor::run
+		// (the shared finalizer) for every request-bound path, so this method no longer
+		// writes executed/failed itself. The executor's atomic claim also makes this
+		// the single execution authority.
 		$result   = $executor->run( $request['operation_id'], $payload, $context );
 
 		if ( ! $result['success'] ) {
 			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
-			$wpdb->update(
-				$wpdb->prefix . 'wpcc_operation_requests',
-				[ 'status' => self::STATUS_FAILED, 'failed_at' => time() ],
-				[ 'request_id' => $request_id ],
-				[ '%s', '%d' ],
-				[ '%s' ]
-			);
 			return new \WP_Error( $error['code'], $error['message'] );
 		}
-
-		$wpdb->update(
-			$wpdb->prefix . 'wpcc_operation_requests',
-			[ 'status' => self::STATUS_EXECUTED, 'executed_at' => time() ],
-			[ 'request_id' => $request_id ],
-			[ '%s', '%d' ],
-			[ '%s' ]
-		);
 
 		// B2-2 queue supersession. The synchronous path bypassed the queue, so the
 		// item auto-enqueued by approve_request is still runnable; cancel it so the
@@ -273,6 +266,51 @@ final class OperationManager {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * PHASE 2 (A-1) — atomic execution claim. Exactly one caller can transition a
+	 * request from a runnable state (approved, or failed for retry) into the
+	 * transient `executing` state via a single conditional UPDATE; the row-count
+	 * decides the winner. Returns 'claimed' (winner), 'already' (lost — another
+	 * path is executing/has executed, or the request is terminal/pending), or
+	 * 'not_found'. This is the cross-path execute-once authority that closes the
+	 * A-1 concurrency residual left by the Phase 1 check-then-act guard.
+	 */
+	public function claim_for_execution( string $request_id ): string {
+		global $wpdb;
+		$affected = $wpdb->query( $wpdb->prepare(
+			"UPDATE {$wpdb->prefix}wpcc_operation_requests SET status = %s WHERE request_id = %s AND status IN ( %s, %s )",
+			self::STATUS_EXECUTING,
+			$request_id,
+			self::STATUS_APPROVED,
+			self::STATUS_FAILED
+		) );
+		if ( 1 === (int) $affected ) {
+			return 'claimed';
+		}
+		return $this->get_request( $request_id ) ? 'already' : 'not_found';
+	}
+
+	/**
+	 * PHASE 2 (B2-1) — shared request finalizer. The single execution winner records
+	 * the durable outcome onto the request: `executed` on success, `failed` on
+	 * failure. CAS from `executing` so only the active winner finalizes. Used by
+	 * every request-bound execution path (admin synchronous, queue worker, MCP),
+	 * so request.status is a faithful projection of the durable result regardless
+	 * of which path executed.
+	 */
+	public function finalize_execution( string $request_id, bool $success ): void {
+		global $wpdb;
+		$status = $success ? self::STATUS_EXECUTED : self::STATUS_FAILED;
+		$field  = $success ? 'executed_at' : 'failed_at';
+		$wpdb->query( $wpdb->prepare(
+			"UPDATE {$wpdb->prefix}wpcc_operation_requests SET status = %s, {$field} = %d WHERE request_id = %s AND status = %s",
+			$status,
+			time(),
+			$request_id,
+			self::STATUS_EXECUTING
+		) );
 	}
 
 	/**

@@ -195,12 +195,52 @@ final class OperationExecutor {
 			return $this->fail( $operation_id, 'execution_failed', __( 'Execution logic not yet implemented for this operation.', 'wp-command-center' ) );
 		}
 
+		// PHASE 2 (B2-1 / A-1) — atomic execution claim for request-bound runs. Only
+		// one execution path (admin synchronous, queue worker, or MCP) may run a
+		// given approved request. The claim is an atomic CAS (approved|failed ->
+		// executing); a loser returns a structured no-op with no mutation and no
+		// result/change rows, while the winner finalizes the request status from the
+		// durable result below. Developer-mode (no request_id) and within-workflow
+		// steps carry no request_id and are unaffected.
+		if ( $is_requested ) {
+			$claim = ( new OperationManager() )->claim_for_execution( (string) $context['request_id'] );
+			if ( 'claimed' !== $claim ) {
+				$audit->record( 'operation.execution.duplicate_suppressed', array_merge( $links, [
+					'operation_id' => $operation_id,
+					'path'         => $is_queued ? 'queue' : 'synchronous',
+					'reason'       => 'claim_' . $claim,
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] ) );
+				return $this->suppressed_noop( $operation_id, (string) $context['request_id'], $claim );
+			}
+		}
+
 		// STEP 102 — capture any rollback id stored by the handler during this run so
 		// normalize_success() can surface it uniformly (findings F-2 / F-3).
 		RollbackContext::boot();
 		RollbackContext::reset();
 
-		$result = $handler->run( $payload, $context );
+		// PHASE 2 HARDENING (A2-1) — Throwable-safe handler execution. After the
+		// atomic claim set request.status to 'executing', an uncaught exception or
+		// Error from the handler would otherwise skip finalization and strand the
+		// request in 'executing' forever (un-reclaimable; proposal stuck
+		// pending_approval). Convert any Throwable into a WP_Error so it funnels into
+		// the failure branch below, which writes the durable failed result, records
+		// the failed change, and finalizes the request to 'failed' (re-claimable).
+		// Uncatchable fatals (OOM / max-execution timeout / process kill) cannot be
+		// caught here — those need the stale-'executing' reaper documented as the
+		// Phase 2.x follow-up (requires a claim timestamp column / schema change).
+		try {
+			$result = $handler->run( $payload, $context );
+		} catch ( \Throwable $e ) {
+			$audit->record( 'operation.execution.exception', array_merge( $links, [
+				'operation_id'  => $operation_id,
+				'exception'     => get_class( $e ),
+				'error_message' => $e->getMessage(),
+				'actor'         => $actor ? AuditLog::resolve_actor( $actor ) : null,
+			] ) );
+			$result = new \WP_Error( 'wpcc_handler_exception', $e->getMessage() );
+		}
 		$ended_at = microtime( true );
 		$duration = (int) ( ( $ended_at - $started_at ) * 1000 );
 
@@ -274,6 +314,11 @@ final class OperationExecutor {
 				'counts'       => [ 0, 0, 0, 1 ],
 			] );
 
+			// PHASE 2 (B2-1) — finalize the request as failed from the durable result.
+			if ( $is_requested ) {
+				( new OperationManager() )->finalize_execution( (string) $context['request_id'], false );
+			}
+
 			return $this->fail( $operation_id, $error_code, $result->get_error_message() );
 		}
 
@@ -335,6 +380,13 @@ final class OperationExecutor {
 				0,
 			],
 		] );
+
+		// PHASE 2 (B2-1) — finalize the request as executed from the durable result.
+		// Applies to every request-bound path (admin synchronous, queue worker, MCP),
+		// so the worker/MCP path no longer leaves the request stuck at 'approved'.
+		if ( $is_requested ) {
+			( new OperationManager() )->finalize_execution( (string) $context['request_id'], true );
+		}
 
 		return $normalized;
 	}
@@ -638,6 +690,29 @@ final class OperationExecutor {
 			'errors'       => [
 				[ 'code' => $code, 'message' => $message ],
 			],
+			'created'      => [],
+			'updated'      => [],
+			'skipped'      => [],
+		];
+	}
+
+	/**
+	 * PHASE 2 (A-1) — structured no-op for a caller that lost the atomic execution
+	 * claim (another path already executed/is executing this request). Success-shaped
+	 * so a queue worker marks the item completed (no retry churn) and performs NO
+	 * mutation; writes no result/change rows. The winning path owns the durable
+	 * result that ProposalSync resolves from.
+	 */
+	private function suppressed_noop( string $operation_id, string $request_id, string $reason ): array {
+		return [
+			'operation_id' => $operation_id,
+			'success'      => true,
+			'result'       => [
+				'duplicate_suppressed' => true,
+				'reason'               => $reason,
+				'request_id'           => $request_id,
+			],
+			'errors'       => [],
 			'created'      => [],
 			'updated'      => [],
 			'skipped'      => [],
