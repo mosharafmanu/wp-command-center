@@ -30,8 +30,10 @@ echo "PROGRAM-4C.0a — Bulk rollback corruption remediation"
 
 echo
 echo "== 1. Source: action-dispatched, field-scoped, honest restore =="
-has  "store_rollback returns the rollback id"      "private function store_rollback(string \$id,string \$action,array \$before,array \$cx):string" "$SRC"
-has  "status capture is a field map (post_status)" "\$before[\$id]=['post_status'=>\$post->post_status]" "$SRC"
+# PROGRAM-4.8 superseded the hotfix internals with per-item delta records; these two static
+# checks now assert the equivalent new guarantees (the functional B1–B10 below remain the oracle).
+has  "per-item delta records persisted"            "PostMetaRollbackStore" "$SRC"
+has  "status captured field-scoped via delta core" "RollbackDelta::capture" "$SRC"
 has  "rollback dispatches on record action"        "if(in_array(\$action,['bulk_content','bulk_publish','bulk_draft','bulk_media']" "$SRC"
 has  "woo branch reversible"                        "'bulk_woocommerce'===\$action" "$SRC"
 has  "acf branch reversible"                        "'bulk_acf'===\$action" "$SRC"
