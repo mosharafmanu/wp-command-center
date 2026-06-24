@@ -75,6 +75,15 @@ $wpcc_total_count   = count( $wpcc_checklist );
 			<p style="margin:6px 0 14px;color:#50575e;font-size:13px;max-width:640px;">
 				<?php esc_html_e( 'A quick checklist to use WPCC safely. AI is optional and stays off until you add a key — nothing here turns AI on or changes your security mode automatically.', 'wp-command-center' ); ?>
 			</p>
+
+			<div style="margin:0 0 16px;padding:12px 14px;background:#f6fbf7;border:1px solid #00a32a;border-radius:4px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+				<span style="font-size:13px;color:#1d2327;">
+					<strong><?php esc_html_e( 'See it work in 2 minutes — no AI or setup needed.', 'wp-command-center' ); ?></strong>
+					<span style="display:block;color:#50575e;font-size:12px;margin-top:2px;"><?php esc_html_e( 'Run a read-only health check on this site. Nothing is changed.', 'wp-command-center' ); ?></span>
+				</span>
+				<a class="button button-primary" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=diagnostics' ) ); ?>"><?php esc_html_e( 'Run a site report', 'wp-command-center' ); ?></a>
+			</div>
+
 			<ol style="list-style:none;margin:0;padding:0;display:grid;gap:10px;">
 				<?php foreach ( $wpcc_checklist as $step ) : ?>
 					<li style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:<?php echo $step['done'] ? '#f6fbf7' : '#f6f7f7'; ?>;border-radius:4px;">
@@ -92,9 +101,9 @@ $wpcc_total_count   = count( $wpcc_checklist );
 				<strong style="font-size:13px;display:block;margin-bottom:8px;"><?php esc_html_e( 'How WPCC keeps you in control', 'wp-command-center' ); ?></strong>
 				<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;font-size:12px;color:#50575e;">
 					<div><strong>1. <?php esc_html_e( 'AI proposes', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'It suggests a change — nothing happens to your site yet.', 'wp-command-center' ); ?></div>
-					<div><strong>2. <?php esc_html_e( 'You approve', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'In Client mode, every change waits for your OK.', 'wp-command-center' ); ?></div>
+					<div><strong>2. <?php esc_html_e( 'You approve', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'In Client mode, every change waits for your OK.', 'wp-command-center' ); ?> <a href="<?php echo esc_url( $links['approvals'] ); ?>"><?php esc_html_e( 'Approvals →', 'wp-command-center' ); ?></a></div>
 					<div><strong>3. <?php esc_html_e( 'It is recorded', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'Every change is logged with who did it and when.', 'wp-command-center' ); ?></div>
-					<div><strong>4. <?php esc_html_e( 'You can undo', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'Reversible changes have a one-click Restore.', 'wp-command-center' ); ?></div>
+					<div><strong>4. <?php esc_html_e( 'You can undo', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'Reversible changes have a one-click Restore.', 'wp-command-center' ); ?> <a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'Changes →', 'wp-command-center' ); ?></a></div>
 				</div>
 			</div>
 

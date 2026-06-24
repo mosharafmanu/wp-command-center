@@ -98,7 +98,28 @@ $wpcc_is_preset    = isset( $wpcc_presets[ $wpcc_model ] );
 			<?php endif; ?>
 		</div>
 	<?php endforeach; ?>
-	<div style="margin-bottom:24px;"></div>
+
+	<?php if ( $wpcc_configured ) : ?>
+		<div style="margin:0 0 24px;padding:12px 14px;background:#f0f6fc;border:1px solid #c3c4c7;border-radius:4px;max-width:760px;">
+			<strong style="font-size:13px;"><?php esc_html_e( 'Key added. What happens next?', 'wp-command-center' ); ?></strong>
+			<ol style="margin:8px 0 0;padding-left:20px;color:#50575e;font-size:13px;line-height:1.6;">
+				<li><?php esc_html_e( 'Use “Test connection” below to confirm your key works.', 'wp-command-center' ); ?></li>
+				<li>
+					<?php
+					printf(
+						/* translators: 1: link open, 2: link close */
+						esc_html__( 'Connect an AI assistant so it can do the work — see %1$sConnect an AI Agent%2$s.', 'wp-command-center' ),
+						'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=integrations' ) ) . '">',
+						'</a>'
+					);
+					?>
+				</li>
+				<li><?php esc_html_e( 'Adding a key does not turn AI features on by itself. Built-in AI screens (like alt-text and SEO drafts) are enabled per site; ask your developer to switch them on if you do not see them.', 'wp-command-center' ); ?></li>
+			</ol>
+		</div>
+	<?php else : ?>
+		<div style="margin-bottom:24px;"></div>
+	<?php endif; ?>
 
 	<!-- ===== Model ===== -->
 	<h2><?php esc_html_e( 'Model', 'wp-command-center' ); ?></h2>
