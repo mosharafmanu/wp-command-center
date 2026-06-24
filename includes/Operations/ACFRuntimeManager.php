@@ -2,6 +2,9 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\PostMetaRollbackStore;
+use WPCommandCenter\Rollback\AcfValueAccessor;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -9,6 +12,12 @@ final class ACFRuntimeManager {
 
 	/** F3.2 — recursion guard for nested-field serialization. */
 	private const MAX_FIELD_DEPTH = 10;
+
+	/** PROGRAM-4.9 — postmeta-per-record store prefix for value_update delta records. */
+	private const VALUE_RB_PREFIX = '_wpcc_acf_rb_';
+
+	/** PROGRAM-4.9 — definition update-in-place actions that get a fingerprint drift guard. */
+	private const FP_GUARDED = [ 'group_update', 'field_update', 'location_assign', 'location_remove', 'layout_update' ];
 
 	private AuditLog $audit;
 
@@ -561,12 +570,25 @@ final class ACFRuntimeManager {
 		if ( $post_id <= 0 ) return $this->error( 'wpcc_missing_post_id', __( 'Post ID is required.', 'wp-command-center' ) );
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? $p['field_name'] ?? '' ) );
 		if ( '' === $key ) return $this->error( 'wpcc_missing_field', __( 'Field key or name is required.', 'wp-command-center' ) );
-		$before = get_field( $key, $post_id );
+
+		// PROGRAM-4.9 — field-scoped, drift-aware, existence-faithful whole-field delta. The ACF
+		// value (scalar or a WHOLE nested array) is captured atomically (never decomposed) and
+		// stored as a v2 record in PostMetaRollbackStore on the post. Replaces the unconditional
+		// whole-value restore in the shared option (which clobbered later edits and never
+		// re-cleared an absent field). Legacy option value records still restore via rollback().
+		$acc   = new AcfValueAccessor( $key );
+		$prior = RollbackDelta::capture( $acc, $post_id, [ 'value' ] );
 		$value = $p['value'] ?? null;
 		update_field( $key, $value, $post_id );
-		$this->store_rollback( $post_id . '_' . $key, 'value_update', [ 'post_id' => $post_id, 'key' => $key, 'value' => $before ], $cx );
+		$after = [ 'value' => $acc->read_field( $post_id, 'value' ) ];
+		$rid   = wp_generate_uuid4();
+		$rec   = RollbackDelta::build_record( [ 'value' ], $prior, $after, $cx, [
+			'id' => $rid, 'post_id' => $post_id, 'field_key' => $key, 'action' => 'value_update',
+		] );
+		( new PostMetaRollbackStore( self::VALUE_RB_PREFIX ) )->persist( $post_id, $rid, $rec );
+
 		$this->audit->record( 'acf.value.updated', [ 'post_id' => $post_id, 'field_key' => $key ] );
-		return [ 'action' => 'acf_value_update', 'post_id' => $post_id, 'field_key' => $key ];
+		return [ 'action' => 'acf_value_update', 'post_id' => $post_id, 'field_key' => $key, 'rollback_id' => $rid ];
 	}
 
 	private function bulk_value_update( array $p, array $cx ): array {
@@ -600,14 +622,40 @@ final class ACFRuntimeManager {
 	public function rollback( array $p, array $cx = [] ): array {
 		$rid = (string) ( $p['rollback_id'] ?? '' );
 		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'wp-command-center' ) );
+
+		// PROGRAM-4.9 — value_update v2 delta records live in postmeta (per post), resolved by id.
+		$store    = new PostMetaRollbackStore( self::VALUE_RB_PREFIX );
+		$resolved = $store->resolve( $rid );
+		if ( null !== $resolved ) {
+			return $this->rollback_value_delta( $store, $rid, $resolved );
+		}
+
+		// Legacy option records (pre-P4.9 values + all definition records).
 		$rollbacks = get_option( 'wpcc_acf_rollbacks', [] );
 		$rec = null; $idx = null;
-		foreach ( $rollbacks as $i => $r ) { if ( $r['id'] === $rid ) { $rec = $r; $idx = $i; break; } }
+		foreach ( $rollbacks as $i => $r ) { if ( ( $r['id'] ?? null ) === $rid ) { $rec = $r; $idx = $i; break; } }
 		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'wp-command-center' ) );
-		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
+		if ( ! empty( $rec['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
 		$eid   = $rec['entity_id'];
 		$act   = $rec['action'];
-		$before = $rec['before_state'];
+		$before = (array) $rec['before_state'];
+
+		// PROGRAM-4.9 — json_import is not faithfully reversible (lossy summary, no restore path);
+		// report honestly instead of a phantom clean success.
+		if ( 'json_import' === $act ) {
+			return $this->rollback_unsupported( __( 'ACF JSON import cannot be automatically rolled back.', 'wp-command-center' ) );
+		}
+
+		// PROGRAM-4.9 — fingerprint drift guard for definition update-in-place actions (new
+		// records only; legacy records without __after_fp keep the prior unconditional restore).
+		// Refuse on drift — never clobber a newer external definition edit.
+		if ( in_array( $act, self::FP_GUARDED, true ) && isset( $before['__after_fp'] ) ) {
+			if ( $this->definition_fingerprint( (string) $eid, $act ) !== (string) $before['__after_fp'] ) {
+				return $this->rollback_conflict( $rid, __( 'ACF definition changed since this update was applied; rollback skipped to avoid clobbering the newer change.', 'wp-command-center' ) );
+			}
+		}
+		unset( $before['__after_fp'] ); // never feed the guard marker into acf_update_*
+
 		if ( in_array( $act, [ 'group_create', 'field_create' ] ) ) {
 			if ( str_starts_with( $act, 'group' ) ) acf_delete_field_group( $eid );
 			elseif ( str_starts_with( $act, 'field' ) ) acf_delete_field( $eid );
@@ -645,6 +693,12 @@ final class ACFRuntimeManager {
 
 	private function store_rollback( string $id, string $action, array $before, array $cx ): string {
 		if ( ! in_array( $action, self::ROLLBACKABLE, true ) ) return '';
+		// PROGRAM-4.9 — capture an apply-time fingerprint of the (post-write) live definition for
+		// update-in-place actions, so rollback can refuse on drift instead of clobbering. Runs
+		// here because store_rollback is invoked immediately after the acf_update_* mutation.
+		if ( in_array( $action, self::FP_GUARDED, true ) ) {
+			$before['__after_fp'] = $this->definition_fingerprint( $id, $action );
+		}
 		$rollbacks = get_option( 'wpcc_acf_rollbacks', [] );
 		$rid = wp_generate_uuid4();
 		$rollbacks[] = [ 'id' => $rid, 'entity_id' => $id, 'action' => $action, 'before_state' => $before, 'rollback_applied' => false, 'created_at' => time(),
@@ -652,6 +706,86 @@ final class ACFRuntimeManager {
 		if ( count( $rollbacks ) > 200 ) $rollbacks = array_slice( $rollbacks, -200 );
 		update_option( 'wpcc_acf_rollbacks', $rollbacks );
 		return $rid;
+	}
+
+	// ── PROGRAM-4.9 — value-delta rollback + definition drift guard ──────────────
+
+	/**
+	 * Restore a value_update v2 delta record (whole-field, drift-aware, existence-faithful).
+	 * Marks applied only on a complete restore; a drift conflict is an error envelope that
+	 * stays retryable (never clobbers a newer change).
+	 *
+	 * @param array{entity_id:mixed,record:array<string,mixed>} $resolved
+	 */
+	private function rollback_value_delta( PostMetaRollbackStore $store, string $rid, array $resolved ): array {
+		$rec     = $resolved['record'];
+		$post_id = (int) ( $resolved['entity_id'] ?? ( $rec['post_id'] ?? 0 ) );
+		if ( ! empty( $rec['rollback_applied'] ) ) {
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
+		}
+		$key    = (string) ( $rec['field_key'] ?? '' );
+		$fields = (array) ( $rec['fields'] ?? [] );
+		$o      = RollbackDelta::restore( new AcfValueAccessor( $key ), $post_id, $fields );
+		$this->audit->record( 'acf.value.restored', [ 'post_id' => $post_id, 'field_key' => $key, 'status' => $o['status'] ] );
+
+		if ( 'complete' === $o['status'] ) {
+			$rec['rollback_applied'] = true;
+			$rec['applied_at']       = time();
+			$store->mark_applied( $post_id, $rid, $rec );
+			return [ 'action' => 'acf_rollback', 'rollback_id' => $rid, 'post_id' => $post_id, 'field_key' => $key, 'status' => 'complete', 'restored' => true, 'reversible' => true ];
+		}
+		// drift → conflict: not applied, retryable, honest (never a clean success).
+		return [ 'action' => 'acf_rollback', 'rollback_id' => $rid, 'post_id' => $post_id, 'field_key' => $key,
+			'error' => true, 'code' => 'wpcc_rollback_conflict', 'status' => $o['status'], 'restored' => false,
+			'reversible' => false, 'skipped_fields' => $o['skipped'] ];
+	}
+
+	/**
+	 * Canonical fingerprint of a live ACF definition (group for group/location actions, field
+	 * for field/layout actions). Drops volatile keys so an unchanged definition is stable.
+	 * Returns '' when the definition cannot be read (treated as drift → safe refusal).
+	 */
+	private function definition_fingerprint( string $id, string $action ): string {
+		if ( ! function_exists( 'acf_get_field_group' ) ) return '';
+		if ( str_starts_with( $action, 'group' ) || str_starts_with( $action, 'location' ) ) {
+			$def = acf_get_field_group( $id );
+		} else { // field_update, layout_update
+			$def = function_exists( 'acf_get_field' ) ? acf_get_field( $id ) : null;
+		}
+		if ( ! is_array( $def ) ) return '';
+		return sha1( (string) wp_json_encode( $this->canonicalize_def( $def ) ) );
+	}
+
+	/**
+	 * Recursive ksort + drop volatile keys, for a deterministic definition fingerprint.
+	 *
+	 * @param mixed $v
+	 * @return mixed
+	 */
+	private function canonicalize_def( $v ) {
+		if ( is_array( $v ) ) {
+			ksort( $v );
+			foreach ( $v as $k => $vv ) {
+				if ( in_array( $k, [ 'ID', 'id', 'menu_order', 'modified', '_valid' ], true ) ) {
+					unset( $v[ $k ] );
+					continue;
+				}
+				$v[ $k ] = $this->canonicalize_def( $vv );
+			}
+		}
+		return $v;
+	}
+
+	/** Honest drift-conflict envelope (error → executor success boolean is truthful). */
+	private function rollback_conflict( string $rid, string $message ): array {
+		return [ 'action' => 'acf_rollback', 'rollback_id' => $rid, 'error' => true, 'code' => 'wpcc_rollback_conflict',
+			'status' => 'conflict', 'restored' => false, 'reversible' => false, 'message' => $message ];
+	}
+
+	/** Honest irreversible/unsupported envelope. */
+	private function rollback_unsupported( string $message ): array {
+		return [ 'action' => 'acf_rollback', 'error' => true, 'code' => 'wpcc_rollback_unsupported',
+			'reversible' => false, 'message' => $message ];
 	}
 
 	// ── STEP 92 helpers ──────────────────────────────────────────
