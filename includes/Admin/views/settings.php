@@ -112,7 +112,8 @@ $endpoints = [
 				<input type="radio" name="wpcc_security_mode" value="<?php echo esc_attr( SecurityModeManager::MODE_DEVELOPER ); ?>" <?php checked( $current_mode, SecurityModeManager::MODE_DEVELOPER ); ?> style="margin-top:2px;float:left;" />
 				<span style="display:block;margin-left:24px;">
 					<strong><?php esc_html_e( 'Developer Mode', 'wp-command-center' ); ?></strong>
-					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'No approval gate. AI agents can execute all operations immediately. Recommended during development and staging. Full audit trail and rollback remain active.', 'wp-command-center' ); ?></span>
+					<span style="display:inline-block;margin-left:8px;padding:1px 8px;border-radius:3px;font-size:11px;font-weight:700;background:#fcf0f1;color:#d63638;vertical-align:middle;"><?php esc_html_e( 'NOT FOR CLIENT SITES', 'wp-command-center' ); ?></span>
+					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'No approval step: AI can change or delete things on this site immediately, with no review. Use only on your own development or staging site. (Audit trail and undo still work, but there is no gate to stop a change before it happens.)', 'wp-command-center' ); ?></span>
 				</span>
 			</label>
 

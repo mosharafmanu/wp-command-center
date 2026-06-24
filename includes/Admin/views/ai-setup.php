@@ -16,6 +16,7 @@ defined( 'ABSPATH' ) || exit;
 
 use WPCommandCenter\Admin\AdoptionStatus;
 use WPCommandCenter\Admin\AiSetupController;
+use WPCommandCenter\Admin\ProviderCatalog;
 
 $wpcc_notice = ( new AiSetupController() )->handle_post();
 
@@ -37,61 +38,67 @@ $wpcc_is_preset    = isset( $wpcc_presets[ $wpcc_model ] );
 		<div class="notice notice-<?php echo esc_attr( $wpcc_notice['type'] ); ?>"><p><?php echo esc_html( $wpcc_notice['message'] ); ?></p></div>
 	<?php endif; ?>
 
-	<!-- ===== Providers ===== -->
+	<!-- ===== Providers (catalogue-driven; only supported providers are configurable) ===== -->
 	<h2><?php esc_html_e( 'Provider', 'wp-command-center' ); ?></h2>
+	<p class="description" style="max-width:660px;margin-top:0;">
+		<?php esc_html_e( 'WP Command Center uses one AI provider at a time. Today that is Anthropic (Claude). Other providers are listed for transparency and will become available when their connectors ship — no key is collected for them until then.', 'wp-command-center' ); ?>
+	</p>
 
-	<div class="wpcc-aisetup-card" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #00a32a;border-radius:4px;padding:18px 20px;margin-bottom:16px;">
-		<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-			<div>
-				<strong style="font-size:15px;"><?php esc_html_e( 'Anthropic (Claude)', 'wp-command-center' ); ?></strong>
-				<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;background:#edfaef;color:#00a32a;"><?php esc_html_e( 'SUPPORTED', 'wp-command-center' ); ?></span>
-			</div>
-			<div>
-				<?php if ( $wpcc_configured ) : ?>
-					<span style="font-weight:600;color:#00a32a;">&#10003; <?php esc_html_e( 'Key configured', 'wp-command-center' ); ?></span>
-				<?php else : ?>
-					<span style="font-weight:600;color:#646970;"><?php esc_html_e( 'No key yet', 'wp-command-center' ); ?></span>
+	<?php foreach ( ProviderCatalog::all() as $wpcc_provider ) : ?>
+		<?php $wpcc_supported = ProviderCatalog::STATUS_SUPPORTED === $wpcc_provider['status']; ?>
+		<div class="wpcc-aisetup-card" style="background:<?php echo $wpcc_supported ? '#fff' : '#f6f7f7'; ?>;border:1px solid <?php echo $wpcc_supported ? '#c3c4c7' : '#dcdcde'; ?>;border-left:4px solid <?php echo $wpcc_supported ? '#00a32a' : '#dcdcde'; ?>;border-radius:4px;padding:<?php echo $wpcc_supported ? '18px 20px' : '14px 18px'; ?>;margin-bottom:16px;<?php echo $wpcc_supported ? '' : 'opacity:.85;'; ?>">
+			<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+				<div>
+					<strong style="font-size:<?php echo $wpcc_supported ? '15px' : '14px'; ?>;color:<?php echo $wpcc_supported ? '#1d2327' : '#50575e'; ?>;"><?php echo esc_html( $wpcc_provider['name'] ); ?></strong>
+					<?php if ( $wpcc_supported ) : ?>
+						<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;background:#edfaef;color:#00a32a;"><?php esc_html_e( 'SUPPORTED', 'wp-command-center' ); ?></span>
+					<?php else : ?>
+						<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;background:#f0f0f1;color:#646970;"><?php esc_html_e( 'PLANNED', 'wp-command-center' ); ?></span>
+					<?php endif; ?>
+				</div>
+				<?php if ( $wpcc_supported ) : ?>
+					<div>
+						<?php if ( $wpcc_configured ) : ?>
+							<span style="font-weight:600;color:#00a32a;">&#10003; <?php esc_html_e( 'Key configured', 'wp-command-center' ); ?></span>
+						<?php else : ?>
+							<span style="font-weight:600;color:#646970;"><?php esc_html_e( 'No key yet', 'wp-command-center' ); ?></span>
+						<?php endif; ?>
+					</div>
 				<?php endif; ?>
 			</div>
-		</div>
 
-		<?php if ( $wpcc_key_constant ) : ?>
-			<p style="margin:14px 0 0;color:#50575e;">
-				<?php esc_html_e( 'The key is defined in wp-config.php (a PHP constant). To manage it from this screen, remove that constant. Constants always take priority and are never editable here.', 'wp-command-center' ); ?>
-			</p>
-		<?php else : ?>
-			<form method="post" style="margin-top:14px;">
-				<?php wp_nonce_field( AiSetupController::NONCE_ACTION ); ?>
-				<label for="wpcc-api-key" style="display:block;font-weight:600;margin-bottom:4px;">
-					<?php echo $wpcc_configured ? esc_html__( 'Replace API key', 'wp-command-center' ) : esc_html__( 'API key', 'wp-command-center' ); ?>
-				</label>
-				<input type="password" id="wpcc-api-key" name="wpcc_api_key" autocomplete="off" spellcheck="false"
-					class="regular-text" style="width:100%;max-width:480px;font-family:monospace;"
-					placeholder="<?php echo $wpcc_configured ? esc_attr__( '•••••••• (hidden — paste a new key to replace)', 'wp-command-center' ) : esc_attr_e( 'sk-ant-…', 'wp-command-center' ); ?>" />
-				<p style="color:#646970;font-size:12px;margin:6px 0 10px;max-width:560px;">
-					<?php esc_html_e( 'Stored on this site only and used for your own API calls (you pay your provider directly). For security it is never displayed again after saving.', 'wp-command-center' ); ?>
+			<?php if ( ! $wpcc_supported ) : ?>
+				<p style="margin:8px 0 0;color:#646970;font-size:12px;max-width:620px;"><?php echo esc_html( $wpcc_provider['note'] ); ?></p>
+			<?php elseif ( $wpcc_key_constant ) : ?>
+				<p style="margin:14px 0 0;color:#50575e;">
+					<?php esc_html_e( 'The key is defined in wp-config.php (a PHP constant). To manage it from this screen, remove that constant. Constants always take priority and are never editable here.', 'wp-command-center' ); ?>
 				</p>
-				<button type="submit" name="wpcc_ai_setup_action" value="save_key" class="button button-primary">
-					<?php echo $wpcc_configured ? esc_html__( 'Update key', 'wp-command-center' ) : esc_html__( 'Save key', 'wp-command-center' ); ?>
-				</button>
-				<?php if ( $wpcc_configured ) : ?>
-					<button type="submit" name="wpcc_ai_setup_action" value="clear_key" class="button button-link-delete"
-						onclick="return confirm('<?php echo esc_js( __( 'Remove the saved API key? AI features will turn off until you add a new one.', 'wp-command-center' ) ); ?>');">
-						<?php esc_html_e( 'Remove key', 'wp-command-center' ); ?>
+			<?php else : ?>
+				<form method="post" style="margin-top:14px;">
+					<?php wp_nonce_field( AiSetupController::NONCE_ACTION ); ?>
+					<label for="wpcc-api-key" style="display:block;font-weight:600;margin-bottom:4px;">
+						<?php echo $wpcc_configured ? esc_html__( 'Replace API key', 'wp-command-center' ) : esc_html__( 'API key', 'wp-command-center' ); ?>
+					</label>
+					<input type="password" id="wpcc-api-key" name="wpcc_api_key" autocomplete="off" spellcheck="false"
+						class="regular-text" style="width:100%;max-width:480px;font-family:monospace;"
+						placeholder="<?php echo $wpcc_configured ? esc_attr__( '•••••••• (hidden — paste a new key to replace)', 'wp-command-center' ) : esc_attr_e( 'sk-ant-…', 'wp-command-center' ); ?>" />
+					<p style="color:#646970;font-size:12px;margin:6px 0 10px;max-width:560px;">
+						<?php esc_html_e( 'Stored on this site only and used for your own API calls (you pay your provider directly). For security it is never displayed again after saving.', 'wp-command-center' ); ?>
+					</p>
+					<button type="submit" name="wpcc_ai_setup_action" value="save_key" class="button button-primary">
+						<?php echo $wpcc_configured ? esc_html__( 'Update key', 'wp-command-center' ) : esc_html__( 'Save key', 'wp-command-center' ); ?>
 					</button>
-				<?php endif; ?>
-			</form>
-		<?php endif; ?>
-	</div>
-
-	<!-- Planned providers: shown, not offered (no fake key fields). -->
-	<div class="wpcc-aisetup-card" style="background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:14px 18px;margin-bottom:24px;opacity:.85;">
-		<strong style="font-size:14px;color:#50575e;"><?php esc_html_e( 'OpenAI · Google Gemini', 'wp-command-center' ); ?></strong>
-		<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:700;background:#f0f0f1;color:#646970;"><?php esc_html_e( 'PLANNED', 'wp-command-center' ); ?></span>
-		<p style="margin:8px 0 0;color:#646970;font-size:12px;max-width:620px;">
-			<?php esc_html_e( 'Not yet supported. WP Command Center currently routes all AI through Anthropic. Other providers will appear here when their transport ships — no key is collected for them today.', 'wp-command-center' ); ?>
-		</p>
-	</div>
+					<?php if ( $wpcc_configured ) : ?>
+						<button type="submit" name="wpcc_ai_setup_action" value="clear_key" class="button button-link-delete"
+							onclick="return confirm('<?php echo esc_js( __( 'Remove the saved API key? AI features will turn off until you add a new one.', 'wp-command-center' ) ); ?>');">
+							<?php esc_html_e( 'Remove key', 'wp-command-center' ); ?>
+						</button>
+					<?php endif; ?>
+				</form>
+			<?php endif; ?>
+		</div>
+	<?php endforeach; ?>
+	<div style="margin-bottom:24px;"></div>
 
 	<!-- ===== Model ===== -->
 	<h2><?php esc_html_e( 'Model', 'wp-command-center' ); ?></h2>
@@ -121,6 +128,16 @@ $wpcc_is_preset    = isset( $wpcc_presets[ $wpcc_model ] );
 			</span>
 		</p>
 	</form>
+
+	<details style="max-width:660px;margin:-8px 0 24px;">
+		<summary style="cursor:pointer;font-weight:600;font-size:13px;color:#2271b1;"><?php esc_html_e( 'Why this model? What changes if I switch?', 'wp-command-center' ); ?></summary>
+		<div style="margin-top:10px;color:#50575e;font-size:13px;display:grid;gap:8px;">
+			<p style="margin:0;"><strong><?php esc_html_e( 'Recommended (Sonnet):', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'the balanced default — strong quality at a sensible cost and speed. Best for most sites.', 'wp-command-center' ); ?></p>
+			<p style="margin:0;"><strong><?php esc_html_e( 'Higher capability (Opus):', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'the most capable model — better on hard or nuanced tasks, but slower and more expensive per request.', 'wp-command-center' ); ?></p>
+			<p style="margin:0;"><strong><?php esc_html_e( 'Fastest (Haiku):', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'the quickest and cheapest — great for simple, high-volume work where speed and cost matter most.', 'wp-command-center' ); ?></p>
+			<p style="margin:0;color:#646970;"><?php esc_html_e( 'Switching only changes which model handles future AI requests — it does not change your key, your saved work, or anything already on your site. You can change it any time.', 'wp-command-center' ); ?></p>
+		</div>
+	</details>
 
 	<!-- ===== Connection test ===== -->
 	<h2><?php esc_html_e( 'Test connection', 'wp-command-center' ); ?></h2>

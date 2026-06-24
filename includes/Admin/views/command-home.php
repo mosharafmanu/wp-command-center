@@ -87,6 +87,17 @@ $wpcc_total_count   = count( $wpcc_checklist );
 					</li>
 				<?php endforeach; ?>
 			</ol>
+
+			<div style="margin-top:14px;padding:12px 14px;background:#f0f6fc;border-radius:4px;">
+				<strong style="font-size:13px;display:block;margin-bottom:8px;"><?php esc_html_e( 'How WPCC keeps you in control', 'wp-command-center' ); ?></strong>
+				<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;font-size:12px;color:#50575e;">
+					<div><strong>1. <?php esc_html_e( 'AI proposes', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'It suggests a change — nothing happens to your site yet.', 'wp-command-center' ); ?></div>
+					<div><strong>2. <?php esc_html_e( 'You approve', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'In Client mode, every change waits for your OK.', 'wp-command-center' ); ?></div>
+					<div><strong>3. <?php esc_html_e( 'It is recorded', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'Every change is logged with who did it and when.', 'wp-command-center' ); ?></div>
+					<div><strong>4. <?php esc_html_e( 'You can undo', 'wp-command-center' ); ?></strong><br><?php esc_html_e( 'Reversible changes have a one-click Restore.', 'wp-command-center' ); ?></div>
+				</div>
+			</div>
+
 			<details style="margin-top:14px;border-top:1px solid #f0f0f1;padding-top:12px;">
 				<summary style="cursor:pointer;font-weight:600;font-size:13px;"><?php esc_html_e( 'What WP Command Center does — and what it doesn\'t', 'wp-command-center' ); ?></summary>
 				<div style="margin-top:10px;color:#50575e;font-size:13px;max-width:640px;display:grid;gap:8px;">
