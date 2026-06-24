@@ -244,6 +244,10 @@ final class ContentManager {
 			}
 		}
 		$prior = RollbackDelta::capture( $accessor, $id, $touched );
+		// P4 RC (D2): capture the prior status for the audit's old_status. The P4.3 delta
+		// migration removed the full-object $before snapshot but left the audit referencing
+		// $before['status'] (undefined → warning + null). This restores the intended value.
+		$old_status = (string) get_post_field( 'post_status', $id );
 
 		$data = [ 'ID' => $id ];
 		if ( isset( $params['title'] ) ) {
@@ -278,7 +282,7 @@ final class ContentManager {
 		$this->audit( 'content.update', [
 			'content_id'   => $result,
 			'title'        => $updated->post_title,
-			'old_status'   => $before['status'],
+			'old_status'   => $old_status,
 			'new_status'   => $updated->post_status,
 			'rollback_id'  => $rollback_id,
 		], $context );
