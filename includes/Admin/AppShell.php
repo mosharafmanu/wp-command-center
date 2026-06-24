@@ -65,6 +65,7 @@ final class AppShell {
 			'wpcc-tokens'             => [ 'wpcc-access', 'tokens' ],
 			'wpcc-settings'           => [ 'wpcc-access', 'security' ],
 			'wpcc-ai-integrations'    => [ 'wpcc-connect', 'integrations' ],
+			'wpcc-ai-setup'           => [ 'wpcc-connect', 'setup' ],
 			'wpcc-file-access'        => [ 'wpcc-connect', 'files' ],
 			// Build-flagged AI surfaces (only reachable when their flag is on).
 			'wpcc-proposals'          => [ 'wpcc-operate', 'drafts' ],
@@ -131,6 +132,7 @@ final class AppShell {
 			'wpcc-connect' => [
 				'label' => __( 'Connect', 'wp-command-center' ),
 				'tabs'  => [
+					'setup'        => [ 'label' => __( 'AI Setup', 'wp-command-center' ),        'view' => 'ai-setup',        'feature' => null ],
 					'integrations' => [ 'label' => __( 'AI Integrations', 'wp-command-center' ), 'view' => 'ai-integrations', 'feature' => null ],
 					'files'        => [ 'label' => __( 'File Access', 'wp-command-center' ),     'view' => 'file-access',     'feature' => null ],
 				],

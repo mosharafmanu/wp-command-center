@@ -36,11 +36,85 @@ $links = [
 
 // Per-session deep link into the Change History timeline, hosted under Audit.
 $session_base = admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=changes&tab=timeline' );
+
+// PROGRAM-5A — first-run / adoption-readiness panel (server-rendered, no REST).
+// Dismiss is per-user and only honored when setup is complete (incomplete setup
+// keeps the panel visible so a new partner is never left without guidance).
+if ( isset( $_POST['wpcc_firstrun_action'] ) && check_admin_referer( 'wpcc_firstrun' ) && current_user_can( 'manage_options' ) ) {
+	$wpcc_fr_action = sanitize_key( wp_unslash( $_POST['wpcc_firstrun_action'] ) );
+	if ( 'dismiss' === $wpcc_fr_action ) {
+		update_user_meta( get_current_user_id(), 'wpcc_firstrun_dismissed', '1' );
+	} elseif ( 'reopen' === $wpcc_fr_action ) {
+		delete_user_meta( get_current_user_id(), 'wpcc_firstrun_dismissed' );
+	}
+}
+
+$wpcc_checklist     = \WPCommandCenter\Admin\AdoptionStatus::checklist();
+$wpcc_incomplete    = \WPCommandCenter\Admin\AdoptionStatus::setup_incomplete();
+$wpcc_fr_dismissed  = '1' === get_user_meta( get_current_user_id(), 'wpcc_firstrun_dismissed', true );
+$wpcc_show_firstrun = $wpcc_incomplete || ! $wpcc_fr_dismissed;
+$wpcc_done_count    = count( array_filter( $wpcc_checklist, static fn ( $s ) => $s['done'] ) );
+$wpcc_total_count   = count( $wpcc_checklist );
 ?>
 <div class="wpcc-home">
 	<p class="description">
 		<?php esc_html_e( 'Mission control for AI on your WordPress site — what needs you, what changed, and what you can undo. Read-only: every card links to the surface that owns the detail.', 'wp-command-center' ); ?>
 	</p>
+
+	<?php if ( $wpcc_show_firstrun ) : ?>
+		<section class="wpcc-firstrun" aria-labelledby="wpcc-firstrun-h" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #2271b1;border-radius:6px;padding:18px 20px;margin:0 0 20px;max-width:840px;">
+			<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
+				<h2 id="wpcc-firstrun-h" style="margin:0;font-size:16px;"><?php esc_html_e( 'Set up WP Command Center', 'wp-command-center' ); ?></h2>
+				<span style="color:#646970;font-size:13px;">
+					<?php
+					/* translators: 1: completed steps, 2: total steps */
+					printf( esc_html__( '%1$d of %2$d ready', 'wp-command-center' ), (int) $wpcc_done_count, (int) $wpcc_total_count );
+					?>
+				</span>
+			</div>
+			<p style="margin:6px 0 14px;color:#50575e;font-size:13px;max-width:640px;">
+				<?php esc_html_e( 'A quick checklist to use WPCC safely. AI is optional and stays off until you add a key — nothing here turns AI on or changes your security mode automatically.', 'wp-command-center' ); ?>
+			</p>
+			<ol style="list-style:none;margin:0;padding:0;display:grid;gap:10px;">
+				<?php foreach ( $wpcc_checklist as $step ) : ?>
+					<li style="display:flex;gap:12px;align-items:flex-start;padding:10px 12px;background:<?php echo $step['done'] ? '#f6fbf7' : '#f6f7f7'; ?>;border-radius:4px;">
+						<span aria-hidden="true" style="font-size:16px;line-height:1.4;color:<?php echo $step['done'] ? '#00a32a' : '#c3c4c7'; ?>;"><?php echo $step['done'] ? '&#10003;' : '&#9711;'; ?></span>
+						<span style="flex:1;">
+							<a href="<?php echo esc_url( $step['url'] ); ?>" style="font-weight:600;text-decoration:none;"><?php echo esc_html( $step['label'] ); ?></a>
+							<span class="screen-reader-text"><?php echo $step['done'] ? esc_html__( '(done)', 'wp-command-center' ) : esc_html__( '(to do)', 'wp-command-center' ); ?></span>
+							<span style="display:block;color:#646970;font-size:12px;margin-top:2px;"><?php echo esc_html( $step['hint'] ); ?></span>
+						</span>
+					</li>
+				<?php endforeach; ?>
+			</ol>
+			<details style="margin-top:14px;border-top:1px solid #f0f0f1;padding-top:12px;">
+				<summary style="cursor:pointer;font-weight:600;font-size:13px;"><?php esc_html_e( 'What WP Command Center does — and what it doesn\'t', 'wp-command-center' ); ?></summary>
+				<div style="margin-top:10px;color:#50575e;font-size:13px;max-width:640px;display:grid;gap:8px;">
+					<p style="margin:0;"><strong><?php esc_html_e( 'What it does:', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Lets an AI agent operate this WordPress site under your control — with capability limits, an approval step, a full audit trail, and one-click undo for supported changes.', 'wp-command-center' ); ?></p>
+					<p style="margin:0;"><strong><?php esc_html_e( 'AI is optional and off by default.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'No AI runs until you add a provider key and enable a feature. Adding a key here never turns features on by itself.', 'wp-command-center' ); ?></p>
+					<p style="margin:0;"><strong><?php esc_html_e( 'Approval protects client sites.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'In Client or Enterprise mode, write operations wait for your review before they apply.', 'wp-command-center' ); ?></p>
+					<p style="margin:0;"><strong><?php esc_html_e( 'Undo lives in Audit → Changes.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Content, SEO meta, media metadata, settings, comments, users and several other surfaces record a reversible change you can restore.', 'wp-command-center' ); ?></p>
+					<p style="margin:0;"><strong><?php esc_html_e( 'Honest limits:', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Not everything is reversible. Plugin and theme updates are NOT automatically undoable, and some surfaces (e.g. WooCommerce orders) have no rollback. WPCC tells you when a change cannot be undone — it does not promise undo everywhere.', 'wp-command-center' ); ?></p>
+					<p style="margin:0;"><strong><?php esc_html_e( 'It is not a backup tool or a fleet manager.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'It governs individual actions on this one site; it does not take full-site backups or manage many sites at once.', 'wp-command-center' ); ?></p>
+				</div>
+			</details>
+
+			<?php if ( ! $wpcc_incomplete ) : ?>
+				<form method="post" style="margin:14px 0 0;">
+					<?php wp_nonce_field( 'wpcc_firstrun' ); ?>
+					<button type="submit" name="wpcc_firstrun_action" value="dismiss" class="button button-small"><?php esc_html_e( 'Hide this guide', 'wp-command-center' ); ?></button>
+					<span style="margin-left:8px;color:#646970;font-size:12px;"><?php esc_html_e( 'You can reopen it from here any time setup changes.', 'wp-command-center' ); ?></span>
+				</form>
+			<?php endif; ?>
+		</section>
+	<?php elseif ( $wpcc_fr_dismissed ) : ?>
+		<p style="margin:0 0 16px;">
+			<form method="post" style="display:inline;">
+				<?php wp_nonce_field( 'wpcc_firstrun' ); ?>
+				<button type="submit" name="wpcc_firstrun_action" value="reopen" class="button-link" style="font-size:13px;"><?php esc_html_e( 'Show setup guide', 'wp-command-center' ); ?></button>
+			</form>
+		</p>
+	<?php endif; ?>
 
 	<div id="wpcc-home-readiness" hidden></div>
 
