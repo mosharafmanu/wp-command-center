@@ -6,7 +6,25 @@
 
 ---
 
-## 1. Production state (CURRENT)
+## 0. PROGRAM-4 DEPLOYED & VERIFIED (2026-06-24) — supersedes §1 for current state
+
+- **Production HEAD = `2657810`** on `origin/main`, local `main`, and the live server (`mosharafmanu.com`). Pull-deploy log: `DEPLOYED a41a9d7 -> 2657810 active=yes`.
+- **Program-4 Rollback Integrity DEPLOYED & VERIFIED.** P4.0–P4.10 consolidated + certified: GATE-1 serial T2 **net-new attributable failures = 0**, GATE-1A stale-tests fixed, independent audit **GO**, and **production token-gated functional validation passed** on every dependency-present certified surface.
+- **Certified surfaces** (field-scoped / atomic, drift-aware, sibling-safe, honest partial/conflict, legacy-compatible): SEO, Settings, Media metadata, Content, Comments, Users, **Woo Products**, Bulk, **ACF value_update**, Elementor — plus **Pattern-C** (byte snapshot+verify): Patch/File, Media bytes, Media Enhancement.
+- **Production functional results (live, via certified rollback-delta suites):** core 25/0 · PostMetaRollbackStore 30/0 · SEO 56/0 · Settings 38/0 · Media 41/0 · Content 30/0 · Comments 27/0 · Users 28/0 · ACF 47/0 · Bulk 53/0.
+- **Dormant-safe on prod:** WooCommerce and Elementor plugins are **inactive on production**, so Woo Products + Elementor certified code is **deployed but dormant** — the runtimes guard with `class_exists`/`defined` and no-op safely (no fatal, no effect) until those plugins are activated.
+- **Posture UNCHANGED:** security mode **`developer`**, Anthropic key **UNSET**, `WPCC_SEO_META_UI` / `WPCC_AI_CONTENT_UI` / `WPCC_ALT_TEXT_UI` all **OFF**.
+- **Invariants (verified live):** OPERATION_MAP **34** · capabilities **23** · catalogue **40** · MCP tools **40** · DB_VERSION **2.5.0**.
+- **Acceptance gate CLOSED:** serial T2 net-new attributable 0; prod token-gated functional validation green; honesty verified (`plugin_update`/`theme_update` return `reversible:false`; `content.update` audit `old_status` non-null with no undefined-`$before` warning — D2 fixed live).
+- **Remaining honest boundaries (NOT certified — unchanged from prior production, not regressions):** ACF **definition** ops (whole-def + fingerprint drift-guard, not field-scoped); Woo **orders / variation_update / coupon_update** (no rollback); CPT, Forms, Menu, Widgets, SiteBuilder, OptionManager (legacy, not drift-aware); plugin/theme **update** (now honestly `reversible:false`); non-field reversals. Residual reliability (non-blocking): option-tier **FIFO rollback-id eviction** (Settings/Media/Comments/Users + shared ACF-definition) — drift-correct, same storage class as pre-Program-4.
+- **Recommended next phase: NOT STARTED.** No new program initiated. Optional, separately-scoped follow-ups (not begun): option-tier → `PostMetaRollbackStore` durability migration; A2-1 stale-`executing` reaper (schema-bearing); Woo orders rollback sub-design.
+- Release commit: `2657810` (`release: PROGRAM-4 rollback integrity certification`, `--no-ff` merge of `program-4-certification @ 1e8d830`).
+
+> The §1 facts below describe the **pre-Program-4 Phase-3 state** (HEAD `7aa7e84`) and are retained for history; §0 above is the authoritative current state.
+
+---
+
+## 1. Production state (pre-Program-4 Phase-3 — historical; see §0 for current)
 
 - **Production HEAD = `7aa7e84`** on `origin/main` and the live server (`mosharafmanu.com`).
 - Local `main` == `origin/main` == production (0 ahead / 0 behind); working tree clean (apart from in-flight doc edits).
@@ -24,7 +42,7 @@
 - **Phase 3 code present in the deployed tree:** `SeoRuntimeManager` carries `rollback_format='delta'`, `restore_delta()`, drift detection, `capture_prior()`, format-v2 records (verified in working tree == `origin/main`).
 - Invariants **34 / 23 / 40 / 40 / 2.5.0** — re-verified against live code (`CapabilityRegistry::OPERATION_MAP`=34, `ALL_CAPABILITIES`=23, `OperationRegistry` ops=40, mcp_tools=40 by construction, `Schema::DB_VERSION`=2.5.0).
 - Anonymous HTTP smoke: homepage 200 · REST root 200 · `wp-command-center/v1` 200 · `/v1/health` 401 (token-gated) · `/v1/admin/approvals` 401 · **no 500s**.
-- **OUTSTANDING:** the full serial **T2 + Stage-A acceptance gate (S3B/S4/S5 + B3/B4)** and the **prod token-gated functional verify** of SEO delta rollback were **not** run this pass (per `7aa7e84`'s own commit message they remain a known residual). Deployed ≠ acceptance-gated — see §4/§5.
+- **OUTSTANDING (at the time of this Phase-3 pass; NOW CLOSED — see §0):** the full serial **T2 + acceptance gate** and the **prod token-gated functional verify** were a known residual for the SEO Phase-3 fix. These were **closed under Program-4** (GATE-1 serial T2 net-new attributable = 0; production functional validation green; SEO 56/0 live), which subsumes and extends the SEO delta rollback. Deployed **and** acceptance-gated as of 2026-06-24 (§0).
 
 ---
 
