@@ -2,6 +2,9 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\WooProductAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -121,12 +124,69 @@ final class WooCommerceRuntimeManager {
 	private function product_update( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
 		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
-		$before = $this->snapshot_product( $p );
+		$id = $p->get_id();
+
+		// PROGRAM-4 / P4.6 — capture ONLY the fields this call touches, BEFORE the write
+		// (field-scoped, drift-aware delta via the RollbackDelta core). Replaces the full
+		// 16-field snapshot/restore that clobbered siblings on layered edits (F-1).
+		$accessor = new WooProductAccessor();
+		$touched  = $this->product_touched_fields( $payload );
+		$prior    = RollbackDelta::capture( $accessor, $id, $touched );
+
 		$this->apply_product_fields( $p, $payload );
 		$p->save();
-		$rollback_id = $this->store_rollback( $p->get_id(), 'product_update', $before, $context );
-		$this->audit->record( 'product.updated', [ 'product_id' => $p->get_id() ] );
-		return [ 'action' => 'product_update', 'product_id' => $p->get_id(), 'rollback_id' => $rollback_id ];
+
+		$after = [];
+		foreach ( $touched as $field ) {
+			$after[ $field ] = $accessor->read_field( $id, $field );
+		}
+		$rollback_id = $this->store_product_delta( $id, $touched, $prior, $after, $context );
+
+		$this->audit->record( 'product.updated', [ 'product_id' => $id ] );
+		return [ 'action' => 'product_update', 'product_id' => $id, 'rollback_id' => $rollback_id ];
+	}
+
+	/**
+	 * PROGRAM-4 / P4.6 — the unified product fields this update writes, derived to match
+	 * apply_product_fields() exactly so capture/after/restore cover precisely what changed.
+	 *
+	 * Boundary note: WooCommerce may implicitly recalc stock_status on save when a
+	 * stock_quantity change crosses the no-stock threshold. That implicit shift is captured
+	 * only when the payload also sends stock_status (its field-scoped contract). This is
+	 * still strictly safer than the old full-object restore, which clobbered every sibling.
+	 *
+	 * @return string[]
+	 */
+	private function product_touched_fields( array $payload ): array {
+		$touched = [];
+		foreach ( [ 'name', 'description', 'short_description', 'sku', 'regular_price', 'sale_price', 'status', 'stock_status', 'image_id', 'gallery_image_ids' ] as $f ) {
+			if ( isset( $payload[ $f ] ) ) $touched[] = $f;
+		}
+		if ( isset( $payload['categories'] ) ) $touched[] = 'category_ids';
+		if ( isset( $payload['tags'] ) )       $touched[] = 'tag_ids';
+		if ( isset( $payload['attributes'] ) && is_array( $payload['attributes'] ) ) $touched[] = 'attributes';
+		if ( array_key_exists( 'manage_stock', $payload ) ) {
+			$touched[] = 'manage_stock';
+			if ( ! empty( $payload['manage_stock'] ) && isset( $payload['stock_quantity'] ) ) $touched[] = 'stock_quantity';
+		}
+		return $touched;
+	}
+
+	/**
+	 * PROGRAM-4 / P4.6 — persist a v2 field-scoped delta record for product_update into the
+	 * shared wpcc_woo_rollbacks option (FIFO cap 200). Legacy full-object before_state
+	 * records remain readable; all other actions keep using store_rollback().
+	 */
+	private function store_product_delta( int $id, array $touched, array $prior, array $after, array $context ): string {
+		$rid    = wp_generate_uuid4();
+		$record = RollbackDelta::build_record( $touched, $prior, $after, $context, [
+			'id'          => $rid,
+			'entity_id'   => $id,
+			'entity_type' => 'product',
+			'action'      => 'product_update',
+		] );
+		( new OptionListRollbackStore( 'wpcc_woo_rollbacks', 200 ) )->persist( $id, $rid, $record );
+		return $rid;
 	}
 
 	private function product_delete( array $payload, array $context ): array {
@@ -593,8 +653,16 @@ final class WooCommerceRuntimeManager {
 		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
 		$entity_id = $rec['entity_id'];
 		$action    = $rec['action'];
-		$before    = $rec['before_state'];
 		$etype     = $rec['entity_type'] ?? 'product';
+
+		// PROGRAM-4 / P4.6 — field-scoped, drift-aware delta restore for v2 product_update
+		// records. Only 'complete' is terminal; partial/conflict stay retryable and report
+		// truthfully. Legacy before_state records (and every other action) fall through.
+		if ( 'product_update' === $action && 2 === (int) ( $rec['version'] ?? 0 ) && isset( $rec['fields'] ) && is_array( $rec['fields'] ) ) {
+			return $this->rollback_product_delta( $rec, $idx, $rollbacks, $context );
+		}
+
+		$before = $rec['before_state'];
 
 		switch ( $etype ) {
 			case 'product':
@@ -642,6 +710,44 @@ final class WooCommerceRuntimeManager {
 		$rollbacks[ $idx ]['rollback_applied'] = true;
 		update_option( 'wpcc_woo_rollbacks', $rollbacks );
 		return [ 'action' => 'woocommerce_rollback', 'rollback_id' => $rollback_id, 'entity_id' => $entity_id ];
+	}
+
+	/**
+	 * PROGRAM-4 / P4.6 — restore a v2 product_update delta record via the RollbackDelta
+	 * core + WooProductAccessor. Marks the record applied only on a complete restore;
+	 * partial/conflict return an error envelope and stay retryable.
+	 *
+	 * @param array<string,mixed>       $rec
+	 * @param int                       $idx
+	 * @param array<int,array<string,mixed>> $rollbacks
+	 */
+	private function rollback_product_delta( array $rec, int $idx, array $rollbacks, array $context ): array {
+		$id = (int) $rec['entity_id'];
+		if ( ! wc_get_product( $id ) ) {
+			return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		}
+
+		$o = RollbackDelta::restore( new WooProductAccessor(), $id, $rec['fields'] );
+
+		if ( 'complete' === $o['status'] ) {
+			$rollbacks[ $idx ]['rollback_applied'] = true;
+			$rollbacks[ $idx ]['applied_at']       = time();
+			update_option( 'wpcc_woo_rollbacks', $rollbacks );
+		}
+
+		$this->audit->record( 'product.rollback', [
+			'product_id'      => $id,
+			'status'          => $o['status'],
+			'restored_fields' => $o['restored'],
+			'skipped_fields'  => $o['skipped'],
+		] );
+
+		return RollbackDelta::result( [
+			'action'      => 'woocommerce_rollback',
+			'rollback_id' => $rec['id'],
+			'entity_id'   => $id,
+			'product_id'  => $id,
+		], $o );
 	}
 
 	private function store_rollback( int $id, string $action, array $before, array $context ): string {
@@ -708,28 +814,10 @@ final class WooCommerceRuntimeManager {
 		return array_values( array_unique( $ids ) );
 	}
 
-	/** Full editable-state snapshot for product_update rollback. */
-	private function snapshot_product( \WC_Product $p ): array {
-		return [
-			'name'              => $p->get_name(),
-			'description'       => $p->get_description(),
-			'short_description' => $p->get_short_description(),
-			'sku'               => $p->get_sku(),
-			'regular_price'     => $p->get_regular_price(),
-			'sale_price'        => $p->get_sale_price(),
-			'status'            => $p->get_status(),
-			'manage_stock'      => $p->get_manage_stock(),
-			'stock_quantity'    => $p->get_stock_quantity(),
-			'stock_status'      => $p->get_stock_status(),
-			'category_ids'      => $p->get_category_ids(),
-			'tag_ids'           => $p->get_tag_ids(),
-			'image_id'          => $p->get_image_id(),
-			'gallery_image_ids' => $p->get_gallery_image_ids(),
-			'attributes'        => $p->get_attributes(),
-		];
-	}
-
-	/** Restore a product from a snapshot_product() snapshot (rollback). */
+	/**
+	 * Restore a product from a legacy full-object before_state snapshot (P4.6 retained the
+	 * restore side for pre-migration product_update records; new records use the delta core).
+	 */
 	private function restore_product( \WC_Product $p, array $b ): void {
 		if ( isset( $b['name'] ) )              $p->set_name( (string) $b['name'] );
 		if ( isset( $b['description'] ) )       $p->set_description( (string) $b['description'] );

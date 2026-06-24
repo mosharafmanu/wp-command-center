@@ -12,6 +12,8 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\SeoFieldAccessor;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -286,34 +288,18 @@ final class SeoRuntimeManager {
 	 * never clobbers because drift always skips.
 	 */
 	private function restore_delta( int $post_id, string $meta_key, array $record ): array {
-		$provider  = (string) $record['provider'];
-		$restored  = [];
-		$skipped   = [];
-		$conflicts = [];
+		$provider = (string) $record['provider'];
 
-		foreach ( (array) $record['fields'] as $field => $spec ) {
-			$field   = (string) $field;
-			$after   = $spec['after'] ?? '';
-			$current = SeoProvider::read_field( $post_id, $field, $provider );
+		// PROGRAM-4 / P4.0 — the field-scoped, drift-aware restore loop now lives in the
+		// runtime-agnostic RollbackDelta core, driven through a SEO field accessor. This
+		// runtime keeps ownership of terminality (mark applied only on 'complete'), audit,
+		// and the response envelope — so partial/conflict stay retryable.
+		$outcome   = RollbackDelta::restore( new SeoFieldAccessor( $provider ), $post_id, (array) $record['fields'] );
+		$status    = $outcome['status'];
+		$restored  = $outcome['restored'];
+		$skipped   = $outcome['skipped'];
+		$conflicts = $outcome['conflicts'];
 
-			if ( ! $this->values_equal( $current, $after, $field ) ) {
-				$skipped[]   = $field;
-				$conflicts[] = [ 'field' => $field, 'reason' => 'drift', 'expected' => $after, 'current' => $current ];
-				continue;
-			}
-
-			foreach ( (array) ( $spec['keys'] ?? [] ) as $key => $meta ) {
-				$key = (string) $key;
-				if ( ! empty( $meta['existed'] ) ) {
-					update_post_meta( $post_id, $key, $meta['prior'] );
-				} elseif ( metadata_exists( 'post', $post_id, $key ) ) {
-					delete_post_meta( $post_id, $key );
-				}
-			}
-			$restored[] = $field;
-		}
-
-		$status      = empty( $skipped ) ? 'complete' : ( empty( $restored ) ? 'conflict' : 'partial' );
 		$rollback_id = (string) ( $record['id'] ?? '' );
 
 		if ( 'complete' === $status ) {
@@ -364,25 +350,6 @@ final class SeoRuntimeManager {
 			'skipped_fields'  => $skipped,
 			'conflicts'       => $conflicts,
 		];
-	}
-
-	/**
-	 * Phase 3 (F-1) — drift comparison. robots compares normalized directive sets
-	 * (order-insensitive); scalars compare as strings — the same normalization
-	 * seo_update applied when it produced the recorded `after` value.
-	 *
-	 * @param mixed $current
-	 * @param mixed $expected
-	 */
-	private function values_equal( $current, $expected, string $field ): bool {
-		if ( 'robots' === $field ) {
-			$c = is_array( $current ) ? $current : [];
-			$e = is_array( $expected ) ? $expected : [];
-			sort( $c );
-			sort( $e );
-			return $c === $e;
-		}
-		return (string) $current === (string) $expected;
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────
@@ -469,18 +436,10 @@ final class SeoRuntimeManager {
 	 * @return array<string,array{keys:array<string,array{existed:bool,prior:mixed}>}>
 	 */
 	private function capture_prior( int $post_id, array $touched, string $provider ): array {
-		$out = [];
-		foreach ( $touched as $field ) {
-			$keys = [];
-			foreach ( SeoProvider::backing_keys( (string) $field, $provider ) as $key ) {
-				$keys[ $key ] = [
-					'existed' => metadata_exists( 'post', $post_id, $key ),
-					'prior'   => get_post_meta( $post_id, $key, true ),
-				];
-			}
-			$out[ (string) $field ] = [ 'keys' => $keys ];
-		}
-		return $out;
+		// PROGRAM-4 / P4.0 — delegated to the runtime-agnostic RollbackDelta core via the
+		// SEO field accessor. Captures only the touched fields' backing keys, each with
+		// prior existence + raw value (unchanged behaviour from the pre-P4.0 inline loop).
+		return RollbackDelta::capture( new SeoFieldAccessor( $provider ), $post_id, $touched );
 	}
 
 	/**

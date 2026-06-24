@@ -27,6 +27,13 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 SRC="$PLUGIN_DIR/includes/Operations/SeoRuntimeManager.php"
 PROV="$PLUGIN_DIR/includes/Operations/SeoProvider.php"
+# PROGRAM-4 / P4.0 — the field-scoped, drift-aware capture/restore loop was extracted
+# (behaviour-preserving) into the runtime-agnostic RollbackDelta core + post-meta accessor.
+# Static structural guards below follow the code to its new home; every FUNCTIONAL
+# round-trip assertion (== 2 onward) is unchanged and remains the behaviour oracle.
+RBD="$PLUGIN_DIR/includes/Rollback/RollbackDelta.php"
+PMA="$PLUGIN_DIR/includes/Rollback/PostMetaAccessor.php"
+SFA="$PLUGIN_DIR/includes/Rollback/SeoFieldAccessor.php"
 
 echo "Phase 3 (F-1) — Field-scoped, drift-aware SEO delta rollback"
 
@@ -36,12 +43,16 @@ has  "store record carries version 2"          "'version'          => 2," "$SRC"
 has  "store record carries fields map"          "'fields'           => \$fields," "$SRC"
 has  "store no longer keeps full before_state"  "after_all" "$SRC"
 lacks "store no longer writes full before_state record" "'before_state'     => \$before," "$SRC"
-has  "capture_prior records existence flag"     "metadata_exists( 'post', \$post_id, \$key )" "$SRC"
+has  "capture records existence flag (core)"    "metadata_exists( 'post', (int) \$entity_id, \$key )" "$PMA"
+has  "SEO delegates capture to core"            "RollbackDelta::capture( new SeoFieldAccessor" "$SRC"
 has  "delta restore branch present"             "function restore_delta" "$SRC"
-has  "drift compare helper present"             "function values_equal" "$SRC"
-has  "drift skips + records conflict"           "'reason' => 'drift'" "$SRC"
-has  "existed=true restores prior (even '')"    "update_post_meta( \$post_id, \$key, \$meta['prior'] )" "$SRC"
-has  "existed=false deletes on rollback"        "delete_post_meta( \$post_id, \$key )" "$SRC"
+has  "SEO delegates restore to core"            "RollbackDelta::restore( new SeoFieldAccessor" "$SRC"
+has  "drift compare helper present (accessor)"  "public function equals" "$SFA"
+has  "robots set-compare retained"              "sort( \$c )" "$SFA"
+has  "drift skips + records conflict (core)"    "'reason' => 'drift'" "$RBD"
+has  "existed=true restores prior (even '') (core)" "\$accessor->key_set( \$entity_id, \$key, \$meta['prior'] )" "$RBD"
+has  "existed=false deletes on rollback (core)" "\$accessor->key_delete( \$entity_id, \$key )" "$RBD"
+has  "accessor key_delete = delete_post_meta"   "delete_post_meta( (int) \$entity_id, \$key )" "$PMA"
 has  "only complete is terminal"                "if ( 'complete' === \$status ) {" "$SRC"
 has  "conflict error code"                      "wpcc_rollback_conflict" "$SRC"
 has  "partial error code"                       "wpcc_rollback_partial" "$SRC"

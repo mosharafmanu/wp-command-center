@@ -8,10 +8,16 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\UserFieldAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
 final class UserManager {
+
+	/** PROGRAM-4 / P4.5 — unified user profile fields for field-scoped rollback. */
+	private const USER_FIELDS = [ 'email', 'display_name', 'first_name', 'last_name' ];
 
 	private AuditLog $audit;
 
@@ -180,12 +186,18 @@ final class UserManager {
 			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
 		}
 
-		$before = [
-			'email'        => $user->user_email,
-			'display_name' => $user->display_name,
-			'first_name'   => $user->first_name,
-			'last_name'    => $user->last_name,
-		];
+		// PROGRAM-4 / P4.5 — capture the prior state of ONLY the fields this call touches,
+		// BEFORE the write (field-scoped, drift-aware delta via the RollbackDelta core).
+		// Replaces the full-object {email,display_name,first_name,last_name} snapshot and
+		// fixes the pre-P4.5 bug where update rollback never restored the email.
+		$accessor = new UserFieldAccessor();
+		$touched  = [];
+		foreach ( self::USER_FIELDS as $field ) {
+			if ( isset( $payload[ $field ] ) ) {
+				$touched[] = $field;
+			}
+		}
+		$prior = RollbackDelta::capture( $accessor, $user_id, $touched );
 
 		$updates = [];
 		if ( isset( $payload['email'] ) ) {
@@ -211,11 +223,15 @@ final class UserManager {
 			return $this->error( 'wpcc_user_update_failed', $result->get_error_message() );
 		}
 
-		$this->store_rollback( $user_id, 'update', $before, $context );
+		$after = [];
+		foreach ( $touched as $field ) {
+			$after[ $field ] = $accessor->read_field( $user_id, $field );
+		}
+		$rollback_id = $this->store_user_delta( $user_id, $touched, $prior, $after, $context );
 
 		$this->audit->record( 'user.updated', [ 'user_id' => $user_id, 'fields' => array_keys( $updates ) ] );
 
-		return [ 'action' => 'user_update', 'user_id' => $user_id, 'updated_fields' => array_keys( $updates ) ];
+		return [ 'action' => 'user_update', 'user_id' => $user_id, 'updated_fields' => array_keys( $updates ), 'rollback_id' => $rollback_id ];
 	}
 
 	private function delete_user( array $payload, array $context ): array {
@@ -411,6 +427,18 @@ final class UserManager {
 		update_option( 'wpcc_user_rollbacks', $rollbacks );
 	}
 
+	/**
+	 * PROGRAM-4 / P4.5 — persist one field-scoped v2 user delta record (touched profile
+	 * fields only, each with post-write `after` + prior value) in the existing
+	 * wpcc_user_rollbacks option. Legacy full-object before_state records remain readable.
+	 */
+	private function store_user_delta( int $user_id, array $touched, array $prior, array $after, array $context ): string {
+		$rollback_id = wp_generate_uuid4();
+		$record      = RollbackDelta::build_record( $touched, $prior, $after, $context, [ 'id' => $rollback_id, 'user_id' => $user_id, 'action' => 'update' ] );
+		( new OptionListRollbackStore( 'wpcc_user_rollbacks', 100 ) )->persist( $user_id, $rollback_id, $record );
+		return $rollback_id;
+	}
+
 	public function rollback( array $payload, array $context = [] ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
@@ -438,7 +466,20 @@ final class UserManager {
 
 		$user_id = $record['user_id'];
 		$action  = $record['action'];
-		$before  = $record['before_state'];
+		$before  = $record['before_state'] ?? [];
+
+		// PROGRAM-4 / P4.5 — field-scoped, drift-aware update restore (v2 records).
+		// Only complete is terminal; a drifted field reports conflict/partial instead of
+		// clobbering a later change, and email is restored correctly (vs the legacy bug).
+		if ( 'update' === $action && isset( $record['fields'] ) && is_array( $record['fields'] ) ) {
+			$o = RollbackDelta::restore( new UserFieldAccessor(), $user_id, $record['fields'] );
+			if ( 'complete' === $o['status'] ) {
+				$rollbacks[ $idx ]['rollback_applied'] = true;
+				update_option( 'wpcc_user_rollbacks', $rollbacks );
+			}
+			$this->audit->record( 'user.rollback.applied', [ 'rollback_id' => $rollback_id, 'user_id' => $user_id, 'action' => 'update', 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ] );
+			return RollbackDelta::result( [ 'action' => 'user_rollback', 'rollback_id' => $rollback_id, 'user_id' => $user_id ], $o );
+		}
 
 		switch ( $action ) {
 			case 'create':

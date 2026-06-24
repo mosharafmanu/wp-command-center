@@ -315,6 +315,11 @@ final class PluginManager {
 			'new_version'     => $new_version,
 			'health_check'    => $health ? $health['status'] : 'skipped',
 			'health_required' => $this->registry->requires_health_check( PluginRegistry::ACTION_UPDATE ),
+			// PROGRAM-4 certification (BLK-3) — honest reversibility: a plugin update replaces
+			// files on disk and captures no rollback artifact, so it is NOT reversible. Stated
+			// explicitly so the contract is truthful (additive field; no registry/contract change).
+			'reversible'      => false,
+			'reversible_note' => __( 'Plugin updates are not automatically reversible; no rollback is captured. Snapshot before updating if reversibility is required.', 'wp-command-center' ),
 		];
 	}
 

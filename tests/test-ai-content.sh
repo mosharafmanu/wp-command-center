@@ -60,7 +60,11 @@ lacks "no new content generate route"            "/admin/content/generate"  "$RE
 
 echo
 echo "== 3. Static: ContentManager excerpt rollback fix (additive, guarded) =="
-has  "update before-state captures excerpt"      "'excerpt' => \$post->post_excerpt" "$CM"
+# PROGRAM-4 / P4.3 replaced the full-object before-state snapshot (which carried the literal
+# 'excerpt' => $post->post_excerpt) with a field-scoped RollbackDelta capture over CONTENT_FIELDS.
+# Validate the delta implementation: excerpt is a tracked content field captured via the core.
+has  "update delta-captures excerpt (tracked field)" "'content', 'excerpt' ]" "$CM"
+has  "update captures touched fields via delta core" "RollbackDelta::capture" "$CM"
 has  "rollback restores excerpt only when present" "array_key_exists( 'excerpt', \$before )" "$CM"
 has  "rollback sets post_excerpt"                "'post_excerpt'"           "$CM"
 

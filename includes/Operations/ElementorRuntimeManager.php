@@ -12,6 +12,9 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\PostMetaRollbackStore;
+use WPCommandCenter\Rollback\ElementorDataAccessor;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,6 +26,9 @@ final class ElementorRuntimeManager {
 		'text-editor' => 'editor',
 		'button'      => 'text',
 	];
+
+	/** PROGRAM-4.10 — postmeta-per-record store prefix for _elementor_data delta records. */
+	private const RB_PREFIX = '_wpcc_elementor_rb_';
 
 	private AuditLog $audit;
 
@@ -138,14 +144,24 @@ final class ElementorRuntimeManager {
 		$data = $this->load_data( $id );
 		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'wp-command-center' ) );
 
-		$before_json = (string) get_post_meta( $id, '_elementor_data', true );
+		// PROGRAM-4.10 — capture the WHOLE pre-edit _elementor_data document atomically (never
+		// decomposed), drift-aware via the RollbackDelta core. Replaces the unconditional
+		// whole-document option-blob restore (which clobbered concurrent edits to other widgets).
+		$acc   = new ElementorDataAccessor();
+		$prior = RollbackDelta::capture( $acc, $id, [ 'data' ] );
 
 		$found = $this->mutate_widget( $data, $widget_id, $mutator );
 		if ( ! $found ) return $this->error( 'wpcc_widget_not_found', sprintf( __( 'Widget %s not found on this page.', 'wp-command-center' ), esc_html( $widget_id ) ) );
 
 		$this->save_data( $id, $data );
 
-		$rollback_id = $this->store_rollback( $id, $action, [ 'data' => $before_json ], $cx );
+		$after       = [ 'data' => $acc->read_field( $id, 'data' ) ];
+		$rollback_id = wp_generate_uuid4();
+		$record      = RollbackDelta::build_record( [ 'data' ], $prior, $after, $cx, [
+			'id' => $rollback_id, 'page_id' => $id, 'action' => $action,
+		] );
+		( new PostMetaRollbackStore( self::RB_PREFIX ) )->persist( $id, $rollback_id, $record );
+
 		$this->audit->record( str_replace( 'elementor_', 'elementor.', $action ), [ 'page_id' => $id, 'widget_id' => $widget_id ] );
 		return [ 'action' => $action, 'page_id' => $id, 'widget_id' => $widget_id, 'rollback_id' => $rollback_id ];
 	}
@@ -155,9 +171,18 @@ final class ElementorRuntimeManager {
 	public function rollback( array $payload, array $context = [] ): array {
 		$rid = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'wp-command-center' ) );
+
+		// PROGRAM-4.10 — v2 whole-document delta records live in postmeta (per page), resolved by id.
+		$store    = new PostMetaRollbackStore( self::RB_PREFIX );
+		$resolved = $store->resolve( $rid );
+		if ( null !== $resolved ) {
+			return $this->rollback_data_delta( $store, $rid, $resolved );
+		}
+
+		// Legacy option records (pre-P4.10): unchanged unconditional whole-document restore.
 		$rollbacks = get_option( 'wpcc_elementor_rollbacks', [] );
 		$idx = null;
-		foreach ( $rollbacks as $i => $r ) { if ( $r['id'] === $rid ) { $idx = $i; break; } }
+		foreach ( $rollbacks as $i => $r ) { if ( ( $r['id'] ?? null ) === $rid ) { $idx = $i; break; } }
 		if ( null === $idx ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'wp-command-center' ) );
 		if ( ! empty( $rollbacks[ $idx ]['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
 
@@ -169,8 +194,37 @@ final class ElementorRuntimeManager {
 
 		$rollbacks[ $idx ]['rollback_applied'] = true;
 		update_option( 'wpcc_elementor_rollbacks', $rollbacks );
-		$this->audit->record( 'elementor.rollback', [ 'rollback_id' => $rid, 'page_id' => $id ] );
-		return [ 'action' => 'elementor_rollback', 'rollback_id' => $rid, 'page_id' => $id, 'restored' => true ];
+		$this->audit->record( 'elementor.rollback', [ 'rollback_id' => $rid, 'page_id' => $id, 'path' => 'legacy' ] );
+		return [ 'action' => 'elementor_rollback', 'rollback_id' => $rid, 'page_id' => $id, 'restored' => true, 'path' => 'legacy' ];
+	}
+
+	/**
+	 * PROGRAM-4.10 — drift-aware whole-document restore of a v2 delta record. Marks applied only
+	 * on a complete restore; a drift conflict is an honest error envelope that stays retryable
+	 * (never clobbers a newer edit to any widget on the page).
+	 *
+	 * @param array{entity_id:mixed,record:array<string,mixed>} $resolved
+	 */
+	private function rollback_data_delta( PostMetaRollbackStore $store, string $rid, array $resolved ): array {
+		$rec = $resolved['record'];
+		$id  = (int) ( $resolved['entity_id'] ?? ( $rec['page_id'] ?? 0 ) );
+		if ( ! empty( $rec['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
+
+		$o = RollbackDelta::restore( new ElementorDataAccessor(), $id, (array) ( $rec['fields'] ?? [] ) );
+
+		if ( 'complete' === $o['status'] ) {
+			$this->clear_cache( $id );
+			$rec['rollback_applied'] = true;
+			$rec['applied_at']       = time();
+			$store->mark_applied( $id, $rid, $rec );
+			$this->audit->record( 'elementor.rollback', [ 'rollback_id' => $rid, 'page_id' => $id, 'status' => 'complete' ] );
+			return [ 'action' => 'elementor_rollback', 'rollback_id' => $rid, 'page_id' => $id, 'status' => 'complete', 'restored' => true, 'reversible' => true ];
+		}
+
+		// drift → conflict: not applied, retryable, honest (never a clean success, never clobbers).
+		$this->audit->record( 'elementor.rollback', [ 'rollback_id' => $rid, 'page_id' => $id, 'status' => $o['status'] ] );
+		return [ 'action' => 'elementor_rollback', 'rollback_id' => $rid, 'page_id' => $id, 'error' => true,
+			'code' => 'wpcc_rollback_conflict', 'status' => $o['status'], 'restored' => false, 'reversible' => false ];
 	}
 
 	// ── Helpers ──────────────────────────────────────────────────
@@ -237,17 +291,6 @@ final class ElementorRuntimeManager {
 		$field    = self::TEXT_FIELD[ $type ] ?? 'title';
 		$val      = $settings[ $field ] ?? '';
 		return is_string( $val ) ? wp_strip_all_tags( $val ) : '';
-	}
-
-	private function store_rollback( int $id, string $action, array $before, array $context ): string {
-		if ( ! ElementorRegistry::supports_rollback( $action ) ) return '';
-		$rollbacks = get_option( 'wpcc_elementor_rollbacks', [] );
-		$rid = wp_generate_uuid4();
-		$rollbacks[] = [ 'id' => $rid, 'entity_id' => $id, 'action' => $action, 'before_state' => $before, 'rollback_applied' => false, 'created_at' => time(),
-			'session_id' => $context['session_id'] ?? null, 'task_id' => $context['task_id'] ?? null ];
-		if ( count( $rollbacks ) > 100 ) $rollbacks = array_slice( $rollbacks, -100 );
-		update_option( 'wpcc_elementor_rollbacks', $rollbacks );
-		return $rid;
 	}
 
 	private function error( string $code, string $message ): array {

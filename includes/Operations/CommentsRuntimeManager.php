@@ -2,6 +2,9 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\CommentFieldAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -87,14 +90,21 @@ final class CommentsRuntimeManager {
 			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
 		}
 
+		// PROGRAM-4 / P4.4 — capture the prior moderation status BEFORE the change so it is
+		// reversible via the field-scoped, drift-aware delta (previously not reversible).
+		$accessor = new CommentFieldAccessor();
+		$prior    = RollbackDelta::capture( $accessor, $comment_id, [ 'status' ] );
+
 		$result = wp_set_comment_status( $comment_id, 'approve' );
 		if ( ! $result ) {
 			return $this->error( 'wpcc_comment_approve_failed', __( 'Failed to approve comment.', 'wp-command-center' ) );
 		}
 
+		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
+
 		$this->audit->record( 'comment.approved', [ 'comment_id' => $comment_id ] );
 
-		return [ 'action' => 'comment_approve', 'comment_id' => $comment_id, 'status' => 'approved' ];
+		return [ 'action' => 'comment_approve', 'comment_id' => $comment_id, 'status' => 'approved', 'rollback_id' => $rollback_id ];
 	}
 
 	private function unapprove_comment( array $payload, array $context ): array {
@@ -105,14 +115,19 @@ final class CommentsRuntimeManager {
 			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
 		}
 
+		$accessor = new CommentFieldAccessor();
+		$prior    = RollbackDelta::capture( $accessor, $comment_id, [ 'status' ] );
+
 		$result = wp_set_comment_status( $comment_id, 'hold' );
 		if ( ! $result ) {
 			return $this->error( 'wpcc_comment_unapprove_failed', __( 'Failed to unapprove comment.', 'wp-command-center' ) );
 		}
 
+		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
+
 		$this->audit->record( 'comment.unapproved', [ 'comment_id' => $comment_id ] );
 
-		return [ 'action' => 'comment_unapprove', 'comment_id' => $comment_id, 'status' => 'hold' ];
+		return [ 'action' => 'comment_unapprove', 'comment_id' => $comment_id, 'status' => 'hold', 'rollback_id' => $rollback_id ];
 	}
 
 	private function spam_comment( array $payload, array $context ): array {
@@ -123,14 +138,19 @@ final class CommentsRuntimeManager {
 			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
 		}
 
+		$accessor = new CommentFieldAccessor();
+		$prior    = RollbackDelta::capture( $accessor, $comment_id, [ 'status' ] );
+
 		$result = wp_spam_comment( $comment_id );
 		if ( ! $result ) {
 			return $this->error( 'wpcc_comment_spam_failed', __( 'Failed to mark comment as spam.', 'wp-command-center' ) );
 		}
 
+		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
+
 		$this->audit->record( 'comment.spammed', [ 'comment_id' => $comment_id ] );
 
-		return [ 'action' => 'comment_spam', 'comment_id' => $comment_id, 'status' => 'spam' ];
+		return [ 'action' => 'comment_spam', 'comment_id' => $comment_id, 'status' => 'spam', 'rollback_id' => $rollback_id ];
 	}
 
 	private function trash_comment( array $payload, array $context ): array {
@@ -243,6 +263,18 @@ final class CommentsRuntimeManager {
 		$comment_id = $record['comment_id'];
 		$action     = $record['action'];
 
+		// PROGRAM-4 / P4.4 — field-scoped, drift-aware status restore (v2 records).
+		// Only complete is terminal; a drifted status reports conflict instead of clobbering.
+		if ( isset( $record['fields'] ) && is_array( $record['fields'] ) ) {
+			$o = RollbackDelta::restore( new CommentFieldAccessor(), $comment_id, $record['fields'] );
+			if ( 'complete' === $o['status'] ) {
+				$rollbacks[ $idx ]['rollback_applied'] = true;
+				update_option( 'wpcc_comments_rollbacks', $rollbacks );
+			}
+			$this->audit->record( 'comment.rollback.applied', [ 'rollback_id' => $rollback_id, 'comment_id' => $comment_id, 'action' => 'status', 'status' => $o['status'], 'restored_fields' => $o['restored'], 'skipped_fields' => $o['skipped'] ] );
+			return RollbackDelta::result( [ 'action' => 'comment_rollback', 'rollback_id' => $rollback_id, 'comment_id' => $comment_id ], $o );
+		}
+
 		switch ( $action ) {
 			case 'trash':
 				wp_untrash_comment( $comment_id );
@@ -283,6 +315,18 @@ final class CommentsRuntimeManager {
 		}
 
 		update_option( 'wpcc_comments_rollbacks', $rollbacks );
+	}
+
+	/**
+	 * PROGRAM-4 / P4.4 — persist one field-scoped v2 status delta record (the touched
+	 * `status` field with post-change `after` + prior value) in the existing
+	 * wpcc_comments_rollbacks option. Makes approve/unapprove/spam reversible.
+	 */
+	private function store_status_delta( int $comment_id, array $prior, array $after, array $context ): string {
+		$rollback_id = wp_generate_uuid4();
+		$record      = RollbackDelta::build_record( [ 'status' ], $prior, $after, $context, [ 'id' => $rollback_id, 'comment_id' => $comment_id, 'action' => 'status' ] );
+		( new OptionListRollbackStore( 'wpcc_comments_rollbacks', 100 ) )->persist( $comment_id, $rollback_id, $record );
+		return $rollback_id;
 	}
 
 	private function format_comment( $comment ): array {

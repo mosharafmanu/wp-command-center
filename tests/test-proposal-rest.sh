@@ -106,11 +106,17 @@ $emit( 'gated apply -> pending_approval (+request_id)', $pending_ok && '' !== $r
 $emit( 'read-through on GET materializes applied', 'applied' === ( $d_rt['status'] ?? '' ), (string) ( $d_rt['status'] ?? '' ) );
 update_option( 'wpcc_security_mode', 'developer' );
 
-// ── rollback-aware presentation: reverse the applied change -> change_status rolled_back ──
+// ── rollback-aware presentation under DRIFT (PROGRAM-4 / P4.2 certified drift-safety) ──
+// The applied change set alt='edited rest cat'; the gated read-through above then executed a
+// SECOND media_update on the SAME attachment (alt='gated rt'). Reversing the first change is
+// therefore a DRIFT case — the field changed since it was applied. P4.2's drift-aware Media
+// rollback correctly REFUSES (it must not clobber the newer value), so the change is NOT marked
+// rolled_back: the proposal's change_status stays 'applied' and the newer alt is preserved.
 ( new WPCommandCenter\Operations\OperationExecutor() )->run( 'change_history', [ 'action' => 'rollback_target', 'change_id' => $d_a['change_id'] ], [ 'actor' => [ 'type' => 'admin', 'wp_user_id' => $uid ], 'source' => 'admin_ui' ] );
 [ , $d_rb ] = $call( 'GET', "$NS/$pid" );
 $emit( 'rollback-aware: status stays applied', 'applied' === ( $d_rb['status'] ?? '' ) );
-$emit( 'rollback-aware: change_status = rolled_back', 'rolled_back' === ( $d_rb['change_status'] ?? '' ), (string) ( $d_rb['change_status'] ?? '' ) );
+$emit( 'rollback-aware: drift refused -> change_status NOT rolled_back', 'rolled_back' !== ( $d_rb['change_status'] ?? '' ), (string) ( $d_rb['change_status'] ?? '' ) );
+$emit( 'rollback-aware: drift-safe -> newer alt preserved (no clobber)', 'gated rt' === get_post_meta( $aid, '_wp_attachment_image_alt', true ), (string) get_post_meta( $aid, '_wp_attachment_image_alt', true ) );
 
 // ── cleanup ──
 update_option( 'wpcc_security_mode', $orig_mode );

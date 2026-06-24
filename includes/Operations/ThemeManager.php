@@ -221,6 +221,11 @@ final class ThemeManager {
 			'new_version'     => $new,
 			'health_check'    => $health['status'] ?? 'skipped',
 			'health_required' => true,
+			// PROGRAM-4 certification (BLK-3) — honest reversibility: a theme update replaces
+			// files on disk and captures no rollback artifact, so it is NOT reversible. Stated
+			// explicitly so the contract is truthful (additive field; no registry/contract change).
+			'reversible'      => false,
+			'reversible_note' => __( 'Theme updates are not automatically reversible; no rollback is captured. Snapshot before updating if reversibility is required.', 'wp-command-center' ),
 		];
 	}
 

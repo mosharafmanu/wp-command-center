@@ -2,6 +2,9 @@
 namespace WPCommandCenter\Operations;
 
 use WPCommandCenter\Security\AuditLog;
+use WPCommandCenter\Rollback\RollbackDelta;
+use WPCommandCenter\Rollback\OptionAccessor;
+use WPCommandCenter\Rollback\OptionListRollbackStore;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -22,12 +25,19 @@ final class SettingsRuntimeManager {
 			SettingsRegistry::A_INVENTORY=>['inventory',false],SettingsRegistry::A_ANALYZE=>['analyze',false],
 		];
 		[$method,$is_mutation]=$opts[$a];
+		// PROGRAM-4 / P4.1 — capture the prior state of ONLY the options this call will
+		// touch BEFORE the write (the field-scoped, drift-aware delta). This both fixes the
+		// pre-existing capture-after-write defect and replaces the full-object group snapshot.
+		$touched=$is_mutation?$this->touched_options($a,$p):[];
+		$prior=$is_mutation?RollbackDelta::capture(new OptionAccessor(),0,$touched):[];
 		$result=$this->$method($p);
 		if(isset($result['error'])){
 			return new \WP_Error($result['code'],$result['message']);
 		}
 		if($is_mutation){
-			$rid=$this->store_rollback($a,[],$cx);
+			$after=[];foreach($touched as $opt)$after[$opt]=get_option($opt);
+			$rid=$this->store_rollback($a,$touched,$prior,$after,$cx);
+			$result['rollback_id']=$rid;
 			$labels=[
 				SettingsRegistry::A_GENERAL_UPDATE=>['settings.general.updated','Site settings updated'],
 				SettingsRegistry::A_READING_UPDATE=>['settings.reading.updated','Reading settings updated'],
@@ -56,8 +66,59 @@ final class SettingsRuntimeManager {
 	private function privacy_update(array $p):array{if(isset($p['privacy_page'])){update_option('wp_page_for_privacy_policy',(int)$p['privacy_page']);}return['updated'=>true];}
 	private function inventory(array $p):array{return['site_title'=>get_option('blogname'),'timezone'=>get_option('timezone_string')?:'UTC','language'=>get_option('WPLANG')?:'en_US','front_page'=>get_option('page_on_front'),'posts_page'=>get_option('page_for_posts'),'permalink'=>get_option('permalink_structure')?:'plain','comments_enabled'=>'open'===get_option('default_comment_status'),'privacy_page'=>(int)get_option('wp_page_for_privacy_policy'),'search_visible'=>(bool)get_option('blog_public')];}
 	private function analyze(array $p):array{$issues=[];if(!get_option('blog_public'))$issues[]=['type'=>'seo','severity'=>'high','setting'=>'blog_public','message'=>'Search engines discouraged (site not public)'];if(empty(get_option('permalink_structure')))$issues[]=['type'=>'seo','severity'=>'medium','setting'=>'permalink_structure','message'=>'Plain permalinks — SEO unfriendly'];if(!get_option('wp_page_for_privacy_policy'))$issues[]=['type'=>'privacy','severity'=>'high','setting'=>'privacy_page','message'=>'No privacy policy page assigned'];if('open'!==get_option('default_comment_status'))$issues[]=['type'=>'discussion','severity'=>'low','setting'=>'comments','message'=>'Comments disabled by default'];if(!get_option('comment_moderation'))$issues[]=['type'=>'spam','severity'=>'low','setting'=>'comment_moderation','message'=>'No comment moderation — spam risk'];return['issue_count'=>count($issues),'issues'=>$issues];}
-	public function rollback(array $p,array $cx=[]):array{$rid=(string)($p['rollback_id']??'');if(''===$rid)return $this->err('wpcc_missing_rb',__('Rollback ID required.','wp-command-center'));$rbs=get_option('wpcc_settings_rollbacks',[]);$rec=null;$idx=null;foreach($rbs as $i=>$r){if($r['id']===$rid){$rec=$r;$idx=$i;break;}}if(!$rec)return $this->err('wpcc_rb_nf',__('Not found.','wp-command-center'));if($rec['rollback_applied'])return $this->err('wpcc_rb_done',__('Already applied.','wp-command-center'));foreach($rec['before_state']as $opt=>$val)update_option($opt,$val);$rbs[$idx]['rollback_applied']=true;update_option('wpcc_settings_rollbacks',$rbs);return['action'=>'settings_rollback','rollback_id'=>$rid];}
+	public function rollback(array $p,array $cx=[]):array{
+		$rid=(string)($p['rollback_id']??'');
+		if(''===$rid)return $this->err('wpcc_missing_rb',__('Rollback ID required.','wp-command-center'));
+		// PROGRAM-4B — resolve via the shared RollbackStore (consistent storage API).
+		$store=new OptionListRollbackStore('wpcc_settings_rollbacks',200);
+		$resolved=$store->resolve($rid);
+		if(!$resolved)return $this->err('wpcc_rb_nf',__('Not found.','wp-command-center'));
+		$rec=$resolved['record'];
+		if(!empty($rec['rollback_applied']))return $this->err('wpcc_rb_done',__('Already applied.','wp-command-center'));
 
-	private function store_rollback(string $action,array $before,array $cx):string{$rid=wp_generate_uuid4();$maps=[SettingsRegistry::A_GENERAL_UPDATE=>['blogname','blogdescription','admin_email','WPLANG','timezone_string','date_format','time_format','start_of_week'],SettingsRegistry::A_READING_UPDATE=>['page_on_front','page_for_posts','posts_per_page','posts_per_rss','blog_public'],SettingsRegistry::A_DISCUSSION_UPDATE=>['default_comment_status','comment_moderation','require_name_email','comment_registration','avatar_default','thread_comments'],SettingsRegistry::A_MEDIA_UPDATE=>['thumbnail_size_w','thumbnail_size_h','thumbnail_crop','medium_size_w','medium_size_h','large_size_w','large_size_h'],SettingsRegistry::A_PERMALINK_UPDATE=>['permalink_structure','category_base','tag_base'],SettingsRegistry::A_PRIVACY_UPDATE=>['wp_page_for_privacy_policy']];$snapshot=[];foreach(($maps[$action]??[])as $opt)$snapshot[$opt]=get_option($opt);$rbs=get_option('wpcc_settings_rollbacks',[]);$rbs[]=['id'=>$rid,'action'=>$action,'before_state'=>$snapshot,'rollback_applied'=>false,'created_at'=>time(),'session_id'=>$cx['session_id']??null,'task_id'=>$cx['task_id']??null];if(count($rbs)>200)$rbs=array_slice($rbs,-200);update_option('wpcc_settings_rollbacks',$rbs);return $rid;}
+		// PROGRAM-4 / P4.1 — v2 field-scoped, drift-aware delta restore via the RollbackDelta
+		// core. Only complete is terminal (idempotency); partial/conflict stay retryable.
+		if(isset($rec['fields'])&&is_array($rec['fields'])){
+			$o=RollbackDelta::restore(new OptionAccessor(),0,$rec['fields']);
+			if('complete'===$o['status']){$rec['rollback_applied']=true;$store->mark_applied(0,$rid,$rec);}
+			$this->audit->record('settings.restored',['rollback_id'=>$rid,'path'=>'delta','status'=>$o['status'],'restored_fields'=>$o['restored'],'skipped_fields'=>$o['skipped']]);
+			return RollbackDelta::result(['action'=>'settings_rollback','rollback_id'=>$rid,'path'=>'delta'],$o);
+		}
+
+		// Legacy pre-P4.1 full-object record: restore the whole before_state unchanged.
+		foreach(($rec['before_state']??[])as $opt=>$val)update_option($opt,$val);
+		$rec['rollback_applied']=true;$store->mark_applied(0,$rid,$rec);
+		$this->audit->record('settings.restored',['rollback_id'=>$rid,'path'=>'legacy']);
+		return['action'=>'settings_rollback','rollback_id'=>$rid,'restored'=>true,'status'=>'complete','path'=>'legacy'];
+	}
+
+	/** Options a given update action writes, keyed option_name => payload_key — the single
+	 *  source of truth that mirrors each *_update method's write set (field-scoped unit). */
+	private function option_field_map(string $action):array{
+		switch($action){
+			case SettingsRegistry::A_GENERAL_UPDATE:return['blogname'=>'site_title','blogdescription'=>'tagline','admin_email'=>'admin_email','WPLANG'=>'language','timezone_string'=>'timezone','date_format'=>'date_format','time_format'=>'time_format','start_of_week'=>'week_start'];
+			case SettingsRegistry::A_READING_UPDATE:return['page_on_front'=>'front_page','page_for_posts'=>'posts_page','posts_per_page'=>'posts_per_page','posts_per_rss'=>'feed_limit','blog_public'=>'search_visibility'];
+			case SettingsRegistry::A_DISCUSSION_UPDATE:return['default_comment_status'=>'default_comment_status','comment_moderation'=>'comment_moderation','require_name_email'=>'require_name_email','comment_registration'=>'comment_registration','avatar_default'=>'avatar_default','thread_comments'=>'thread_comments'];
+			case SettingsRegistry::A_MEDIA_UPDATE:return['thumbnail_size_w'=>'thumbnail_size_w','thumbnail_size_h'=>'thumbnail_size_h','thumbnail_crop'=>'thumbnail_crop','medium_size_w'=>'medium_size_w','medium_size_h'=>'medium_size_h','large_size_w'=>'large_size_w','large_size_h'=>'large_size_h'];
+			case SettingsRegistry::A_PERMALINK_UPDATE:return['permalink_structure'=>'structure'];
+			case SettingsRegistry::A_PRIVACY_UPDATE:return['wp_page_for_privacy_policy'=>'privacy_page'];
+			default:return[];
+		}
+	}
+
+	/** The option names this call will actually write — those whose payload key is set
+	 *  (matches each update method's isset() guard). */
+	private function touched_options(string $action,array $p):array{
+		$touched=[];foreach($this->option_field_map($action)as $opt=>$pkey){if(isset($p[$pkey]))$touched[]=$opt;}return $touched;
+	}
+
+	/** Persist one field-scoped v2 delta record (touched options only) in the existing
+	 *  wpcc_settings_rollbacks option. Legacy before_state records remain readable. */
+	private function store_rollback(string $action,array $touched,array $prior,array $after,array $cx):string{
+		$rid=wp_generate_uuid4();
+		$rec=RollbackDelta::build_record($touched,$prior,$after,$cx,['id'=>$rid,'action'=>$action]);
+		(new OptionListRollbackStore('wpcc_settings_rollbacks',200))->persist(0,$rid,$rec);
+		return $rid;
+	}
 	private function err(string $code,string $msg):array{return['error'=>true,'code'=>$code,'message'=>$msg];}
 }
