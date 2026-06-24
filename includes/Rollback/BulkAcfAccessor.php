@@ -21,10 +21,24 @@ final class BulkAcfAccessor implements FieldAccessor {
 
 	private const FIELD = 'value';
 
+	/** Field key or name as supplied to bulk_acf. */
 	private string $field_key;
+
+	/** Resolved field name (the raw meta_key), for existence checks. */
+	private string $name;
 
 	public function __construct( string $field_key ) {
 		$this->field_key = $field_key;
+		// PROGRAM-4 certification (AR-MED-1) — resolve the underlying field NAME for existence,
+		// because the value's meta_key is the field name, not the key. Without this, a field-KEY
+		// selector would read existence=false and clear-instead-of-restore on rollback.
+		$this->name = $field_key;
+		if ( function_exists( 'acf_get_field' ) ) {
+			$f = acf_get_field( $field_key );
+			if ( is_array( $f ) && ! empty( $f['name'] ) ) {
+				$this->name = (string) $f['name'];
+			}
+		}
 	}
 
 	public function backing_keys( string $field ): array {
@@ -39,16 +53,19 @@ final class BulkAcfAccessor implements FieldAccessor {
 		if ( self::FIELD !== $field || ! function_exists( 'get_field' ) ) {
 			return null;
 		}
-		return get_field( $this->field_key, (int) $entity_id );
+		// Read RAW (unformatted) — the storable form update_field() expects; keeps
+		// capture↔after↔restore symmetric for formatted-return fields (relationship/image).
+		return get_field( $this->field_key, (int) $entity_id, false );
 	}
 
 	/**
 	 * @param int|string $entity_id
 	 */
 	public function key_exists( $entity_id, string $key ): bool {
-		// ACF stores a scalar value under meta_key == field name; the row's presence is the
-		// existence signal (distinguishes absent from present-but-empty).
-		return metadata_exists( 'post', (int) $entity_id, $this->field_key );
+		// ACF stores a scalar value under meta_key == field NAME; the row's presence is the
+		// existence signal (distinguishes absent from present-but-empty). Uses the resolved name
+		// so a field-KEY selector reports existence correctly.
+		return metadata_exists( 'post', (int) $entity_id, $this->name );
 	}
 
 	/**

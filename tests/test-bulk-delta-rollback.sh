@@ -154,6 +154,22 @@ else
 			$out["d11_run"]=1; wp_delete_post($pa,true);
 		} else { $out["d11_run"]=0; }
 
+		// D11b — AR-MED-1 regression: bulk_acf via a real field KEY selector must RESTORE the
+		// prior value (not clear it). Pre-fix, existence resolved on the key → false → rollback
+		// cleared instead of restoring.
+		if(function_exists("acf_update_field_group")&&function_exists("update_field")){
+			acf_update_field_group(["key"=>"group_bulkkey","title"=>"BK","fields"=>[],"location"=>[[["param"=>"post_type","operator"=>"==","value"=>"post"]]],"active"=>true]);
+			acf_update_field(["key"=>"field_bulkkey","label"=>"BK","name"=>"bk_field","type"=>"text","parent"=>"group_bulkkey"]);
+			$pk=$mk("BKP","draft");
+			update_field("field_bulkkey","PRIOR",$pk);            // prior value (exists under name bk_field)
+			$rk=$mgr->run(["action"=>"bulk_acf","post_ids"=>[$pk],"field_key"=>"field_bulkkey","value"=>"NEWV"]);
+			$out["d11b_applied"]=(string)get_field("field_bulkkey",$pk);  // NEWV
+			$rb($rk["rollback_id"]);
+			$out["d11b_restored"]=(string)get_field("field_bulkkey",$pk); // PRIOR (must NOT be cleared)
+			$out["d11b_run"]=1;
+			acf_delete_field("field_bulkkey"); acf_delete_field_group("group_bulkkey"); wp_delete_post($pk,true);
+		} else { $out["d11b_run"]=0; }
+
 		// D12 — batch index resolves item records (postmeta membership, indexed).
 		$pb1=$mk("BI1","draft"); $pb2=$mk("BI2","draft");
 		$rbi=$mgr->run(["action"=>"bulk_publish","ids"=>[$pb1,$pb2]]); $bid=$rbi["rollback_id"];
@@ -233,6 +249,10 @@ else
 		assert_eq "D11 acf applied"                   "AV" "$(gj d11_applied)"
 		assert_eq "D11 acf restored (prior empty)"    "" "$(gj d11_restored)"
 	else echo "  NOTE: ACF inactive — D11 skipped"; fi
+	if [ "$(gj d11b_run)" = "1" ]; then
+		assert_eq "D11b acf KEY-selector applied"     "NEWV" "$(gj d11b_applied)"
+		assert_eq "D11b acf KEY-selector RESTORES prior (AR-MED-1)" "PRIOR" "$(gj d11b_restored)"
+	else echo "  NOTE: ACF inactive — D11b skipped"; fi
 	# 12 batch index
 	assert_eq "D12 batch membership rows = item count" "2" "$(gj d12_members)"
 	assert_eq "D12 item record resolves via store"     "1" "$(gj d12_resolves)"
