@@ -49,6 +49,12 @@ final class Plugin {
 		// behavior-neutral wpcc_audit_recorded hook; never affects execution).
 		( new \WPCommandCenter\Telemetry\TelemetrySubscriber() )->init();
 
+		// PROGRAM-9 — runtime event bus bridge: publishes one typed RuntimeEvent per
+		// audit record onto the EventBus so future subscribers (notifications,
+		// webhooks, live dashboard, fleet, analytics) attach with zero runtime change.
+		// Additive + behavior-neutral; Audit stays authoritative, Telemetry unchanged.
+		( new \WPCommandCenter\Events\EventBridge() )->init();
+
 		if ( is_admin() ) {
 			( new AdminMenu() )->init();
 			( new Assets() )->init();
