@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP Command Center
  * Description:       Connect Claude, Codex, GPT, and other AI agents to WordPress using only WordPress Admin access — Site Intelligence, Diagnostics, Safe File Patching, and Rollback Protection.
- * Version:           0.1.0
+ * Version:           0.2.0-rc.2
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Mosharaf Hossain
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPCC_VERSION', '0.1.0' );
+define( 'WPCC_VERSION', '0.2.0-rc.2' );
 define( 'WPCC_PLUGIN_FILE', __FILE__ );
 define( 'WPCC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPCC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
