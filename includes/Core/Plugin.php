@@ -45,6 +45,10 @@ final class Plugin {
 		( new McpRestApi() )->init();
 		( new AdminRestApi() )->init();
 
+		// PROGRAM-8 — runtime telemetry observer (read-only; subscribes to the
+		// behavior-neutral wpcc_audit_recorded hook; never affects execution).
+		( new \WPCommandCenter\Telemetry\TelemetrySubscriber() )->init();
+
 		if ( is_admin() ) {
 			( new AdminMenu() )->init();
 			( new Assets() )->init();
