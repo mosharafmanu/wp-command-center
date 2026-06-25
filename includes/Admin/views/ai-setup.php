@@ -49,6 +49,16 @@ if ( $wpcc_has_healthy ) { $wpcc_ready += 30; }
 if ( $wpcc_health['attention'] === 0 && ! empty( $wpcc_conns ) ) { $wpcc_ready += 15; }
 $wpcc_ready = min( 100, $wpcc_ready );
 
+// PROGRAM-7.5 — make the readiness % self-explanatory: expose the exact components
+// that produced it (no scoring-logic change), plus honest context for AI being
+// inactive (not part of the score — purely informational).
+$wpcc_ready_steps = [
+	[ 'done' => ! empty( $wpcc_conns ),                                      'label' => __( 'A connection added', 'wp-command-center' ) ],
+	[ 'done' => '' !== $wpcc_default,                                        'label' => __( 'A default chosen', 'wp-command-center' ) ],
+	[ 'done' => $wpcc_has_healthy,                                           'label' => __( 'Tested healthy', 'wp-command-center' ) ],
+	[ 'done' => ( $wpcc_health['attention'] === 0 && ! empty( $wpcc_conns ) ), 'label' => __( 'No connection issues', 'wp-command-center' ) ],
+];
+
 // Provider groups for the wizard.
 $wpcc_groups = [ 'cloud' => [], 'local' => [], 'gateway' => [] ];
 foreach ( $wpcc_providers as $pid => $pdef ) {
@@ -65,7 +75,11 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 .wpcc-aip-hero { display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap; align-items:center; background:linear-gradient(135deg,#1d2734,#2c3a4f); color:#e8edf3; border-radius:12px; padding:22px 26px; margin:6px 0 18px; }
 .wpcc-aip-hero h1 { color:#fff; margin:0 0 4px; font-size:22px; }
 .wpcc-aip-hero p { margin:0; color:#b9c4d2; font-size:13px; max-width:520px; }
-.wpcc-aip-score { text-align:center; min-width:120px; }
+.wpcc-aip-score { text-align:center; min-width:110px; }
+.wpcc-aip-readiness { display:flex; gap:18px; align-items:center; }
+.wpcc-aip-checklist { list-style:none; margin:0; padding:0; display:grid; gap:4px; font-size:12.5px; color:#cdd6e2; }
+.wpcc-aip-checklist li { white-space:nowrap; }
+.wpcc-aip-checklist .ck { display:inline-block; width:16px; font-weight:700; }
 .wpcc-aip-ring { --v:0; width:84px; height:84px; border-radius:50%; margin:0 auto 6px; background:conic-gradient(#3ec46d calc(var(--v)*1%), rgba(255,255,255,.15) 0); display:flex; align-items:center; justify-content:center; }
 .wpcc-aip-ring span { width:64px; height:64px; border-radius:50%; background:#1d2734; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:#fff; }
 .wpcc-aip-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:8px; }
@@ -73,14 +87,29 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 .wpcc-aip-kpi .v { font-size:24px; font-weight:700; color:#1d2327; line-height:1.1; }
 .wpcc-aip-kpi .l { font-size:12px; color:#646970; text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
 .wpcc-aip-warn { background:#fcf6e6; border:1px solid #f0d97a; border-radius:8px; padding:12px 16px; margin:10px 0; font-size:13px; }
+.wpcc-aip-needsyou { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:#fef0f0; border:1px solid #f0a8a8; border-left:4px solid #d63638; border-radius:8px; padding:12px 16px; margin:10px 0; font-size:13px; }
+.wpcc-aip-flow { display:flex; align-items:center; gap:6px; flex-wrap:wrap; background:#f6f7f9; border:1px solid #e4e7eb; border-radius:10px; padding:10px 14px; margin:14px 0; font-size:12.5px; color:#50575e; }
+.wpcc-aip-flow .step { display:inline-flex; align-items:center; gap:5px; font-weight:600; color:#2c3a4f; }
+.wpcc-aip-flow .step .dashicons { font-size:16px; width:16px; height:16px; color:#5b6b82; }
+.wpcc-aip-flow .sep { color:#aab2bd; font-weight:700; }
 .wpcc-aip-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
-.wpcc-aip-card { background:#fff; border:1px solid #dcdfe3; border-radius:12px; padding:16px 18px; box-shadow:0 1px 2px rgba(0,0,0,.04); display:flex; flex-direction:column; gap:8px; }
+.wpcc-aip-card { background:#fff; border:1px solid #dcdfe3; border-radius:12px; padding:16px 18px; box-shadow:0 1px 2px rgba(0,0,0,.04); display:flex; flex-direction:column; gap:8px; transition:box-shadow .15s ease, border-color .15s ease; }
+.wpcc-aip-card:hover { box-shadow:0 4px 14px rgba(28,39,52,.10); border-color:#c5ccd4; }
 .wpcc-aip-card.dim { opacity:.62; }
 .wpcc-aip-card__top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
 .wpcc-aip-avatar { width:38px; height:38px; border-radius:9px; background:#eef2f7; color:#2c3a4f; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:15px; flex:0 0 auto; }
 .wpcc-aip-name { font-size:15px; font-weight:700; line-height:1.2; }
 .wpcc-aip-sub { font-size:12px; color:#646970; }
 .wpcc-aip-dot { width:9px; height:9px; border-radius:50%; display:inline-block; vertical-align:middle; margin-right:5px; }
+.wpcc-aip-timeline { list-style:none; margin:0; padding:0; }
+.wpcc-aip-timeline .grp { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#8a93a0; margin:8px 0 4px; }
+.wpcc-aip-timeline .grp:first-child { margin-top:0; }
+.wpcc-aip-timeline .ev { display:flex; gap:9px; align-items:baseline; font-size:13px; padding:4px 0; border-bottom:1px solid #f3f4f6; }
+.wpcc-aip-timeline .ev:last-child { border-bottom:0; }
+.wpcc-aip-timeline .ic { flex:0 0 18px; }
+.wpcc-aip-timeline .ic .dashicons { font-size:16px; width:16px; height:16px; }
+.wpcc-aip-timeline .bd { flex:1; }
+.wpcc-aip-timeline .tm { white-space:nowrap; font-size:12px; }
 .wpcc-aip-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.2px; }
 .wpcc-aip-meta { font-size:12px; color:#50575e; display:grid; gap:3px; }
 .wpcc-aip-meta code { background:#f4f6f8; padding:1px 6px; border-radius:4px; }
@@ -91,8 +120,8 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 .wpcc-aip-actions form { margin:0; }
 .wpcc-aip-empty { background:#fff; border:2px dashed #c3c4c7; border-radius:12px; padding:36px 24px; text-align:center; }
 .wpcc-aip-empty h3 { margin:0 0 6px; font-size:17px; }
-.wpcc-aip-route { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #f0f0f1; }
-.wpcc-aip-route .f { min-width:120px; font-weight:600; }
+.wpcc-aip-route { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #f0f0f1; }
+.wpcc-aip-route .f { min-width:200px; font-weight:600; }
 .wpcc-aip-route .arrow { color:#8a93a0; }
 .wpcc-aip-wizard { display:none; background:#fff; border:1px solid #c3c4c7; border-radius:12px; padding:20px 22px; margin:8px 0 18px; max-width:620px; }
 .wpcc-aip-wizard.open { display:block; }
@@ -120,9 +149,17 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 			<h1><?php esc_html_e( 'AI Connections', 'wp-command-center' ); ?></h1>
 			<p><?php esc_html_e( 'Your AI control panel. Connect any provider — cloud, local, or a gateway — see what’s healthy, and choose which connection powers each feature. AI stays off until you add a key and turn a feature on.', 'wp-command-center' ); ?></p>
 		</div>
-		<div class="wpcc-aip-score" aria-label="<?php echo esc_attr( sprintf( /* translators: %d score */ __( 'Setup readiness %d percent', 'wp-command-center' ), (int) $wpcc_ready ) ); ?>">
-			<div class="wpcc-aip-ring" style="--v:<?php echo (int) $wpcc_ready; ?>"><span><?php echo (int) $wpcc_ready; ?></span></div>
-			<div style="font-size:12px;color:#b9c4d2;"><?php esc_html_e( 'Setup readiness', 'wp-command-center' ); ?></div>
+		<div class="wpcc-aip-readiness">
+			<div class="wpcc-aip-score" aria-label="<?php echo esc_attr( sprintf( /* translators: %d score */ __( 'Setup readiness %d percent', 'wp-command-center' ), (int) $wpcc_ready ) ); ?>">
+				<div class="wpcc-aip-ring" style="--v:<?php echo (int) $wpcc_ready; ?>"><span><?php echo (int) $wpcc_ready; ?></span></div>
+				<div style="font-size:12px;color:#b9c4d2;"><?php esc_html_e( 'Setup readiness', 'wp-command-center' ); ?></div>
+			</div>
+			<ul class="wpcc-aip-checklist" aria-label="<?php esc_attr_e( 'What makes up your readiness', 'wp-command-center' ); ?>">
+				<?php foreach ( $wpcc_ready_steps as $rs ) : ?>
+					<li><span class="ck" aria-hidden="true" style="color:<?php echo $rs['done'] ? '#3ec46d' : '#7c8694'; ?>;"><?php echo $rs['done'] ? '&#10003;' : '&#9711;'; ?></span> <?php echo esc_html( $rs['label'] ); ?><span class="screen-reader-text"><?php echo $rs['done'] ? esc_html__( ' (done)', 'wp-command-center' ) : esc_html__( ' (to do)', 'wp-command-center' ); ?></span></li>
+				<?php endforeach; ?>
+				<li style="opacity:.75;"><span class="ck" aria-hidden="true">&#8230;</span> <?php esc_html_e( 'AI features: inactive (enable when ready)', 'wp-command-center' ); ?></li>
+			</ul>
 		</div>
 	</div>
 
@@ -131,7 +168,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		<div class="wpcc-aip-kpi"><div class="v"><?php echo (int) $wpcc_health['total']; ?></div><div class="l"><?php esc_html_e( 'Connections', 'wp-command-center' ); ?></div></div>
 		<div class="wpcc-aip-kpi"><div class="v" style="color:<?php echo $wpcc_health['attention'] ? '#d63638' : '#0a7a33'; ?>;"><?php echo (int) $wpcc_health['healthy']; ?></div><div class="l"><?php esc_html_e( 'Healthy', 'wp-command-center' ); ?></div></div>
 		<div class="wpcc-aip-kpi"><div class="v"><?php echo esc_html( $wpcc_default_name ); ?></div><div class="l"><?php esc_html_e( 'Default environment', 'wp-command-center' ); ?></div></div>
-		<div class="wpcc-aip-kpi"><div class="v"><?php echo $wpcc_has_healthy ? esc_html__( 'Ready', 'wp-command-center' ) : esc_html__( 'Off', 'wp-command-center' ); ?></div><div class="l"><?php esc_html_e( 'AI status', 'wp-command-center' ); ?></div></div>
+		<div class="wpcc-aip-kpi"><div class="v" style="<?php echo $wpcc_has_healthy ? 'color:#0a7a33;' : 'font-size:16px;color:#646970;'; ?>"><?php echo $wpcc_has_healthy ? esc_html__( 'Ready', 'wp-command-center' ) : esc_html__( 'Inactive', 'wp-command-center' ); ?></div><div class="l"><?php esc_html_e( 'AI status', 'wp-command-center' ); ?></div></div>
 	</div>
 
 	<?php if ( $wpcc_health['attention'] > 0 ) : ?>
@@ -139,6 +176,32 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	<?php elseif ( '' === $wpcc_default && ! empty( $wpcc_conns ) ) : ?>
 		<div class="wpcc-aip-warn" role="status"><?php esc_html_e( 'No default connection yet. Add a key to an Anthropic connection and set it as default so AI features have something to use.', 'wp-command-center' ); ?></div>
 	<?php endif; ?>
+
+	<?php if ( (int) $wpcc_act['pending_approvals'] > 0 ) : ?>
+		<div class="wpcc-aip-needsyou" role="status">
+			<span><strong><?php printf( esc_html( _n( '%d change is waiting for your approval.', '%d changes are waiting for your approval.', (int) $wpcc_act['pending_approvals'], 'wp-command-center' ) ), (int) $wpcc_act['pending_approvals'] ); ?></strong> <?php esc_html_e( 'Nothing applies to your site until you review it.', 'wp-command-center' ); ?></span>
+			<a class="button button-primary button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals' ) ); ?>"><?php esc_html_e( 'Review now', 'wp-command-center' ); ?></a>
+		</div>
+	<?php endif; ?>
+
+	<!-- ===== How WP Command Center works (the governed promise, visualized) ===== -->
+	<div class="wpcc-aip-flow" aria-label="<?php esc_attr_e( 'How WP Command Center works', 'wp-command-center' ); ?>">
+		<?php
+		$wpcc_flow = [
+			[ 'dashicons-search',        __( 'Inspect', 'wp-command-center' ) ],
+			[ 'dashicons-lightbulb',     __( 'Plan', 'wp-command-center' ) ],
+			[ 'dashicons-yes-alt',       __( 'Approve', 'wp-command-center' ) ],
+			[ 'dashicons-controls-play', __( 'Execute', 'wp-command-center' ) ],
+			[ 'dashicons-shield',        __( 'Verify', 'wp-command-center' ) ],
+			[ 'dashicons-undo',          __( 'Rollback', 'wp-command-center' ) ],
+		];
+		$wpcc_flow_last = count( $wpcc_flow ) - 1;
+		foreach ( $wpcc_flow as $i => $step ) :
+			?>
+			<span class="step"><span class="dashicons <?php echo esc_attr( $step[0] ); ?>" aria-hidden="true"></span><?php echo esc_html( $step[1] ); ?></span>
+			<?php if ( $i < $wpcc_flow_last ) : ?><span class="sep" aria-hidden="true">›</span><?php endif; ?>
+		<?php endforeach; ?>
+	</div>
 
 	<!-- ===== Mission Control — AI activity ===== -->
 	<h2><?php esc_html_e( 'Mission control', 'wp-command-center' ); ?></h2>
@@ -153,12 +216,29 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 			<?php if ( empty( $wpcc_feed ) ) : ?>
 				<p class="muted" style="font-size:13px;margin:0;"><?php esc_html_e( 'No activity yet. When AI or an agent acts on this site, the governed history appears here — every action recorded, reversible where supported.', 'wp-command-center' ); ?></p>
 			<?php else : ?>
-				<ul style="list-style:none;margin:0;padding:0;display:grid;gap:7px;" aria-label="<?php esc_attr_e( 'Recent AI activity', 'wp-command-center' ); ?>">
-					<?php foreach ( $wpcc_feed as $ev ) : ?>
-						<li style="display:flex;gap:9px;align-items:baseline;font-size:13px;">
-							<span class="wpcc-aip-dot" style="background:<?php echo esc_attr( $ev['color'] ); ?>" aria-hidden="true"></span>
-							<span style="flex:1;"><strong style="font-weight:600;"><?php echo esc_html( $ev['cat_label'] ); ?></strong> <span class="muted"><?php echo esc_html( $ev['label'] ); ?></span><?php if ( '' !== $ev['actor'] ) : ?> <span class="muted">· <?php echo esc_html( $ev['actor'] ); ?></span><?php endif; ?></span>
-							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo $ev['time'] ? esc_html( sprintf( /* translators: %s ago */ __( '%s ago', 'wp-command-center' ), human_time_diff( $ev['time'], time() ) ) ) : ''; ?></span>
+				<?php
+				// Category → dashicon (visual scanning aid; presentation only).
+				$wpcc_cat_icon = [
+					'rollback' => 'dashicons-undo', 'connection' => 'dashicons-admin-links', 'generation' => 'dashicons-superhero',
+					'agent' => 'dashicons-rest-api', 'change' => 'dashicons-edit', 'operation' => 'dashicons-controls-play',
+					'security' => 'dashicons-shield', 'patch' => 'dashicons-media-code', 'activity' => 'dashicons-marker',
+				];
+				// Group by day bucket (Today / Earlier) using existing timestamps — no new data.
+				$wpcc_today = (int) current_time( 'timestamp' ) - (int) ( current_time( 'timestamp' ) % DAY_IN_SECONDS );
+				$wpcc_bucket = '';
+				?>
+				<ul class="wpcc-aip-timeline" aria-label="<?php esc_attr_e( 'Recent AI activity', 'wp-command-center' ); ?>">
+					<?php foreach ( $wpcc_feed as $ev ) :
+						$b = ( $ev['time'] && $ev['time'] >= $wpcc_today ) ? 'today' : 'earlier';
+						if ( $b !== $wpcc_bucket ) :
+							$wpcc_bucket = $b;
+							?>
+							<li class="grp"><?php echo 'today' === $b ? esc_html__( 'Today', 'wp-command-center' ) : esc_html__( 'Earlier', 'wp-command-center' ); ?></li>
+						<?php endif; ?>
+						<li class="ev">
+							<span class="ic" style="color:<?php echo esc_attr( $ev['color'] ); ?>" aria-hidden="true"><span class="dashicons <?php echo esc_attr( $wpcc_cat_icon[ $ev['category'] ] ?? 'dashicons-marker' ); ?>"></span></span>
+							<span class="bd"><strong><?php echo esc_html( $ev['cat_label'] ); ?></strong> <span class="muted"><?php echo esc_html( $ev['label'] ); ?></span><?php if ( '' !== $ev['actor'] ) : ?> <span class="muted">· <?php echo esc_html( $ev['actor'] ); ?></span><?php endif; ?></span>
+							<span class="tm muted"><?php echo $ev['time'] ? esc_html( sprintf( /* translators: %s ago */ __( '%s ago', 'wp-command-center' ), human_time_diff( $ev['time'], time() ) ) ) : ''; ?></span>
 						</li>
 					<?php endforeach; ?>
 				</ul>
@@ -188,7 +268,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 
 		<div class="wpcc-aip-step active" data-step="1">
 			<h3><?php esc_html_e( 'Step 1 — Choose a provider', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick the AI service. Only Anthropic powers WPCC’s features today; others can be saved and tested now.', 'wp-command-center' ); ?></p>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick the AI service. Cloud = hosted (Claude, GPT, Gemini); Local = a model on your own machine (Ollama, LM Studio); Gateway / Custom = your own endpoint. Only Anthropic powers WPCC’s features today — each option shows whether WPCC can use it, test it, or just store it.', 'wp-command-center' ); ?></p>
 			<div class="wpcc-aip-field">
 				<label for="wpcc-w-provider"><?php esc_html_e( 'Provider', 'wp-command-center' ); ?></label>
 				<select name="wpcc_provider" id="wpcc-w-provider">
@@ -358,7 +438,10 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 			<?php wp_nonce_field( ConnectionController::NONCE ); ?>
 			<?php foreach ( ConnectionStore::FEATURES as $fk => $flabel ) : ?>
 				<div class="wpcc-aip-route">
-					<span class="f"><?php echo esc_html( $flabel ); ?></span>
+					<span class="f"><?php echo esc_html( $flabel ); ?><span style="display:block;font-weight:400;font-size:11.5px;color:#8a93a0;"><?php
+						$wpcc_fdesc = [ 'seo_meta' => __( 'Powers AI-written SEO titles & descriptions', 'wp-command-center' ), 'alt_text' => __( 'Powers AI image alt text for accessibility & SEO', 'wp-command-center' ), 'ai_content' => __( 'Powers AI title & excerpt suggestions', 'wp-command-center' ) ];
+						echo esc_html( $wpcc_fdesc[ $fk ] ?? '' );
+					?></span></span>
 					<span class="arrow" aria-hidden="true">→</span>
 					<label class="screen-reader-text" for="wpcc-route-<?php echo esc_attr( $fk ); ?>"><?php printf( esc_html__( 'Connection for %s', 'wp-command-center' ), esc_html( $flabel ) ); ?></label>
 					<select name="wpcc_route_<?php echo esc_attr( $fk ); ?>" id="wpcc-route-<?php echo esc_attr( $fk ); ?>" style="flex:1;">
