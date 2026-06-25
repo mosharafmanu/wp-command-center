@@ -288,7 +288,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		<div class="wpcc-aip-step" data-step="2">
 			<h3><?php esc_html_e( 'Step 2 — Name & where it runs', 'wp-command-center' ); ?></h3>
 			<div class="wpcc-aip-field"><label for="wpcc-w-name"><?php esc_html_e( 'Connection name', 'wp-command-center' ); ?></label><input type="text" id="wpcc-w-name" name="wpcc_name" placeholder="<?php esc_attr_e( 'e.g. Production Claude', 'wp-command-center' ); ?>" /></div>
-			<div class="wpcc-aip-field"><label for="wpcc-w-endpoint"><?php esc_html_e( 'Base URL', 'wp-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'local / gateway / Azure / custom only — blank for cloud defaults', 'wp-command-center' ); ?>)</span></label><input type="url" id="wpcc-w-endpoint" name="wpcc_endpoint" style="font-family:monospace;" placeholder="http://localhost:11434/v1" /></div>
+			<div class="wpcc-aip-field" id="wpcc-w-endpoint-field"><label for="wpcc-w-endpoint"><?php esc_html_e( 'Base URL', 'wp-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'required for this provider', 'wp-command-center' ); ?>)</span></label><input type="url" id="wpcc-w-endpoint" name="wpcc_endpoint" style="font-family:monospace;" placeholder="https://…" /><p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Cloud providers use their official URL automatically — you only set this for local, Azure, gateway, or custom endpoints.', 'wp-command-center' ); ?></p></div>
 		</div>
 
 		<div class="wpcc-aip-step" data-step="3">
@@ -299,9 +299,21 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 
 		<div class="wpcc-aip-step" data-step="4">
 			<h3><?php esc_html_e( 'Step 4 — Model', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Leave blank to use the provider’s recommended default. You can change it any time.', 'wp-command-center' ); ?></p>
-			<div class="wpcc-aip-field"><label for="wpcc-w-model"><?php esc_html_e( 'Model', 'wp-command-center' ); ?></label><input type="text" id="wpcc-w-model" name="wpcc_model_custom" style="font-family:monospace;" placeholder="model-id" /></div>
-			<div class="wpcc-aip-field"><label for="wpcc-w-tags"><?php esc_html_e( 'Tags', 'wp-command-center' ); ?></label><input type="text" id="wpcc-w-tags" name="wpcc_tags" placeholder="prod, premium" /></div>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick a model, or keep the recommended default. You can change it any time.', 'wp-command-center' ); ?></p>
+			<div class="wpcc-aip-field">
+				<label for="wpcc-w-model-select"><?php esc_html_e( 'Model', 'wp-command-center' ); ?></label>
+				<select id="wpcc-w-model-select" style="display:none;"></select>
+				<input type="text" id="wpcc-w-model" name="wpcc_model_custom" style="font-family:monospace;" placeholder="model-id" />
+				<p class="muted" id="wpcc-w-model-help" style="font-size:12px;margin:4px 0 0;"></p>
+			</div>
+			<details class="wpcc-aip-advanced" style="margin-top:4px;">
+				<summary style="cursor:pointer;font-size:13px;"><?php esc_html_e( 'Advanced options', 'wp-command-center' ); ?></summary>
+				<div class="wpcc-aip-field" style="margin-top:10px;">
+					<label for="wpcc-w-tags"><?php esc_html_e( 'Tags', 'wp-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'optional', 'wp-command-center' ); ?>)</span></label>
+					<input type="text" id="wpcc-w-tags" name="wpcc_tags" placeholder="prod, premium" />
+					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Internal labels to organize and route your connections (for example “prod” or “cheap”). Optional, used only inside WP Command Center — never sent to the provider.', 'wp-command-center' ); ?></p>
+				</div>
+			</details>
 		</div>
 
 		<div class="wpcc-aip-step" data-step="5">
@@ -472,10 +484,71 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	</p>
 </div>
 
+<?php
+// PROVIDER META (data only — drives the wizard's provider-aware Base URL + model
+// controls). No runtime/storage/security behavior: the backend already applies
+// these defaults when fields are blank (ConnectionController::endpoint_value/model_value).
+$wpcc_provider_meta = [];
+foreach ( $wpcc_providers as $wpcc_pid => $wpcc_pdef ) {
+	$wpcc_provider_meta[ $wpcc_pid ] = [
+		'needs_endpoint'   => ! empty( $wpcc_pdef['needs_endpoint'] ),
+		'default_endpoint' => ProviderCatalog::default_endpoint( $wpcc_pid ),
+		'models'           => ( isset( $wpcc_pdef['models'] ) && is_array( $wpcc_pdef['models'] ) && $wpcc_pdef['models'] ) ? $wpcc_pdef['models'] : new stdClass(),
+		'default_model'    => (string) ( $wpcc_pdef['default_model'] ?? '' ),
+		'allow_custom'     => ! empty( $wpcc_pdef['allow_custom_model'] ),
+	];
+}
+?>
 <script>
 (function () {
 	var wiz = document.getElementById('wpcc-aip-wizard');
 	if (!wiz) return;
+
+	// ---- Provider-aware fields: Base URL only for local/Azure/gateway/custom;
+	// model dropdown for providers with a model list, free text otherwise. ----
+	var WPCC_PMETA = <?php echo wp_json_encode( $wpcc_provider_meta ); ?>;
+	(function () {
+		var provSel = document.getElementById('wpcc-w-provider');
+		var epField = document.getElementById('wpcc-w-endpoint-field');
+		var epInput = document.getElementById('wpcc-w-endpoint');
+		var mdlSel  = document.getElementById('wpcc-w-model-select');
+		var mdlTxt  = document.getElementById('wpcc-w-model');
+		var mdlHelp = document.getElementById('wpcc-w-model-help');
+		var mFlag   = wiz.querySelector('input[name="wpcc_model"]');
+		if (!provSel || !mdlSel || !mdlTxt || !mFlag) return;
+		var CUSTOM = '__custom__';
+		var CUSTOM_LABEL = <?php echo wp_json_encode( __( 'Custom model ID…', 'wp-command-center' ) ); ?>;
+		var FREE_HELP = <?php echo wp_json_encode( __( 'Enter the model id your endpoint serves (free text).', 'wp-command-center' ) ); ?>;
+		function syncModel() {
+			if (mdlSel.style.display === 'none') { mFlag.value = 'custom'; return; }
+			if (mdlSel.value === CUSTOM) { mFlag.value = 'custom'; mdlTxt.style.display = ''; mdlTxt.focus(); }
+			else { mFlag.value = mdlSel.value; mdlTxt.style.display = 'none'; mdlTxt.value = ''; }
+		}
+		function applyProvider() {
+			var m = WPCC_PMETA[provSel.value] || {};
+			if (epField) {
+				epField.style.display = m.needs_endpoint ? '' : 'none';
+				if (epInput) { epInput.placeholder = m.default_endpoint || 'https://…'; if (!m.needs_endpoint) { epInput.value = ''; } }
+			}
+			var models = (m.models && typeof m.models === 'object') ? m.models : {};
+			var ids = Object.keys(models);
+			if (ids.length) {
+				mdlSel.innerHTML = '';
+				ids.forEach(function (id) { var o = document.createElement('option'); o.value = id; o.textContent = models[id]; mdlSel.appendChild(o); });
+				if (m.allow_custom !== false) { var c = document.createElement('option'); c.value = CUSTOM; c.textContent = CUSTOM_LABEL; mdlSel.appendChild(c); }
+				mdlSel.value = (m.default_model && models[m.default_model]) ? m.default_model : ids[0];
+				mdlSel.style.display = ''; mdlTxt.style.display = 'none'; mdlTxt.value = '';
+				if (mdlHelp) { mdlHelp.textContent = ''; }
+				syncModel();
+			} else {
+				mdlSel.style.display = 'none'; mdlTxt.style.display = ''; mFlag.value = 'custom';
+				if (mdlHelp) { mdlHelp.textContent = FREE_HELP; }
+			}
+		}
+		provSel.addEventListener('change', applyProvider);
+		mdlSel.addEventListener('change', syncModel);
+		applyProvider();
+	})();
 	var steps = wiz.querySelectorAll('.wpcc-aip-step');
 	var bars  = wiz.querySelectorAll('.wpcc-aip-steps .s');
 	var back  = document.getElementById('wpcc-w-back');
