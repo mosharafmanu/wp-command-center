@@ -156,7 +156,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	<div class="wpcc-aip-hero">
 		<div>
 			<h1><?php esc_html_e( 'Providers', 'wp-command-center' ); ?></h1>
-			<p><?php esc_html_e( 'The provider powers WP Command Center’s built-in AI. Connect any provider — cloud, local, or a gateway — see what’s healthy, and choose which connection powers each feature. AI stays off until you add a key and turn a feature on.', 'wp-command-center' ); ?></p>
+			<p><?php esc_html_e( 'Connect the AI provider that powers WP Command Center’s built-in AI. Add a key, pick a model, test it, and choose which features use it. AI stays off until you turn a feature on.', 'wp-command-center' ); ?></p>
 		</div>
 		<div class="wpcc-aip-readiness">
 			<div class="wpcc-aip-score" aria-label="<?php echo esc_attr( sprintf( /* translators: %d score */ __( 'Setup readiness %d percent', 'wp-command-center' ), (int) $wpcc_ready ) ); ?>">
@@ -212,8 +212,10 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		<?php endforeach; ?>
 	</div>
 
-	<!-- ===== Mission Control — AI activity ===== -->
-	<h2><?php esc_html_e( 'Mission control', 'wp-command-center' ); ?></h2>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
+
+	<!-- ===== Recent AI activity ===== -->
+	<h2><?php esc_html_e( 'Recent AI activity', 'wp-command-center' ); ?></h2>
 	<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;">
 		<div style="background:#fff;border:1px solid #dcdfe3;border-radius:12px;padding:16px 18px;">
 			<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">

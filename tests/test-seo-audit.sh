@@ -89,7 +89,9 @@ echo
 echo "== 4b. UX polish (U1.1 intro, U1.3 tab badges, U3 dashboard) =="
 # U1.1 — the stale "read-only" intro is gone; intro now states reversibility.
 lacks "no stale read-only intro"           "this page does not change anything" "$VIEW"
-has  "intro states reversibility"          "every change is reviewable"  "$VIEW"
+# Phase 2.5A: the reversibility/approval/audit message moved from the intro sentence into
+# the shared Built-in AI trust strip (Reviewed · Requires approval · Audited · Reversible).
+has  "surfaces the trust strip"            "builtin-ai-trust"  "$VIEW"
 # U1.3 — tab count badges.
 has  "Review tab count badge"              "wpcc-seo-tabcount-review"      "$VIEW"
 has  "Suggestions tab count badge"         "wpcc-seo-tabcount-suggestions" "$VIEW"

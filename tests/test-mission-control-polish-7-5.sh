@@ -58,7 +58,8 @@ echo "== 10. Honesty + anchors preserved (no fake data) =="
 has "cost still not faked" "Not tracked yet" "$VIEW"
 hasnt "no fabricated cost figure" 'cost.*\$[0-9]' "$VIEW"
 hasnt "view never echoes a key" "echo .*(wpcc_key|->secret\()" "$VIEW"
-has "mission control intact" "Mission control" "$VIEW"
+# Phase 2.5A: renamed "Mission control" → "Recent AI activity" (avoids the Home collision).
+has "AI activity section intact" "Recent AI activity" "$VIEW"
 has "honest runtime badges intact" "USED BY RUNTIME" "$VIEW"
 
 echo

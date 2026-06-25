@@ -26,8 +26,10 @@ has "pending approvals from existing queue" "wpcc_operation_requests" "$ACT"
 has "cost explicitly NOT faked" "cost_tracked.*false|not instrumented" "$ACT"
 has "table-exists guard" "SHOW TABLES LIKE" "$ACT"
 
-echo "== 3. Mission control surface =="
-has "mission control heading" "Mission control" "$VIEW"
+echo "== 3. AI activity surface =="
+# Phase 2.5A: the in-screen "Mission control" sub-heading was renamed to "Recent AI
+# activity" to avoid colliding with the Home (Mission Control) page.
+has "AI activity section heading" "Recent AI activity" "$VIEW"
 has "recent AI activity feed" "Recent AI activity" "$VIEW"
 has "pending approvals KPI" "Pending approvals" "$VIEW"
 has "review changes & undo link" "Review changes & undo" "$VIEW"

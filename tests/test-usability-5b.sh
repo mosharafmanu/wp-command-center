@@ -52,7 +52,7 @@ hasnt "no fake per-provider key field names" "openai_api_key|gemini_api_key" "$A
 echo "== 5. Model management — per-connection model field =="
 has "per-connection model field" "name=\"wpcc_model_custom\"" "$AISETUP"
 has "provider default model shown" "default_model" "$AISETUP"
-has "honest: AI off until key+feature" "AI stays off until you add a key" "$AISETUP"
+has "honest: AI off until key+feature" "AI stays off until you turn a feature on" "$AISETUP"
 
 echo "== 6. First-run — how it works (AI→approve→record→undo) =="
 has "how-it-works strip present" "How WPCC keeps you in control" "$HOME_F"

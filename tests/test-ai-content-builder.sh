@@ -123,7 +123,8 @@ echo "== 9. Notices: contextual entry args =="
 has  "reads wpcc_content_gen arg"           "wpcc_content_gen"           "$VIEW"
 has  "reads wpcc_content_bulk arg"          "wpcc_content_bulk"          "$VIEW"
 has  "reads kind arg"                       "sp.get( 'kind' )"           "$VIEW"
-has  "no_provider links AI Integrations"    "wpcc-ai-integrations"       "$VIEW"
+# Phase 1 canonicalized the connect-a-key link to Connect › AI Clients.
+has  "no_provider links Connect › AI Clients" "wpcc-connect"             "$VIEW"
 
 echo
 echo "== 10. Config injection + escaping helpers =="

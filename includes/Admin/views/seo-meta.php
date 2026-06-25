@@ -36,10 +36,11 @@ $ai_url    = admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ); // U1.
 $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 ?>
 <div class="wrap wpcc-wrap wpcc-seo">
-	<h1><?php esc_html_e( 'SEO Meta', 'wp-command-center' ); ?></h1>
-	<p class="description">
-		<?php esc_html_e( 'Find posts and pages with missing or weak SEO titles and descriptions, generate AI suggestions, and apply them — every change is reviewable, approval-aware, and reversible.', 'wp-command-center' ); ?>
+	<h1><?php esc_html_e( 'SEO', 'wp-command-center' ); ?></h1>
+	<p class="description" style="max-width:720px;">
+		<?php esc_html_e( 'Generate clear SEO titles and descriptions for posts and pages that need them. Review each suggestion, then approve to apply — nothing changes until you say so.', 'wp-command-center' ); ?>
 	</p>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
 		<a href="#" class="nav-tab nav-tab-active" id="wpcc-seo-tab-review"><?php esc_html_e( 'Review', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-review"></span></a>

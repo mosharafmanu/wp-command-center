@@ -43,10 +43,11 @@ $ai_url    = esc_url( admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' 
 $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 ?>
 <div class="wrap wpcc-wrap wpcc-aic">
-	<h1><?php esc_html_e( 'AI Content', 'wp-command-center' ); ?></h1>
-	<p class="description">
-		<?php esc_html_e( 'Review AI-suggested titles and excerpts for your posts and pages, edit them, and apply — every change is reviewable, approval-aware, and reversible.', 'wp-command-center' ); ?>
+	<h1><?php esc_html_e( 'Content', 'wp-command-center' ); ?></h1>
+	<p class="description" style="max-width:720px;">
+		<?php esc_html_e( 'Draft titles and excerpts for your posts and pages with AI. Review and edit each suggestion, then approve to apply — you’re always in control.', 'wp-command-center' ); ?>
 	</p>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
 		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'wp-command-center' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>

@@ -73,7 +73,8 @@ has  "Generate->Suggestions handoff"          "switchTab( 'suggestions' )" "$VIE
 # U1.4 — no_provider results surface AI-key guidance linking to AI Integrations.
 has  "no-provider notice element"             "wpcc-seo-gen-notice"  "$VIEW"
 has  "detects no_provider skip reason"        "reason === 'no_provider'" "$VIEW"
-has  "links to AI Integrations"               "wpcc-ai-integrations" "$VIEW"
+# Phase 1 canonicalized the connect-a-key link to Connect › AI Clients.
+has  "links to Connect › AI Clients"          "wpcc-connect" "$VIEW"
 has  "uses server-provided AI URL const"      "AI_URL"               "$VIEW"
 # (Apply arrives in Slice 4a; per-item Undo in Slice 4b — both covered by
 # test-seo-apply.sh / test-seo-undo.sh. The shared view now legitimately contains the

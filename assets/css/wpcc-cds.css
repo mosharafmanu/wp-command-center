@@ -895,3 +895,23 @@
 	background: var( --wpcc-state-danger-bg );
 	color: var( --wpcc-state-danger-fg );
 }
+
+/* Built-in AI — shared page-header trust strip (Phase 2.5A).
+   Reuses CDS chip tokens; adds a leading check. Token-driven spacing only. */
+.wpcc-bai-trust {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var( --wpcc-space-2 );
+	margin: var( --wpcc-space-2 ) 0 var( --wpcc-space-5 );
+}
+.wpcc-bai-trust__label {
+	font-size: var( --wpcc-fs-small );
+	color: var( --wpcc-text-secondary );
+	margin-right: var( --wpcc-space-1 );
+}
+.wpcc-bai-trust .wpcc-cds-chip::before {
+	content: "\2713";
+	font-weight: 700;
+	margin-right: var( --wpcc-space-1 );
+}

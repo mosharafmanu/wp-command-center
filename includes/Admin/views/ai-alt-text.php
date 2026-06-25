@@ -32,16 +32,17 @@ $approval_url  = admin_url( 'admin.php?page=wpcc-approval-center' );
 $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'AI Alt Text', 'wp-command-center' ); ?></h1>
-	<p class="description">
-		<?php esc_html_e( 'Generate and review AI alt-text suggestions for your images. Suggestions are drafts — nothing is applied to your site here.', 'wp-command-center' ); ?>
+	<h1><?php esc_html_e( 'Alt Text', 'wp-command-center' ); ?></h1>
+	<p class="description" style="max-width:720px;">
+		<?php esc_html_e( 'Generate clear, descriptive alt text for your images — better for accessibility and SEO. Review each suggestion, then approve to apply. Nothing is saved until you do.', 'wp-command-center' ); ?>
 	</p>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
 
 	<!-- Readiness header -->
-	<div id="wpcc-at-readiness" style="display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;padding:16px;border:1px solid #c3c4c7;background:#fff;border-radius:4px;">
+	<div id="wpcc-at-readiness" class="wpcc-cds-card" style="display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;">
 		<div><strong style="font-size:22px;" id="wpcc-at-pct">—</strong><br><span class="description"><?php esc_html_e( 'Media described', 'wp-command-center' ); ?></span></div>
-		<div><strong style="font-size:22px;color:#b32d2e;" id="wpcc-at-missing">—</strong><br><span class="description"><?php esc_html_e( 'Missing alt text', 'wp-command-center' ); ?></span></div>
-		<div><strong style="font-size:22px;color:#bd8600;" id="wpcc-at-weak">—</strong><br><span class="description"><?php esc_html_e( 'Weak alt text', 'wp-command-center' ); ?></span></div>
+		<div><strong style="font-size:22px;color:var(--wpcc-state-danger-fg);" id="wpcc-at-missing">—</strong><br><span class="description"><?php esc_html_e( 'Missing alt text', 'wp-command-center' ); ?></span></div>
+		<div><strong style="font-size:22px;color:var(--wpcc-state-warning-fg);" id="wpcc-at-weak">—</strong><br><span class="description"><?php esc_html_e( 'Weak alt text', 'wp-command-center' ); ?></span></div>
 		<div><strong style="font-size:22px;" id="wpcc-at-total">—</strong><br><span class="description"><?php esc_html_e( 'Total images', 'wp-command-center' ); ?></span></div>
 	</div>
 
