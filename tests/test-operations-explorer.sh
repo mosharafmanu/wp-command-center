@@ -108,14 +108,14 @@ lacks "no policy mutation"               "->assign\(|->remove\(|->create\(|->rev
 
 echo
 echo "== 4. App Shell hosts Operations Explorer as Operate › Operations =="
-# Experience Layer: the standalone submenu became the Operate › Operations tab,
-# routed by the 5-C App Shell via ?wpcc_tab=operations; legacy slug redirects in.
-has "Operations tab labeled in shell"    "'Operations'"                 "$SHELL"
-has "Operations tab renders explorer view" "'view' => 'operations-explorer'" "$SHELL"
-has "Operations tab gated by operations_explorer feature" "'feature' => 'operations_explorer'" "$SHELL"
-has "FeatureGate gates the Operations tab" "FeatureGate::allows"        "$SHELL"
-has "legacy operations slug redirects (map)" "'wpcc-operations'         => \[ 'wpcc-operate', 'operations' \]" "$SHELL"
-has "Operate section registered"         "'wpcc-operate'"               "$MENU"
+# Phase 1 IA: the catalogue became Settings › Capabilities (the read-only contract),
+# routed by the App Shell via ?wpcc_tab=capabilities; legacy slugs redirect in.
+has "Capabilities tab labeled in shell"    "__\( 'Capabilities'"          "$SHELL"
+has "Capabilities tab renders explorer view" "'view' => 'operations-explorer'" "$SHELL"
+has "Capabilities tab gated by operations_explorer feature" "'feature' => 'operations_explorer'" "$SHELL"
+has "FeatureGate gates the Capabilities tab" "FeatureGate::allows"        "$SHELL"
+has "legacy operations slug redirects (map)" "'wpcc-operations'         => \[ self::SETTINGS_SLUG, 'capabilities' \]" "$SHELL"
+has "Settings section registered"        "render_settings"              "$MENU"
 
 echo
 echo "== 5. View is read-only + escaped + filterable =="

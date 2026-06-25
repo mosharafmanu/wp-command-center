@@ -20,9 +20,9 @@ $wpcc_rev     = $wpcc_oc->reversible( 8 );
 $wpcc_honest  = $wpcc_oc->honesty();
 
 $wpcc_links = [
-	'approvals' => admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals' ),
-	'changes'   => admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=changes' ),
-	'sessions'  => admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=changes&tab=sessions' ),
+	'approvals' => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ),
+	'changes'   => admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ),
+	'sessions'  => admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes&tab=sessions' ),
 ];
 
 /** Status → [label, color] (honest; only known statuses). */

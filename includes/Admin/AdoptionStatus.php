@@ -117,7 +117,7 @@ final class AdoptionStatus {
 				'hint'  => $self_approve
 					? __( 'Currently Developer mode: AI writes apply with no approval. Switch to Client mode before working on a client site.', 'wp-command-center' )
 					: __( 'A human-approval mode is active. Writes wait for your review.', 'wp-command-center' ),
-				'url'   => admin_url( 'admin.php?page=wpcc-access&wpcc_tab=security' ),
+				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=security' ),
 			],
 			[
 				'key'   => 'ai_key',
@@ -126,7 +126,7 @@ final class AdoptionStatus {
 				'hint'  => $ai_configured
 					? __( 'An Anthropic key is configured. AI features can be used once their surface is enabled.', 'wp-command-center' )
 					: __( 'No key yet. AI stays off until you add one — WPCC works without it.', 'wp-command-center' ),
-				'url'   => admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=setup' ),
+				'url'   => admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' ),
 			],
 			[
 				'key'   => 'token',
@@ -136,14 +136,14 @@ final class AdoptionStatus {
 					/* translators: %d: number of active tokens */
 					? sprintf( _n( '%d active token.', '%d active tokens.', $tokens, 'wp-command-center' ), $tokens )
 					: __( 'No tokens yet. Create one to let Claude or another agent connect over MCP/REST.', 'wp-command-center' ),
-				'url'   => admin_url( 'admin.php?page=wpcc-access&wpcc_tab=tokens' ),
+				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=access' ),
 			],
 			[
 				'key'   => 'review',
 				'label' => __( 'Know where to review & undo changes', 'wp-command-center' ),
 				'done'  => false, // informational; never auto-checks.
-				'hint'  => __( 'Approvals live under Operate → Approvals. Every change and its undo live under Audit → Changes.', 'wp-command-center' ),
-				'url'   => admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=changes' ),
+				'hint'  => __( 'Approvals live under Activity → Approvals. Every change and its undo live under History → Changes.', 'wp-command-center' ),
+				'url'   => admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ),
 			],
 		];
 	}

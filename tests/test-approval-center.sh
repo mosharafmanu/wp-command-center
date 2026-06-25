@@ -168,12 +168,12 @@ echo
 echo "== 7b. STEP 106.4 + Experience Layer: IA placement + redirect + FeatureGate + a11y + i18n =="
 CH="$PLUGIN_DIR/includes/Admin/views/change-history.php"
 # Approvals lives under the Operate section; the legacy slug redirects in (deep-link preserved).
-has "Operate section registered"             "'wpcc-operate'"           "$MENU"
+has "Activity section registered"            "render_activity"          "$MENU"
 has "Approvals tab labeled in shell"         "'Approvals'"              "$SHELL"
 has "FeatureGate gates the Approvals tab"    "FeatureGate::allows"      "$SHELL"
-has "legacy approval-center slug redirects (map)" "'wpcc-approval-center'    => \[ 'wpcc-operate', 'approvals' \]" "$SHELL"
+has "legacy approval-center slug redirects (map)" "'wpcc-approval-center'    => \[ self::ACTIVITY_SLUG, 'approvals' \]" "$SHELL"
 has "consolidated legacy redirect handler"   "function redirect_legacy_slugs" "$MENU"
-has "badge href -> Operate/Approvals"        "page=wpcc-operate&wpcc_tab=approvals" "$MENU"
+has "badge href -> Activity/Approvals"        "ACTIVITY_SLUG \. '&wpcc_tab=approvals'" "$MENU"
 lacks "no standalone approval-center submenu" "add_submenu_page.*wpcc-approval-center" "$MENU"
 # Obsolete view removed
 [ ! -f "$PLUGIN_DIR/includes/Admin/views/approvals.php" ] && pass "obsolete approvals.php removed" || fail "approvals.php still present"

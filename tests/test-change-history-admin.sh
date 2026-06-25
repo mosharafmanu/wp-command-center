@@ -97,11 +97,11 @@ echo "== 5. App Shell hosts Change History as Audit › Changes; legacy slugs re
 # ?wpcc_tab=changes, and both the legacy change-history AND rollback slugs redirect in.
 has "Changes tab renders change-history view" "'view' => 'change-history'" "$SHELL"
 has "Changes tab gated by change_history feature" "'feature' => 'change_history'" "$SHELL"
-has "legacy change-history slug redirects (map)" "'wpcc-change-history'     => \[ 'wpcc-audit', 'changes' \]" "$SHELL"
-has "legacy rollback slug merged into Changes" "'wpcc-rollback'           => \[ 'wpcc-audit', 'changes' \]" "$SHELL"
+has "legacy change-history slug redirects (map)" "'wpcc-change-history'     => \[ self::HISTORY_SLUG, 'changes' \]" "$SHELL"
+has "legacy rollback slug merged into Changes" "'wpcc-rollback'           => \[ self::HISTORY_SLUG, 'changes' \]" "$SHELL"
 lacks "no standalone rollback submenu"  "add_submenu_page.*wpcc-rollback" "$MENU"
 has "consolidated legacy redirect handler" "function redirect_legacy_slugs" "$MENU"
-has "Audit section registered"          "'wpcc-audit'"               "$MENU"
+has "History section registered"        "render_history"             "$MENU"
 [ -f "$PLUGIN_DIR/includes/Admin/views/rollback.php" ] && fail "legacy rollback view deleted" || pass "legacy rollback view deleted"
 
 echo

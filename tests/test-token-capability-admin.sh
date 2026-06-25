@@ -155,12 +155,12 @@ echo
 echo "== 4. App Shell hosts Tokens & Capabilities as Access › Tokens =="
 # Experience Layer: the standalone submenu became the Access › Tokens tab, routed
 # by the 5-C App Shell via ?wpcc_tab=tokens; the legacy slug redirects in.
-has "Tokens tab labeled in shell"     "'Tokens & Capabilities'"   "$SHELL"
+has "Access tab labeled in shell"     "__\( 'Access', 'wp-command-center' \)"   "$SHELL"
 has "Tokens tab renders the manager view" "'view' => 'token-capability-manager'" "$SHELL"
 has "Tokens tab gated by token_capability_manager feature" "'feature' => 'token_capability_manager'" "$SHELL"
 has "FeatureGate gates the Tokens tab" "FeatureGate::allows"      "$SHELL"
-has "legacy tokens slug redirects (map)" "'wpcc-tokens'             => \[ 'wpcc-access', 'tokens' \]" "$SHELL"
-has "Access section registered"        "'wpcc-access'"             "$MENU"
+has "legacy tokens slug redirects (map)" "'wpcc-tokens'             => \[ self::SETTINGS_SLUG, 'access' \]" "$SHELL"
+has "Settings section registered"      "render_settings"          "$MENU"
 
 echo
 echo "== 5. View is read-only + escaped =="
@@ -206,7 +206,7 @@ has   "settings.php: retains Security Mode"  "set_security_mode"    "$SETTINGS"
 # Legacy redirect compatibility (Experience Layer consolidated handler).
 has   "menu: consolidated redirect handler" "function redirect_legacy_slugs" "$MENU"
 has   "menu: admin_init hook for redirect"  "'redirect_legacy_slugs'" "$MENU"
-has   "menu: settings token section -> Access/Tokens" "redirect_to\( 'wpcc-access', 'tokens' \)" "$MENU"
+has   "menu: settings token section -> Settings/Access" "redirect_to\( AppShell::SETTINGS_SLUG, 'access' \)" "$MENU"
 
 echo
 echo "== 5c. STEP 107.5 — accessibility sweep =="
@@ -536,7 +536,7 @@ NEG="$(wpe '
 	( new \WPCommandCenter\Admin\AdminMenu() )->redirect_legacy_slugs();
 	echo "NO_REDIRECT";
 ')"
-case "$POS" in *"REDIRECT:"*"page=wpcc-access"*"wpcc_tab=tokens"*) pass "legacy token deep-link redirects to Access › Tokens";; *) fail "legacy redirect (positive) got: $POS";; esac
+case "$POS" in *"REDIRECT:"*"page=wpcc-settings"*"wpcc_tab=access"*) pass "legacy token deep-link redirects to Settings › Access";; *) fail "legacy redirect (positive) got: $POS";; esac
 case "$NEG" in *"REDIRECT:"*"wpcc_tab=security"*) pass "plain Settings redirects to Access › Security (not tokens)";; *) fail "legacy redirect (negative) got: $NEG";; esac
 
 echo

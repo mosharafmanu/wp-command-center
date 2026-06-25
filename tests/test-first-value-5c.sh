@@ -30,7 +30,8 @@ has "explainer answers what-does-token-do" "What does the access token do" "$EXP
 has "explainer answers what-talks-to-what" "What talks to what" "$EXPL"
 has "explainer has a jargon-free flow line" "function flow_line" "$EXPL"
 has "Connect screen renders the explainer" "AgentExplainer::faq\(\)" "$CONNECT"
-has "Connect screen H1 is plain language" "Connect an AI Agent" "$CONNECT"
+has "Connect screen H1 is plain language" "esc_html_e\( 'AI Clients'" "$CONNECT"
+has "Connect screen still explains a client in plain words" "An AI client is an assistant" "$CONNECT"
 hasnt "Connect screen no longer leads with MCP-protocol jargon" "via the MCP protocol. All clients share" "$CONNECT"
 
 echo "== 3. First success — no-setup quick win (Phase D) =="
@@ -45,7 +46,7 @@ has "changes/undo link in how-it-works" "Changes →" "$HOME_F"
 echo "== 5. Honest after-key guidance (Phase A/D) =="
 has "after-key next steps present" "What happens next" "$AISETUP"
 has "honest: key alone does not enable AI" "does not turn AI features on by itself" "$AISETUP"
-has "after-key points to connect-agent" "Connect an AI Agent" "$AISETUP"
+has "after-key points to AI Clients" "AI Clients" "$AISETUP"
 
 echo "== 6. STOP-condition guard — no architecture edits =="
 hasnt "no schema edit marker" "PROGRAM-5C" "$ROOT/includes/Core/Schema.php"

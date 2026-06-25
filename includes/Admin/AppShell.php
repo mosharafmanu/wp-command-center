@@ -1,18 +1,23 @@
 <?php
 /**
- * Experience Layer — App Shell + 5-C information architecture.
+ * Experience Layer — App Shell + the "Three Doors, One Engine" information architecture.
  *
- * The single source of truth for WP Command Center's navigation. It collapses the
- * former ~12 flat submenus into five operator-mental-model sections — Overview ·
- * Operate · Audit · Access · Connect — each rendered as a branded shell (header +
- * sub-tab bar) that hosts the EXISTING view files in a content canvas. It adds no
- * REST routes, operations, capabilities, MCP tools, or schema: it only re-frames
- * where the existing read/write surfaces live and how they are reached.
+ * The single source of truth for WP Command Center's navigation. Per the canonical
+ * UX Master Blueprint (§2) it presents SIX product-language sections —
+ * Home · Built-in AI · Connect · Activity · History · Settings — that map onto the
+ * platform's "Three Doors, One Engine" model: Built-in AI (Door 1), Connect
+ * (Doors 2 & 3: AI Clients over MCP + API & Integrations over REST), and the engine's
+ * activity / history / policy surfaces. Each section is rendered as a branded shell
+ * (header + sub-tab bar) hosting the EXISTING view files in a content canvas. It adds
+ * no REST routes, operations, capabilities, MCP tools, or schema: it only re-frames
+ * where the existing read/write surfaces live, how they are reached, and what they
+ * are called — so the user thinks in product terms, never in architecture terms.
  *
  * Section-tab selection uses the namespaced `?wpcc_tab=` query arg so it never
- * collides with a hosted view's own `?tab=` / `?view=` sub-navigation. Legacy slugs
- * keep working via AdminMenu's redirects, which map the old slug to the new
- * section + wpcc_tab and pass through every original query arg.
+ * collides with a hosted view's own `?tab=` / `?view=` sub-navigation. Every legacy
+ * URL keeps working: AdminMenu calls resolve_legacy() to map an old slug (and, for
+ * the retired 5-C section slugs, the old `wpcc_tab` value) onto the new section + tab,
+ * passing through every other original query arg so deep links survive.
  *
  * Builder vs Engineer disclosure/density is a client-side concern (wpcc-cds.js +
  * data-wpcc-mode); the shell renders the toggle, the ⌘K trigger, and the live
@@ -27,121 +32,228 @@ defined( 'ABSPATH' ) || exit;
 
 final class AppShell {
 
-	/** The Overview/home section slug = the plugin's top-level menu slug. */
+	/** The Home (Mission Control) section slug = the plugin's top-level menu slug. */
 	public const HOME_SLUG = 'wp-command-center';
 
+	/** Built-in AI (Door 1). */
+	public const BUILTIN_SLUG = 'wpcc-built-in-ai';
+
+	/** Connect (Doors 2 & 3 — AI Clients + API & Integrations). */
+	public const CONNECT_SLUG = 'wpcc-connect';
+
+	/** Activity (the live engine feed + approvals). */
+	public const ACTIVITY_SLUG = 'wpcc-activity';
+
+	/** History (every change + undo). */
+	public const HISTORY_SLUG = 'wpcc-history';
+
+	/** Settings (rules + advanced controls). */
+	public const SETTINGS_SLUG = 'wpcc-settings';
+
 	/**
-	 * The 5-C section slugs in menu order. Overview is the home (HOME_SLUG).
+	 * The six section slugs in menu order. Home is the top-level (HOME_SLUG).
 	 *
 	 * @var array<string,string> slug => i18n label (resolved at runtime).
 	 */
 	public const SECTION_SLUGS = [
-		self::HOME_SLUG => 'Overview',
-		'wpcc-operate'  => 'Operate',
-		'wpcc-audit'    => 'Audit',
-		'wpcc-access'   => 'Access',
-		'wpcc-connect'  => 'Connect',
+		self::HOME_SLUG     => 'Home',
+		self::BUILTIN_SLUG  => 'Built-in AI',
+		self::CONNECT_SLUG  => 'Connect',
+		self::ACTIVITY_SLUG => 'Activity',
+		self::HISTORY_SLUG  => 'History',
+		self::SETTINGS_SLUG => 'Settings',
 	];
 
 	/**
-	 * Legacy slug → [ section slug, wpcc_tab ] migration map. Used by AdminMenu to
-	 * redirect old bookmarks/deep-links into the new IA (passing through any other
-	 * query args so a hosted view still receives its own tab/view/session_id/etc.).
+	 * Retired standalone (pre-5-C) slugs → [ section slug, wpcc_tab ]. These slugs
+	 * never carried a `wpcc_tab` of their own, so the mapping is unconditional. Used
+	 * by resolve_legacy() to redirect old bookmarks/deep-links into the new IA.
 	 *
 	 * @return array<string,array{0:string,1:string}>
 	 */
 	public static function legacy_map(): array {
 		return [
-			// Phase A surfaces folded into sections.
+			// Phase A standalone surfaces.
 			'wpcc-dashboard-overview' => [ self::HOME_SLUG, '' ],
-			'wpcc-approval-center'    => [ 'wpcc-operate', 'approvals' ],
-			'wpcc-approvals'          => [ 'wpcc-operate', 'approvals' ], // pre-106 slug
-			'wpcc-operations'         => [ 'wpcc-operate', 'operations' ],
-			'wpcc-operations-center'  => [ 'wpcc-operate', 'center' ],
-			'wpcc-change-history'     => [ 'wpcc-audit', 'changes' ],
-			'wpcc-rollback'           => [ 'wpcc-audit', 'changes' ],     // pre-105.3 slug
-			'wpcc-patches'            => [ 'wpcc-audit', 'patches' ],
-			'wpcc-diagnostics'        => [ 'wpcc-audit', 'diagnostics' ],
-			'wpcc-site-intelligence'  => [ 'wpcc-audit', 'intelligence' ],
-			'wpcc-tokens'             => [ 'wpcc-access', 'tokens' ],
-			'wpcc-settings'           => [ 'wpcc-access', 'security' ],
-			'wpcc-ai-integrations'    => [ 'wpcc-connect', 'integrations' ],
-			'wpcc-ai-setup'           => [ 'wpcc-connect', 'setup' ],
-			'wpcc-file-access'        => [ 'wpcc-connect', 'files' ],
+			'wpcc-approval-center'    => [ self::ACTIVITY_SLUG, 'approvals' ],
+			'wpcc-approvals'          => [ self::ACTIVITY_SLUG, 'approvals' ], // pre-106 slug
+			'wpcc-operations'         => [ self::SETTINGS_SLUG, 'capabilities' ],
+			'wpcc-operations-center'  => [ self::ACTIVITY_SLUG, 'live' ],
+			'wpcc-change-history'     => [ self::HISTORY_SLUG, 'changes' ],
+			'wpcc-rollback'           => [ self::HISTORY_SLUG, 'changes' ],     // pre-105.3 slug
+			'wpcc-patches'            => [ self::SETTINGS_SLUG, 'patches' ],
+			'wpcc-diagnostics'        => [ self::SETTINGS_SLUG, 'diagnostics' ],
+			'wpcc-site-intelligence'  => [ self::SETTINGS_SLUG, 'intelligence' ],
+			'wpcc-tokens'             => [ self::SETTINGS_SLUG, 'access' ],
+			'wpcc-settings'           => [ self::SETTINGS_SLUG, 'security' ],
+			'wpcc-ai-integrations'    => [ self::CONNECT_SLUG, 'clients' ],
+			'wpcc-ai-setup'           => [ self::BUILTIN_SLUG, 'providers' ],
+			'wpcc-file-access'        => [ self::SETTINGS_SLUG, 'files' ],
 			// Build-flagged AI surfaces (only reachable when their flag is on).
-			'wpcc-proposals'          => [ 'wpcc-operate', 'drafts' ],
-			'wpcc-alt-text'           => [ 'wpcc-operate', 'alt_text' ],
-			'wpcc-seo'                => [ 'wpcc-operate', 'seo' ],
-			'wpcc-ai-content'         => [ 'wpcc-operate', 'ai_content' ],
+			'wpcc-proposals'          => [ self::ACTIVITY_SLUG, 'drafts' ],
+			'wpcc-alt-text'           => [ self::BUILTIN_SLUG, 'alt_text' ],
+			'wpcc-seo'                => [ self::BUILTIN_SLUG, 'seo' ],
+			'wpcc-ai-content'         => [ self::BUILTIN_SLUG, 'content' ],
 		];
 	}
 
 	/**
-	 * Build the full 5-C section/tab tree, already filtered by FeatureGate and the
+	 * Retired 5-C SECTION slugs → [ old wpcc_tab => [ new section slug, new wpcc_tab ] ].
+	 * The 5-C IA (Overview · Operate · Audit · Access · Connect) hosted multiple tabs
+	 * per section; the new IA re-homes them. resolve_legacy() consults this with the
+	 * incoming `wpcc_tab` so a deep link like `…?page=wpcc-operate&wpcc_tab=approvals`
+	 * lands on its exact new home. A `*` key is the section's no-tab default.
+	 *
+	 * Note `wpcc-connect` is reused as a live slug but its tab keys changed, so its old
+	 * tabs are remapped here too.
+	 *
+	 * @return array<string,array<string,array{0:string,1:string}>>
+	 */
+	public static function legacy_tab_map(): array {
+		return [
+			'wpcc-operate' => [
+				'*'          => [ self::ACTIVITY_SLUG, 'live' ],
+				'center'     => [ self::ACTIVITY_SLUG, 'live' ],
+				'approvals'  => [ self::ACTIVITY_SLUG, 'approvals' ],
+				'operations' => [ self::SETTINGS_SLUG, 'capabilities' ],
+				'runtime'    => [ self::SETTINGS_SLUG, 'runtime' ],
+				'drafts'     => [ self::ACTIVITY_SLUG, 'drafts' ],
+				'alt_text'   => [ self::BUILTIN_SLUG, 'alt_text' ],
+				'seo'        => [ self::BUILTIN_SLUG, 'seo' ],
+				'ai_content' => [ self::BUILTIN_SLUG, 'content' ],
+			],
+			'wpcc-audit' => [
+				'*'            => [ self::HISTORY_SLUG, 'changes' ],
+				'changes'      => [ self::HISTORY_SLUG, 'changes' ],
+				'patches'      => [ self::SETTINGS_SLUG, 'patches' ],
+				'diagnostics'  => [ self::SETTINGS_SLUG, 'diagnostics' ],
+				'intelligence' => [ self::SETTINGS_SLUG, 'intelligence' ],
+			],
+			'wpcc-access' => [
+				'*'        => [ self::SETTINGS_SLUG, 'access' ],
+				'tokens'   => [ self::SETTINGS_SLUG, 'access' ],
+				'security' => [ self::SETTINGS_SLUG, 'security' ],
+			],
+			// Old Connect tab keys (setup/integrations/files) → new homes.
+			'wpcc-connect' => [
+				'setup'        => [ self::BUILTIN_SLUG, 'providers' ],
+				'integrations' => [ self::CONNECT_SLUG, 'clients' ],
+				'files'        => [ self::SETTINGS_SLUG, 'files' ],
+			],
+		];
+	}
+
+	/**
+	 * Resolve a (possibly legacy) page slug + incoming wpcc_tab to its canonical
+	 * [ section_slug, wpcc_tab ] in the current IA, or null when no migration applies
+	 * (the slug is already current, or unknown). AdminMenu uses this for redirects.
+	 *
+	 * @return array{0:string,1:string}|null
+	 */
+	public static function resolve_legacy( string $page, string $tab = '' ): ?array {
+		// Retired section slugs (and reused Connect with an old tab) resolve by tab.
+		$tab_map = self::legacy_tab_map();
+		if ( isset( $tab_map[ $page ] ) ) {
+			$section_tabs = $tab_map[ $page ];
+			if ( '' !== $tab && isset( $section_tabs[ $tab ] ) ) {
+				return $section_tabs[ $tab ];
+			}
+			// Reused Connect slug with a new/empty tab is already current — no redirect.
+			if ( self::CONNECT_SLUG === $page ) {
+				return null;
+			}
+			if ( isset( $section_tabs['*'] ) ) {
+				return $section_tabs['*'];
+			}
+		}
+
+		// Standalone retired slugs (no tab of their own).
+		$map = self::legacy_map();
+		if ( isset( $map[ $page ] ) ) {
+			return $map[ $page ];
+		}
+
+		return null;
+	}
+
+	/**
+	 * Build the full six-section/tab tree, already filtered by FeatureGate and the
 	 * dev/build flags. Each tab: [ label, view (file stem), feature (key|null) ].
 	 *
-	 * @return array<string,array{label:string,tabs:array<string,array{label:string,view:string,feature:?string}>}>
+	 * @return array<string,array{label:string,desc:string,tabs:array<string,array{label:string,view:string,feature:?string}>}>
 	 */
 	public static function sections(): array {
-		$operate_tabs = [
-			'center'     => [ 'label' => __( 'Operations Center', 'wp-command-center' ), 'view' => 'operations-center', 'feature' => null ],
-			'approvals'  => [ 'label' => __( 'Approvals', 'wp-command-center' ),  'view' => 'approval-center',     'feature' => 'approval_center' ],
-			'operations' => [ 'label' => __( 'Operations', 'wp-command-center' ), 'view' => 'operations-explorer', 'feature' => 'operations_explorer' ],
-			'runtime'    => [ 'label' => __( 'Runtime (advanced)', 'wp-command-center' ), 'view' => 'dashboard', 'feature' => null ],
+		// Door 1 — Built-in AI. Providers is always present; the generation tools
+		// (SEO / Alt Text / Content) appear only when their build flag + FeatureGate
+		// allow, so the section never promises a tool the site can't actually run.
+		$builtin_tabs = [
+			'providers' => [ 'label' => __( 'Providers', 'wp-command-center' ), 'view' => 'ai-setup', 'feature' => null ],
 		];
-
-		// Build-flagged Governed Action surfaces fold under Operate only when enabled.
-		if ( self::flag( 'WPCC_PROPOSALS_DEV_UI', 'wpcc_proposals_dev_ui' ) && FeatureGate::allows( 'proposal_store' ) ) {
-			$operate_tabs['drafts'] = [ 'label' => __( 'Governed Drafts (Dev)', 'wp-command-center' ), 'view' => 'proposals', 'feature' => null ];
+		if ( self::flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
+			$builtin_tabs['seo'] = [ 'label' => __( 'SEO', 'wp-command-center' ), 'view' => 'seo-meta', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_ALT_TEXT_UI', 'wpcc_alt_text_ui' ) && FeatureGate::allows( 'ai_alt_text' ) ) {
-			$operate_tabs['alt_text'] = [ 'label' => __( 'AI Alt Text', 'wp-command-center' ), 'view' => 'ai-alt-text', 'feature' => null ];
-		}
-		if ( self::flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
-			$operate_tabs['seo'] = [ 'label' => __( 'SEO Meta', 'wp-command-center' ), 'view' => 'seo-meta', 'feature' => null ];
+			$builtin_tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'wp-command-center' ), 'view' => 'ai-alt-text', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_AI_CONTENT_UI', 'wpcc_ai_content_ui' ) && ( FeatureGate::allows( 'title_generator' ) || FeatureGate::allows( 'excerpt_generator' ) ) ) {
-			$operate_tabs['ai_content'] = [ 'label' => __( 'AI Content', 'wp-command-center' ), 'view' => 'ai-content', 'feature' => null ];
+			$builtin_tabs['content'] = [ 'label' => __( 'Content', 'wp-command-center' ), 'view' => 'ai-content', 'feature' => null ];
+		}
+
+		// Activity — the live feed + approvals. The dev-only proposal store folds in
+		// here (review queue) when its flag is on.
+		$activity_tabs = [
+			'live'      => [ 'label' => __( 'Live', 'wp-command-center' ),      'view' => 'operations-center', 'feature' => null ],
+			'approvals' => [ 'label' => __( 'Approvals', 'wp-command-center' ), 'view' => 'approval-center',   'feature' => 'approval_center' ],
+		];
+		if ( self::flag( 'WPCC_PROPOSALS_DEV_UI', 'wpcc_proposals_dev_ui' ) && FeatureGate::allows( 'proposal_store' ) ) {
+			$activity_tabs['drafts'] = [ 'label' => __( 'Drafts (Dev)', 'wp-command-center' ), 'view' => 'proposals', 'feature' => null ];
 		}
 
 		$tree = [
 			self::HOME_SLUG => [
-				'label' => __( 'Overview', 'wp-command-center' ),
-				'desc'  => __( 'Your starting point: what needs you, what changed, and how to set up.', 'wp-command-center' ),
+				'label' => __( 'Home', 'wp-command-center' ),
+				'desc'  => __( 'Mission control: what needs you, what changed, and where to start.', 'wp-command-center' ),
 				'tabs'  => [
 					'home' => [ 'label' => __( 'Home', 'wp-command-center' ), 'view' => 'command-home', 'feature' => null ],
 				],
 			],
-			'wpcc-operate' => [
-				'label' => __( 'Operate', 'wp-command-center' ),
-				'desc'  => __( 'Review and approve the work AI wants to do, and browse what it is allowed to do.', 'wp-command-center' ),
-				'tabs'  => $operate_tabs,
+			self::BUILTIN_SLUG => [
+				'label' => __( 'Built-in AI', 'wp-command-center' ),
+				'desc'  => __( 'Use AI to do work on your site: connect a provider, then generate — every change is reviewed and reversible.', 'wp-command-center' ),
+				'tabs'  => $builtin_tabs,
 			],
-			'wpcc-audit' => [
-				'label' => __( 'Audit', 'wp-command-center' ),
-				'desc'  => __( 'See every change, and undo the ones that can be reversed.', 'wp-command-center' ),
-				'tabs'  => [
-					'changes'      => [ 'label' => __( 'Changes', 'wp-command-center' ),          'view' => 'change-history',    'feature' => 'change_history' ],
-					'patches'      => [ 'label' => __( 'Patches', 'wp-command-center' ),          'view' => 'patches',          'feature' => null ],
-					'diagnostics'  => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),      'view' => 'diagnostics',      'feature' => null ],
-					'intelligence' => [ 'label' => __( 'Site Intelligence', 'wp-command-center' ), 'view' => 'site-intelligence', 'feature' => null ],
-				],
-			],
-			'wpcc-access' => [
-				'label' => __( 'Access', 'wp-command-center' ),
-				'desc'  => __( 'Control who and what can act: access tokens for AI agents, and your safety mode.', 'wp-command-center' ),
-				'tabs'  => [
-					'tokens'   => [ 'label' => __( 'Tokens & Capabilities', 'wp-command-center' ), 'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
-					'security' => [ 'label' => __( 'Security Mode', 'wp-command-center' ),         'view' => 'settings',                'feature' => null ],
-				],
-			],
-			'wpcc-connect' => [
+			self::CONNECT_SLUG => [
 				'label' => __( 'Connect', 'wp-command-center' ),
-				'desc'  => __( 'Set up your AI provider, connect an AI agent, and browse files.', 'wp-command-center' ),
+				'desc'  => __( 'Let an external AI assistant or your own app act on this site — safely, under approval and audit.', 'wp-command-center' ),
 				'tabs'  => [
-					'setup'        => [ 'label' => __( 'AI Setup', 'wp-command-center' ),             'view' => 'ai-setup',        'feature' => null ],
-					'integrations' => [ 'label' => __( 'Connect an AI Agent', 'wp-command-center' ), 'view' => 'ai-integrations', 'feature' => null ],
-					'files'        => [ 'label' => __( 'File Access', 'wp-command-center' ),          'view' => 'file-access',     'feature' => null ],
+					'clients' => [ 'label' => __( 'AI Clients', 'wp-command-center' ),        'view' => 'ai-integrations', 'feature' => null ],
+					'api'     => [ 'label' => __( 'API & Integrations', 'wp-command-center' ), 'view' => 'api-integrations', 'feature' => null ],
+				],
+			],
+			self::ACTIVITY_SLUG => [
+				'label' => __( 'Activity', 'wp-command-center' ),
+				'desc'  => __( 'What is happening right now, and what is waiting for your sign-off.', 'wp-command-center' ),
+				'tabs'  => $activity_tabs,
+			],
+			self::HISTORY_SLUG => [
+				'label' => __( 'History', 'wp-command-center' ),
+				'desc'  => __( 'Every change to your site — review it, and undo what is reversible.', 'wp-command-center' ),
+				'tabs'  => [
+					'changes' => [ 'label' => __( 'Changes', 'wp-command-center' ), 'view' => 'change-history', 'feature' => 'change_history' ],
+				],
+			],
+			self::SETTINGS_SLUG => [
+				'label' => __( 'Settings', 'wp-command-center' ),
+				'desc'  => __( 'Rules and advanced controls: security mode, access, diagnostics, and developer tools.', 'wp-command-center' ),
+				'tabs'  => [
+					'security'     => [ 'label' => __( 'Security & Approvals', 'wp-command-center' ), 'view' => 'settings',                  'feature' => null ],
+					'access'       => [ 'label' => __( 'Access', 'wp-command-center' ),               'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
+					'files'        => [ 'label' => __( 'File Access', 'wp-command-center' ),           'view' => 'file-access',              'feature' => null ],
+					'diagnostics'  => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),           'view' => 'diagnostics',              'feature' => null ],
+					'patches'      => [ 'label' => __( 'Patches', 'wp-command-center' ),               'view' => 'patches',                  'feature' => null ],
+					'intelligence' => [ 'label' => __( 'Site Report', 'wp-command-center' ),           'view' => 'site-intelligence',        'feature' => null ],
+					'capabilities' => [ 'label' => __( 'Capabilities', 'wp-command-center' ),          'view' => 'operations-explorer',      'feature' => 'operations_explorer' ],
+					'runtime'      => [ 'label' => __( 'Runtime', 'wp-command-center' ),               'view' => 'dashboard',                'feature' => null ],
 				],
 			],
 		];
@@ -204,15 +316,7 @@ final class AppShell {
 		}
 		$section = $sections[ $section_slug ];
 		$tabs    = $section['tabs'];
-		if ( empty( $tabs ) ) {
-			return; // every tab gated off — nothing to show.
-		}
-
-		// Resolve the active tab.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view selection, no state change.
-		$requested = isset( $_GET['wpcc_tab'] ) ? sanitize_key( wp_unslash( $_GET['wpcc_tab'] ) ) : '';
-		$active    = isset( $tabs[ $requested ] ) ? $requested : array_key_first( $tabs );
-		$is_home   = ( self::HOME_SLUG === $section_slug );
+		$is_home = ( self::HOME_SLUG === $section_slug );
 
 		$mode  = SecurityModeManager::current();
 		$label = SecurityModeManager::label();
@@ -222,7 +326,9 @@ final class AppShell {
 				<h1 class="wpcc-shell__brand">
 					<span class="wpcc-shell__brand-mark" aria-hidden="true">&#9783;</span>
 					<?php esc_html_e( 'Command Center', 'wp-command-center' ); ?>
-					<?php if ( ! $is_home ) : ?>
+					<?php if ( $is_home ) : ?>
+						<span class="wpcc-shell__brand-section"><?php esc_html_e( 'Mission Control', 'wp-command-center' ); ?></span>
+					<?php else : ?>
 						<span class="wpcc-shell__brand-section"><?php echo esc_html( $section['label'] ); ?></span>
 					<?php endif; ?>
 				</h1>
@@ -242,7 +348,12 @@ final class AppShell {
 
 			<?php if ( ! $is_home && count( $tabs ) > 0 ) : ?>
 				<nav class="wpcc-shell__tabs" aria-label="<?php echo esc_attr( $section['label'] ); ?>">
-					<?php foreach ( $tabs as $key => $tab ) : ?>
+					<?php
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view selection, no state change.
+					$requested = isset( $_GET['wpcc_tab'] ) ? sanitize_key( wp_unslash( $_GET['wpcc_tab'] ) ) : '';
+					$active    = isset( $tabs[ $requested ] ) ? $requested : array_key_first( $tabs );
+					foreach ( $tabs as $key => $tab ) :
+						?>
 						<a class="wpcc-shell__tab <?php echo $key === $active ? 'is-active' : ''; ?>"
 							href="<?php echo esc_url( admin_url( 'admin.php?page=' . $section_slug . '&wpcc_tab=' . $key ) ); ?>"
 							<?php echo $key === $active ? 'aria-current="page"' : ''; ?>>
@@ -257,8 +368,29 @@ final class AppShell {
 			<?php endif; ?>
 
 			<div class="wpcc-shell__canvas">
-				<?php $this->require_view( $tabs[ $active ]['view'] ); ?>
+				<?php
+				if ( empty( $tabs ) ) {
+					// Every tab gated off (licensing seam): instruct, never show a blank page.
+					$this->render_empty_section( $section['label'] );
+				} else {
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view selection.
+					$requested = isset( $_GET['wpcc_tab'] ) ? sanitize_key( wp_unslash( $_GET['wpcc_tab'] ) ) : '';
+					$active    = isset( $tabs[ $requested ] ) ? $requested : array_key_first( $tabs );
+					$this->require_view( $tabs[ $active ]['view'] );
+				}
+				?>
 			</div>
+		</div>
+		<?php
+	}
+
+	/** A graceful, instructive empty state when a whole section is gated off. */
+	private function render_empty_section( string $label ): void {
+		?>
+		<div class="wpcc-cds-empty" role="status">
+			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'wp-command-center' ), $label ) ); ?></strong></p>
+			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in WP Command Center stays available.', 'wp-command-center' ); ?></p>
+			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'wp-command-center' ); ?></a></p>
 		</div>
 		<?php
 	}

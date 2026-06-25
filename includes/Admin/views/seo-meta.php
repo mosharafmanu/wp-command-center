@@ -29,7 +29,7 @@ $nonce     = wp_create_nonce( 'wp_rest' );
 $api_base  = rest_url( 'wp-command-center/v1/admin' );
 $core_base = rest_url( 'wp/v2' );
 $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any post type)
-$ai_url    = admin_url( 'admin.php?page=wpcc-ai-integrations' ); // U1.4 — connect an AI key
+$ai_url    = admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ); // U1.4 — connect an AI key
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.

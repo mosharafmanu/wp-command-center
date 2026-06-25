@@ -3,8 +3,9 @@
 # Experience Layer — acceptance suite.
 #
 # Validates the WPCC Experience Layer: the unified Command Center Home (resolving
-# the two-dashboard conflict), the 5-C App Shell + navigation (Overview · Operate ·
-# Audit · Access · Connect) with legacy-slug redirects, the Command Design System
+# the two-dashboard conflict), the product-language App Shell + navigation (Home ·
+# Built-in AI · Connect · Activity · History · Settings) with tab-aware legacy-slug
+# redirects (Phase 1 IA migration from the former 5-C nav), the Command Design System
 # (CDS) token/component substrate, the relocated + trimmed legacy operational
 # dashboard (Operate › Runtime), Builder/Engineer mode, and the ⌘K palette —
 # WITHOUT any new REST route, operation, capability, MCP tool, or schema change.
@@ -76,30 +77,33 @@ fi
 if [ -f "$PLUGIN_DIR/includes/Admin/views/dashboard-overview.php" ]; then fail "legacy dashboard-overview.php removed"; else pass "legacy dashboard-overview.php removed"; fi
 
 echo
-echo "== 2. AppShell — 5-C IA + migration map + selector =="
-has "section: Overview (home slug)"  "HOME_SLUG = 'wp-command-center'" "$SHELL_PHP"
-has "section: Operate"               "'wpcc-operate'"  "$SHELL_PHP"
-has "section: Audit"                 "'wpcc-audit'"    "$SHELL_PHP"
-has "section: Access"                "'wpcc-access'"   "$SHELL_PHP"
-has "section: Connect"               "'wpcc-connect'"  "$SHELL_PHP"
+echo "== 2. AppShell — six-section IA + migration map + selector =="
+has "section: Home (home slug)"      "HOME_SLUG\s*=\s*'wp-command-center'" "$SHELL_PHP"
+has "section: Built-in AI"           "BUILTIN_SLUG\s*=\s*'wpcc-built-in-ai'" "$SHELL_PHP"
+has "section: Connect"               "CONNECT_SLUG\s*=\s*'wpcc-connect'"  "$SHELL_PHP"
+has "section: Activity"              "ACTIVITY_SLUG\s*=\s*'wpcc-activity'" "$SHELL_PHP"
+has "section: History"               "HISTORY_SLUG\s*=\s*'wpcc-history'"  "$SHELL_PHP"
+has "section: Settings"              "SETTINGS_SLUG\s*=\s*'wpcc-settings'" "$SHELL_PHP"
 has "selector is namespaced wpcc_tab (no ?tab= collision)" "wpcc_tab" "$SHELL_PHP"
-lacks "shell does not read raw \$_GET['tab'] for selection" "\\\$_GET\['tab'\]" "$SHELL_PHP"
-# Legacy migration map covers every former Phase A surface.
+# Legacy migration map re-homes every former Phase A / 5-C standalone surface.
 has "map: dashboard-overview -> home"     "'wpcc-dashboard-overview' => \[ self::HOME_SLUG" "$SHELL_PHP"
-has "map: approval-center -> operate"     "'wpcc-approval-center'    => \[ 'wpcc-operate', 'approvals' \]" "$SHELL_PHP"
-has "map: operations -> operate"          "'wpcc-operations'         => \[ 'wpcc-operate', 'operations' \]" "$SHELL_PHP"
-has "map: change-history -> audit"        "'wpcc-change-history'     => \[ 'wpcc-audit', 'changes' \]" "$SHELL_PHP"
-has "map: patches -> audit"               "'wpcc-patches'            => \[ 'wpcc-audit', 'patches' \]" "$SHELL_PHP"
-has "map: diagnostics -> audit"           "'wpcc-diagnostics'        => \[ 'wpcc-audit', 'diagnostics' \]" "$SHELL_PHP"
-has "map: site-intelligence -> audit"     "'wpcc-site-intelligence'  => \[ 'wpcc-audit', 'intelligence' \]" "$SHELL_PHP"
-has "map: tokens -> access"               "'wpcc-tokens'             => \[ 'wpcc-access', 'tokens' \]" "$SHELL_PHP"
-has "map: settings -> access (security)"  "'wpcc-settings'           => \[ 'wpcc-access', 'security' \]" "$SHELL_PHP"
-has "map: ai-integrations -> connect"     "'wpcc-ai-integrations'    => \[ 'wpcc-connect', 'integrations' \]" "$SHELL_PHP"
-has "map: file-access -> connect"         "'wpcc-file-access'        => \[ 'wpcc-connect', 'files' \]" "$SHELL_PHP"
-# Build-flagged AI surfaces fold under Operate.
-has "map: alt-text -> operate"            "'wpcc-alt-text'" "$SHELL_PHP"
-has "map: seo -> operate"                 "'wpcc-seo'" "$SHELL_PHP"
-has "map: ai-content -> operate"          "'wpcc-ai-content'" "$SHELL_PHP"
+has "map: approval-center -> activity"    "'wpcc-approval-center'    => \[ self::ACTIVITY_SLUG, 'approvals' \]" "$SHELL_PHP"
+has "map: operations -> settings/caps"    "'wpcc-operations'         => \[ self::SETTINGS_SLUG, 'capabilities' \]" "$SHELL_PHP"
+has "map: change-history -> history"      "'wpcc-change-history'     => \[ self::HISTORY_SLUG, 'changes' \]" "$SHELL_PHP"
+has "map: patches -> settings"            "'wpcc-patches'            => \[ self::SETTINGS_SLUG, 'patches' \]" "$SHELL_PHP"
+has "map: diagnostics -> settings"        "'wpcc-diagnostics'        => \[ self::SETTINGS_SLUG, 'diagnostics' \]" "$SHELL_PHP"
+has "map: site-intelligence -> settings"  "'wpcc-site-intelligence'  => \[ self::SETTINGS_SLUG, 'intelligence' \]" "$SHELL_PHP"
+has "map: tokens -> settings/access"      "'wpcc-tokens'             => \[ self::SETTINGS_SLUG, 'access' \]" "$SHELL_PHP"
+has "map: settings -> settings/security"  "'wpcc-settings'           => \[ self::SETTINGS_SLUG, 'security' \]" "$SHELL_PHP"
+has "map: ai-integrations -> connect"     "'wpcc-ai-integrations'    => \[ self::CONNECT_SLUG, 'clients' \]" "$SHELL_PHP"
+has "map: ai-setup -> built-in-ai"        "'wpcc-ai-setup'           => \[ self::BUILTIN_SLUG, 'providers' \]" "$SHELL_PHP"
+has "map: file-access -> settings"        "'wpcc-file-access'        => \[ self::SETTINGS_SLUG, 'files' \]" "$SHELL_PHP"
+# Build-flagged AI surfaces fold under Built-in AI.
+has "map: alt-text -> built-in-ai"        "'wpcc-alt-text'" "$SHELL_PHP"
+has "map: seo -> built-in-ai"             "'wpcc-seo'" "$SHELL_PHP"
+has "map: ai-content -> built-in-ai"      "'wpcc-ai-content'" "$SHELL_PHP"
+# Retired 5-C section slugs resolve tab-aware (deep-link preservation).
+has "tab-aware resolve_legacy present"    "function resolve_legacy" "$SHELL_PHP"
 # Tabs are FeatureGate-filtered (licensing seam honored).
 has "tabs filtered by FeatureGate"        "FeatureGate::allows" "$SHELL_PHP"
 # Shell chrome.
@@ -114,19 +118,20 @@ lacks "shell adds no REST route"          "register_rest_route" "$SHELL_PHP"
 lacks "shell never dispatches engine"     "OperationExecutor|->run\(|->execute\(" "$SHELL_PHP"
 
 echo
-echo "== 3. AdminMenu — five sections + one redirect + badge =="
-has "menu: Overview section"  "render_overview"  "$MENU"
-has "menu: Operate section"   "'wpcc-operate'"   "$MENU"
-has "menu: Audit section"     "'wpcc-audit'"     "$MENU"
-has "menu: Access section"    "'wpcc-access'"    "$MENU"
-has "menu: Connect section"   "'wpcc-connect'"   "$MENU"
+echo "== 3. AdminMenu — six sections + one redirect + badge =="
+has "menu: Home section"      "render_overview" "$MENU"
+has "menu: Built-in AI section" "render_builtin"  "$MENU"
+has "menu: Connect section"   "render_connect"  "$MENU"
+has "menu: Activity section"  "render_activity" "$MENU"
+has "menu: History section"   "render_history"  "$MENU"
+has "menu: Settings section"  "render_settings" "$MENU"
 has "single consolidated legacy redirect" "function redirect_legacy_slugs" "$MENU"
 has "redirect carries wpcc_tab"           "wpcc_tab"            "$MENU"
 # Redirect MUST run on admin_menu (before core's user_can_access_admin_page() 403
 # in menu.php), NOT admin_init — unregistered legacy slugs 403 before admin_init.
 has "redirect hooked on admin_menu (pre-403)" "add_action\( 'admin_menu', \[ \\\$this, 'redirect_legacy_slugs' \], 0 \)" "$MENU"
 lacks "redirect NOT on admin_init (too late)"  "add_action\( 'admin_init', \[ \\\$this, 'redirect_legacy_slugs'" "$MENU"
-has "admin-bar badge -> new Approvals"    "page=wpcc-operate&wpcc_tab=approvals" "$MENU"
+has "admin-bar badge -> new Approvals"    "ACTIVITY_SLUG \. '&wpcc_tab=approvals'" "$MENU"
 # No stale standalone submenus for surfaces that are now tabs.
 lacks "no stale change-history submenu"   "add_submenu_page.*wpcc-change-history" "$MENU"
 lacks "no stale tokens submenu"           "add_submenu_page.*wpcc-tokens"        "$MENU"
@@ -171,7 +176,7 @@ lacks "no Queued Operations panel"        ">Queued Operations<"       "$RUNTIME"
 has "keeps Safe Search & Replace"         "wpcc_sr_action"            "$RUNTIME"
 has "keeps agent plan approval"           "value=\"approve_plan\""    "$RUNTIME"
 has "keeps runtime hierarchy"             "Runtime Hierarchy"         "$RUNTIME"
-has "points operators to Approval Center" "page=wpcc-operate&wpcc_tab=approvals" "$RUNTIME"
+has "points operators to Approval Center" "page=wpcc-activity&wpcc_tab=approvals" "$RUNTIME"
 # Self-links/forms retarget the new Runtime location (not the old top-level slug).
 has "timeline form targets new Runtime"   "name=\"wpcc_tab\" value=\"runtime\"" "$RUNTIME"
 lacks "no self-link to old top-level slug" "'page' => 'wp-command-center'" "$RUNTIME"

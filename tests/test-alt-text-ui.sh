@@ -27,9 +27,9 @@ cat > "$BATT" <<'PHP'
 <?php
 $a=get_users(['role'=>'administrator','number'=>1]); wp_set_current_user($a?$a[0]->ID:1);
 $out=[]; $emit=function($d,$ok,$x='')use(&$out){ $out[]=$d."\t".($ok?'PASS':'FAIL')."\t".$x; };
-// Experience Layer: AI Alt Text is the Operate › alt_text tab in the 5-C App Shell
+// Experience Layer: AI Alt Text is the Built-in AI › Alt Text tab in the App Shell
 // (added only when the build flag is on AND the FeatureGate allows ai_alt_text).
-$reg=function(){ $s=\WPCommandCenter\Admin\AppShell::sections(); return $s['wpcc-operate']['tabs']['alt_text'] ?? null; };
+$reg=function(){ $s=\WPCommandCenter\Admin\AppShell::sections(); return $s['wpcc-built-in-ai']['tabs']['alt_text'] ?? null; };
 
 // 1. hidden by default
 remove_all_filters('wpcc_alt_text_ui');
@@ -39,7 +39,7 @@ $emit('tab hidden by default', $reg()===null);
 add_filter('wpcc_alt_text_ui','__return_true');
 $item=$reg();
 $emit('tab visible when flag on + FeatureGate allows', $item!==null && ($item['view']??'')==='ai-alt-text');
-$emit('tab title is "AI Alt Text"', $item!==null && wp_strip_all_tags($item['label']??'')==='AI Alt Text');
+$emit('tab title is "Alt Text"', $item!==null && wp_strip_all_tags($item['label']??'')==='Alt Text');
 
 // 2b. AND-gating: build flag on but FeatureGate('ai_alt_text') OFF -> hidden
 $deny=function($allow,$feature){ return $feature==='ai_alt_text' ? false : $allow; };

@@ -44,12 +44,15 @@ final class AdminMenu {
 			65
 		);
 
-		// Submenu order mirrors the 5-C IA. Overview reuses the parent slug.
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Overview', 'wp-command-center' ), __( 'Overview', 'wp-command-center' ), self::CAPABILITY, AppShell::HOME_SLUG, [ $this, 'render_overview' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Operate', 'wp-command-center' ), __( 'Operate', 'wp-command-center' ), self::CAPABILITY, 'wpcc-operate', [ $this, 'render_operate' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Audit', 'wp-command-center' ), __( 'Audit', 'wp-command-center' ), self::CAPABILITY, 'wpcc-audit', [ $this, 'render_audit' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Access', 'wp-command-center' ), __( 'Access', 'wp-command-center' ), self::CAPABILITY, 'wpcc-access', [ $this, 'render_access' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Connect', 'wp-command-center' ), __( 'Connect', 'wp-command-center' ), self::CAPABILITY, 'wpcc-connect', [ $this, 'render_connect' ] );
+		// Submenu order mirrors the product-language IA (UX Master Blueprint §2):
+		// Home · Built-in AI · Connect · Activity · History · Settings. Home reuses
+		// the parent slug. Architecture words never appear in the menu.
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Home', 'wp-command-center' ), __( 'Home', 'wp-command-center' ), self::CAPABILITY, AppShell::HOME_SLUG, [ $this, 'render_overview' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Built-in AI', 'wp-command-center' ), __( 'Built-in AI', 'wp-command-center' ), self::CAPABILITY, AppShell::BUILTIN_SLUG, [ $this, 'render_builtin' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Connect', 'wp-command-center' ), __( 'Connect', 'wp-command-center' ), self::CAPABILITY, AppShell::CONNECT_SLUG, [ $this, 'render_connect' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Activity', 'wp-command-center' ), __( 'Activity', 'wp-command-center' ), self::CAPABILITY, AppShell::ACTIVITY_SLUG, [ $this, 'render_activity' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'History', 'wp-command-center' ), __( 'History', 'wp-command-center' ), self::CAPABILITY, AppShell::HISTORY_SLUG, [ $this, 'render_history' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, AppShell::SETTINGS_SLUG, [ $this, 'render_settings' ] );
 	}
 
 	/**
@@ -68,26 +71,30 @@ final class AdminMenu {
 			return;
 		}
 
-		$map = AppShell::legacy_map();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation.
+		$tab = isset( $_GET['wpcc_tab'] ) ? sanitize_key( wp_unslash( $_GET['wpcc_tab'] ) ) : '';
 
 		// Special case: the old Settings → API Tokens section deep-links to the
-		// Tokens tab (not Security), preserving the STEP 107.4 behavior.
-		if ( 'wpcc-settings' === $page ) {
+		// Access tab (not Security), preserving the STEP 107.4 behavior.
+		if ( 'wpcc-settings' === $page && '' === $tab ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$section = isset( $_GET['section'] ) ? sanitize_key( wp_unslash( $_GET['section'] ) )
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				: ( isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '' );
 			if ( in_array( $section, [ 'tokens', 'api-tokens', 'api_tokens' ], true ) ) {
-				$this->redirect_to( 'wpcc-access', 'tokens' );
+				$this->redirect_to( AppShell::SETTINGS_SLUG, 'access' );
 				return;
 			}
 		}
 
-		if ( ! isset( $map[ $page ] ) ) {
+		// Resolve any legacy slug (and, for retired 5-C section slugs, the old
+		// wpcc_tab) onto its canonical home in the current IA. Null = already current.
+		$resolved = AppShell::resolve_legacy( $page, $tab );
+		if ( null === $resolved ) {
 			return;
 		}
 
-		[ $section_slug, $wpcc_tab ] = $map[ $page ];
+		[ $section_slug, $wpcc_tab ] = $resolved;
 		$this->redirect_to( $section_slug, $wpcc_tab );
 	}
 
@@ -138,7 +145,7 @@ final class AdminMenu {
 				esc_html__( 'AI Requests', 'wp-command-center' ),
 				$count
 			),
-			'href'  => admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals' ),
+			'href'  => admin_url( 'admin.php?page=' . AppShell::ACTIVITY_SLUG . '&wpcc_tab=approvals' ),
 		] );
 	}
 
@@ -146,19 +153,23 @@ final class AdminMenu {
 		( new AppShell() )->render( AppShell::HOME_SLUG );
 	}
 
-	public function render_operate(): void {
-		( new AppShell() )->render( 'wpcc-operate' );
-	}
-
-	public function render_audit(): void {
-		( new AppShell() )->render( 'wpcc-audit' );
-	}
-
-	public function render_access(): void {
-		( new AppShell() )->render( 'wpcc-access' );
+	public function render_builtin(): void {
+		( new AppShell() )->render( AppShell::BUILTIN_SLUG );
 	}
 
 	public function render_connect(): void {
-		( new AppShell() )->render( 'wpcc-connect' );
+		( new AppShell() )->render( AppShell::CONNECT_SLUG );
+	}
+
+	public function render_activity(): void {
+		( new AppShell() )->render( AppShell::ACTIVITY_SLUG );
+	}
+
+	public function render_history(): void {
+		( new AppShell() )->render( AppShell::HISTORY_SLUG );
+	}
+
+	public function render_settings(): void {
+		( new AppShell() )->render( AppShell::SETTINGS_SLUG );
 	}
 }

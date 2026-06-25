@@ -150,8 +150,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 </style>
 
 <div class="wrap wpcc-ai-wrap">
-	<h1><?php esc_html_e( 'Connect an AI Agent', 'wp-command-center' ); ?></h1>
-	<p style="max-width:680px;"><?php esc_html_e( 'Connect an AI assistant (like the Claude desktop app) to this site so it can help with WordPress tasks — safely, with your approval, a full record, and one-click undo. New to this? Start with the short guide below.', 'wp-command-center' ); ?></p>
+	<h1><?php esc_html_e( 'AI Clients', 'wp-command-center' ); ?></h1>
+	<p style="max-width:680px;"><?php esc_html_e( 'An AI client is an assistant like Claude Desktop, Cursor, Codex, Continue, or Gemini CLI, running on your computer. Connect one here so it can help with WordPress tasks on this site — safely, with your approval, a full record, and one-click undo. New to this? Start with the short guide below.', 'wp-command-center' ); ?></p>
 
 	<details class="wpcc-agent-explainer" style="max-width:760px;margin:10px 0 20px;border:1px solid #c3c4c7;border-radius:6px;background:#f0f6fc;padding:14px 18px;" open>
 		<summary style="cursor:pointer;font-weight:700;font-size:14px;"><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'wp-command-center' ); ?></summary>
@@ -166,11 +166,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			<p style="margin:0;color:#646970;font-size:12px;">
 				<?php
 				printf(
-					/* translators: 1: AI Setup link open, 2: link close, 3: Tokens link open, 4: link close */
-					esc_html__( 'Setup order: 1) add your AI key in %1$sAI Setup%2$s, 2) create an %3$saccess token%4$s, 3) paste the token into your AI assistant using the configuration below.', 'wp-command-center' ),
-					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=setup' ) ) . '">',
+					/* translators: 1: Providers link open, 2: link close, 3: Tokens link open, 4: link close */
+					esc_html__( 'Setup order: 1) add your AI key in %1$sBuilt-in AI → Providers%2$s, 2) create an %3$saccess token%4$s, 3) paste the token into your AI assistant using the configuration below.', 'wp-command-center' ),
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' ) ) . '">',
 					'</a>',
-					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-access&wpcc_tab=tokens' ) ) . '">',
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=access' ) ) . '">',
 					'</a>'
 				);
 				?>
@@ -197,7 +197,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	<!-- Tab navigation -->
 	<div class="wpcc-ai-tabs">
 		<?php foreach ( $wpcc_tabs as $tab_id => $tab_label ) : ?>
-			<a href="<?php echo esc_url( add_query_arg( 'tab', $tab_id, admin_url( 'admin.php?page=wpcc-ai-integrations' ) ) ); ?>"
+			<a href="<?php echo esc_url( add_query_arg( 'tab', $tab_id, admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>"
 			   class="wpcc-ai-tab<?php echo $tab_id === $wpcc_tab ? ' wpcc-ai-tab--active' : ''; ?>"><?php echo esc_html( $tab_label ); ?></a>
 		<?php endforeach; ?>
 	</div>
@@ -281,7 +281,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<div class="type"><span class="wpcc-badge wpcc-badge--neutral"><?php echo esc_html( $client['type'] ); ?></span></div>
 					<div class="desc"><?php echo esc_html( $client['description'] ); ?></div>
 					<div style="margin-top:10px;">
-						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-ai-integrations' ) ) ); ?>" class="button button-small">
+						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>" class="button button-small">
 							<?php esc_html_e( 'Configure', 'wp-command-center' ); ?>
 						</a>
 					</div>
@@ -298,7 +298,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			<div class="wpcc-ai-panel__body">
 				<div style="display: flex; gap: 10px; flex-wrap: wrap;">
 					<?php foreach ( $wpcc_active_clients as $id => $client ) : ?>
-						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-ai-integrations' ) ) ); ?>"
+						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>"
 						   class="button<?php echo $id === $wpcc_selected_client ? ' button-primary' : ''; ?>">
 							<?php echo esc_html( $client['name'] ); ?>
 						</a>

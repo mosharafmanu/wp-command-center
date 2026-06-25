@@ -26,16 +26,16 @@ $nonce    = wp_create_nonce( 'wp_rest' );
 $api_base = rest_url( 'wp-command-center/v1/admin' );
 
 $links = [
-	'approvals'       => admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals' ),
-	'approvals_queue' => admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals&tab=queue' ),
-	'operations'      => admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=operations' ),
-	'tokens'          => admin_url( 'admin.php?page=wpcc-access&wpcc_tab=tokens' ),
-	'change_history'  => admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=changes&tab=sessions' ),
-	'connect'         => admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=integrations' ),
+	'approvals'       => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ),
+	'approvals_queue' => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals&tab=queue' ),
+	'operations'      => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=capabilities' ),
+	'tokens'          => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=access' ),
+	'change_history'  => admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes&tab=sessions' ),
+	'connect'         => admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ),
 ];
 
-// Per-session deep link into the Change History timeline, hosted under Audit.
-$session_base = admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=changes&tab=timeline' );
+// Per-session deep link into the Change History timeline, hosted under History.
+$session_base = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes&tab=timeline' );
 
 // PROGRAM-5A — first-run / adoption-readiness panel (server-rendered, no REST).
 // Dismiss is per-user and only honored when setup is complete (incomplete setup
@@ -76,6 +76,49 @@ $wpcc_total_count   = count( $wpcc_checklist );
 				<?php esc_html_e( 'A quick checklist to use WPCC safely. AI is optional and stays off until you add a key — nothing here turns AI on or changes your security mode automatically.', 'wp-command-center' ); ?>
 			</p>
 
+			<?php
+			// "Three Doors" onboarding fork (UX Master Blueprint §3.1). One question,
+			// three self-contained paths — choosing one orders the journey; it never
+			// hides the others. Pure navigation: no state is written.
+			$wpcc_doors = [
+				[
+					'title' => __( 'Use WPCC’s built-in AI', 'wp-command-center' ),
+					'desc'  => __( 'Generate SEO, alt text and content with your own provider key.', 'wp-command-center' ),
+					'cta'   => __( 'Set up Built-in AI', 'wp-command-center' ),
+					'url'   => admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' ),
+					'icon'  => 'dashicons-superhero',
+				],
+				[
+					'title' => __( 'Connect my AI assistant', 'wp-command-center' ),
+					'desc'  => __( 'Let Claude, Cursor, Codex and others act here, under approval.', 'wp-command-center' ),
+					'cta'   => __( 'Connect a client', 'wp-command-center' ),
+					'url'   => admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ),
+					'icon'  => 'dashicons-admin-plugins',
+				],
+				[
+					'title' => __( 'Connect an app or service', 'wp-command-center' ),
+					'desc'  => __( 'Drive this site from your own software over a governed REST API.', 'wp-command-center' ),
+					'cta'   => __( 'Set up the API', 'wp-command-center' ),
+					'url'   => admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=api' ),
+					'icon'  => 'dashicons-rest-api',
+				],
+			];
+			?>
+			<div class="wpcc-doorfork" role="group" aria-label="<?php esc_attr_e( 'How do you want to use AI here?', 'wp-command-center' ); ?>" style="margin:0 0 18px;">
+				<p style="margin:0 0 10px;font-weight:600;font-size:14px;"><?php esc_html_e( 'How do you want to use AI here?', 'wp-command-center' ); ?></p>
+				<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;">
+					<?php foreach ( $wpcc_doors as $wpcc_door ) : ?>
+						<div style="display:flex;flex-direction:column;gap:8px;padding:14px;background:#fff;border:1px solid #dcdcde;border-radius:6px;">
+							<span class="dashicons <?php echo esc_attr( $wpcc_door['icon'] ); ?>" aria-hidden="true" style="font-size:22px;width:22px;height:22px;color:#2271b1;"></span>
+							<strong style="font-size:13px;"><?php echo esc_html( $wpcc_door['title'] ); ?></strong>
+							<span style="flex:1;color:#646970;font-size:12px;line-height:1.5;"><?php echo esc_html( $wpcc_door['desc'] ); ?></span>
+							<a class="button button-secondary button-small" style="align-self:flex-start;" href="<?php echo esc_url( $wpcc_door['url'] ); ?>"><?php echo esc_html( $wpcc_door['cta'] ); ?></a>
+						</div>
+					<?php endforeach; ?>
+				</div>
+				<p style="margin:10px 0 0;color:#646970;font-size:12px;"><?php esc_html_e( 'You can do all three later — pick where to start. Whatever you choose, every change waits for your approval and can be undone.', 'wp-command-center' ); ?></p>
+			</div>
+
 			<div style="margin:0 0 16px;padding:18px 20px;background:linear-gradient(135deg,#f2fbf5,#eaf7ef);border:1px solid #b6e3c5;border-left:4px solid #00a32a;border-radius:8px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
 				<span style="display:flex;gap:12px;align-items:center;">
 					<span class="dashicons dashicons-chart-area" aria-hidden="true" style="font-size:26px;width:26px;height:26px;color:#00a32a;"></span>
@@ -84,7 +127,7 @@ $wpcc_total_count   = count( $wpcc_checklist );
 						<span style="display:block;color:#50575e;font-size:13px;margin-top:3px;"><?php esc_html_e( 'Run a read-only health check on this site for an instant win. Nothing is changed — it only reads.', 'wp-command-center' ); ?></span>
 					</span>
 				</span>
-				<a class="button button-primary button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=diagnostics' ) ); ?>"><?php esc_html_e( 'Run a site report', 'wp-command-center' ); ?></a>
+				<a class="button button-primary button-hero" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=diagnostics' ) ); ?>"><?php esc_html_e( 'Run a site report', 'wp-command-center' ); ?></a>
 			</div>
 
 			<ol style="list-style:none;margin:0;padding:0;display:grid;gap:10px;">
@@ -116,7 +159,7 @@ $wpcc_total_count   = count( $wpcc_checklist );
 					<p style="margin:0;"><strong><?php esc_html_e( 'What it does:', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Lets an AI agent operate this WordPress site under your control — with capability limits, an approval step, a full audit trail, and one-click undo for supported changes.', 'wp-command-center' ); ?></p>
 					<p style="margin:0;"><strong><?php esc_html_e( 'AI is optional and off by default.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'No AI runs until you add a provider key and enable a feature. Adding a key here never turns features on by itself.', 'wp-command-center' ); ?></p>
 					<p style="margin:0;"><strong><?php esc_html_e( 'Approval protects client sites.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'In Client or Enterprise mode, write operations wait for your review before they apply.', 'wp-command-center' ); ?></p>
-					<p style="margin:0;"><strong><?php esc_html_e( 'Undo lives in Audit → Changes.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Content, SEO meta, media metadata, settings, comments, users and several other surfaces record a reversible change you can restore.', 'wp-command-center' ); ?></p>
+					<p style="margin:0;"><strong><?php esc_html_e( 'Undo lives in History → Changes.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Content, SEO meta, media metadata, settings, comments, users and several other surfaces record a reversible change you can restore.', 'wp-command-center' ); ?></p>
 					<p style="margin:0;"><strong><?php esc_html_e( 'Honest limits:', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Not everything is reversible. Plugin and theme updates are NOT automatically undoable, and some surfaces (e.g. WooCommerce orders) have no rollback. WPCC tells you when a change cannot be undone — it does not promise undo everywhere.', 'wp-command-center' ); ?></p>
 					<p style="margin:0;"><strong><?php esc_html_e( 'It is not a backup tool or a fleet manager.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'It governs individual actions on this one site; it does not take full-site backups or manage many sites at once.', 'wp-command-center' ); ?></p>
 				</div>

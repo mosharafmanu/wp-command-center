@@ -203,13 +203,13 @@ else
 	echo "== 5b. Tab gating (functional, via AppShell::sections) =="
 	# Experience Layer: SEO Meta is the Operate › SEO Meta tab; it appears in the
 	# shell only when the build flag is on AND the FeatureGate allows.
-	TAB_OFF="$(wpe 'remove_all_filters("wpcc_seo_meta_ui"); $s=\WPCommandCenter\Admin\AppShell::sections(); echo isset($s["wpcc-operate"]["tabs"]["seo"])?"shown":"hidden";')"
+	TAB_OFF="$(wpe 'remove_all_filters("wpcc_seo_meta_ui"); $s=\WPCommandCenter\Admin\AppShell::sections(); echo isset($s["wpcc-built-in-ai"]["tabs"]["seo"])?"shown":"hidden";')"
 	assert_eq "tab hidden by default" "hidden" "$TAB_OFF"
 
-	TAB_ON="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-operate"]["tabs"]["seo"])?"shown":"hidden";')"
+	TAB_ON="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-built-in-ai"]["tabs"]["seo"])?"shown":"hidden";')"
 	assert_eq "tab shown when build flag on + FeatureGate allows" "shown" "$TAB_ON"
 
-	TAB_DENY="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $d=function($allow,$f){ return $f==="seo_meta_generator"?false:$allow; }; add_filter("wpcc_feature_allowed",$d,10,2); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_filter("wpcc_feature_allowed",$d,10); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-operate"]["tabs"]["seo"])?"shown":"hidden";')"
+	TAB_DENY="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $d=function($allow,$f){ return $f==="seo_meta_generator"?false:$allow; }; add_filter("wpcc_feature_allowed",$d,10,2); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_filter("wpcc_feature_allowed",$d,10); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-built-in-ai"]["tabs"]["seo"])?"shown":"hidden";')"
 	assert_eq "tab hidden when FeatureGate denies" "hidden" "$TAB_DENY"
 fi
 

@@ -41,7 +41,7 @@ VIEW_PHP="$(awk '/<script>/{s=1} /<\/script>/{s=0;next} !s' "$VIEW" | grep -vE '
 DEFAULT_REG="$(wpe '
 remove_all_filters("wpcc_proposals_dev_ui");
 $s=\WPCommandCenter\Admin\AppShell::sections();
-echo isset($s["wpcc-operate"]["tabs"]["drafts"])?"yes":"no";
+echo isset($s["wpcc-activity"]["tabs"]["drafts"])?"yes":"no";
 ')"
 assert_eq "tab OFF by default (real users)" "no" "$DEFAULT_REG"
 
@@ -49,7 +49,7 @@ FILTER_REG="$(wpe '
 add_filter("wpcc_proposals_dev_ui","__return_true");
 $s=\WPCommandCenter\Admin\AppShell::sections();
 remove_all_filters("wpcc_proposals_dev_ui");
-echo isset($s["wpcc-operate"]["tabs"]["drafts"])?"yes":"no";
+echo isset($s["wpcc-activity"]["tabs"]["drafts"])?"yes":"no";
 ')"
 assert_eq "tab ON when dev switch enabled" "yes" "$FILTER_REG"
 
