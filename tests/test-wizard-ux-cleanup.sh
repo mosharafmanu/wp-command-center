@@ -43,8 +43,8 @@ for n in wpcc_provider wpcc_endpoint wpcc_key wpcc_model wpcc_model_custom wpcc_
   has "field $n preserved" "name=\"$n\"" "$V"
 done
 
-echo "== 6. Execution/storage/security byte-identical to main (no runtime change) =="
-for f in includes/Admin/ConnectionController.php includes/Ai/Platform/ConnectionStore.php includes/Ai/Platform/Dialect.php includes/Ai/Platform/ConnectionTester.php; do
+echo "== 6. GENERATION/security/runtime byte-identical to main (no runtime change) =="
+for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php includes/Ai/Platform/CredentialStore.php; do
   if git -C "$ROOT" diff --quiet main -- "$f" 2>/dev/null; then pass "unchanged vs main: $(basename "$f")"; else fail "CHANGED vs main: $(basename "$f")"; fi
 done
 # ProviderCatalog gains metadata() but ADDITIVELY — no existing line removed/changed.

@@ -91,26 +91,37 @@ final class ConnectionTester {
 		$body = json_decode( (string) wp_remote_retrieve_body( $res ), true );
 		if ( $code >= 200 && $code < 300 ) {
 			// Honest model discovery from the SAME /models response (no extra call).
+			// Capture the real model ids the provider returns — never invented.
 			$models = 0;
+			$list   = [];
 			if ( is_array( $body ) ) {
 				if ( isset( $body['data'] ) && is_array( $body['data'] ) ) {
 					$models = count( $body['data'] );              // OpenAI-compatible
+					foreach ( $body['data'] as $m ) {
+						$id = is_array( $m ) ? (string) ( $m['id'] ?? '' ) : '';
+						if ( '' !== $id ) { $list[] = $id; }
+					}
 				} elseif ( isset( $body['models'] ) && is_array( $body['models'] ) ) {
 					$models = count( $body['models'] );            // Gemini
+					foreach ( $body['models'] as $m ) {
+						$id = is_array( $m ) ? (string) ( $m['name'] ?? ( $m['id'] ?? '' ) ) : ( is_string( $m ) ? $m : '' );
+						if ( '' !== $id ) { $list[] = $id; }
+					}
 				}
 			}
-			return $this->res( true, 'ok', '', $models );
+			return $this->res( true, 'ok', '', $models, $list );
 		}
 		$msg = is_array( $body ) ? (string) ( $body['error']['message'] ?? ( is_string( $body['error'] ?? null ) ? $body['error'] : '' ) ) : '';
 		return $this->res( false, 'api_error_' . $code, '' !== $msg ? $msg : ( 'HTTP ' . $code ) );
 	}
 
-	private function res( bool $ok, string $code, string $message, int $models = 0 ): array {
+	private function res( bool $ok, string $code, string $message, int $models = 0, array $models_list = [] ): array {
 		return [
-			'ok'      => $ok,
-			'code'    => $code,
-			'message' => $ok ? '' : ( new Redactor() )->redact( $message )['text'],
-			'models'  => $models,
+			'ok'          => $ok,
+			'code'        => $code,
+			'message'     => $ok ? '' : ( new Redactor() )->redact( $message )['text'],
+			'models'      => $models,
+			'models_list' => $models_list,
 		];
 	}
 }

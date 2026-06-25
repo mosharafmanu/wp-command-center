@@ -221,10 +221,23 @@ final class ConnectionStore {
 		$stored = get_option( self::OPT_CONNECTIONS, [] );
 		$stored = is_array( $stored ) ? $stored : [];
 		if ( isset( $stored[ $id ] ) ) {
-			$stored[ $id ]['last_test'] = array_merge(
-				[ 'ok' => $ok, 'code' => $code, 'time' => time() ],
-				array_intersect_key( $extra, [ 'latency_ms' => 1, 'models' => 1 ] ) // whitelist — no secrets.
-			);
+			$clean = array_intersect_key( $extra, [ 'latency_ms' => 1, 'models' => 1 ] ); // whitelist — no secrets.
+			// Persist the real discovered model ids (sanitised, bounded) so the editor
+			// can offer them. Non-secret metadata; never fabricated.
+			if ( isset( $extra['models_list'] ) && is_array( $extra['models_list'] ) ) {
+				$ids = [];
+				foreach ( $extra['models_list'] as $m ) {
+					$m = (string) $m;
+					if ( '' !== $m && strlen( $m ) <= 80 && false === strpos( $m, '..' ) && preg_match( '/^[A-Za-z0-9._:\/\-]+$/', $m ) ) {
+						$ids[] = $m;
+					}
+					if ( count( $ids ) >= 250 ) {
+						break;
+					}
+				}
+				$clean['models_list'] = array_values( array_unique( $ids ) );
+			}
+			$stored[ $id ]['last_test'] = array_merge( [ 'ok' => $ok, 'code' => $code, 'time' => time() ], $clean );
 			update_option( self::OPT_CONNECTIONS, $stored, false );
 		}
 	}

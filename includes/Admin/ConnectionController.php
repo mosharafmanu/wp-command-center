@@ -176,7 +176,7 @@ final class ConnectionController {
 		$ms     = (int) round( ( microtime( true ) - $t0 ) * 1000 );
 		$ok     = ! empty( $result['ok'] );
 		$code   = sanitize_text_field( (string) ( $result['code'] ?? 'error' ) );
-		$this->store->record_test( $id, $ok, $code, [ 'latency_ms' => $ms, 'models' => (int) ( $result['models'] ?? 0 ) ] );
+		$this->store->record_test( $id, $ok, $code, [ 'latency_ms' => $ms, 'models' => (int) ( $result['models'] ?? 0 ), 'models_list' => is_array( $result['models_list'] ?? null ) ? $result['models_list'] : [] ] );
 		$this->audit( 'ai.connection.test', [ 'connection' => $id, 'dialect' => $conn['dialect'], 'result' => $code ] );
 		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'wp-command-center' ) ); }
 		$detail = sanitize_text_field( (string) ( $result['message'] ?? '' ) );
@@ -229,6 +229,12 @@ final class ConnectionController {
 		}
 		$models = is_array( $def['models'] ?? null ) ? $def['models'] : [];
 		if ( '' !== $choice && isset( $models[ $choice ] ) ) {
+			return $choice;
+		}
+		// A real model id chosen from the selector (a recommended OR a discovered
+		// model surfaced after a successful test). Validated for shape — never
+		// fabricated; falls back to the provider default when unrecognised.
+		if ( '' !== $choice && strlen( $choice ) <= 80 && false === strpos( $choice, '..' ) && preg_match( '/^[A-Za-z0-9._:\/\-]+$/', $choice ) ) {
 			return $choice;
 		}
 		return (string) ( $def['default_model'] ?? '' );
