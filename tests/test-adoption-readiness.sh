@@ -43,9 +43,11 @@ echo "== 3. AI Setup view — never exposes the secret =="
 hasnt "view never echoes a key value" "echo .*(api_key|wpcc_api_key|->key\(\))" "$VIEW"
 hasnt "key input is not prefilled with a value" "name=\"wpcc_api_key\"[^>]*value=" "$VIEW"
 has "key input is type=password" 'type="password"' "$VIEW"
-has "view shows configured state only" "ai_configured" "$VIEW"
-has "view carries the nonce" "wp_nonce_field\( AiSetupController::NONCE_ACTION" "$VIEW"
-has "OpenAI/Gemini shown as planned, not offered" "PLANNED" "$VIEW"
+# PROGRAM-6: view rebuilt to multi-provider; these assertions re-pointed to the new
+# (still-safe) reality. Key is never echoed; configured state shown; nonce present.
+has "view shows configured state only" "has_secret" "$VIEW"
+has "view carries the nonce" "wp_nonce_field\( ProviderConfigController::NONCE" "$VIEW"
+has "OpenAI/Gemini are configurable (no longer 'planned' placeholders)" "Add a provider" "$VIEW"
 has "honest local-storage security note present" "stored in this site" "$VIEW"
 
 echo "== 4. AdoptionStatus — read-only, no key leak =="
