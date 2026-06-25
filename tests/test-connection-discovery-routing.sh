@@ -31,7 +31,7 @@ has "rejects path-ish ids (..)" "strpos\( \\\$m, '..' \)" "$S"
 echo "== 4. Editor shows recommended + discovered + custom =="
 has "edit selector present" 'class="wpcc-edit-model"' "$V"
 has "Recommended optgroup" "esc_attr_e\( 'Recommended'" "$V"
-has "Discovered optgroup (count)" "Discovered \(%d\)" "$V"
+has "Discovered optgroup (count)" "Discovered from your account \(%d\)" "$V"
 has "Custom model ID preserved" "Custom model ID" "$V"
 has "custom text revealed by JS" "wpcc-edit-model-custom" "$V"
 
@@ -40,10 +40,16 @@ has "model_value accepts validated id" "preg_match\( '/\^\[A-Za-z0-9._:" "$CC"
 has "model_value rejects path-ish id" "strpos\( \\\$choice, '..' \)" "$CC"
 
 echo "== 6. Routing clarity (Issue 2) — explicit reason, no faked support =="
-has "intro explains Anthropic-only runtime" "executes through Anthropic .Claude. only" "$V"
+has "intro explains Anthropic-only runtime (plain)" "only run AI tasks through Anthropic" "$V"
 has "ineligible connections collected" "wpcc_ineligible_conns" "$V"
-has "ineligible shown as disabled with reason" "not usable by the runtime yet" "$V"
-has "explicit note: no provider support faked" "no provider support is faked" "$V"
+has "ineligible shown as disabled with reason" "healthy, but WP Command Center can" "$V"
+has "explicit note: nothing hidden or faked" "Nothing is hidden or faked" "$V"
+
+echo "== 6b. Copy guidance (setup→discovery, no-discovery, discovery-unavailable) =="
+has "wizard: recommended-at-setup, discovery-after-test" "Recommended models are shown during setup" "$V"
+has "edit: 'test once to discover' hint" "Test this connection once to discover" "$V"
+has "edit: discovery-unavailable explained (not broken)" "doesn.t publish an account model list" "$V"
+has "copy-selection flag is presentation-only" "Copy selection only" "$V"
 
 echo "== 7. Generation/security/runtime byte-identical to main =="
 for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php includes/Ai/Platform/CredentialStore.php; do

@@ -308,7 +308,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 
 		<div class="wpcc-aip-step" data-step="4">
 			<h3><?php esc_html_e( 'Step 4 — Model', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick a model, or keep the recommended default. You can change it any time.', 'wp-command-center' ); ?></p>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Recommended models are shown during setup. After you save and test this connection, WP Command Center automatically adds any other models your account exposes — you’ll find them in this connection’s Model list under “Edit”. Providers that don’t publish a model list simply keep the recommended set. You can change the model any time.', 'wp-command-center' ); ?></p>
 			<div class="wpcc-aip-field">
 				<label for="wpcc-w-model-select"><?php esc_html_e( 'Model', 'wp-command-center' ); ?></label>
 				<input type="search" id="wpcc-w-model-search" style="display:none;width:100%;margin-bottom:6px;" placeholder="<?php esc_attr_e( 'Filter models…', 'wp-command-center' ); ?>" aria-label="<?php esc_attr_e( 'Filter models', 'wp-command-center' ); ?>" />
@@ -431,15 +431,24 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 								$wpcc_disc  = ( is_array( $lt ) && ! empty( $lt['models_list'] ) && is_array( $lt['models_list'] ) ) ? $lt['models_list'] : [];
 								$wpcc_cur   = (string) $c['model'];
 								$wpcc_known = isset( $wpcc_rec[ $wpcc_cur ] ) || in_array( $wpcc_cur, $wpcc_disc, true );
+								// Copy selection only: providers whose connection test lists account models.
+								$wpcc_lists = in_array( $c['dialect'], [ Dialect::OPENAI, Dialect::GEMINI ], true );
 								?>
 								<label style="font-size:12px;"><?php esc_html_e( 'Model', 'wp-command-center' ); ?>
 									<select name="wpcc_model" class="wpcc-edit-model" style="width:100%;">
 										<?php if ( $wpcc_rec ) : ?><optgroup label="<?php esc_attr_e( 'Recommended', 'wp-command-center' ); ?>"><?php foreach ( $wpcc_rec as $wpcc_mid => $wpcc_mlabel ) : ?><option value="<?php echo esc_attr( $wpcc_mid ); ?>" <?php selected( $wpcc_cur === (string) $wpcc_mid ); ?>><?php echo esc_html( $wpcc_mlabel ); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
-										<?php if ( $wpcc_disc ) : ?><optgroup label="<?php echo esc_attr( sprintf( __( 'Discovered (%d)', 'wp-command-center' ), count( $wpcc_disc ) ) ); ?>"><?php foreach ( $wpcc_disc as $wpcc_did ) : if ( isset( $wpcc_rec[ $wpcc_did ] ) ) { continue; } ?><option value="<?php echo esc_attr( $wpcc_did ); ?>" <?php selected( $wpcc_cur === (string) $wpcc_did ); ?>><?php echo esc_html( $wpcc_did ); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+										<?php if ( $wpcc_disc ) : ?><optgroup label="<?php echo esc_attr( sprintf( __( 'Discovered from your account (%d)', 'wp-command-center' ), count( $wpcc_disc ) ) ); ?>"><?php foreach ( $wpcc_disc as $wpcc_did ) : if ( isset( $wpcc_rec[ $wpcc_did ] ) ) { continue; } ?><option value="<?php echo esc_attr( $wpcc_did ); ?>" <?php selected( $wpcc_cur === (string) $wpcc_did ); ?>><?php echo esc_html( $wpcc_did ); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
 										<option value="custom" <?php selected( ! $wpcc_known ); ?>><?php esc_html_e( 'Custom model ID…', 'wp-command-center' ); ?></option>
 									</select>
 								</label>
 								<input type="text" name="wpcc_model_custom" class="wpcc-edit-model-custom" value="<?php echo esc_attr( $wpcc_known ? '' : $wpcc_cur ); ?>" style="width:100%;font-family:monospace;<?php echo $wpcc_known ? 'display:none;' : ''; ?>" placeholder="<?php echo esc_attr( (string) ( $def['default_model'] ?? 'model-id' ) ); ?>" />
+								<?php if ( ! empty( $wpcc_disc ) ) : ?>
+									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'Recommended = our defaults. Discovered from your account = pulled live from your last connection test. Custom = enter any model id.', 'wp-command-center' ); ?></p>
+								<?php elseif ( $wpcc_lists ) : ?>
+									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'Test this connection once to discover the additional models available to your account.', 'wp-command-center' ); ?></p>
+								<?php else : ?>
+									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'This provider offers the recommended models only — it doesn’t publish an account model list to discover. Nothing is broken; use Custom to enter any model id.', 'wp-command-center' ); ?></p>
+								<?php endif; ?>
 							<label style="font-size:12px;"><?php esc_html_e( 'Tags', 'wp-command-center' ); ?><input type="text" name="wpcc_tags" value="<?php echo esc_attr( implode( ', ', $c['tags'] ) ); ?>" style="width:100%;" placeholder="prod, cheap" /></label>
 							<div><button type="submit" name="wpcc_conn_action" value="update" class="button button-small"><?php esc_html_e( 'Save changes', 'wp-command-center' ); ?></button></div>
 						</form>
@@ -469,13 +478,13 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 
 	<!-- ===== Feature routing (visual) ===== -->
 	<h2><?php esc_html_e( 'Feature routing', 'wp-command-center' ); ?></h2>
-	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers each AI feature. WP Command Center’s runtime currently executes through Anthropic (Claude) only, so only Anthropic connections can be selected here — other providers can be stored and tested, and will become selectable as runtime support expands. This is the seam where failover and cost routing will live.', 'wp-command-center' ); ?></p>
+	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers each AI feature. Right now WP Command Center can only run AI tasks through Anthropic (Claude), so only Anthropic connections appear here. Other providers can still be saved and tested — they’ll appear here automatically once WP Command Center can run them. This is the seam where failover and cost routing will live.', 'wp-command-center' ); ?></p>
 	<?php if ( empty( $wpcc_runtime_conns ) ) : ?>
 		<?php if ( ! empty( $wpcc_ineligible_conns ) ) : ?>
 			<p class="muted" style="font-size:13px;max-width:700px;">
 				<?php
 				/* translators: 1: number of healthy connections, 2: their names. */
-				printf( esc_html__( 'You have %1$d healthy connection(s) (%2$s) — but the runtime executes through Anthropic (Claude) only, so they can’t power features yet. Add a key to an Anthropic connection to choose routing.', 'wp-command-center' ), count( $wpcc_ineligible_conns ), esc_html( implode( ', ', $wpcc_ineligible_conns ) ) );
+				printf( esc_html__( 'You have %1$d connection(s) that connected and tested fine (%2$s) — but WP Command Center can only run AI through Anthropic (Claude) right now, so they can’t power features yet. Add a key to an Anthropic connection to choose routing.', 'wp-command-center' ), count( $wpcc_ineligible_conns ), esc_html( implode( ', ', $wpcc_ineligible_conns ) ) );
 				?>
 			</p>
 		<?php else : ?>
@@ -497,14 +506,14 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 							<option value="<?php echo esc_attr( $rid ); ?>" <?php selected( ( $wpcc_routes[ $fk ] ?? '' ) === $rid ); ?>><?php echo esc_html( $rname ); ?></option>
 						<?php endforeach; ?>
 						<?php foreach ( $wpcc_ineligible_conns as $iname ) : ?>
-							<option disabled><?php echo esc_html( sprintf( /* translators: %s: connection label */ __( '%s — not usable by the runtime yet', 'wp-command-center' ), $iname ) ); ?></option>
+							<option disabled><?php echo esc_html( sprintf( /* translators: %s: connection label */ __( '%s — healthy, but WP Command Center can’t run it yet', 'wp-command-center' ), $iname ) ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</div>
 			<?php endforeach; ?>
 			<button type="submit" name="wpcc_conn_action" value="save_routes" class="button" style="margin-top:12px;"><?php esc_html_e( 'Save routing', 'wp-command-center' ); ?></button>
 			<?php if ( ! empty( $wpcc_ineligible_conns ) ) : ?>
-				<p class="muted" style="font-size:12px;margin:12px 0 0;max-width:520px;"><?php esc_html_e( 'Connections marked “not usable by the runtime yet” are healthy and testable, but WP Command Center currently executes AI through Anthropic (Claude) only. They’ll become selectable here when runtime support for their provider ships — no provider support is faked.', 'wp-command-center' ); ?></p>
+				<p class="muted" style="font-size:12px;margin:12px 0 0;max-width:520px;"><?php esc_html_e( 'Connections marked “healthy, but WP Command Center can’t run it yet” connected and tested successfully — WP Command Center simply can’t run AI tasks through them yet (today it runs through Anthropic / Claude only). They’ll appear as selectable the moment that changes. Nothing is hidden or faked.', 'wp-command-center' ); ?></p>
 			<?php endif; ?>
 		</form>
 	<?php endif; ?>
