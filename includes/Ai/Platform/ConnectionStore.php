@@ -216,12 +216,15 @@ final class ConnectionStore {
 		$this->sync_runtime();
 	}
 
-	public function record_test( string $id, bool $ok, string $code ): void {
+	public function record_test( string $id, bool $ok, string $code, array $extra = [] ): void {
 		$this->update( $id, [] ); // ensure persisted
 		$stored = get_option( self::OPT_CONNECTIONS, [] );
 		$stored = is_array( $stored ) ? $stored : [];
 		if ( isset( $stored[ $id ] ) ) {
-			$stored[ $id ]['last_test'] = [ 'ok' => $ok, 'code' => $code, 'time' => time() ];
+			$stored[ $id ]['last_test'] = array_merge(
+				[ 'ok' => $ok, 'code' => $code, 'time' => time() ],
+				array_intersect_key( $extra, [ 'latency_ms' => 1, 'models' => 1 ] ) // whitelist — no secrets.
+			);
 			update_option( self::OPT_CONNECTIONS, $stored, false );
 		}
 	}

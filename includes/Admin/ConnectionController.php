@@ -171,10 +171,12 @@ final class ConnectionController {
 			return $this->n( 'warning', __( 'A connection test is not available for this provider yet.', 'wp-command-center' ) );
 		}
 		$key    = $this->store->credentials()->secret( $conn );
+		$t0     = microtime( true );
 		$result = ( new ConnectionTester() )->test( $conn, $key );
+		$ms     = (int) round( ( microtime( true ) - $t0 ) * 1000 );
 		$ok     = ! empty( $result['ok'] );
 		$code   = sanitize_text_field( (string) ( $result['code'] ?? 'error' ) );
-		$this->store->record_test( $id, $ok, $code );
+		$this->store->record_test( $id, $ok, $code, [ 'latency_ms' => $ms, 'models' => (int) ( $result['models'] ?? 0 ) ] );
 		$this->audit( 'ai.connection.test', [ 'connection' => $id, 'dialect' => $conn['dialect'], 'result' => $code ] );
 		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'wp-command-center' ) ); }
 		$detail = sanitize_text_field( (string) ( $result['message'] ?? '' ) );
