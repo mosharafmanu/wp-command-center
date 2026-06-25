@@ -57,6 +57,7 @@ final class AppShell {
 			'wpcc-approval-center'    => [ 'wpcc-operate', 'approvals' ],
 			'wpcc-approvals'          => [ 'wpcc-operate', 'approvals' ], // pre-106 slug
 			'wpcc-operations'         => [ 'wpcc-operate', 'operations' ],
+			'wpcc-operations-center'  => [ 'wpcc-operate', 'center' ],
 			'wpcc-change-history'     => [ 'wpcc-audit', 'changes' ],
 			'wpcc-rollback'           => [ 'wpcc-audit', 'changes' ],     // pre-105.3 slug
 			'wpcc-patches'            => [ 'wpcc-audit', 'patches' ],
@@ -83,6 +84,7 @@ final class AppShell {
 	 */
 	public static function sections(): array {
 		$operate_tabs = [
+			'center'     => [ 'label' => __( 'Operations Center', 'wp-command-center' ), 'view' => 'operations-center', 'feature' => null ],
 			'approvals'  => [ 'label' => __( 'Approvals', 'wp-command-center' ),  'view' => 'approval-center',     'feature' => 'approval_center' ],
 			'operations' => [ 'label' => __( 'Operations', 'wp-command-center' ), 'view' => 'operations-explorer', 'feature' => 'operations_explorer' ],
 			'runtime'    => [ 'label' => __( 'Runtime (advanced)', 'wp-command-center' ), 'view' => 'dashboard', 'feature' => null ],
