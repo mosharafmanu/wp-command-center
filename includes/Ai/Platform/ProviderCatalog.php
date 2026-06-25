@@ -165,4 +165,56 @@ final class ProviderCatalog {
 		}
 		return $out;
 	}
+
+	/** Above this many models the wizard offers a search/filter box. */
+	public const SEARCH_THRESHOLD = 8;
+
+	/**
+	 * Provider-driven UI metadata — the single descriptor the connection wizard
+	 * renders from (no provider-specific conditionals in the view). Pure derivation
+	 * from the catalog definition; NO provider execution, runtime, key-storage, or
+	 * API-contract behavior.
+	 *
+	 * `supports_discovery` is **false for every provider today**: WPCC has no
+	 * browser-facing model-listing endpoint (the connection test only *counts*
+	 * models server-side). This flag is the honest seam a future discovery endpoint
+	 * would flip on — until then the wizard uses `recommended_models` / free text and
+	 * never fabricates a model list.
+	 *
+	 * @return array<string,mixed>|null
+	 */
+	public static function metadata( string $id ): ?array {
+		$def = self::get( $id );
+		if ( ! $def ) {
+			return null;
+		}
+		$recommended = ( isset( $def['models'] ) && is_array( $def['models'] ) ) ? $def['models'] : [];
+		return [
+			'id'                    => $id,
+			'label'                 => (string) ( $def['label'] ?? $id ),
+			'dialect'               => (string) ( $def['dialect'] ?? '' ),
+			'requires_endpoint'     => ! empty( $def['needs_endpoint'] ),
+			'default_endpoint'      => self::default_endpoint( $id ),
+			'supports_discovery'    => false, // honest: no UI-facing model-listing endpoint exists yet.
+			'recommended_models'    => $recommended,
+			'default_model'         => (string) ( $def['default_model'] ?? '' ),
+			'supports_custom_model' => ! empty( $def['allow_custom_model'] ),
+			'supports_search'       => count( $recommended ) > self::SEARCH_THRESHOLD,
+			'supports_testing'      => self::test_supported( $id ),
+			'needs_deployment'      => ! empty( $def['needs_deployment'] ),
+			'key_optional'          => ! empty( $def['key_optional'] ),
+		];
+	}
+
+	/** @return array<string,array<string,mixed>> metadata for every provider, keyed by id. */
+	public static function metadata_all(): array {
+		$out = [];
+		foreach ( array_keys( self::all() ) as $id ) {
+			$meta = self::metadata( $id );
+			if ( null !== $meta ) {
+				$out[ $id ] = $meta;
+			}
+		}
+		return $out;
+	}
 }

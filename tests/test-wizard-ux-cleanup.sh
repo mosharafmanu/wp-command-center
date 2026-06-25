@@ -20,14 +20,14 @@ echo "== 2. Base URL is conditional (cloud uses defaults automatically) =="
 has "endpoint field has a toggle wrapper" 'id="wpcc-w-endpoint-field"' "$V"
 has "copy: cloud uses official URL automatically" "Cloud providers use their official URL automatically" "$V"
 hasnt "old confusing 'blank for cloud defaults' copy removed" "blank for cloud defaults" "$V"
-has "JS hides Base URL unless needs_endpoint" "needs_endpoint \? '' : 'none'" "$V"
+has "JS hides Base URL unless endpoint required" "requires_endpoint \? '' : 'none'" "$V"
 
 echo "== 3. Provider-aware model dropdown + custom fallback =="
 has "model dropdown present" 'id="wpcc-w-model-select"' "$V"
 has "custom model free-text fallback retained" 'name="wpcc_model_custom"' "$V"
 has "'Custom model ID' option label" "Custom model ID" "$V"
 has "JS wires wpcc_model flag to dropdown/custom" "mFlag.value = mdlSel.value" "$V"
-has "free text used when provider has no model list" "mdlSel.style.display = 'none'; mdlTxt.style.display = ''" "$V"
+has "free text used when provider has no model list" "mdlTxt.style.display = ''; mFlag.value = 'custom'" "$V"
 
 echo "== 4. Tags hidden behind Advanced options + explained =="
 has "Advanced options disclosure" "<details class=\"wpcc-aip-advanced\"" "$V"
@@ -43,10 +43,12 @@ for n in wpcc_provider wpcc_endpoint wpcc_key wpcc_model wpcc_model_custom wpcc_
   has "field $n preserved" "name=\"$n\"" "$V"
 done
 
-echo "== 6. Backend is byte-identical to main (no runtime/storage/security change) =="
-for f in includes/Admin/ConnectionController.php includes/Ai/Platform/ConnectionStore.php includes/Ai/Platform/ProviderCatalog.php includes/Ai/Platform/Dialect.php; do
+echo "== 6. Execution/storage/security byte-identical to main (no runtime change) =="
+for f in includes/Admin/ConnectionController.php includes/Ai/Platform/ConnectionStore.php includes/Ai/Platform/Dialect.php includes/Ai/Platform/ConnectionTester.php; do
   if git -C "$ROOT" diff --quiet main -- "$f" 2>/dev/null; then pass "unchanged vs main: $(basename "$f")"; else fail "CHANGED vs main: $(basename "$f")"; fi
 done
+# ProviderCatalog gains metadata() but ADDITIVELY — no existing line removed/changed.
+if [ -z "$(git -C "$ROOT" diff main -- includes/Ai/Platform/ProviderCatalog.php | rg '^-' | rg -v '^---')" ]; then pass "ProviderCatalog change is additive-only (no execution change)"; else fail "ProviderCatalog has non-additive edits"; fi
 
 echo "== 7. Functional: provider-meta correctness (the data the wizard renders) =="
 PHPF="$(mktemp -t wizux.XXXXXX.php)"

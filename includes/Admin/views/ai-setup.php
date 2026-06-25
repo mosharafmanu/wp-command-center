@@ -302,6 +302,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick a model, or keep the recommended default. You can change it any time.', 'wp-command-center' ); ?></p>
 			<div class="wpcc-aip-field">
 				<label for="wpcc-w-model-select"><?php esc_html_e( 'Model', 'wp-command-center' ); ?></label>
+				<input type="search" id="wpcc-w-model-search" style="display:none;width:100%;margin-bottom:6px;" placeholder="<?php esc_attr_e( 'Filter models…', 'wp-command-center' ); ?>" aria-label="<?php esc_attr_e( 'Filter models', 'wp-command-center' ); ?>" />
 				<select id="wpcc-w-model-select" style="display:none;"></select>
 				<input type="text" id="wpcc-w-model" name="wpcc_model_custom" style="font-family:monospace;" placeholder="model-id" />
 				<p class="muted" id="wpcc-w-model-help" style="font-size:12px;margin:4px 0 0;"></p>
@@ -312,6 +313,11 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 					<label for="wpcc-w-tags"><?php esc_html_e( 'Tags', 'wp-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'optional', 'wp-command-center' ); ?>)</span></label>
 					<input type="text" id="wpcc-w-tags" name="wpcc_tags" placeholder="prod, premium" />
 					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Internal labels to organize and route your connections (for example “prod” or “cheap”). Optional, used only inside WP Command Center — never sent to the provider.', 'wp-command-center' ); ?></p>
+				</div>
+				<div class="wpcc-aip-field" id="wpcc-w-deployment-field" style="display:none;margin-top:10px;">
+					<label for="wpcc-w-deployment"><?php esc_html_e( 'Deployment name', 'wp-command-center' ); ?></label>
+					<input type="text" id="wpcc-w-deployment" name="wpcc_deployment" />
+					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Azure OpenAI only: the deployment name you created for this model in your Azure resource.', 'wp-command-center' ); ?></p>
 				</div>
 			</details>
 		</div>
@@ -485,68 +491,103 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 </div>
 
 <?php
-// PROVIDER META (data only — drives the wizard's provider-aware Base URL + model
-// controls). No runtime/storage/security behavior: the backend already applies
-// these defaults when fields are blank (ConnectionController::endpoint_value/model_value).
-$wpcc_provider_meta = [];
-foreach ( $wpcc_providers as $wpcc_pid => $wpcc_pdef ) {
-	$wpcc_provider_meta[ $wpcc_pid ] = [
-		'needs_endpoint'   => ! empty( $wpcc_pdef['needs_endpoint'] ),
-		'default_endpoint' => ProviderCatalog::default_endpoint( $wpcc_pid ),
-		'models'           => ( isset( $wpcc_pdef['models'] ) && is_array( $wpcc_pdef['models'] ) && $wpcc_pdef['models'] ) ? $wpcc_pdef['models'] : new stdClass(),
-		'default_model'    => (string) ( $wpcc_pdef['default_model'] ?? '' ),
-		'allow_custom'     => ! empty( $wpcc_pdef['allow_custom_model'] ),
-	];
+// PROVIDER-DRIVEN WIZARD METADATA — the single descriptor the wizard renders from
+// (ProviderCatalog::metadata()). Data only: NO runtime/provider-execution/key-storage/
+// security/API-contract behavior. Adding a provider = a catalog row; the wizard adapts
+// with no view change. recommended_models normalize to objects so empty serialises {}.
+$wpcc_provider_meta = ProviderCatalog::metadata_all();
+foreach ( $wpcc_provider_meta as &$wpcc_m ) {
+	$wpcc_m['recommended_models'] = ! empty( $wpcc_m['recommended_models'] ) ? $wpcc_m['recommended_models'] : new stdClass();
 }
+unset( $wpcc_m );
 ?>
 <script>
 (function () {
 	var wiz = document.getElementById('wpcc-aip-wizard');
 	if (!wiz) return;
 
-	// ---- Provider-aware fields: Base URL only for local/Azure/gateway/custom;
-	// model dropdown for providers with a model list, free text otherwise. ----
+	// ---- Provider-driven wizard: every field renders from provider metadata
+	// (ProviderCatalog::metadata) — no provider-specific conditionals. Adding a
+	// provider needs no code here. Model discovery is a gated seam (no backend
+	// listing endpoint exists yet → curated fallback; never fabricated). ----
 	var WPCC_PMETA = <?php echo wp_json_encode( $wpcc_provider_meta ); ?>;
 	(function () {
 		var provSel = document.getElementById('wpcc-w-provider');
 		var epField = document.getElementById('wpcc-w-endpoint-field');
 		var epInput = document.getElementById('wpcc-w-endpoint');
+		var depField= document.getElementById('wpcc-w-deployment-field');
 		var mdlSel  = document.getElementById('wpcc-w-model-select');
 		var mdlTxt  = document.getElementById('wpcc-w-model');
+		var mdlSrch = document.getElementById('wpcc-w-model-search');
 		var mdlHelp = document.getElementById('wpcc-w-model-help');
 		var mFlag   = wiz.querySelector('input[name="wpcc_model"]');
 		if (!provSel || !mdlSel || !mdlTxt || !mFlag) return;
 		var CUSTOM = '__custom__';
 		var CUSTOM_LABEL = <?php echo wp_json_encode( __( 'Custom model ID…', 'wp-command-center' ) ); ?>;
 		var FREE_HELP = <?php echo wp_json_encode( __( 'Enter the model id your endpoint serves (free text).', 'wp-command-center' ) ); ?>;
+		var DISC_HELP = <?php echo wp_json_encode( __( 'Discovering models…', 'wp-command-center' ) ); ?>;
+		var THRESHOLD = <?php echo (int) ProviderCatalog::SEARCH_THRESHOLD; ?>;
+
 		function syncModel() {
 			if (mdlSel.style.display === 'none') { mFlag.value = 'custom'; return; }
 			if (mdlSel.value === CUSTOM) { mFlag.value = 'custom'; mdlTxt.style.display = ''; mdlTxt.focus(); }
 			else { mFlag.value = mdlSel.value; mdlTxt.style.display = 'none'; mdlTxt.value = ''; }
 		}
-		function applyProvider() {
-			var m = WPCC_PMETA[provSel.value] || {};
-			if (epField) {
-				epField.style.display = m.needs_endpoint ? '' : 'none';
-				if (epInput) { epInput.placeholder = m.default_endpoint || 'https://…'; if (!m.needs_endpoint) { epInput.value = ''; } }
-			}
-			var models = (m.models && typeof m.models === 'object') ? m.models : {};
-			var ids = Object.keys(models);
+		function filterModels() {
+			var q = (mdlSrch.value || '').toLowerCase();
+			Array.prototype.forEach.call(mdlSel.options, function (o) {
+				if (o.value === CUSTOM) { return; } // custom stays reachable
+				o.hidden = q !== '' && o.textContent.toLowerCase().indexOf(q) === -1 && o.value.toLowerCase().indexOf(q) === -1;
+			});
+		}
+		// Render the model control from a {id:label} map (curated, or future discovered).
+		function populate(meta, models) {
+			var ids = models ? Object.keys(models) : [];
 			if (ids.length) {
 				mdlSel.innerHTML = '';
 				ids.forEach(function (id) { var o = document.createElement('option'); o.value = id; o.textContent = models[id]; mdlSel.appendChild(o); });
-				if (m.allow_custom !== false) { var c = document.createElement('option'); c.value = CUSTOM; c.textContent = CUSTOM_LABEL; mdlSel.appendChild(c); }
-				mdlSel.value = (m.default_model && models[m.default_model]) ? m.default_model : ids[0];
+				if (meta.supports_custom_model !== false) { var c = document.createElement('option'); c.value = CUSTOM; c.textContent = CUSTOM_LABEL; mdlSel.appendChild(c); }
+				mdlSel.value = (meta.default_model && models[meta.default_model]) ? meta.default_model : ids[0];
 				mdlSel.style.display = ''; mdlTxt.style.display = 'none'; mdlTxt.value = '';
+				if (mdlSrch) { mdlSrch.style.display = (ids.length > THRESHOLD || meta.supports_search) ? '' : 'none'; mdlSrch.value = ''; filterModels(); }
 				if (mdlHelp) { mdlHelp.textContent = ''; }
 				syncModel();
 			} else {
-				mdlSel.style.display = 'none'; mdlTxt.style.display = ''; mFlag.value = 'custom';
+				// No list, no discovery → free text (local / gateway / custom). Never an empty dropdown.
+				mdlSel.style.display = 'none';
+				if (mdlSrch) { mdlSrch.style.display = 'none'; }
+				mdlTxt.style.display = ''; mFlag.value = 'custom';
 				if (mdlHelp) { mdlHelp.textContent = FREE_HELP; }
 			}
 		}
+		function renderModels(meta) {
+			var curated = (meta.recommended_models && typeof meta.recommended_models === 'object') ? meta.recommended_models : {};
+			// Discovery seam: used only when the provider advertises discovery AND a
+			// discovery transport is registered. None exists today, so this always
+			// falls back to the curated list — no fabricated models.
+			if (meta.supports_discovery && typeof window.wpccDiscoverModels === 'function') {
+				if (mdlHelp) { mdlHelp.textContent = DISC_HELP; }
+				try {
+					window.wpccDiscoverModels(meta, function (discovered) {
+						populate(meta, (discovered && Object.keys(discovered).length) ? discovered : curated);
+					});
+					return;
+				} catch (e) { /* fall through to curated */ }
+			}
+			populate(meta, curated);
+		}
+		function applyProvider() {
+			var meta = WPCC_PMETA[provSel.value] || {};
+			if (epField) {
+				epField.style.display = meta.requires_endpoint ? '' : 'none';
+				if (epInput) { epInput.placeholder = meta.default_endpoint || 'https://…'; if (!meta.requires_endpoint) { epInput.value = ''; } }
+			}
+			if (depField) { depField.style.display = meta.needs_deployment ? '' : 'none'; }
+			renderModels(meta);
+		}
 		provSel.addEventListener('change', applyProvider);
 		mdlSel.addEventListener('change', syncModel);
+		if (mdlSrch) { mdlSrch.addEventListener('input', filterModels); }
 		applyProvider();
 	})();
 	var steps = wiz.querySelectorAll('.wpcc-aip-step');
