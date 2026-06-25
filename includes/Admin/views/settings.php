@@ -24,7 +24,18 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 	if ( 'set_security_mode' === $action ) {
 		$mode = sanitize_key( wp_unslash( $_POST['wpcc_security_mode'] ?? '' ) );
 		if ( in_array( $mode, SecurityModeManager::MODES, true ) ) {
+			$previous = SecurityModeManager::current();
 			update_option( 'wpcc_security_mode', $mode );
+			// PROGRAM-5A — record every mode change (no secret). Switching into the
+			// self-approving Developer mode is logged with an explicit risk flag.
+			if ( $previous !== $mode ) {
+				( new \WPCommandCenter\Security\AuditLog() )->record( 'security.mode.changed', [
+					'from'         => $previous,
+					'to'           => $mode,
+					'self_approve' => ( SecurityModeManager::MODE_DEVELOPER === $mode ),
+					'actor'        => 'admin_ui',
+				] );
+			}
 			$notice = [
 				'type'    => 'success',
 				'message' => sprintf(
@@ -78,7 +89,20 @@ $endpoints = [
 	<h2><?php esc_html_e( 'Security Mode', 'wp-command-center' ); ?></h2>
 	<p><?php esc_html_e( 'Controls whether AI agents can execute write operations immediately or must wait for administrator approval. Diagnostic and read-only operations are never gated, in any mode.', 'wp-command-center' ); ?></p>
 
-	<form method="post">
+	<?php if ( SecurityModeManager::MODE_DEVELOPER === $current_mode ) : ?>
+		<div class="notice notice-warning inline" style="margin:0 0 14px;max-width:640px;">
+			<p style="margin:.5em 0;">
+				<strong><?php esc_html_e( 'You are in Developer mode.', 'wp-command-center' ); ?></strong>
+				<?php esc_html_e( 'AI agents can change this site with no approval step. Before working on a real client site, switch to Client mode so every change waits for your review. Audit and undo stay on in all modes.', 'wp-command-center' ); ?>
+			</p>
+		</div>
+	<?php else : ?>
+		<div class="notice notice-success inline" style="margin:0 0 14px;max-width:640px;">
+			<p style="margin:.5em 0;"><?php esc_html_e( 'A human-approval mode is active — recommended for client sites. Write operations wait for your review.', 'wp-command-center' ); ?></p>
+		</div>
+	<?php endif; ?>
+
+	<form method="post" id="wpcc-security-mode-form">
 		<?php wp_nonce_field( 'wpcc_settings' ); ?>
 		<input type="hidden" name="wpcc_action" value="set_security_mode" />
 		<fieldset>
@@ -88,7 +112,8 @@ $endpoints = [
 				<input type="radio" name="wpcc_security_mode" value="<?php echo esc_attr( SecurityModeManager::MODE_DEVELOPER ); ?>" <?php checked( $current_mode, SecurityModeManager::MODE_DEVELOPER ); ?> style="margin-top:2px;float:left;" />
 				<span style="display:block;margin-left:24px;">
 					<strong><?php esc_html_e( 'Developer Mode', 'wp-command-center' ); ?></strong>
-					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'No approval gate. AI agents can execute all operations immediately. Recommended during development and staging. Full audit trail and rollback remain active.', 'wp-command-center' ); ?></span>
+					<span style="display:inline-block;margin-left:8px;padding:1px 8px;border-radius:3px;font-size:11px;font-weight:700;background:#fcf0f1;color:#d63638;vertical-align:middle;"><?php esc_html_e( 'NOT FOR CLIENT SITES', 'wp-command-center' ); ?></span>
+					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'No approval step: AI can change or delete things on this site immediately, with no review. Use only on your own development or staging site. (Audit trail and undo still work, but there is no gate to stop a change before it happens.)', 'wp-command-center' ); ?></span>
 				</span>
 			</label>
 
@@ -96,6 +121,7 @@ $endpoints = [
 				<input type="radio" name="wpcc_security_mode" value="<?php echo esc_attr( SecurityModeManager::MODE_CLIENT ); ?>" <?php checked( $current_mode, SecurityModeManager::MODE_CLIENT ); ?> style="margin-top:2px;float:left;" />
 				<span style="display:block;margin-left:24px;">
 					<strong><?php esc_html_e( 'Client Mode', 'wp-command-center' ); ?></strong>
+					<span style="display:inline-block;margin-left:8px;padding:1px 8px;border-radius:3px;font-size:11px;font-weight:700;background:#edfaef;color:#00a32a;vertical-align:middle;"><?php esc_html_e( 'RECOMMENDED', 'wp-command-center' ); ?></span>
 					<span style="display:block;color:#50575e;margin-top:3px;font-size:13px;"><?php esc_html_e( 'Medium, high, and critical operations require administrator approval before running. Read-only and diagnostic operations always execute freely. Switch to this mode before handing a site to a client.', 'wp-command-center' ); ?></span>
 				</span>
 			</label>
@@ -110,6 +136,20 @@ $endpoints = [
 		</fieldset>
 		<?php submit_button( __( 'Save Security Mode', 'wp-command-center' ) ); ?>
 	</form>
+	<script>
+	(function () {
+		var form = document.getElementById( 'wpcc-security-mode-form' );
+		if ( ! form ) { return; }
+		var warn = <?php echo wp_json_encode( __( 'Developer mode lets AI change this site with no approval step. This is unsafe for a live client site. Switch to Developer mode anyway?', 'wp-command-center' ) ); ?>;
+		var devValue = <?php echo wp_json_encode( SecurityModeManager::MODE_DEVELOPER ); ?>;
+		form.addEventListener( 'submit', function ( e ) {
+			var sel = form.querySelector( 'input[name="wpcc_security_mode"]:checked' );
+			if ( sel && sel.value === devValue && ! window.confirm( warn ) ) {
+				e.preventDefault();
+			}
+		} );
+	})();
+	</script>
 
 	<h2><?php esc_html_e( 'API Tokens', 'wp-command-center' ); ?></h2>
 	<p>

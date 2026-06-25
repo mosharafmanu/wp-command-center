@@ -51,6 +51,18 @@ final class AuditLog {
 		$this->maybe_rotate( $dir );
 
 		file_put_contents( trailingslashit( $dir ) . self::LOG_FILE, $line . "\n", FILE_APPEND | LOCK_EX );
+
+		/**
+		 * PROGRAM-8 — behavior-neutral observation point. Fired AFTER the audit
+		 * record is durably written, so the audit's behavior is unchanged. Telemetry
+		 * (and any read-only observer) may subscribe; subscribers MUST self-guard and
+		 * MUST NOT affect execution. No subscriber is required.
+		 *
+		 * @param string $action    The audit action.
+		 * @param array  $context   The audit context (already secret-redacted by callers).
+		 * @param int    $timestamp Unix time of the record.
+		 */
+		do_action( 'wpcc_audit_recorded', $action, $context, time() );
 	}
 
 	/**

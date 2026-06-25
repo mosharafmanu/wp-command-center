@@ -150,8 +150,33 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 </style>
 
 <div class="wrap wpcc-ai-wrap">
-	<h1><?php esc_html_e( 'AI Integrations', 'wp-command-center' ); ?></h1>
-	<p><?php esc_html_e( 'Connect external AI tools to your WordPress site via the MCP protocol. All clients share the same platform, security model, and execution pipeline.', 'wp-command-center' ); ?></p>
+	<h1><?php esc_html_e( 'Connect an AI Agent', 'wp-command-center' ); ?></h1>
+	<p style="max-width:680px;"><?php esc_html_e( 'Connect an AI assistant (like the Claude desktop app) to this site so it can help with WordPress tasks — safely, with your approval, a full record, and one-click undo. New to this? Start with the short guide below.', 'wp-command-center' ); ?></p>
+
+	<details class="wpcc-agent-explainer" style="max-width:760px;margin:10px 0 20px;border:1px solid #c3c4c7;border-radius:6px;background:#f0f6fc;padding:14px 18px;" open>
+		<summary style="cursor:pointer;font-weight:700;font-size:14px;"><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'wp-command-center' ); ?></summary>
+		<div style="margin-top:12px;display:grid;gap:12px;">
+			<?php foreach ( \WPCommandCenter\Admin\AgentExplainer::faq() as $wpcc_qa ) : ?>
+				<div>
+					<strong style="display:block;font-size:13px;color:#1d2327;"><?php echo esc_html( $wpcc_qa['q'] ); ?></strong>
+					<span style="display:block;color:#50575e;font-size:13px;margin-top:2px;"><?php echo esc_html( $wpcc_qa['a'] ); ?></span>
+				</div>
+			<?php endforeach; ?>
+			<p style="margin:4px 0 0;padding:10px 12px;background:#fff;border-radius:4px;font-size:12px;color:#2271b1;font-weight:600;text-align:center;"><?php echo esc_html( \WPCommandCenter\Admin\AgentExplainer::flow_line() ); ?></p>
+			<p style="margin:0;color:#646970;font-size:12px;">
+				<?php
+				printf(
+					/* translators: 1: AI Setup link open, 2: link close, 3: Tokens link open, 4: link close */
+					esc_html__( 'Setup order: 1) add your AI key in %1$sAI Setup%2$s, 2) create an %3$saccess token%4$s, 3) paste the token into your AI assistant using the configuration below.', 'wp-command-center' ),
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=setup' ) ) . '">',
+					'</a>',
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-access&wpcc_tab=tokens' ) ) . '">',
+					'</a>'
+				);
+				?>
+			</p>
+		</div>
+	</details>
 
 	<?php if ( $wpcc_token_error ) : ?>
 		<div class="notice notice-error wpcc-ai-notice"><p><?php echo esc_html( $wpcc_token_error ); ?></p></div>

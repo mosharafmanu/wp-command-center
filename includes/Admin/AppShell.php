@@ -57,6 +57,7 @@ final class AppShell {
 			'wpcc-approval-center'    => [ 'wpcc-operate', 'approvals' ],
 			'wpcc-approvals'          => [ 'wpcc-operate', 'approvals' ], // pre-106 slug
 			'wpcc-operations'         => [ 'wpcc-operate', 'operations' ],
+			'wpcc-operations-center'  => [ 'wpcc-operate', 'center' ],
 			'wpcc-change-history'     => [ 'wpcc-audit', 'changes' ],
 			'wpcc-rollback'           => [ 'wpcc-audit', 'changes' ],     // pre-105.3 slug
 			'wpcc-patches'            => [ 'wpcc-audit', 'patches' ],
@@ -65,6 +66,7 @@ final class AppShell {
 			'wpcc-tokens'             => [ 'wpcc-access', 'tokens' ],
 			'wpcc-settings'           => [ 'wpcc-access', 'security' ],
 			'wpcc-ai-integrations'    => [ 'wpcc-connect', 'integrations' ],
+			'wpcc-ai-setup'           => [ 'wpcc-connect', 'setup' ],
 			'wpcc-file-access'        => [ 'wpcc-connect', 'files' ],
 			// Build-flagged AI surfaces (only reachable when their flag is on).
 			'wpcc-proposals'          => [ 'wpcc-operate', 'drafts' ],
@@ -82,9 +84,10 @@ final class AppShell {
 	 */
 	public static function sections(): array {
 		$operate_tabs = [
+			'center'     => [ 'label' => __( 'Operations Center', 'wp-command-center' ), 'view' => 'operations-center', 'feature' => null ],
 			'approvals'  => [ 'label' => __( 'Approvals', 'wp-command-center' ),  'view' => 'approval-center',     'feature' => 'approval_center' ],
 			'operations' => [ 'label' => __( 'Operations', 'wp-command-center' ), 'view' => 'operations-explorer', 'feature' => 'operations_explorer' ],
-			'runtime'    => [ 'label' => __( 'Runtime', 'wp-command-center' ),    'view' => 'dashboard',           'feature' => null ],
+			'runtime'    => [ 'label' => __( 'Runtime (advanced)', 'wp-command-center' ), 'view' => 'dashboard', 'feature' => null ],
 		];
 
 		// Build-flagged Governed Action surfaces fold under Operate only when enabled.
@@ -104,16 +107,19 @@ final class AppShell {
 		$tree = [
 			self::HOME_SLUG => [
 				'label' => __( 'Overview', 'wp-command-center' ),
+				'desc'  => __( 'Your starting point: what needs you, what changed, and how to set up.', 'wp-command-center' ),
 				'tabs'  => [
 					'home' => [ 'label' => __( 'Home', 'wp-command-center' ), 'view' => 'command-home', 'feature' => null ],
 				],
 			],
 			'wpcc-operate' => [
 				'label' => __( 'Operate', 'wp-command-center' ),
+				'desc'  => __( 'Review and approve the work AI wants to do, and browse what it is allowed to do.', 'wp-command-center' ),
 				'tabs'  => $operate_tabs,
 			],
 			'wpcc-audit' => [
 				'label' => __( 'Audit', 'wp-command-center' ),
+				'desc'  => __( 'See every change, and undo the ones that can be reversed.', 'wp-command-center' ),
 				'tabs'  => [
 					'changes'      => [ 'label' => __( 'Changes', 'wp-command-center' ),          'view' => 'change-history',    'feature' => 'change_history' ],
 					'patches'      => [ 'label' => __( 'Patches', 'wp-command-center' ),          'view' => 'patches',          'feature' => null ],
@@ -123,6 +129,7 @@ final class AppShell {
 			],
 			'wpcc-access' => [
 				'label' => __( 'Access', 'wp-command-center' ),
+				'desc'  => __( 'Control who and what can act: access tokens for AI agents, and your safety mode.', 'wp-command-center' ),
 				'tabs'  => [
 					'tokens'   => [ 'label' => __( 'Tokens & Capabilities', 'wp-command-center' ), 'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
 					'security' => [ 'label' => __( 'Security Mode', 'wp-command-center' ),         'view' => 'settings',                'feature' => null ],
@@ -130,9 +137,11 @@ final class AppShell {
 			],
 			'wpcc-connect' => [
 				'label' => __( 'Connect', 'wp-command-center' ),
+				'desc'  => __( 'Set up your AI provider, connect an AI agent, and browse files.', 'wp-command-center' ),
 				'tabs'  => [
-					'integrations' => [ 'label' => __( 'AI Integrations', 'wp-command-center' ), 'view' => 'ai-integrations', 'feature' => null ],
-					'files'        => [ 'label' => __( 'File Access', 'wp-command-center' ),     'view' => 'file-access',     'feature' => null ],
+					'setup'        => [ 'label' => __( 'AI Setup', 'wp-command-center' ),             'view' => 'ai-setup',        'feature' => null ],
+					'integrations' => [ 'label' => __( 'Connect an AI Agent', 'wp-command-center' ), 'view' => 'ai-integrations', 'feature' => null ],
+					'files'        => [ 'label' => __( 'File Access', 'wp-command-center' ),          'view' => 'file-access',     'feature' => null ],
 				],
 			],
 		];
@@ -241,6 +250,10 @@ final class AppShell {
 						</a>
 					<?php endforeach; ?>
 				</nav>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $section['desc'] ) ) : ?>
+				<p class="wpcc-shell__desc" style="margin:10px 0 4px;color:#50575e;max-width:760px;font-size:13px;"><?php echo esc_html( $section['desc'] ); ?></p>
 			<?php endif; ?>
 
 			<div class="wpcc-shell__canvas">
