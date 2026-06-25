@@ -17,8 +17,12 @@ use WPCommandCenter\Ai\Platform\ProviderCatalog;
 use WPCommandCenter\Ai\Platform\Dialect;
 use WPCommandCenter\Ai\Platform\Capabilities;
 use WPCommandCenter\Ai\Platform\Health;
+use WPCommandCenter\Ai\Platform\AiActivity;
 
 $wpcc_notice = ( new ConnectionController() )->handle_post();
+
+$wpcc_act  = AiActivity::summary();
+$wpcc_feed = AiActivity::feed( 12 );
 
 $wpcc_store     = new ConnectionStore();
 $wpcc_conns     = $wpcc_store->all();
@@ -136,8 +140,44 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		<div class="wpcc-aip-warn" role="status"><?php esc_html_e( 'No default connection yet. Add a key to an Anthropic connection and set it as default so AI features have something to use.', 'wp-command-center' ); ?></div>
 	<?php endif; ?>
 
+	<!-- ===== Mission Control — AI activity ===== -->
+	<h2><?php esc_html_e( 'Mission control', 'wp-command-center' ); ?></h2>
+	<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;">
+		<div style="background:#fff;border:1px solid #dcdfe3;border-radius:12px;padding:16px 18px;">
+			<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+				<strong style="font-size:14px;"><?php esc_html_e( 'Recent AI activity', 'wp-command-center' ); ?></strong>
+				<?php if ( (int) $wpcc_act['pending_approvals'] > 0 ) : ?>
+					<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals' ) ); ?>"><?php printf( esc_html( _n( '%d pending approval', '%d pending approvals', (int) $wpcc_act['pending_approvals'], 'wp-command-center' ) ), (int) $wpcc_act['pending_approvals'] ); ?></a>
+				<?php endif; ?>
+			</div>
+			<?php if ( empty( $wpcc_feed ) ) : ?>
+				<p class="muted" style="font-size:13px;margin:0;"><?php esc_html_e( 'No activity yet. When AI or an agent acts on this site, the governed history appears here — every action recorded, reversible where supported.', 'wp-command-center' ); ?></p>
+			<?php else : ?>
+				<ul style="list-style:none;margin:0;padding:0;display:grid;gap:7px;" aria-label="<?php esc_attr_e( 'Recent AI activity', 'wp-command-center' ); ?>">
+					<?php foreach ( $wpcc_feed as $ev ) : ?>
+						<li style="display:flex;gap:9px;align-items:baseline;font-size:13px;">
+							<span class="wpcc-aip-dot" style="background:<?php echo esc_attr( $ev['color'] ); ?>" aria-hidden="true"></span>
+							<span style="flex:1;"><strong style="font-weight:600;"><?php echo esc_html( $ev['cat_label'] ); ?></strong> <span class="muted"><?php echo esc_html( $ev['label'] ); ?></span><?php if ( '' !== $ev['actor'] ) : ?> <span class="muted">· <?php echo esc_html( $ev['actor'] ); ?></span><?php endif; ?></span>
+							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo $ev['time'] ? esc_html( sprintf( /* translators: %s ago */ __( '%s ago', 'wp-command-center' ), human_time_diff( $ev['time'], time() ) ) ) : ''; ?></span>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+			<p style="margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap;">
+				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-audit&wpcc_tab=changes' ) ); ?>"><?php esc_html_e( 'Review changes & undo', 'wp-command-center' ); ?></a>
+				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-operate&wpcc_tab=approvals' ) ); ?>"><?php esc_html_e( 'Approvals', 'wp-command-center' ); ?></a>
+				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=integrations' ) ); ?>"><?php esc_html_e( 'Connect an AI agent', 'wp-command-center' ); ?></a>
+			</p>
+		</div>
+		<div style="display:grid;gap:10px;">
+			<div class="wpcc-aip-kpi"><div class="v"><?php echo (int) $wpcc_act['events']; ?></div><div class="l"><?php esc_html_e( 'Recent events', 'wp-command-center' ); ?></div></div>
+			<div class="wpcc-aip-kpi"><div class="v" style="color:<?php echo (int) $wpcc_act['pending_approvals'] ? '#d63638' : '#0a7a33'; ?>;"><?php echo (int) $wpcc_act['pending_approvals']; ?></div><div class="l"><?php esc_html_e( 'Pending approvals', 'wp-command-center' ); ?></div></div>
+			<div class="wpcc-aip-kpi" title="<?php esc_attr_e( 'Per-token usage and cost are not metered yet — they arrive when the AI runtime is instrumented. No estimated figure is shown to avoid misleading you.', 'wp-command-center' ); ?>"><div class="v" style="font-size:15px;color:#646970;"><?php esc_html_e( 'Not tracked yet', 'wp-command-center' ); ?></div><div class="l"><?php esc_html_e( 'Token usage & cost', 'wp-command-center' ); ?></div></div>
+		</div>
+	</div>
+
 	<!-- ===== Quick action ===== -->
-	<p style="margin:14px 0;"><button type="button" class="button button-primary button-hero" id="wpcc-aip-new" aria-expanded="false" aria-controls="wpcc-aip-wizard">+ <?php esc_html_e( 'New connection', 'wp-command-center' ); ?></button></p>
+	<p style="margin:18px 0;"><button type="button" class="button button-primary button-hero" id="wpcc-aip-new" aria-expanded="false" aria-controls="wpcc-aip-wizard">+ <?php esc_html_e( 'New connection', 'wp-command-center' ); ?></button></p>
 
 	<!-- ===== Connection wizard (progressive; degrades to a full form without JS) ===== -->
 	<form method="post" class="wpcc-aip-wizard" id="wpcc-aip-wizard" aria-label="<?php esc_attr_e( 'New connection wizard', 'wp-command-center' ); ?>">
