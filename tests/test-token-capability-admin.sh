@@ -517,8 +517,10 @@ assert_eq "filter removed: manager permitted again" "1" "$(getf restored)"
 echo
 echo "== 6f. Functional — legacy redirect (settings token section -> Access › Tokens) =="
 # Experience Layer: the consolidated redirect_legacy_slugs() maps the old Settings
-# token deep-link to Access › Tokens, and plain Settings to Access › Security.
-# Token deep-link -> Access section + wpcc_tab=tokens.
+# token deep-link to Settings › Access. Plain Settings now RENDERS DIRECTLY (Security
+# & Approvals is the default first tab) — it must NOT redirect, or wpcc-settings (a
+# live section slug) would self-redirect and loop. This is the Phase-1 polish fix.
+# Token deep-link -> Settings section + wpcc_tab=access.
 POS="$(wpe '
 	if ( ! defined( "WP_ADMIN" ) ) { define( "WP_ADMIN", true ); }
 	$admin = get_users( ["role"=>"administrator","number"=>1] ); wp_set_current_user( $admin[0]->ID );
@@ -527,7 +529,7 @@ POS="$(wpe '
 	( new \WPCommandCenter\Admin\AdminMenu() )->redirect_legacy_slugs();
 	echo "NO_REDIRECT";
 ')"
-# Plain Settings -> Access › Security (still redirected, but NOT to the tokens tab).
+# Plain Settings -> renders directly (Security default tab); NO redirect, NO loop.
 NEG="$(wpe '
 	if ( ! defined( "WP_ADMIN" ) ) { define( "WP_ADMIN", true ); }
 	$admin = get_users( ["role"=>"administrator","number"=>1] ); wp_set_current_user( $admin[0]->ID );
@@ -537,7 +539,7 @@ NEG="$(wpe '
 	echo "NO_REDIRECT";
 ')"
 case "$POS" in *"REDIRECT:"*"page=wpcc-settings"*"wpcc_tab=access"*) pass "legacy token deep-link redirects to Settings › Access";; *) fail "legacy redirect (positive) got: $POS";; esac
-case "$NEG" in *"REDIRECT:"*"wpcc_tab=security"*) pass "plain Settings redirects to Access › Security (not tokens)";; *) fail "legacy redirect (negative) got: $NEG";; esac
+case "$NEG" in *"NO_REDIRECT"*) pass "plain Settings renders directly (Security default tab) — no redirect, no loop";; *) fail "plain Settings should NOT redirect (loop risk); got: $NEG";; esac
 
 echo
 echo "== 7. Invariants unchanged (no op_map / capability change) =="

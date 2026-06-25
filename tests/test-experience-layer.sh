@@ -94,7 +94,11 @@ has "map: patches -> settings"            "'wpcc-patches'            => \[ self:
 has "map: diagnostics -> settings"        "'wpcc-diagnostics'        => \[ self::SETTINGS_SLUG, 'diagnostics' \]" "$SHELL_PHP"
 has "map: site-intelligence -> settings"  "'wpcc-site-intelligence'  => \[ self::SETTINGS_SLUG, 'intelligence' \]" "$SHELL_PHP"
 has "map: tokens -> settings/access"      "'wpcc-tokens'             => \[ self::SETTINGS_SLUG, 'access' \]" "$SHELL_PHP"
-has "map: settings -> settings/security"  "'wpcc-settings'           => \[ self::SETTINGS_SLUG, 'security' \]" "$SHELL_PHP"
+# wpcc-settings is a LIVE section slug — it must NOT be a self-referential legacy_map
+# entry (that caused the Settings redirect loop). It renders directly via resolve_legacy's
+# live-section short-circuit; the Security & Approvals tab is its default first tab.
+lacks "no self-referential wpcc-settings legacy entry" "'wpcc-settings'\s*=> \[ self::SETTINGS_SLUG, 'security' \]" "$SHELL_PHP"
+has "resolve_legacy short-circuits live section slugs" "is_live_section" "$SHELL_PHP"
 has "map: ai-integrations -> connect"     "'wpcc-ai-integrations'    => \[ self::CONNECT_SLUG, 'clients' \]" "$SHELL_PHP"
 has "map: ai-setup -> built-in-ai"        "'wpcc-ai-setup'           => \[ self::BUILTIN_SLUG, 'providers' \]" "$SHELL_PHP"
 has "map: file-access -> settings"        "'wpcc-file-access'        => \[ self::SETTINGS_SLUG, 'files' \]" "$SHELL_PHP"

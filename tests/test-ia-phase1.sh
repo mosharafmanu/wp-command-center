@@ -158,6 +158,32 @@ else
 fi
 
 echo
+echo "== 8. Navigation integrity — no redirect loops, no dead destinations =="
+# Regression guard for the Settings redirect-loop bug: a slug that is itself a live
+# section (e.g. wpcc-settings) must NEVER resolve as a legacy slug. Exhaustively:
+# every live section + tab must render (resolve_legacy === null), and every legacy
+# path must reach a real section in <=10 hops without cycling.
+has "live-section short-circuit in resolve_legacy" "is_live_section" "$SHELL_PHP"
+lacks "wpcc-settings not a self-referential legacy_map entry" "'wpcc-settings'\s*=> \[ self::SETTINGS_SLUG" "$SHELL_PHP"
+if ! command -v wp >/dev/null 2>&1; then
+	echo "  SKIP: wp-cli unavailable — live nav-integrity sweep skipped."
+else
+	NAV="$(wpe '
+		use WPCommandCenter\Admin\AppShell;
+		$bad=0; $sections=AppShell::sections(); $known=array_keys(AppShell::SECTION_SLUGS);
+		foreach($sections as $slug=>$sec){ if(AppShell::resolve_legacy($slug,"")!==null){$bad++;}
+			foreach(array_keys($sec["tabs"]) as $t){ if(AppShell::resolve_legacy($slug,$t)!==null){$bad++;} } }
+		$follow=function($p,$t) use($known){ $seen=[]; $h=0; while(true){ $k="$p|$t"; if(isset($seen[$k]))return"LOOP"; $seen[$k]=1;
+			$r=AppShell::resolve_legacy($p,$t); if($r===null)return in_array($p,$known,true)?"OK":"BADDEST"; $p=$r[0];$t=$r[1]; if(++$h>10)return"RUNAWAY"; } };
+		$cases=[]; foreach(array_keys(AppShell::legacy_map()) as $s)$cases[]=[$s,""];
+		foreach(AppShell::legacy_tab_map() as $s=>$tabs)foreach(array_keys($tabs) as $t)$cases[]=[$s,$t==="*"?"":$t];
+		foreach($cases as $c){ if($follow($c[0],$c[1])!=="OK"){$bad++;} }
+		echo ($bad===0)?"CLEAN":("BAD:".$bad);
+	')"
+	assert_eq "all sections/tabs render + all legacy paths terminate on a real section" "CLEAN" "$NAV"
+fi
+
+echo
 echo "== RESULT =="
 echo "  PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ]

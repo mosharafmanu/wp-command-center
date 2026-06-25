@@ -85,7 +85,12 @@ final class AppShell {
 			'wpcc-diagnostics'        => [ self::SETTINGS_SLUG, 'diagnostics' ],
 			'wpcc-site-intelligence'  => [ self::SETTINGS_SLUG, 'intelligence' ],
 			'wpcc-tokens'             => [ self::SETTINGS_SLUG, 'access' ],
-			'wpcc-settings'           => [ self::SETTINGS_SLUG, 'security' ],
+			// NOTE: the retired Security-Mode page shared today's live Settings slug
+			// (`wpcc-settings`). It is intentionally NOT mapped here — a live section
+			// slug must never resolve as a legacy slug (that would self-redirect /
+			// loop). resolve_legacy() short-circuits live section slugs; the old
+			// `?page=wpcc-settings&section=tokens` deep-link is handled separately in
+			// AdminMenu before resolution.
 			'wpcc-ai-integrations'    => [ self::CONNECT_SLUG, 'clients' ],
 			'wpcc-ai-setup'           => [ self::BUILTIN_SLUG, 'providers' ],
 			'wpcc-file-access'        => [ self::SETTINGS_SLUG, 'files' ],
@@ -151,20 +156,34 @@ final class AppShell {
 	 * @return array{0:string,1:string}|null
 	 */
 	public static function resolve_legacy( string $page, string $tab = '' ): ?array {
-		// Retired section slugs (and reused Connect with an old tab) resolve by tab.
+		// A slug that is itself one of today's live sections must NEVER be treated as
+		// a legacy slug — doing so self-redirects and loops (this was the Settings
+		// redirect-loop bug). Live sections only need tab-aware remapping for a slug
+		// that is *reused* but whose tab keys changed (Connect: setup/integrations/
+		// files → new homes). Any current/empty tab on a live section renders as-is.
+		$is_live_section = isset( self::SECTION_SLUGS[ $page ] );
+
+		// Retired section slugs (and reused live slugs carrying an OLD tab) resolve by tab.
 		$tab_map = self::legacy_tab_map();
 		if ( isset( $tab_map[ $page ] ) ) {
 			$section_tabs = $tab_map[ $page ];
 			if ( '' !== $tab && isset( $section_tabs[ $tab ] ) ) {
-				return $section_tabs[ $tab ];
+				$result = $section_tabs[ $tab ];
+				// Guard: never emit a no-op redirect to the exact same page+tab.
+				return ( $result[0] === $page && $result[1] === $tab ) ? null : $result;
 			}
-			// Reused Connect slug with a new/empty tab is already current — no redirect.
-			if ( self::CONNECT_SLUG === $page ) {
+			// A live/reused section slug with a new or empty tab is already current.
+			if ( $is_live_section ) {
 				return null;
 			}
 			if ( isset( $section_tabs['*'] ) ) {
 				return $section_tabs['*'];
 			}
+		}
+
+		// Live section slugs render as-is — they are not legacy standalone slugs.
+		if ( $is_live_section ) {
+			return null;
 		}
 
 		// Standalone retired slugs (no tab of their own).
@@ -365,6 +384,20 @@ final class AppShell {
 
 			<?php if ( ! empty( $section['desc'] ) ) : ?>
 				<p class="wpcc-shell__desc" style="margin:10px 0 4px;color:#50575e;max-width:760px;font-size:13px;"><?php echo esc_html( $section['desc'] ); ?></p>
+			<?php endif; ?>
+
+			<?php
+			// Honest helper for the Built-in AI section when its generation tools are
+			// not enabled on this site (build-flag gated — contradiction C1). It does
+			// NOT fake a toggle; it tells the user where the tools live and that they
+			// are turned on per-site, so a first-timer who sees only "Providers" is
+			// never left wondering where SEO / Alt Text / Content are.
+			if ( self::BUILTIN_SLUG === $section_slug
+				&& ! isset( $tabs['seo'] ) && ! isset( $tabs['alt_text'] ) && ! isset( $tabs['content'] ) ) :
+				?>
+				<p class="wpcc-builtin-note" role="note" style="margin:6px 0 4px;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:760px;font-size:13px;color:#1d2327;">
+					<?php esc_html_e( 'Connect a provider below to power WP Command Center’s AI. The SEO, Alt Text, and Content tools appear here as tabs once enabled for this site — they are turned on per site and do not switch on just by adding a key.', 'wp-command-center' ); ?>
+				</p>
 			<?php endif; ?>
 
 			<div class="wpcc-shell__canvas">

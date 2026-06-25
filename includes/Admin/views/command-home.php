@@ -194,7 +194,7 @@ $wpcc_total_count   = count( $wpcc_checklist );
 		<div id="wpcc-home-invariants" class="wpcc-cds-kpis" role="status" aria-live="polite"></div>
 	</div>
 
-	<h2><?php esc_html_e( 'Subsystems', 'wp-command-center' ); ?></h2>
+	<h2><?php esc_html_e( 'At a glance', 'wp-command-center' ); ?></h2>
 	<div id="wpcc-home-cards" class="wpcc-cds-cards" aria-live="polite"></div>
 
 	<h2><?php esc_html_e( 'AI workflow activity', 'wp-command-center' ); ?></h2>
@@ -246,20 +246,20 @@ $wpcc_total_count   = count( $wpcc_checklist );
 		invDb:      <?php echo wp_json_encode( __( 'DB version', 'wp-command-center' ) ); ?>,
 		// Cards.
 		view:       <?php echo wp_json_encode( __( 'View details', 'wp-command-center' ) ); ?>,
-		cardApprovals: <?php echo wp_json_encode( __( 'Approval Center', 'wp-command-center' ) ); ?>,
+		cardApprovals: <?php echo wp_json_encode( __( 'Approvals', 'wp-command-center' ) ); ?>,
 		apPending:  <?php echo wp_json_encode( __( 'Pending', 'wp-command-center' ) ); ?>,
 		apCritical: <?php echo wp_json_encode( __( 'Pending critical', 'wp-command-center' ) ); ?>,
 		apResolved: <?php echo wp_json_encode( __( 'Resolved', 'wp-command-center' ) ); ?>,
 		apFailed:   <?php echo wp_json_encode( __( 'Queue failed', 'wp-command-center' ) ); ?>,
-		cardOps:    <?php echo wp_json_encode( __( 'Operations', 'wp-command-center' ) ); ?>,
+		cardOps:    <?php echo wp_json_encode( __( 'Capabilities', 'wp-command-center' ) ); ?>,
 		opTotal:    <?php echo wp_json_encode( __( 'Total', 'wp-command-center' ) ); ?>,
 		opAvailable:<?php echo wp_json_encode( __( 'Available', 'wp-command-center' ) ); ?>,
 		opApproval: <?php echo wp_json_encode( __( 'Need approval', 'wp-command-center' ) ); ?>,
 		riskLabel:  <?php echo wp_json_encode( __( 'Risk', 'wp-command-center' ) ); ?>,
-		cardTokens: <?php echo wp_json_encode( __( 'Tokens & Capabilities', 'wp-command-center' ) ); ?>,
+		cardTokens: <?php echo wp_json_encode( __( 'Access', 'wp-command-center' ) ); ?>,
 		tkTokens:   <?php echo wp_json_encode( __( 'Tokens', 'wp-command-center' ) ); ?>,
 		tkCaps:     <?php echo wp_json_encode( __( 'Capabilities', 'wp-command-center' ) ); ?>,
-		cardHistory:<?php echo wp_json_encode( __( 'Change History', 'wp-command-center' ) ); ?>,
+		cardHistory:<?php echo wp_json_encode( __( 'History', 'wp-command-center' ) ); ?>,
 		chSessions: <?php echo wp_json_encode( __( 'Change sessions', 'wp-command-center' ) ); ?>,
 		gated:      <?php echo wp_json_encode( __( 'Not available in this edition.', 'wp-command-center' ) ); ?>,
 		// AI workflow summary.

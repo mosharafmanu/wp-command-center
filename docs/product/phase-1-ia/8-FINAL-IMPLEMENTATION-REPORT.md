@@ -23,7 +23,9 @@ The 5-C IA (Overview · Operate · Audit · Access · Connect) became the produc
 Approval, rollback, audit, and capability scoping untouched. No provider over-promised; the Anthropic-only execution gap and the PHP-flag AI-enable contradiction are left **honestly visible**, not papered over. Nothing was faked.
 
 ## Deliverables (this folder)
-1. IA Implementation Report · 2. Navigation Report · 3. UX Validation · 4. Accessibility Review · 5. Performance Review · 6. Regression Report · 7. Independent Product Review · 8. Final Implementation Report (this).
+1. IA Implementation Report · 2. Navigation Report · 3. UX Validation · 4. Accessibility Review · 5. Performance Review · 6. Regression Report · 7. Independent Product Review · 8. Final Implementation Report (this) · **9. Polish & Fix Report** (pre-beta: Settings redirect-loop fix + exhaustive nav verification + UX self-critique/polish).
+
+> **Update (beta-readiness pass):** after first review, a Settings redirect loop was found (the live `wpcc-settings` slug was self-referenced in `legacy_map`), fixed (`resolve_legacy` now short-circuits live section slugs), and guarded by a new exhaustive nav-integrity regression test. Home cards were relabeled off architecture terms ("At a glance"; Approvals/Capabilities/Access/History), and Built-in AI gained an honest "tools enabled per-site" note. See deliverable 9.
 
 ## Forward items (sequenced beyond Phase 1 by the blueprints — NOT regressions)
 - Merge Settings sub-areas (Diagnostics ⊇ Patches/Site Report; Access ⊇ File Access as a scope).
