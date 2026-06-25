@@ -265,14 +265,20 @@ final class AppShell {
 				'label' => __( 'Settings', 'wp-command-center' ),
 				'desc'  => __( 'Rules and advanced controls: security mode, access, diagnostics, and developer tools.', 'wp-command-center' ),
 				'tabs'  => [
-					'security'     => [ 'label' => __( 'Security & Approvals', 'wp-command-center' ), 'view' => 'settings',                  'feature' => null ],
-					'access'       => [ 'label' => __( 'Access', 'wp-command-center' ),               'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
-					'files'        => [ 'label' => __( 'File Access', 'wp-command-center' ),           'view' => 'file-access',              'feature' => null ],
-					'diagnostics'  => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),           'view' => 'diagnostics',              'feature' => null ],
-					'patches'      => [ 'label' => __( 'Patches', 'wp-command-center' ),               'view' => 'patches',                  'feature' => null ],
-					'intelligence' => [ 'label' => __( 'Site Report', 'wp-command-center' ),           'view' => 'site-intelligence',        'feature' => null ],
-					'capabilities' => [ 'label' => __( 'Capabilities', 'wp-command-center' ),          'view' => 'operations-explorer',      'feature' => 'operations_explorer' ],
-					'runtime'      => [ 'label' => __( 'Runtime', 'wp-command-center' ),               'view' => 'dashboard',                'feature' => null ],
+					'security'        => [ 'label' => __( 'Security & Approvals', 'wp-command-center' ), 'view' => 'settings',                  'feature' => null ],
+					'access'          => [ 'label' => __( 'Access', 'wp-command-center' ),               'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
+					// Phase 2A (additive): the new Tools home for governed maintenance (Search & Replace).
+					'tools'           => [ 'label' => __( 'Tools', 'wp-command-center' ),                'view' => 'tools-search-replace',     'feature' => null ],
+					'files'           => [ 'label' => __( 'File Access', 'wp-command-center' ),           'view' => 'file-access',              'feature' => null ],
+					'diagnostics'     => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),           'view' => 'diagnostics',              'feature' => null ],
+					// Phase 2A (additive): the new Recommendations home (lives under Diagnostics conceptually;
+					// grouped into a Diagnostics hub in Phase 2B).
+					'recommendations' => [ 'label' => __( 'Recommendations', 'wp-command-center' ),       'view' => 'recommendations',          'feature' => null ],
+					'patches'         => [ 'label' => __( 'Patches', 'wp-command-center' ),               'view' => 'patches',                  'feature' => null ],
+					'intelligence'    => [ 'label' => __( 'Site Report', 'wp-command-center' ),           'view' => 'site-intelligence',        'feature' => null ],
+					'capabilities'    => [ 'label' => __( 'Capabilities', 'wp-command-center' ),          'view' => 'operations-explorer',      'feature' => 'operations_explorer' ],
+					// Runtime stays for now — Phase 2A is additive; Phase 2B removes it.
+					'runtime'         => [ 'label' => __( 'Runtime', 'wp-command-center' ),               'view' => 'dashboard',                'feature' => null ],
 				],
 			],
 		];

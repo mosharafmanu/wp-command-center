@@ -55,11 +55,31 @@ $wpcc_fr_dismissed  = '1' === get_user_meta( get_current_user_id(), 'wpcc_firstr
 $wpcc_show_firstrun = $wpcc_incomplete || ! $wpcc_fr_dismissed;
 $wpcc_done_count    = count( array_filter( $wpcc_checklist, static fn ( $s ) => $s['done'] ) );
 $wpcc_total_count   = count( $wpcc_checklist );
+
+// Phase 2A — Recommendations signal (real data only; shown only when there are open
+// findings). Read-only count; no fabrication, no scary language.
+global $wpdb;
+$wpcc_rec_open      = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}wpcc_recommendations WHERE status = %s", 'open' ) );
+$wpcc_recs_url      = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=recommendations' );
 ?>
 <div class="wpcc-home">
 	<p class="description">
 		<?php esc_html_e( 'Mission control for AI on your WordPress site — what needs you, what changed, and what you can undo. Read-only: every card links to the surface that owns the detail.', 'wp-command-center' ); ?>
 	</p>
+
+	<?php if ( $wpcc_rec_open > 0 ) : ?>
+		<p class="wpcc-home-recsignal" style="margin:0 0 16px;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:760px;font-size:13px;">
+			<span class="dashicons dashicons-lightbulb" aria-hidden="true" style="color:#2271b1;"></span>
+			<?php
+			printf(
+				/* translators: %d: number of open recommendations */
+				esc_html( _n( '%d recommendation to review.', '%d recommendations to review.', $wpcc_rec_open, 'wp-command-center' ) ),
+				(int) $wpcc_rec_open
+			);
+			?>
+			<a href="<?php echo esc_url( $wpcc_recs_url ); ?>"><?php esc_html_e( 'View recommendations →', 'wp-command-center' ); ?></a>
+		</p>
+	<?php endif; ?>
 
 	<?php if ( $wpcc_show_firstrun ) : ?>
 		<section class="wpcc-firstrun" aria-labelledby="wpcc-firstrun-h" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #2271b1;border-radius:6px;padding:18px 20px;margin:0 0 20px;max-width:840px;">

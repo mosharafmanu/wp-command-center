@@ -51,6 +51,29 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 
 	<div id="wpcc-approval-summary" class="wpcc-summary-bar" aria-live="polite"></div>
 
+	<?php
+	// Phase 2A — pointer to Recommendations when suggested-fix plans await approval.
+	// Real data only (no duplicate UI); the plans are approved in their recommendation
+	// context. Shown only when there is at least one pending plan.
+	global $wpdb;
+	$wpcc_pending_plan_cnt = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}wpcc_agent_plans WHERE status = %s", 'pending_review' ) );
+	if ( $wpcc_pending_plan_cnt > 0 ) :
+		?>
+		<p class="wpcc-approvals-recsignal" style="margin:0 0 14px;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:760px;font-size:13px;">
+			<span class="dashicons dashicons-lightbulb" aria-hidden="true" style="color:#2271b1;"></span>
+			<?php
+			printf(
+				/* translators: %d: number of suggested fixes awaiting approval */
+				esc_html( _n( '%d suggested fix is awaiting your review.', '%d suggested fixes are awaiting your review.', $wpcc_pending_plan_cnt, 'wp-command-center' ) ),
+				(int) $wpcc_pending_plan_cnt
+			);
+			?>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=recommendations' ) ); ?>"><?php esc_html_e( 'Review in Recommendations →', 'wp-command-center' ); ?></a>
+		</p>
+		<?php
+	endif;
+	?>
+
 	<?php if ( '' !== $detail_id ) : ?>
 	<p><a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="button">&larr; <?php esc_html_e( 'Back to Approval Center', 'wp-command-center' ); ?></a></p>
 	<div id="wpcc-detail" data-id="<?php echo esc_attr( $detail_id ); ?>">
