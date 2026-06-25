@@ -77,13 +77,13 @@ final class AppShell {
 			'wpcc-dashboard-overview' => [ self::HOME_SLUG, '' ],
 			'wpcc-approval-center'    => [ self::ACTIVITY_SLUG, 'approvals' ],
 			'wpcc-approvals'          => [ self::ACTIVITY_SLUG, 'approvals' ], // pre-106 slug
-			'wpcc-operations'         => [ self::SETTINGS_SLUG, 'capabilities' ],
+			'wpcc-operations'         => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'capabilities' ] ],
 			'wpcc-operations-center'  => [ self::ACTIVITY_SLUG, 'live' ],
 			'wpcc-change-history'     => [ self::HISTORY_SLUG, 'changes' ],
 			'wpcc-rollback'           => [ self::HISTORY_SLUG, 'changes' ],     // pre-105.3 slug
-			'wpcc-patches'            => [ self::SETTINGS_SLUG, 'patches' ],
+			'wpcc-patches'            => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'patches' ] ],
 			'wpcc-diagnostics'        => [ self::SETTINGS_SLUG, 'diagnostics' ],
-			'wpcc-site-intelligence'  => [ self::SETTINGS_SLUG, 'intelligence' ],
+			'wpcc-site-intelligence'  => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'sitereport' ] ],
 			'wpcc-tokens'             => [ self::SETTINGS_SLUG, 'access' ],
 			// NOTE: the retired Security-Mode page shared today's live Settings slug
 			// (`wpcc-settings`). It is intentionally NOT mapped here — a live section
@@ -93,7 +93,7 @@ final class AppShell {
 			// AdminMenu before resolution.
 			'wpcc-ai-integrations'    => [ self::CONNECT_SLUG, 'clients' ],
 			'wpcc-ai-setup'           => [ self::BUILTIN_SLUG, 'providers' ],
-			'wpcc-file-access'        => [ self::SETTINGS_SLUG, 'files' ],
+			'wpcc-file-access'        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'files' ] ],
 			// Build-flagged AI surfaces (only reachable when their flag is on).
 			'wpcc-proposals'          => [ self::ACTIVITY_SLUG, 'drafts' ],
 			'wpcc-alt-text'           => [ self::BUILTIN_SLUG, 'alt_text' ],
@@ -120,8 +120,8 @@ final class AppShell {
 				'*'          => [ self::ACTIVITY_SLUG, 'live' ],
 				'center'     => [ self::ACTIVITY_SLUG, 'live' ],
 				'approvals'  => [ self::ACTIVITY_SLUG, 'approvals' ],
-				'operations' => [ self::SETTINGS_SLUG, 'capabilities' ],
-				'runtime'    => [ self::SETTINGS_SLUG, 'runtime' ],
+				'operations' => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'capabilities' ] ],
+				'runtime'    => [ self::SETTINGS_SLUG, 'diagnostics' ],
 				'drafts'     => [ self::ACTIVITY_SLUG, 'drafts' ],
 				'alt_text'   => [ self::BUILTIN_SLUG, 'alt_text' ],
 				'seo'        => [ self::BUILTIN_SLUG, 'seo' ],
@@ -130,9 +130,9 @@ final class AppShell {
 			'wpcc-audit' => [
 				'*'            => [ self::HISTORY_SLUG, 'changes' ],
 				'changes'      => [ self::HISTORY_SLUG, 'changes' ],
-				'patches'      => [ self::SETTINGS_SLUG, 'patches' ],
+				'patches'      => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'patches' ] ],
 				'diagnostics'  => [ self::SETTINGS_SLUG, 'diagnostics' ],
-				'intelligence' => [ self::SETTINGS_SLUG, 'intelligence' ],
+				'intelligence' => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'sitereport' ] ],
 			],
 			'wpcc-access' => [
 				'*'        => [ self::SETTINGS_SLUG, 'access' ],
@@ -143,7 +143,19 @@ final class AppShell {
 			'wpcc-connect' => [
 				'setup'        => [ self::BUILTIN_SLUG, 'providers' ],
 				'integrations' => [ self::CONNECT_SLUG, 'clients' ],
-				'files'        => [ self::SETTINGS_SLUG, 'files' ],
+				'files'        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'files' ] ],
+			],
+			// Phase 2B: Settings sub-tabs retired into the Diagnostics/Advanced hubs.
+			// Only the RETIRED keys are listed here; current tabs (security/access/tools/
+			// diagnostics/advanced) are absent, so they render directly via the live-section
+			// short-circuit (no self-redirect, no loop).
+			'wpcc-settings' => [
+				'runtime'         => [ self::SETTINGS_SLUG, 'diagnostics' ],
+				'patches'         => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'patches' ] ],
+				'intelligence'    => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'sitereport' ] ],
+				'recommendations' => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'recommendations' ] ],
+				'files'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'files' ] ],
+				'capabilities'    => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'capabilities' ] ],
 			],
 		];
 	}
@@ -264,21 +276,16 @@ final class AppShell {
 			self::SETTINGS_SLUG => [
 				'label' => __( 'Settings', 'wp-command-center' ),
 				'desc'  => __( 'Rules and advanced controls: security mode, access, diagnostics, and developer tools.', 'wp-command-center' ),
+				// Phase 2B: five intent-grouped tabs. Diagnostics and Advanced are hubs that
+				// host the formerly-separate surfaces via a second-level ?dpane=/?apane= sub-nav.
+				// Runtime is RETIRED — its tools live in Tools + Diagnostics › Recommendations;
+				// its engine internals are deferred to a future Developer-mode Engine Inspector.
 				'tabs'  => [
-					'security'        => [ 'label' => __( 'Security & Approvals', 'wp-command-center' ), 'view' => 'settings',                  'feature' => null ],
-					'access'          => [ 'label' => __( 'Access', 'wp-command-center' ),               'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
-					// Phase 2A (additive): the new Tools home for governed maintenance (Search & Replace).
-					'tools'           => [ 'label' => __( 'Tools', 'wp-command-center' ),                'view' => 'tools-search-replace',     'feature' => null ],
-					'files'           => [ 'label' => __( 'File Access', 'wp-command-center' ),           'view' => 'file-access',              'feature' => null ],
-					'diagnostics'     => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),           'view' => 'diagnostics',              'feature' => null ],
-					// Phase 2A (additive): the new Recommendations home (lives under Diagnostics conceptually;
-					// grouped into a Diagnostics hub in Phase 2B).
-					'recommendations' => [ 'label' => __( 'Recommendations', 'wp-command-center' ),       'view' => 'recommendations',          'feature' => null ],
-					'patches'         => [ 'label' => __( 'Patches', 'wp-command-center' ),               'view' => 'patches',                  'feature' => null ],
-					'intelligence'    => [ 'label' => __( 'Site Report', 'wp-command-center' ),           'view' => 'site-intelligence',        'feature' => null ],
-					'capabilities'    => [ 'label' => __( 'Capabilities', 'wp-command-center' ),          'view' => 'operations-explorer',      'feature' => 'operations_explorer' ],
-					// Runtime stays for now — Phase 2A is additive; Phase 2B removes it.
-					'runtime'         => [ 'label' => __( 'Runtime', 'wp-command-center' ),               'view' => 'dashboard',                'feature' => null ],
+					'security'    => [ 'label' => __( 'Security & Approvals', 'wp-command-center' ), 'view' => 'settings',              'feature' => null ],
+					'access'      => [ 'label' => __( 'Access', 'wp-command-center' ),               'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
+					'tools'       => [ 'label' => __( 'Tools', 'wp-command-center' ),                'view' => 'tools-search-replace',  'feature' => null ],
+					'diagnostics' => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),          'view' => 'settings-diagnostics',  'feature' => null ],
+					'advanced'    => [ 'label' => __( 'Advanced', 'wp-command-center' ),             'view' => 'settings-advanced',     'feature' => null ],
 				],
 			],
 		];

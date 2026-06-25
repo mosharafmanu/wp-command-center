@@ -107,14 +107,17 @@ lacks "no audit/change writes"           "->record\(|ChangeRecorder"    "$QUERY"
 lacks "no policy mutation"               "->assign\(|->remove\(|->create\(|->revoke\(|->delete\(" "$QUERY"
 
 echo
-echo "== 4. App Shell hosts Operations Explorer as Operate › Operations =="
-# Phase 1 IA: the catalogue became Settings › Capabilities (the read-only contract),
-# routed by the App Shell via ?wpcc_tab=capabilities; legacy slugs redirect in.
-has "Capabilities tab labeled in shell"    "__\( 'Capabilities'"          "$SHELL"
-has "Capabilities tab renders explorer view" "'view' => 'operations-explorer'" "$SHELL"
-has "Capabilities tab gated by operations_explorer feature" "'feature' => 'operations_explorer'" "$SHELL"
-has "FeatureGate gates the Capabilities tab" "FeatureGate::allows"        "$SHELL"
-has "legacy operations slug redirects (map)" "'wpcc-operations'         => \[ self::SETTINGS_SLUG, 'capabilities' \]" "$SHELL"
+echo "== 4. App Shell hosts the catalogue as Settings › Advanced › Capabilities =="
+# Phase 2B IA: the catalogue is the Capabilities pane inside the Advanced hub
+# (settings-advanced.php), reached via ?wpcc_tab=advanced&apane=capabilities; legacy
+# slugs redirect in.
+ADVANCED="$PLUGIN_DIR/includes/Admin/views/settings-advanced.php"
+has "Capabilities pane labeled in Advanced hub"    "__\( 'Capabilities'"          "$ADVANCED"
+has "Capabilities pane renders explorer view"      "'view' => 'operations-explorer'" "$ADVANCED"
+has "Capabilities pane gated by operations_explorer feature" "'feature' => 'operations_explorer'" "$ADVANCED"
+has "Advanced hub FeatureGate-filters panes"       "FeatureGate::allows"        "$ADVANCED"
+has "Advanced hub registered in shell"             "'view' => 'settings-advanced'" "$SHELL"
+has "legacy operations slug redirects to advanced/caps" "'wpcc-operations'         => \[ self::SETTINGS_SLUG, 'advanced', \[ 'apane' => 'capabilities' \] \]" "$SHELL"
 has "Settings section registered"        "render_settings"              "$MENU"
 
 echo

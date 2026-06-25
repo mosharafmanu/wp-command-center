@@ -10,7 +10,7 @@
 #   - Settings › Recommendations surfaces findings + governed actions, honest empty state
 #   - Home shows a recommendations signal only on real open findings
 #   - Activity › Approvals points to Recommendations only on real pending plans
-#   - Runtime (dashboard.php) still present and rendering (additive guarantee)
+#   - Runtime (dashboard.php) retired in 2B; the new homes are the sole owners
 #   - No redirect loops; invariants 34/23/40/40/2.5.0; no new route/capability in new views
 #
 # Requires: php, rg; wp-cli optional (functional + invariant checks).
@@ -46,8 +46,10 @@ for f in "$SHELL_PHP" "$TOOLS" "$RECS" "$HOME_V" "$APPROV"; do lint "lint $(base
 echo
 echo "== 2. New Settings tabs registered (additive) =="
 has "Tools tab → tools-search-replace"           "'tools'\s*=> \[ 'label' => __\( 'Tools'" "$SHELL_PHP"
-has "Recommendations tab → recommendations view" "'recommendations'\s*=> \[ 'label' => __\( 'Recommendations'" "$SHELL_PHP"
-has "Runtime tab STILL present (not removed)"     "'runtime'\s*=> \[ 'label' => __\( 'Runtime'" "$SHELL_PHP"
+# Phase 2B: Recommendations is now a pane inside the Diagnostics hub (not a flat tab);
+# Runtime is removed.
+has "Recommendations hosted in Diagnostics hub"  "'view' => 'recommendations'" "$ROOT/includes/Admin/views/settings-diagnostics.php"
+lacks "Runtime tab removed (no dashboard view)"  "'view' => 'dashboard'" "$SHELL_PHP"
 
 echo
 echo "== 3. Tools — governed Search & Replace preserved =="
@@ -88,9 +90,9 @@ has "links to Recommendations"        "wpcc_tab=recommendations" "$APPROV"
 lacks "no duplicated recommendations table" "RecommendationEngine" "$APPROV"
 
 echo
-echo "== 7. Runtime untouched (additive guarantee) =="
-[ -f "$RUNTIME" ] && pass "dashboard.php (Runtime) still exists" || fail "dashboard.php was removed (must not be in 2A)"
-has "Runtime still hosts its own S&R copy" "wpcc_sr_action" "$RUNTIME"
+echo "== 7. Runtime retired (Phase 2B cutover; homes are now the sole owners) =="
+[ -f "$RUNTIME" ] && fail "dashboard.php (Runtime) still exists" || pass "dashboard.php (Runtime) removed"
+has "Tools is the sole S&R home" "create_request\( 'safe_search_replace'" "$TOOLS"
 
 echo
 echo "== 8. Functional + invariants + nav (wp-cli) =="

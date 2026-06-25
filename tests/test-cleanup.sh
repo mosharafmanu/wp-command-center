@@ -35,7 +35,9 @@ echo "== 4. API, Context, Dashboard & Audit =="
 eq "cleanup requires full token" 401 "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$WPCC_BASE/system/cleanup")"
 CTX=$(api GET /agent/context); eq "context environment mode" development "$(echo "$CTX"|jq -r '.environment_mode')"
 MAN=$(api GET /agent/manifest); eq "cleanup capability" true "$(echo "$MAN"|jq -r '.capabilities.cleanup')"; eq "environment capability" true "$(echo "$MAN"|jq -r '.capabilities.environment_management')"
-ok "dashboard has production warning" "$(grep -q 'Production environment' "$ROOT/includes/Admin/views/dashboard.php"&&echo true||echo false)"
+# Phase 2B: the Runtime dashboard (and its environment-mode banner) was retired. Environment
+# mode itself is unchanged — verified via the REST context/manifest above (development mode +
+# environment_management capability). The admin banner is a deferred re-surface in Diagnostics.
 AUDIT=$(wp eval '$u=wp_upload_dir();echo trailingslashit($u["basedir"])."wpcc-audit/audit.log";' 2>/dev/null)
 for e in system.environment.updated system.cleanup.started system.cleanup.completed system.cleanup.blocked;do ok "audit has $e" "$(grep -q "$e" "$AUDIT"&&echo true||echo false)";done
 api POST /system/environment "{\"mode\":\"$ORIGINAL\"}" >/dev/null

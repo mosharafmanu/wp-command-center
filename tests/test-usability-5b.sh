@@ -30,7 +30,8 @@ echo "== 2. Navigation rebuild — clarity, no regression =="
 has "sections carry a plain-language description" "'desc'  => __\(" "$SHELL_F"
 has "shell renders the section description" "wpcc-shell__desc" "$SHELL_F"
 has "AI client door uses plain 'AI Clients' label" "__\( 'AI Clients'" "$SHELL_F"
-has "Runtime present under Settings (advanced area)" "__\( 'Runtime', 'wp-command-center' \)" "$SHELL_F"
+# Phase 2B: Runtime retired; the advanced area is now the Advanced hub.
+has "Advanced hub present under Settings" "__\( 'Advanced', 'wp-command-center' \)" "$SHELL_F"
 has "Connect section slug intact" "CONNECT_SLUG\s*=\s*'wpcc-connect'" "$SHELL_F"
 has "Providers (AI Setup) tab still present" "'view' => 'ai-setup'" "$SHELL_F"
 

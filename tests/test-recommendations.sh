@@ -88,9 +88,11 @@ assert_eq "manifest recommendation capability" "true" "$(echo "$MANIFEST" | jq -
 assert_true "manifest recommendation statuses" "$(echo "$MANIFEST" | jq -r '.recommendation_statuses == ["open","converted_to_action","plan_created","approved","executing","resolved","dismissed"]')"
 assert_true "manifest recommendation severities" "$(echo "$MANIFEST" | jq -r '.recommendation_severities == ["info","low","medium","high","critical"]')"
 assert_eq "manifest has seven recommendation endpoints" "7" "$(echo "$MANIFEST" | jq -r '[.endpoints[] | select(.path | startswith("/recommendations"))] | length')"
-assert_true "dashboard has open count card" "$(grep -q 'Open Recommendations' "$PLUGIN_DIR/includes/Admin/views/dashboard.php" && echo true || echo false)"
-assert_true "dashboard has critical count card" "$(grep -q 'Critical Recommendations' "$PLUGIN_DIR/includes/Admin/views/dashboard.php" && echo true || echo false)"
-assert_true "dashboard has recent panel" "$(grep -q 'Recent Recommendations' "$PLUGIN_DIR/includes/Admin/views/dashboard.php" && echo true || echo false)"
+# Phase 2B: the Recommendations admin home is Settings › Diagnostics › Recommendations
+# (recommendations.php), reached via the Diagnostics hub. The legacy Runtime dashboard is gone.
+assert_true "recommendations view has open count" "$(grep -q "esc_html_e( 'Open'" "$PLUGIN_DIR/includes/Admin/views/recommendations.php" && echo true || echo false)"
+assert_true "recommendations view has critical count" "$(grep -q "esc_html_e( 'Critical'" "$PLUGIN_DIR/includes/Admin/views/recommendations.php" && echo true || echo false)"
+assert_true "recommendations view lists findings" "$(grep -q 'RecommendationEngine' "$PLUGIN_DIR/includes/Admin/views/recommendations.php" && echo true || echo false)"
 
 echo "== 7. Timeline & Audit =="
 TIMELINE=$(api GET '/agent/timeline?limit=200')

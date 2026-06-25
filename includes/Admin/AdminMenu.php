@@ -94,23 +94,34 @@ final class AdminMenu {
 			return;
 		}
 
-		[ $section_slug, $wpcc_tab ] = $resolved;
-		$this->redirect_to( $section_slug, $wpcc_tab );
+		// resolve_legacy may return an optional 3rd element: extra query args that
+		// land a legacy deep-link on a specific second-level pane (Diagnostics/Advanced
+		// hubs), e.g. [ 'dpane' => 'patches' ].
+		$section_slug = $resolved[0];
+		$wpcc_tab     = $resolved[1];
+		$extra_args   = isset( $resolved[2] ) && is_array( $resolved[2] ) ? $resolved[2] : [];
+		$this->redirect_to( $section_slug, $wpcc_tab, $extra_args );
 	}
 
 	/**
-	 * Redirect to a section page, setting `wpcc_tab` and carrying through every
-	 * original query arg except `page`/`wpcc_tab` (sanitized).
+	 * Redirect to a section page, setting `wpcc_tab` (+ optional hub-pane args) and
+	 * carrying through every original query arg except `page`/`wpcc_tab`/pane (sanitized).
+	 *
+	 * @param array<string,string> $extra_args Hub-pane selectors (e.g. dpane/apane).
 	 */
-	private function redirect_to( string $section_slug, string $wpcc_tab ): void {
+	private function redirect_to( string $section_slug, string $wpcc_tab, array $extra_args = [] ): void {
 		$args = [ 'page' => $section_slug ];
 		if ( '' !== $wpcc_tab ) {
 			$args['wpcc_tab'] = $wpcc_tab;
 		}
+		foreach ( $extra_args as $k => $v ) {
+			$args[ sanitize_key( (string) $k ) ] = sanitize_key( (string) $v );
+		}
+		$reserved = array_merge( [ 'page', 'wpcc_tab' ], array_keys( $args ) );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation; passthrough is sanitized below.
 		foreach ( $_GET as $key => $value ) {
 			$key = sanitize_key( $key );
-			if ( in_array( $key, [ 'page', 'wpcc_tab' ], true ) || is_array( $value ) ) {
+			if ( in_array( $key, $reserved, true ) || is_array( $value ) ) {
 				continue;
 			}
 			$args[ $key ] = sanitize_text_field( wp_unslash( $value ) );

@@ -79,10 +79,13 @@ CONTEXT=$(api GET /agent/context)
 assert_true "context has recommendation summary" "$(echo "$CONTEXT" | jq -r 'has("recommendation_summary")')"
 assert_true "context summary has workflow buckets" "$(echo "$CONTEXT" | jq -r '.recommendation_summary | has("open") and has("awaiting_plan") and has("awaiting_approval") and has("in_progress") and has("resolved")')"
 assert_true "resolved summary includes workflow record" "$(echo "$CONTEXT" | jq -r '.recommendation_summary.resolved >= 1')"
-assert_true "dashboard has Awaiting Plan card" "$(grep -q 'Awaiting Plan' "$PLUGIN_DIR/includes/Admin/views/dashboard.php" && echo true || echo false)"
-assert_true "dashboard has Awaiting Approval card" "$(grep -q 'Awaiting Approval' "$PLUGIN_DIR/includes/Admin/views/dashboard.php" && echo true || echo false)"
-assert_true "dashboard has In Progress card" "$(grep -q 'In Progress' "$PLUGIN_DIR/includes/Admin/views/dashboard.php" && echo true || echo false)"
-assert_true "dashboard has Resolved card" "$(grep -q '>Resolved<' "$PLUGIN_DIR/includes/Admin/views/dashboard.php" && echo true || echo false)"
+# Phase 2B: the workflow stages are surfaced in Settings › Diagnostics › Recommendations
+# (recommendations.php) — the awaiting-approval stage as the suggested-fix plans section,
+# plus the resolved count; the full stage vocabulary stays covered by the REST summary above.
+REC_V="$PLUGIN_DIR/includes/Admin/views/recommendations.php"
+assert_true "recommendations view surfaces suggested-fix plans (awaiting approval)" "$(grep -q 'awaiting your approval' "$REC_V" && echo true || echo false)"
+assert_true "recommendations view has resolved count" "$(grep -q "esc_html_e( 'Resolved'" "$REC_V" && echo true || echo false)"
+assert_true "recommendations view preserves plan approve/reject" "$(grep -q 'approve_plan' "$REC_V" && echo true || echo false)"
 PATCH_COUNT_AFTER=$(api GET /patches | jq -r 'length')
 assert_eq "workflow created no patches" "$PATCH_COUNT_BEFORE" "$PATCH_COUNT_AFTER"
 

@@ -67,7 +67,7 @@ lint "AppShell lints"          "$SHELL_PHP"
 lint "AdminMenu lints"         "$MENU"
 lint "Assets lints"            "$ASSETS"
 lint "Home view lints"         "$HOME_VIEW"
-lint "Runtime view lints"      "$RUNTIME"
+# (Runtime view dashboard.php was retired in Phase 2B — no longer linted.)
 if command -v node >/dev/null 2>&1; then
 	if node -c "$CDS_JS" >/dev/null 2>&1; then pass "CDS runtime parses (node -c)"; else fail "CDS runtime parses (node -c)"; fi
 else
@@ -88,11 +88,11 @@ has "selector is namespaced wpcc_tab (no ?tab= collision)" "wpcc_tab" "$SHELL_PH
 # Legacy migration map re-homes every former Phase A / 5-C standalone surface.
 has "map: dashboard-overview -> home"     "'wpcc-dashboard-overview' => \[ self::HOME_SLUG" "$SHELL_PHP"
 has "map: approval-center -> activity"    "'wpcc-approval-center'    => \[ self::ACTIVITY_SLUG, 'approvals' \]" "$SHELL_PHP"
-has "map: operations -> settings/caps"    "'wpcc-operations'         => \[ self::SETTINGS_SLUG, 'capabilities' \]" "$SHELL_PHP"
+has "map: operations -> advanced/caps"    "'wpcc-operations'         => \[ self::SETTINGS_SLUG, 'advanced', \[ 'apane' => 'capabilities' \] \]" "$SHELL_PHP"
 has "map: change-history -> history"      "'wpcc-change-history'     => \[ self::HISTORY_SLUG, 'changes' \]" "$SHELL_PHP"
-has "map: patches -> settings"            "'wpcc-patches'            => \[ self::SETTINGS_SLUG, 'patches' \]" "$SHELL_PHP"
+has "map: patches -> diagnostics"         "'wpcc-patches'            => \[ self::SETTINGS_SLUG, 'diagnostics', \[ 'dpane' => 'patches' \] \]" "$SHELL_PHP"
 has "map: diagnostics -> settings"        "'wpcc-diagnostics'        => \[ self::SETTINGS_SLUG, 'diagnostics' \]" "$SHELL_PHP"
-has "map: site-intelligence -> settings"  "'wpcc-site-intelligence'  => \[ self::SETTINGS_SLUG, 'intelligence' \]" "$SHELL_PHP"
+has "map: site-intelligence -> diagnostics" "'wpcc-site-intelligence'  => \[ self::SETTINGS_SLUG, 'diagnostics', \[ 'dpane' => 'sitereport' \] \]" "$SHELL_PHP"
 has "map: tokens -> settings/access"      "'wpcc-tokens'             => \[ self::SETTINGS_SLUG, 'access' \]" "$SHELL_PHP"
 # wpcc-settings is a LIVE section slug — it must NOT be a self-referential legacy_map
 # entry (that caused the Settings redirect loop). It renders directly via resolve_legacy's
@@ -101,7 +101,7 @@ lacks "no self-referential wpcc-settings legacy entry" "'wpcc-settings'\s*=> \[ 
 has "resolve_legacy short-circuits live section slugs" "is_live_section" "$SHELL_PHP"
 has "map: ai-integrations -> connect"     "'wpcc-ai-integrations'    => \[ self::CONNECT_SLUG, 'clients' \]" "$SHELL_PHP"
 has "map: ai-setup -> built-in-ai"        "'wpcc-ai-setup'           => \[ self::BUILTIN_SLUG, 'providers' \]" "$SHELL_PHP"
-has "map: file-access -> settings"        "'wpcc-file-access'        => \[ self::SETTINGS_SLUG, 'files' \]" "$SHELL_PHP"
+has "map: file-access -> advanced/files"  "'wpcc-file-access'        => \[ self::SETTINGS_SLUG, 'advanced', \[ 'apane' => 'files' \] \]" "$SHELL_PHP"
 # Build-flagged AI surfaces fold under Built-in AI.
 has "map: alt-text -> built-in-ai"        "'wpcc-alt-text'" "$SHELL_PHP"
 has "map: seo -> built-in-ai"             "'wpcc-seo'" "$SHELL_PHP"
@@ -169,21 +169,15 @@ lacks "no write fetch (POST/PUT/DELETE)"  "'POST'|'PUT'|'DELETE'|method: 'POST'"
 lacks "no engine dispatch"                "OperationExecutor|wpcc_action" "$HOME_VIEW"
 
 echo
-echo "== 5. Trimmed Runtime (relocated legacy dashboard) =="
-# Removed: duplicated op-request + queue WRITE panels (now in the Approval Center).
-lacks "no approve_request control"        "value=\"approve_request\"" "$RUNTIME"
-lacks "no reject_request control"         "value=\"reject_request\""  "$RUNTIME"
-lacks "no manual run_queue control"       "value=\"run_queue\""       "$RUNTIME"
-lacks "no Pending Operation Requests panel" "Pending Operation Requests" "$RUNTIME"
-lacks "no Queued Operations panel"        ">Queued Operations<"       "$RUNTIME"
-# Kept: the controls unique to Runtime.
-has "keeps Safe Search & Replace"         "wpcc_sr_action"            "$RUNTIME"
-has "keeps agent plan approval"           "value=\"approve_plan\""    "$RUNTIME"
-has "keeps runtime hierarchy"             "Runtime Hierarchy"         "$RUNTIME"
-has "points operators to Approval Center" "page=wpcc-activity&wpcc_tab=approvals" "$RUNTIME"
-# Self-links/forms retarget the new Runtime location (not the old top-level slug).
-has "timeline form targets new Runtime"   "name=\"wpcc_tab\" value=\"runtime\"" "$RUNTIME"
-lacks "no self-link to old top-level slug" "'page' => 'wp-command-center'" "$RUNTIME"
+echo "== 5. Runtime retired (Phase 2B cutover) =="
+# The legacy operational dashboard (dashboard.php) is GONE; its tools moved to new homes.
+if [ -f "$RUNTIME" ]; then fail "dashboard.php (Runtime) removed"; else pass "dashboard.php (Runtime) removed"; fi
+lacks "no Runtime tab in the shell"        "'view' => 'dashboard'" "$SHELL_PHP"
+lacks "no 'Agent Runtime Dashboard' string in admin views" "Agent Runtime Dashboard" "$PLUGIN_DIR/includes/Admin"
+has "Search & Replace re-homed in Tools"   "wpcc_sr_action" "$PLUGIN_DIR/includes/Admin/views/tools-search-replace.php"
+has "Recommendations re-homed"             "RecommendationEngine" "$PLUGIN_DIR/includes/Admin/views/recommendations.php"
+has "Diagnostics hub present"              "settings-diagnostics" "$SHELL_PHP"
+has "Advanced hub present"                 "settings-advanced" "$SHELL_PHP"
 
 echo
 echo "== 6. CDS tokens + components + enqueue =="

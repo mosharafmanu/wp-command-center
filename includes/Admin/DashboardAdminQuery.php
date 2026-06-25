@@ -28,9 +28,10 @@
  * OperationRegistry::get_operations() 1:1), the live MCP-tool count equals the
  * catalogue count by construction, read from the same registry with no side effect.
  *
- * STEP 109 is additive and read-only: the legacy operational Dashboard
- * (views/dashboard.php) and its execution controls are untouched and continue to
- * own all operational actions. This surface only summarises and links out.
+ * STEP 109 is additive and read-only: this surface only summarises and links out.
+ * (The legacy operational "Runtime" dashboard it once referenced was retired in the
+ * Phase 2B Runtime migration; its tools now live in Settings › Tools and
+ * Settings › Diagnostics › Recommendations.)
  */
 
 namespace WPCommandCenter\Admin;
