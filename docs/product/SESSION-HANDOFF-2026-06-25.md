@@ -37,3 +37,13 @@ The client-safe default is **unset-only**. Production already has `wpcc_security
 5. Runbook: `docs/product/rc-2/CONCIERGE-BETA-CHECKLIST.md`.
 
 Nothing reaches production until an explicit `git push`. Local `main` being ahead of `origin/main` is expected (staged release) — not "behind", no pull needed.
+
+---
+
+## Planning phase — COMPLETE (2026-06-25)
+
+- **Planning phase is complete.** The canonical planning set is finalized and committed: `PRODUCT-MASTER-PLAN.md` (§0 hierarchy) · `master-architecture/MASTER-AI-PLATFORM-BLUEPRINT.md` (platform: "Three Doors, One Engine") · `master-architecture/FINAL-UX-MASTER-BLUEPRINT.md` (UX).
+- **RC build remains staged locally** on `main` (Programs 5A→10 + RC-2 + concierge-beta + wizard UX), ahead of `origin/main`.
+- **Nothing has been pushed.** `origin/main` is unchanged.
+- **Production remains unchanged** — Program-4 (`2657810`); AI dormant; invariants 34/23/40/40/2.5.0.
+- **The next session begins the implementation phase**, aligned to the three canonical documents (build toward the blueprints; UX-blueprint §14 lists the contradictions to resolve forward, never by faking behavior).

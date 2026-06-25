@@ -11,6 +11,20 @@
 
 ---
 
+## 0. Canonical planning documents (read in this order)
+
+> **Planning phase complete (2026-06-25).** Future implementation must align with the three canonical documents below. This plan is strategy; the blueprints are the binding architecture and UX references.
+
+| # | Document | Scope |
+|---|---|---|
+| 1 | **PRODUCT-MASTER-PLAN.md** (this) | Product strategy & roadmap — positioning, audiences, commercial direction |
+| 2 | **master-architecture/MASTER-AI-PLATFORM-BLUEPRINT.md** | Platform architecture — *"Three Doors, One Engine"*: built-in AI / MCP clients / REST, over the governed Operation Registry → capability → approval → execute → audit → rollback engine |
+| 3 | **master-architecture/FINAL-UX-MASTER-BLUEPRINT.md** | User-experience architecture — navigation, onboarding, screen hierarchy, empty states, labels, progressive disclosure |
+
+Where the current implementation and these blueprints disagree, build toward the blueprint direction (the contradictions are catalogued in the UX blueprint §14) — never resolve by faking behavior.
+
+---
+
 ## 1. Product positioning
 
 ### 1.1 The refined position — *AI Operations Platform for WordPress* (AIOps for WP)
