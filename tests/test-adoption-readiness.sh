@@ -45,9 +45,10 @@ hasnt "key input is not prefilled with a value" "name=\"wpcc_api_key\"[^>]*value
 has "key input is type=password" 'type="password"' "$VIEW"
 # PROGRAM-6: view rebuilt to multi-provider; these assertions re-pointed to the new
 # (still-safe) reality. Key is never echoed; configured state shown; nonce present.
-has "view shows configured state only" "has_secret" "$VIEW"
-has "view carries the nonce" "wp_nonce_field\( ProviderConfigController::NONCE" "$VIEW"
-has "OpenAI/Gemini are configurable (no longer 'planned' placeholders)" "Add a provider" "$VIEW"
+# PROGRAM-6R: view rebuilt to connection-centric platform; assertions re-pointed.
+has "view shows configured state only" "is_configured" "$VIEW"
+has "view carries the nonce" "wp_nonce_field\( ConnectionController::NONCE" "$VIEW"
+has "providers are configurable connections (no 'planned' placeholders)" "Add a connection" "$VIEW"
 has "honest local-storage security note present" "stored in this site" "$VIEW"
 
 echo "== 4. AdoptionStatus — read-only, no key leak =="
