@@ -2,9 +2,11 @@
 /**
  * PROGRAM-6S — declared capability + model metadata (read-only, honest).
  *
- * EXPERIENCE ONLY. This is DECLARED metadata (what each provider/dialect documents),
- * NOT live-detected — the UI labels it as such and never claims to have tested it.
- * No runtime, no calls, no architecture change. Pure display data.
+ * DECLARED metadata (what each provider/dialect documents), NOT live-detected —
+ * the UI labels it as such and never claims to have tested it. It performs no
+ * calls and reads no options — pure data. Originally display-only; as of Phase C
+ * it is also read (read-only) by Ai\CapabilityGate to validate a feature's
+ * required capabilities against the active provider before generation.
  *
  * Capability values: 'yes' | 'no' | 'model' (model-dependent) | 'sep' (separate models).
  */

@@ -19,6 +19,7 @@
 
 namespace WPCommandCenter\Content;
 
+use WPCommandCenter\Ai\CapabilityGate;
 use WPCommandCenter\Proposals\ProposalStore;
 
 defined( 'ABSPATH' ) || exit;
@@ -81,6 +82,12 @@ final class ContentFieldGenerator {
 		if ( null === $provider ) {
 			$skipped[] = [ 'post_id' => $post_id, 'reason' => 'no_provider' ];
 			return $this->envelope( $kind, $batch_id, '', '', $created, $skipped, $failed );
+		}
+
+		// Capability gate: inert for Anthropic; never selects/routes.
+		if ( ! CapabilityGate::check( 'ai_content', $provider->id() )['ok'] ) {
+			$skipped[] = [ 'post_id' => $post_id, 'reason' => 'capability_unsupported' ];
+			return $this->envelope( $kind, $batch_id, $provider->id(), '', $created, $skipped, $failed );
 		}
 
 		$post = get_post( $post_id );

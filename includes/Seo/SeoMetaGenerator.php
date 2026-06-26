@@ -20,6 +20,7 @@
 
 namespace WPCommandCenter\Seo;
 
+use WPCommandCenter\Ai\CapabilityGate;
 use WPCommandCenter\Proposals\ProposalStore;
 use WPCommandCenter\Operations\SeoProvider;
 
@@ -93,6 +94,15 @@ final class SeoMetaGenerator {
 				$skipped[] = [ 'post_id' => $id, 'reason' => 'no_provider' ];
 			}
 			return $this->envelope( $batch_id, '', '', $created, $skipped, $failed );
+		}
+
+		// Precondition 3 (capability gate): the active provider must support what
+		// this feature requires. Inert for Anthropic; never selects/routes.
+		if ( ! CapabilityGate::check( 'seo_meta', $provider->id() )['ok'] ) {
+			foreach ( $ids as $id ) {
+				$skipped[] = [ 'post_id' => $id, 'reason' => 'capability_unsupported' ];
+			}
+			return $this->envelope( $batch_id, $provider->id(), '', $created, $skipped, $failed );
 		}
 
 		$used_model = '';

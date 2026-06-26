@@ -17,6 +17,7 @@
 
 namespace WPCommandCenter\AltText;
 
+use WPCommandCenter\Ai\CapabilityGate;
 use WPCommandCenter\Proposals\ProposalStore;
 
 defined( 'ABSPATH' ) || exit;
@@ -62,6 +63,15 @@ final class AltTextGenerator {
 				$skipped[] = [ 'attachment_id' => $id, 'reason' => 'no_provider' ];
 			}
 			return $this->envelope( $batch_id, '', '', $created, $skipped, $failed );
+		}
+
+		// Capability gate: alt text requires vision. Inert for Anthropic (vision=yes);
+		// never selects/routes. A provider declared without vision skips the batch.
+		if ( ! CapabilityGate::check( 'alt_text', $provider->id() )['ok'] ) {
+			foreach ( $ids as $id ) {
+				$skipped[] = [ 'attachment_id' => $id, 'reason' => 'capability_unsupported' ];
+			}
+			return $this->envelope( $batch_id, $provider->id(), '', $created, $skipped, $failed );
 		}
 
 		$used_model = '';
