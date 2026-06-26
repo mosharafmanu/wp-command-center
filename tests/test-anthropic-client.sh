@@ -25,17 +25,26 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 CLIENT="$PLUGIN_DIR/includes/Ai/AnthropicClient.php"
 VISION="$PLUGIN_DIR/includes/AltText/AnthropicVisionProvider.php"
+TRANSPORT="$PLUGIN_DIR/includes/Ai/Transport/AnthropicTransport.php"
+HTTP="$PLUGIN_DIR/includes/Ai/Http/AiHttpClient.php"
 
 echo "STEP 111 — GA#2 Slice 2a: shared Anthropic transport"
+echo "Phase A — neutral runtime seam: wire relocated to AnthropicTransport over AiHttpClient"
 
 echo
-echo "== 1. Static: client owns the transport, no writes, no engine =="
-has  "API endpoint"                        "api.anthropic.com/v1/messages" "$CLIENT"
-has  "anthropic version header"            "anthropic-version"  "$CLIENT"
-has  "api key header"                      "x-api-key"          "$CLIENT"
-has  "timeout enforced"                    "DEFAULT_TIMEOUT"    "$CLIENT"
-has  "performs wp_remote_post"             "wp_remote_post"     "$CLIENT"
-has  "redacts errors"                      "Redactor"           "$CLIENT"
+echo "== 1. Static: transport owns the wire; HTTP client owns the call; facade delegates =="
+# Phase A relocated the Anthropic wire from the facade into the transport, and the
+# single HTTP attempt into the shared client. The facade now delegates and keeps
+# only key/model resolution + the timeout default.
+has  "API endpoint (transport)"            "api.anthropic.com/v1/messages" "$TRANSPORT"
+has  "anthropic version header (transport)" "anthropic-version" "$TRANSPORT"
+has  "api key header (transport)"          "x-api-key"          "$TRANSPORT"
+has  "timeout default (facade)"            "DEFAULT_TIMEOUT"    "$CLIENT"
+has  "performs wp_remote_post (http client)" "wp_remote_post"   "$HTTP"
+has  "redacts errors (transport)"          "Redactor"           "$TRANSPORT"
+has  "redacts errors (http client)"        "Redactor"           "$HTTP"
+has  "facade delegates to transport"       "AnthropicTransport" "$CLIENT"
+lacks "facade performs no direct HTTP"     "wp_remote_post"     "$CLIENT"
 # Key resolution names (canonical + legacy) all present.
 has  "key: canonical constant"             "WPCC_ANTHROPIC_API_KEY" "$CLIENT"
 has  "key: canonical option"               "wpcc_anthropic_api_key" "$CLIENT"

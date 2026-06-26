@@ -1,23 +1,27 @@
 <?php
 /**
  * STEP 111 — GA#2 Slice 2a: shared Anthropic transport.
+ * Phase A — Universal AI Provider Runtime: re-roled as the back-compat FACADE.
  *
- * The single low-level Anthropic Messages transport for WP Command Center,
- * extracted (extract-on-second-use) from the GA#1 AnthropicVisionProvider so that
- * both the vision provider and future text providers share one outbound path,
- * one BYO key, one timeout, and one redaction pass. WPCC's outbound AI calls live
- * ONLY here.
+ * Historically this class owned the outbound Anthropic call directly. As of
+ * Phase A the wire now lives in AnthropicTransport (Anthropic format) over the
+ * shared AiHttpClient (one HTTP attempt + redaction), driven by the neutral
+ * runtime contract (GenerationRequest/Result). This class is now a thin FACADE
+ * that preserves 100% of its previous public surface so every existing caller
+ * — the SEO / Alt Text / Content providers, ConnectionTester, AdoptionStatus —
+ * keeps working with no edits and the outbound request stays byte-identical.
  *
- * It is operation-agnostic: the caller supplies the `messages` content + max_tokens
- * + model; this class owns the URL/version/headers/timeout/HTTP call, the key and
- * model resolution (canonical names with back-compat to the original vision names),
- * response parsing + HTTP error mapping, and Redactor scrubbing. It returns a
- * normalized array (errors as DATA, never thrown).
+ * The facade's job, and only job:
+ *   1. resolve the key/model exactly as before (canonical → legacy → default),
+ *   2. translate the legacy Anthropic-shaped `messages` into the neutral contract,
+ *   3. delegate to AnthropicTransport,
+ *   4. translate the neutral GenerationResult back into the legacy return array.
+ * It surfaces no new fields (no usage / finish reason) in Phase A.
  *
  * Strict boundaries — this class NEVER:
  *   - writes WordPress data (no post/meta/option writes),
  *   - touches ProposalStore / ProposalApplyService / OperationExecutor,
- *   - logs or returns the API key (every error string is run through Redactor).
+ *   - performs HTTP itself (the transport/HTTP client do, and redact errors).
  *
  * Key resolution (first non-empty wins):
  *   1. WPCC_ANTHROPIC_API_KEY constant   (canonical, shared)
@@ -33,15 +37,28 @@
 
 namespace WPCommandCenter\Ai;
 
-use WPCommandCenter\Security\Redactor;
+use WPCommandCenter\Ai\Contract\GenerationImagePart;
+use WPCommandCenter\Ai\Contract\GenerationMessage;
+use WPCommandCenter\Ai\Contract\GenerationRequest;
+use WPCommandCenter\Ai\Contract\GenerationTextPart;
+use WPCommandCenter\Ai\Transport\AnthropicTransport;
 
 defined( 'ABSPATH' ) || exit;
 
 final class AnthropicClient {
 
-	private const API_URL         = 'https://api.anthropic.com/v1/messages';
-	private const API_VERSION     = '2023-06-01';
 	private const DEFAULT_TIMEOUT = 30; // hard request timeout (seconds)
+
+	private AnthropicTransport $transport;
+
+	/**
+	 * @param AnthropicTransport|null $transport Injectable for tests; defaults to the
+	 *                                           real Anthropic transport. Existing callers
+	 *                                           use the no-arg form unchanged.
+	 */
+	public function __construct( ?AnthropicTransport $transport = null ) {
+		$this->transport = $transport ?? new AnthropicTransport();
+	}
 
 	/** True when any key (canonical or legacy) is configured. No outbound call. */
 	public function is_configured(): bool {
@@ -103,46 +120,50 @@ final class AnthropicClient {
 	 * @return array<string,mixed>
 	 */
 	public function send( array $messages, int $max_tokens, string $model, array $opts = [] ): array {
-		$key = $this->key();
-		if ( '' === $key ) {
-			return [ 'ok' => false, 'code' => 'not_configured', 'message' => __( 'No Anthropic API key configured.', 'wp-command-center' ), 'model' => $model ];
-		}
-
 		$timeout = isset( $opts['timeout'] ) ? (int) $opts['timeout'] : self::DEFAULT_TIMEOUT;
 
-		$response = wp_remote_post( self::API_URL, [
-			'timeout' => $timeout,
-			'headers' => [
-				'x-api-key'         => $key,
-				'anthropic-version' => self::API_VERSION,
-				'content-type'      => 'application/json',
-			],
-			'body'    => wp_json_encode( [
-				'model'      => $model,
-				'max_tokens' => $max_tokens,
-				'messages'   => $messages,
-			] ),
-		] );
+		$request = new GenerationRequest( $model, $max_tokens, $this->neutral_messages( $messages ), $timeout );
+		$result  = $this->transport->generate( $request, $this->key() );
 
-		if ( is_wp_error( $response ) ) {
-			return [ 'ok' => false, 'code' => 'request_failed', 'message' => $this->scrub( $response->get_error_message() ), 'model' => $model ];
+		if ( $result->is_ok() ) {
+			return [ 'ok' => true, 'text' => $result->text(), 'model' => $result->model() ];
 		}
 
-		$code = (int) wp_remote_retrieve_response_code( $response );
-		$raw  = (string) wp_remote_retrieve_body( $response );
-		$data = json_decode( $raw, true );
+		return [ 'ok' => false, 'code' => $result->code(), 'message' => $result->message(), 'model' => $result->model() ];
+	}
 
-		if ( 200 !== $code ) {
-			$msg = is_array( $data ) ? (string) ( $data['error']['message'] ?? '' ) : '';
-			return [ 'ok' => false, 'code' => 'api_error_' . $code, 'message' => $this->scrub( '' !== $msg ? $msg : ( 'HTTP ' . $code ) ), 'model' => $model ];
+	/**
+	 * Translate legacy Anthropic-shaped `messages` into neutral GenerationMessages.
+	 * The transport re-serializes these back to the identical wire shape, so the
+	 * round-trip is lossless for the live call shapes (text; image+text).
+	 *
+	 * @param array<int,array<string,mixed>> $messages
+	 * @return array<int, GenerationMessage>
+	 */
+	private function neutral_messages( array $messages ): array {
+		$out = [];
+
+		foreach ( $messages as $message ) {
+			$role    = (string) ( $message['role'] ?? 'user' );
+			$content = $message['content'] ?? [];
+			$parts   = [];
+
+			if ( is_array( $content ) ) {
+				foreach ( $content as $block ) {
+					$type = is_array( $block ) ? (string) ( $block['type'] ?? '' ) : '';
+					if ( 'text' === $type ) {
+						$parts[] = new GenerationTextPart( (string) ( $block['text'] ?? '' ) );
+					} elseif ( 'image' === $type ) {
+						$source  = isset( $block['source'] ) && is_array( $block['source'] ) ? $block['source'] : [];
+						$parts[] = new GenerationImagePart( (string) ( $source['media_type'] ?? '' ), (string) ( $source['data'] ?? '' ) );
+					}
+				}
+			}
+
+			$out[] = new GenerationMessage( $role, $parts );
 		}
 
-		$text = '';
-		if ( is_array( $data ) && isset( $data['content'][0]['text'] ) ) {
-			$text = trim( (string) $data['content'][0]['text'] );
-		}
-
-		return [ 'ok' => true, 'text' => $text, 'model' => $model ];
+		return $out;
 	}
 
 	/** Key: canonical constant/option → legacy constant/option. Never logged/returned. */
@@ -158,10 +179,5 @@ final class AnthropicClient {
 			return (string) WPCC_VISION_API_KEY;
 		}
 		return (string) get_option( 'wpcc_alt_text_api_key', '' );
-	}
-
-	/** Scrub any secret pattern from an error string before it leaves the client. */
-	private function scrub( string $message ): string {
-		return ( new Redactor() )->redact( $message )['text'];
 	}
 }
