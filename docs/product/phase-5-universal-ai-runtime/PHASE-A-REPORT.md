@@ -49,6 +49,8 @@ The new Phase A suite asserts, for the **three live call shapes** (SEO text, Con
 
 The legacy→neutral→wire round-trip reproduces the original body exactly because the transport serializer preserves key order (`role`→`content`; `type`→`text`; `type`→`source`→`type`/`media_type`/`data`).
 
+> **Hotfix (post-`8a9d34d`):** `send()` also accepts a **bare-string** content shape (`'content' => 'ping'`) used by the connection-test pings in `ConnectionTester` and `AiSetupController`. The original transport passed this through verbatim; the initial neutral round-trip dropped it to `content:[]`. Fixed by carrying a *scalar-text* distinction on `GenerationMessage` (string content → single text part flagged scalar; serialized back as bare-string content). Byte-identity for the ping shape is now locked by a regression test. No other behavior changed.
+
 ## Tests run
 
 | Suite | Result | Notes |

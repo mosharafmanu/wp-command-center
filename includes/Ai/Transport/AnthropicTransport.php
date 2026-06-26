@@ -103,7 +103,8 @@ final class AnthropicTransport {
 	 * Serialize neutral messages back into the EXACT Anthropic `messages` wire
 	 * shape (key order preserved: role→content; type→text; type→source→
 	 * type/media_type/data). This round-trip must reproduce the pre-Phase-A body
-	 * byte-for-byte for the live call shapes.
+	 * byte-for-byte for every live call shape — a parts array, or a scalar-text
+	 * message (serialized as bare-string content, e.g. a connection-test ping).
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
@@ -111,6 +112,19 @@ final class AnthropicTransport {
 		$out = [];
 
 		foreach ( $request->messages() as $message ) {
+			// Scalar-text content stays a bare string (Anthropic shorthand).
+			if ( $message->is_scalar_text() ) {
+				$parts = $message->parts();
+				$first = $parts[0] ?? null;
+				if ( $first instanceof GenerationTextPart ) {
+					$out[] = [
+						'role'    => $message->role(),
+						'content' => $first->text(),
+					];
+					continue;
+				}
+			}
+
 			$content = [];
 
 			foreach ( $message->parts() as $part ) {

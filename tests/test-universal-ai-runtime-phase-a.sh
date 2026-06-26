@@ -147,6 +147,13 @@ RES="$(wpe '
 	$client->send( $seo_msgs, 400, "claude-sonnet-4-6", [ "timeout" => 12 ] );
 	$out["to_override"] = ( (int)($captured["args"]["timeout"] ?? 0) === 12 ) ? 1 : 0;
 
+	// (e) Connection-test PING shape: content is a BARE STRING — must stay a
+	// string (not collapse to []). Regression guard for the Phase A hotfix.
+	$ping_msgs = [ [ "role" => "user", "content" => "ping" ] ];
+	$ping_exp  = wp_json_encode([ "model" => "claude-sonnet-4-6", "max_tokens" => 1, "messages" => $ping_msgs ]);
+	$client->send( $ping_msgs, 1, "claude-sonnet-4-6", [ "timeout" => 10 ] );
+	$out["ping_body"] = ( ($captured["args"]["body"] ?? "") === $ping_exp ) ? 1 : 0;
+
 	if (null!==$prev) update_option("wpcc_anthropic_api_key",$prev); else delete_option("wpcc_anthropic_api_key");
 	echo wp_json_encode($out);
 ')"
@@ -162,6 +169,7 @@ assert_eq "SEO: return array shape + trim"      "1" "$(getj seo_ret)"
 assert_eq "Content: request body BYTE-identical" "1" "$(getj cnt_body)"
 assert_eq "Alt Text: image+text body BYTE-identical" "1" "$(getj alt_body)"
 assert_eq "timeout override honored"            "1" "$(getj to_override)"
+assert_eq "Ping: bare-string content preserved (byte-identical)" "1" "$(getj ping_body)"
 
 echo
 echo "== 6. Functional: error mapping identical + redaction + not_configured =="

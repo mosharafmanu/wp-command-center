@@ -135,7 +135,9 @@ final class AnthropicClient {
 	/**
 	 * Translate legacy Anthropic-shaped `messages` into neutral GenerationMessages.
 	 * The transport re-serializes these back to the identical wire shape, so the
-	 * round-trip is lossless for the live call shapes (text; image+text).
+	 * round-trip is lossless for every live call shape:
+	 *   - content as a parts array  → text / image parts (generation calls),
+	 *   - content as a plain string → a single scalar-text message (test pings).
 	 *
 	 * @param array<int,array<string,mixed>> $messages
 	 * @return array<int, GenerationMessage>
@@ -146,7 +148,14 @@ final class AnthropicClient {
 		foreach ( $messages as $message ) {
 			$role    = (string) ( $message['role'] ?? 'user' );
 			$content = $message['content'] ?? [];
-			$parts   = [];
+
+			// Bare-string content (e.g. a connection-test "ping") — preserve as scalar text.
+			if ( is_string( $content ) ) {
+				$out[] = new GenerationMessage( $role, [ new GenerationTextPart( $content ) ], true );
+				continue;
+			}
+
+			$parts = [];
 
 			if ( is_array( $content ) ) {
 				foreach ( $content as $block ) {
