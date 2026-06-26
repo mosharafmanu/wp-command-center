@@ -28,7 +28,7 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 <section class="wpcc-cds-card" style="max-width:760px;margin:0 0 22px;" aria-labelledby="wpcc-bai-tools-h">
 	<h2 id="wpcc-bai-tools-h" style="margin:0 0 4px;font-size:15px;"><?php esc_html_e( 'Built-in AI tools', 'wp-command-center' ); ?></h2>
 	<p class="description" style="margin:0;">
-		<?php esc_html_e( 'Turn on the AI tools you want to use — each appears as a tab here once it’s on. Generation runs on Anthropic today.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'Turn on the AI tools you want to use — each appears as a tab here once it’s on. Generation runs on the provider you select as the default (Anthropic or an OpenAI-compatible provider).', 'wp-command-center' ); ?>
 	</p>
 
 	<?php if ( $wpcc_bai_notice ) : ?>

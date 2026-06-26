@@ -26,8 +26,10 @@ namespace WPCommandCenter\Ai\Transport;
 
 use WPCommandCenter\Ai\Contract\GenerationRequest;
 use WPCommandCenter\Ai\Contract\GenerationResult;
+use WPCommandCenter\Ai\Http\AiEndpointGuard;
 use WPCommandCenter\Ai\Http\AiHttpClient;
 use WPCommandCenter\Ai\Http\AiHttpRequest;
+use WPCommandCenter\Ai\Platform\ProviderCatalog;
 use WPCommandCenter\Security\Redactor;
 
 defined( 'ABSPATH' ) || exit;
@@ -38,8 +40,16 @@ final class OpenAiCompatibleTransport {
 
 	private AiHttpClient $http;
 
-	public function __construct( ?AiHttpClient $http = null ) {
-		$this->http = $http ?? new AiHttpClient();
+	/** @var callable(string,bool):array Endpoint validator; injectable for tests. */
+	private $guard;
+
+	/**
+	 * @param AiHttpClient|null              $http  Injectable for tests; defaults to the real client.
+	 * @param callable(string,bool):array|null $guard Endpoint validator; defaults to AiEndpointGuard.
+	 */
+	public function __construct( ?AiHttpClient $http = null, ?callable $guard = null ) {
+		$this->http  = $http ?? new AiHttpClient();
+		$this->guard = $guard ?? [ AiEndpointGuard::class, 'validate' ];
 	}
 
 	/**
@@ -62,12 +72,21 @@ final class OpenAiCompatibleTransport {
 		}
 
 		$profile = OpenAiCompatProfiles::for_provider( $provider );
+		$url     = $this->url( $endpoint, $deployment, $profile );
+
+		// SSRF guard: validate the admin-supplied endpoint before any outbound call.
+		// Declared local providers (Ollama/LM Studio/vLLM) may use loopback/private.
+		$verdict = ( $this->guard )( $url, ProviderCatalog::is_local( $provider ) );
+		if ( empty( $verdict['ok'] ) ) {
+			return GenerationResult::error( 'endpoint_blocked', $this->scrub( (string) ( $verdict['message'] ?? '' ) ), $model );
+		}
 
 		$http_request = new AiHttpRequest(
-			$this->url( $endpoint, $deployment, $profile ),
+			$url,
 			$this->headers( $api_key, $profile ),
 			(string) wp_json_encode( OpenAiCompatibleCodec::request_body( $request, $profile ) ),
-			$request->timeout() > 0 ? $request->timeout() : self::DEFAULT_TIMEOUT
+			$request->timeout() > 0 ? $request->timeout() : self::DEFAULT_TIMEOUT,
+			0 // never follow redirects on a custom AI endpoint (no 3xx-bounce into private space).
 		);
 
 		$response = $this->http->send( $http_request );

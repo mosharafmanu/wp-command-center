@@ -40,7 +40,7 @@ has  "transport: uses shared AiHttpClient" "AiHttpClient"     "$T_DIR/OpenAiComp
 has  "transport: redacts errors"        "Redactor"            "$T_DIR/OpenAiCompatibleTransport.php"
 lacks "transport: no option reads"      "get_option"          "$T_DIR/OpenAiCompatibleTransport.php"
 lacks "transport: no retry loop (for)"  "for ("               "$T_DIR/OpenAiCompatibleTransport.php"
-lacks "transport: no SSRF guard yet"    "wp_http_validate_url" "$T_DIR/OpenAiCompatibleTransport.php"
+has  "transport: SSRF endpoint guard"   "AiEndpointGuard"     "$T_DIR/OpenAiCompatibleTransport.php"
 lacks "codec: no I/O"                   "wp_remote"           "$T_DIR/OpenAiCompatibleCodec.php"
 lacks "codec: no options"               "get_option"          "$T_DIR/OpenAiCompatibleCodec.php"
 lacks "profiles: no I/O"                "wp_remote"           "$T_DIR/OpenAiCompatProfiles.php"
@@ -96,9 +96,12 @@ $out["codec_image"] = (
 $baz = OpenAiCompatibleCodec::request_body($txt, $az);
 $out["codec_azure_tokens"] = isset($baz["max_tokens"]) ? 1 : 0; // azure default keeps max_tokens
 
-// (d) transport: success, url, auth, parse.
+// (d) transport: success, url, auth, parse. A permissive endpoint guard is
+// injected so these dispatch/codec checks stay DNS-independent; the SSRF guard
+// itself is proven in test-universal-ai-runtime-phase-d-safety.sh.
+$pass = function($u,$l){ return ["ok"=>true,"code"=>"","message"=>""]; };
 $cap=[]; $sender=function($u,$a)use(&$cap){ $cap=["url"=>$u,"args"=>$a]; return ["response"=>["code"=>200],"body"=>wp_json_encode(["choices"=>[["message"=>["content"=>"  done  "]]]])]; };
-$tr = new OpenAiCompatibleTransport(new AiHttpClient($sender));
+$tr = new OpenAiCompatibleTransport(new AiHttpClient($sender), $pass);
 $r1 = $tr->generate($txt, "sk-x", "https://api.openai.com/v1", "openai", "");
 $out["tr_url"]  = (($cap["url"]??"")==="https://api.openai.com/v1/chat/completions") ? 1 : 0;
 $out["tr_auth"] = (($cap["args"]["headers"]["Authorization"]??"")==="Bearer sk-x") ? 1 : 0;
@@ -110,10 +113,10 @@ $out["tr_azure_url"] = ( strpos($cap["url"]??"", "/openai/deployments/mydeploy/c
 $out["tr_azure_auth"]= (($cap["args"]["headers"]["api-key"]??"")==="sk-x") ? 1 : 0;
 
 // (f) transport: error mapping + redaction + not_configured.
-$te = new OpenAiCompatibleTransport(new AiHttpClient(function($u,$a){ return ["response"=>["code"=>401],"body"=>wp_json_encode(["error"=>["message"=>"bad key"]])]; }));
+$te = new OpenAiCompatibleTransport(new AiHttpClient(function($u,$a){ return ["response"=>["code"=>401],"body"=>wp_json_encode(["error"=>["message"=>"bad key"]])]; }), $pass);
 $re = $te->generate($txt,"k","https://e","openai","");
 $out["tr_apierr"] = (!$re->is_ok() && $re->code()==="api_error_401") ? 1 : 0;
-$tw = new OpenAiCompatibleTransport(new AiHttpClient(function($u,$a){ return new \WP_Error("x","leaked sk-ant-AAAAAAAAAAAAAAAAAAAAAAAA"); }));
+$tw = new OpenAiCompatibleTransport(new AiHttpClient(function($u,$a){ return new \WP_Error("x","leaked sk-ant-AAAAAAAAAAAAAAAAAAAAAAAA"); }), $pass);
 $rw = $tw->generate($txt,"k","https://e","openai","");
 $out["tr_redacted"] = (!$rw->is_ok() && $rw->code()==="request_failed" && strpos($rw->message(),"sk-ant-")===false) ? 1 : 0;
 $rn = $tr->generate($txt,"","https://e","openai","");
@@ -127,7 +130,7 @@ $id = $store->create("openai", ["name"=>"D","model"=>"gpt-5"]);
 $store->credentials()->set_secret($id,"sk-rt");
 $store->set_default($id);
 $cap=[]; $sender2=function($u,$a)use(&$cap){ $cap=$a; return ["response"=>["code"=>200],"body"=>wp_json_encode(["choices"=>[["message"=>["content"=>"openai!"]]]])]; };
-$rt = new AiRuntime(null, new OpenAiCompatibleTransport(new AiHttpClient($sender2)));
+$rt = new AiRuntime(null, new OpenAiCompatibleTransport(new AiHttpClient($sender2), $pass));
 $out["rt_model"]  = ($rt->model("claude-sonnet-4-6")==="gpt-5") ? 1 : 0;       // connection model, not anthropic default
 $out["rt_cfg"]    = $rt->is_configured() ? 1 : 0;
 $rr = $rt->generate(new GenerationRequest("gpt-5", 400, [ new GenerationMessage("user",[ new GenerationTextPart("x") ]) ]));
@@ -136,7 +139,7 @@ $out["rt_dispatch"] = ($rr->is_ok() && $rr->text()==="openai!" && ($bb["model"]?
 
 // (h) safety: KEYLESS openai default → Anthropic path (target null).
 $store->credentials()->clear_secret($id);
-$rt2 = new AiRuntime(null, new OpenAiCompatibleTransport(new AiHttpClient($sender2)));
+$rt2 = new AiRuntime(null, new OpenAiCompatibleTransport(new AiHttpClient($sender2), $pass));
 $out["rt_keyless_falls_back"] = ($rt2->model("claude-sonnet-4-6")==="claude-sonnet-4-6" || $rt2->model("claude-sonnet-4-6")!=="gpt-5") ? 1 : 0;
 
 // cleanup / restore

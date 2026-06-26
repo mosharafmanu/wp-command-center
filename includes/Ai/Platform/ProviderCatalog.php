@@ -153,6 +153,12 @@ final class ProviderCatalog {
 		return Dialect::runtime_supported( self::dialect_of( $provider ) );
 	}
 
+	/** True for a declared local provider (Ollama/LM Studio/vLLM) — may use loopback/private endpoints. */
+	public static function is_local( string $provider ): bool {
+		$p = self::get( $provider );
+		return null !== $p && ! empty( $p['local'] );
+	}
+
 	public static function test_supported( string $provider ): bool {
 		return Dialect::test_supported( self::dialect_of( $provider ) );
 	}

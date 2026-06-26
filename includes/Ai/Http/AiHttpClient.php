@@ -45,14 +45,18 @@ final class AiHttpClient {
 
 	/** Perform exactly one POST attempt and normalize the outcome. */
 	public function send( AiHttpRequest $request ): AiHttpResponse {
-		$response = ( $this->sender )(
-			$request->url(),
-			[
-				'timeout' => $request->timeout(),
-				'headers' => $request->headers(),
-				'body'    => $request->body(),
-			]
-		);
+		$args = [
+			'timeout' => $request->timeout(),
+			'headers' => $request->headers(),
+			'body'    => $request->body(),
+		];
+		// Only constrain redirects when the caller asks (custom AI endpoints); the
+		// Anthropic path leaves this unset, so its outbound args stay unchanged.
+		if ( null !== $request->max_redirects() ) {
+			$args['redirection'] = $request->max_redirects();
+		}
+
+		$response = ( $this->sender )( $request->url(), $args );
 
 		if ( is_wp_error( $response ) ) {
 			return AiHttpResponse::failure( $this->scrub( $response->get_error_message() ) );

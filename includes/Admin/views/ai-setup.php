@@ -483,7 +483,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 
 	<!-- ===== Feature routing (visual) ===== -->
 	<h2><?php esc_html_e( 'Feature routing', 'wp-command-center' ); ?></h2>
-	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers each AI feature. Right now WP Command Center can only run AI tasks through Anthropic (Claude), so only Anthropic connections appear here. Other providers can still be saved and tested — they’ll appear here automatically once WP Command Center can run them. This is the seam where failover and cost routing will live.', 'wp-command-center' ); ?></p>
+	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers your AI tasks. WP Command Center runs generation through the one connection you set as the default — Anthropic (Claude) and OpenAI-compatible providers both work once selected. Other providers can be saved and tested, but only a supported provider that you choose will generate. Nothing is selected automatically, and your content is sent only to the provider you pick.', 'wp-command-center' ); ?></p>
 	<?php if ( empty( $wpcc_runtime_conns ) ) : ?>
 		<?php if ( ! empty( $wpcc_ineligible_conns ) ) : ?>
 			<p class="muted" style="font-size:13px;max-width:700px;">

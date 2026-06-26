@@ -80,7 +80,7 @@ final class DesignPartnerReadiness {
 			'key'          => 'generation_supported',
 			'label'        => __( 'Generation supported', 'wp-command-center' ),
 			'status'       => $configured ? 'pass' : 'blocked',
-			'detail'       => __( 'Generation runs on Anthropic today. Other providers can be connected and tested, but can’t generate yet.', 'wp-command-center' ),
+			'detail'       => __( 'Generation runs on the provider you set as the default — Anthropic (Claude) or an OpenAI-compatible provider. Other providers can be connected and tested, but only the one you select will generate.', 'wp-command-center' ),
 			'action_label' => '',
 			'action_url'   => $providers_url,
 		];

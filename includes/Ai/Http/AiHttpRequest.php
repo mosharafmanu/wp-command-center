@@ -26,17 +26,26 @@ final class AiHttpRequest {
 	private string $body;
 	private int $timeout;
 
+	/** Null = use the WP default; an int caps followed redirects (0 = follow none). */
+	private ?int $max_redirects;
+
 	/**
 	 * @param string                 $url
 	 * @param array<string, string>  $headers
-	 * @param string                 $body    Already-encoded request body.
-	 * @param int                    $timeout Seconds.
+	 * @param string                 $body          Already-encoded request body.
+	 * @param int                    $timeout       Seconds.
+	 * @param int|null               $max_redirects Null leaves WP's default untouched (Anthropic path); 0 follows none.
 	 */
-	public function __construct( string $url, array $headers, string $body, int $timeout ) {
-		$this->url     = $url;
-		$this->headers = $headers;
-		$this->body    = $body;
-		$this->timeout = $timeout;
+	public function __construct( string $url, array $headers, string $body, int $timeout, ?int $max_redirects = null ) {
+		$this->url           = $url;
+		$this->headers       = $headers;
+		$this->body          = $body;
+		$this->timeout       = $timeout;
+		$this->max_redirects = $max_redirects;
+	}
+
+	public function max_redirects(): ?int {
+		return $this->max_redirects;
 	}
 
 	public function url(): string {
