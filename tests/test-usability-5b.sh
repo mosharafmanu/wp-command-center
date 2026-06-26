@@ -37,7 +37,7 @@ has "Providers (AI Setup) tab still present" "'view' => 'ai-setup'" "$SHELL_F"
 
 echo "== 3. Honest stale-copy fixes (P0) =="
 hasnt "Changes no longer claims restore is unreleased" "restore controls arrive in a later release" "$CHANGES"
-has "Changes describes working Restore" "Restore button" "$CHANGES"
+has "Changes describes working Undo" "Undo button" "$CHANGES"
 hasnt "Tokens no longer claims create/revoke is unreleased" "token create/revoke arrives in a later release" "$TOKENS"
 has "Tokens describes working create" "Create access tokens" "$TOKENS"
 

@@ -41,13 +41,22 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 ?>
 <div class="wrap wpcc-wrap wpcc-history">
 	<h1><?php esc_html_e( 'History', 'wp-command-center' ); ?></h1>
-	<p class="description">
-		<?php esc_html_e( 'Every AI- or API-driven change to this site, newest first. Reversible changes show a Restore button — restoring runs through the same approval, safety check, and audit trail as any other change.', 'wp-command-center' ); ?>
-	</p>
+
+	<section class="wpcc-hist-hero">
+		<p class="wpcc-hist-lead"><?php esc_html_e( 'Every change to this site is recorded here — what changed, when, and who made it. Changes that can be undone show an Undo button.', 'wp-command-center' ); ?></p>
+		<p class="wpcc-hist-sub"><?php esc_html_e( 'Newest first. Undoing a change runs through the same approval, safety check, and record as the original — so it’s safe, and nothing happens silently.', 'wp-command-center' ); ?></p>
+		<div class="wpcc-hist-chips" role="note" aria-label="<?php esc_attr_e( 'How changes stay safe and trustworthy', 'wp-command-center' ); ?>">
+			<span class="lbl"><?php esc_html_e( 'Every change is:', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Recorded', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible when possible', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--approval"><?php esc_html_e( 'Safe to undo', 'wp-command-center' ); ?></span>
+		</div>
+	</section>
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo $tab_url( 'timeline' ); ?>">&larr; <?php esc_html_e( 'Back to Change History', 'wp-command-center' ); ?></a>
+			<a href="<?php echo $tab_url( 'timeline' ); ?>">&larr; <?php esc_html_e( 'Back to History', 'wp-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-history-detail" data-change-id="<?php echo esc_attr( $view_id ); ?>">
 			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'wp-command-center' ); ?></p>
@@ -56,9 +65,9 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		<div id="wpcc-history-diff"></div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo $tab_url( 'timeline' ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Timeline', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'sessions' ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Sessions', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'reversible' ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Reversible only', 'wp-command-center' ); ?></a>
+			<a href="<?php echo $tab_url( 'timeline' ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'wp-command-center' ); ?></a>
+			<a href="<?php echo $tab_url( 'sessions' ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'wp-command-center' ); ?></a>
+			<a href="<?php echo $tab_url( 'reversible' ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Reversible only', 'wp-command-center' ); ?></a>
 		</h2>
 
 		<?php if ( '' !== $session_id ) : ?>
@@ -74,7 +83,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 				<?php if ( '' !== $session_id ) : ?>
 					<input type="hidden" name="session_id" value="<?php echo esc_attr( $session_id ); ?>" />
 				<?php endif; ?>
-				<label><?php esc_html_e( 'Runtime', 'wp-command-center' ); ?>
+				<label><?php esc_html_e( 'Area', 'wp-command-center' ); ?>
 					<input type="text" name="runtime" value="<?php echo esc_attr( $f_runtime ); ?>" placeholder="<?php esc_attr_e( 'e.g. seo', 'wp-command-center' ); ?>" />
 				</label>
 				<label><?php esc_html_e( 'Status', 'wp-command-center' ); ?>
@@ -102,7 +111,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 
 <div id="wpcc-restore-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-restore-title" aria-describedby="wpcc-restore-msg">
 	<div class="wpcc-modal-box" role="document">
-		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Restore change', 'wp-command-center' ); ?></h2>
+		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Undo change', 'wp-command-center' ); ?></h2>
 		<p id="wpcc-restore-msg"></p>
 		<div id="wpcc-restore-highrisk" style="display:none;">
 			<div class="wpcc-restore-warning" id="wpcc-restore-warning" role="alert"></div>
@@ -120,54 +129,97 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 </div>
 
 <style>
-.wpcc-modal { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center; }
-.wpcc-modal-box { background:#fff;border-radius:6px;padding:20px 24px;max-width:560px;width:92%;box-shadow:0 6px 30px rgba(0,0,0,.3); }
-.wpcc-modal-box h2 { margin-top:0; }
-.wpcc-modal-actions { margin:16px 0 0;text-align:right; }
-.wpcc-modal-actions .button { margin-left:8px; }
-.wpcc-restore-warning { background:#fcf0f1;border:1px solid #d63638;color:#8a1f1f;border-radius:3px;padding:10px 12px;margin:6px 0 12px;font-size:13px; }
-.wpcc-restore-result { padding:8px 12px;border-radius:3px;font-size:13px;margin:8px 0; }
-.wpcc-restore-result.success { background:#edfaef;border:1px solid #00a32a; }
-.wpcc-restore-result.error   { background:#fce9e9;border:1px solid #d63638; }
-.wpcc-restore-result.info    { background:#f0f6fc;border:1px solid #72aee6; }
-.wpcc-restore-link { color:#b32d2e; }
-.wpcc-detail-restore { margin-top:14px; }
-.wpcc-history .wpcc-spin { float:none;margin:0 6px 0 0;vertical-align:middle; }
-.wpcc-history-filters { display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin:14px 0; }
-.wpcc-history-filters label { display:flex;flex-direction:column;font-size:12px;font-weight:600;color:#50575e;gap:4px; }
-.wpcc-history-filters input { font-weight:400; }
-.wpcc-day-group { margin:18px 0 6px;font-size:13px;font-weight:600;color:#1d2327;border-bottom:1px solid #dcdcde;padding-bottom:4px; }
-.wpcc-change-row { background:#fff;border:1px solid #e0e0e0;border-left:4px solid #c3c4c7;border-radius:4px;padding:10px 14px;margin:8px 0;max-width:900px; }
+/* History / Review & Undo — scoped polish. Premium, light, wp-admin compatible.
+   Reuses CDS chips (wpcc-cds-chip--*, loaded site-wide); all JS/HTML class names
+   below are preserved — only their styling is improved. */
+
+/* Hero */
+.wpcc-hist-hero { background:#fff;border:1px solid #e3e5ec;border-radius:14px;padding:22px 24px;margin:12px 0 22px;max-width:920px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.05); }
+.wpcc-hist-lead { font-size:16px;line-height:1.55;color:#1d2327;font-weight:600;margin:0 0 8px;max-width:72ch; }
+.wpcc-hist-sub { font-size:13.5px;line-height:1.6;color:#4b5161;margin:0;max-width:74ch; }
+.wpcc-hist-chips { display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px; }
+.wpcc-hist-chips .lbl { font-size:12.5px;font-weight:600;color:#646970;margin-right:2px; }
+
+/* Tabs (WP nav-tab refinements) */
+.wpcc-history .nav-tab-wrapper { border-bottom:1px solid #e3e5ec;margin:8px 0 4px; }
+
+/* Filters */
+.wpcc-history-filters { display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin:16px 0;background:#fff;border:1px solid #e3e5ec;border-radius:12px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,24,40,.04);max-width:920px; }
+.wpcc-history-filters label { display:flex;flex-direction:column;font-size:11px;font-weight:700;color:#646970;gap:5px;text-transform:uppercase;letter-spacing:.4px; }
+.wpcc-history-filters input { font-weight:400;border-radius:7px; }
+
+/* Day group + change rows */
+.wpcc-day-group { margin:22px 0 8px;font-size:11.5px;font-weight:700;color:#646970;text-transform:uppercase;letter-spacing:.5px; }
+.wpcc-change-row { background:#fff;border:1px solid #e3e5ec;border-left:4px solid #c3c4c7;border-radius:12px;padding:14px 18px;margin:10px 0;max-width:920px;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:box-shadow .12s ease,transform .12s ease; }
+.wpcc-change-row:hover { box-shadow:0 1px 2px rgba(16,24,40,.04),0 8px 22px rgba(16,24,40,.06); }
 .wpcc-change-row.st-success { border-left-color:#00a32a; }
 .wpcc-change-row.st-failed,.wpcc-change-row.st-error { border-left-color:#d63638; }
-.wpcc-change-row.st-rolled_back { border-left-color:#8c8f94;opacity:.75; }
+.wpcc-change-row.st-rolled_back { border-left-color:#8c8f94;opacity:.72; }
 .wpcc-change-top { display:flex;justify-content:space-between;align-items:baseline;gap:10px; }
-.wpcc-change-title { font-size:14px;font-weight:600;margin:0; }
-.wpcc-change-title a { text-decoration:none; }
+.wpcc-change-title { font-size:14.5px;font-weight:600;margin:0; }
+.wpcc-change-title a { text-decoration:none;color:#1d2327; }
+.wpcc-change-title a:hover { color:#2271b1; }
 .wpcc-change-time { font-size:12px;color:#646970;white-space:nowrap; }
-.wpcc-change-meta { font-size:12px;color:#646970;margin-top:4px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center; }
-.wpcc-chip { display:inline-block;font-size:11px;background:#f0f0f1;border:1px solid #dcdcde;border-radius:10px;padding:1px 8px;color:#3c434a;text-decoration:none; }
-.wpcc-chip:hover { background:#e8e8e9; }
-.wpcc-badge-rev { font-size:11px;color:#2271b1; }
-.wpcc-badge-norev { font-size:11px;color:#8c8f94; }
-.wpcc-badge-done { font-size:11px;color:#8c8f94;font-style:italic; }
-.wpcc-session-summary { background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:10px 14px;margin:12px 0;max-width:900px;font-size:13px; }
-.wpcc-sessions-table { max-width:980px; }
+.wpcc-change-meta { font-size:12.5px;color:#646970;margin-top:9px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center; }
+.wpcc-chip { display:inline-block;font-size:11px;background:#eef0f4;border:1px solid #e3e5ec;border-radius:999px;padding:2px 10px;color:#3c434a;text-decoration:none; }
+.wpcc-chip:hover { background:#e4e7ee; }
+
+/* Reversible state — clear pills */
+.wpcc-badge-rev { display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:#008a25;background:#e7f6ee;border-radius:999px;padding:2px 9px; }
+.wpcc-badge-done { display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#646970;background:#eef0f4;border-radius:999px;padding:2px 9px;font-style:normal; }
+.wpcc-badge-norev { font-size:11px;color:#a7aab0; }
+
+/* Undo / Restore — a confident, consistent action button in both timeline + detail */
+.wpcc-history .wpcc-restore-link { display:inline-flex;align-items:center;gap:5px;background:#fff;border:1px solid #2271b1;color:#1f5fa8;font-weight:600;font-size:12px;line-height:1.6;padding:4px 13px;border-radius:999px;text-decoration:none;cursor:pointer;transition:background .12s ease,color .12s ease; }
+.wpcc-history .wpcc-restore-link:hover { background:#2271b1;color:#fff; }
+.wpcc-detail-restore { margin-top:16px; }
+
+/* Session summary + tables */
+.wpcc-session-summary { background:#f7f8fb;border:1px solid #e3e5ec;border-radius:10px;padding:12px 16px;margin:12px 0;max-width:920px;font-size:13px; }
+.wpcc-sessions-table { max-width:980px;border:1px solid #e3e5ec;border-radius:10px;overflow:hidden; }
 .wpcc-sessions-table td,.wpcc-sessions-table th { vertical-align:middle; }
-.wpcc-detail-table { max-width:900px;margin-top:8px; }
-.wpcc-detail-table th { text-align:left;width:180px;color:#50575e; }
-.wpcc-detail-table td,.wpcc-detail-table th { padding:6px 12px;border-bottom:1px solid #f0f0f1;vertical-align:top; }
-.wpcc-empty { background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:18px;max-width:900px;color:#50575e; }
-.wpcc-diff-summary { background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:10px 14px;margin:10px 0;max-width:980px;font-size:13px; }
+.wpcc-detail-table { max-width:920px;margin-top:8px;border:1px solid #e3e5ec;border-radius:10px;overflow:hidden; }
+.wpcc-detail-table th { text-align:left;width:180px;color:#50575e;font-size:12.5px;font-weight:600; }
+.wpcc-detail-table td,.wpcc-detail-table th { padding:9px 14px;border-bottom:1px solid #eef0f4;vertical-align:top; }
+
+/* Empty state — calm, centered, with an undo glyph */
+.wpcc-empty { background:#fff;border:1px solid #e3e5ec;border-radius:12px;padding:30px 22px;max-width:920px;color:#50575e;text-align:center;box-shadow:0 1px 2px rgba(16,24,40,.04);font-size:14px; }
+.wpcc-empty::before { content:"\21BA";display:block;font-size:30px;color:#c3c8d2;margin-bottom:10px;line-height:1; }
+
+/* Diff panels (functional — detail view) */
+.wpcc-diff-summary { background:#f7f8fb;border:1px solid #e3e5ec;border-radius:10px;padding:11px 14px;margin:10px 0;max-width:980px;font-size:13px; }
 .wpcc-diff-stat { font-weight:600;margin-right:10px; }
 .wpcc-diff-add { color:#0a7c2f; }
 .wpcc-diff-del { color:#b32d2e; }
 .wpcc-diff-filelist { margin:8px 0 0;padding-left:0;list-style:none; }
 .wpcc-diff-filelist li { font-size:12px;padding:2px 0; }
-.wpcc-diff-file { max-width:980px;margin:8px 0;border:1px solid #e0e0e0;border-radius:4px;background:#fff; }
-.wpcc-diff-file > summary { cursor:pointer;padding:8px 12px;font-size:13px;user-select:none; }
+.wpcc-diff-file { max-width:980px;margin:8px 0;border:1px solid #e3e5ec;border-radius:10px;background:#fff; }
+.wpcc-diff-file > summary { cursor:pointer;padding:9px 13px;font-size:13px;user-select:none; }
 .wpcc-diff-truncated { color:#646970;font-style:italic; }
 .wpcc-change-meta-summary { max-width:980px; }
+
+/* Restore modal */
+.wpcc-modal { position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center; }
+.wpcc-modal-box { background:#fff;border-radius:14px;padding:22px 26px;max-width:560px;width:92%;box-shadow:0 10px 44px rgba(0,0,0,.28); }
+.wpcc-modal-box h2 { margin-top:0; }
+.wpcc-modal-actions { margin:18px 0 0;text-align:right; }
+.wpcc-modal-actions .button { margin-left:8px; }
+.wpcc-restore-warning { background:#fcf0f1;border:1px solid #d63638;color:#8a1f1f;border-radius:9px;padding:10px 12px;margin:6px 0 12px;font-size:13px; }
+.wpcc-restore-result { padding:10px 12px;border-radius:9px;font-size:13px;margin:8px 0; }
+.wpcc-restore-result.success { background:#edfaef;border:1px solid #00a32a; }
+.wpcc-restore-result.error   { background:#fce9e9;border:1px solid #d63638; }
+.wpcc-restore-result.info    { background:#f0f6fc;border:1px solid #72aee6; }
+
+.wpcc-history .wpcc-spin { float:none;margin:0 6px 0 0;vertical-align:middle; }
+
+/* Focus states (keyboard) */
+.wpcc-history a:focus-visible,
+.wpcc-history button:focus-visible,
+.wpcc-history-filters input:focus-visible,
+.wpcc-modal button:focus-visible,
+.wpcc-modal a:focus-visible,
+.wpcc-modal textarea:focus-visible,
+.wpcc-modal input:focus-visible { outline:2px solid #2271b1;outline-offset:2px; }
 </style>
 
 <script>
@@ -187,7 +239,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	};
 	var i18n = {
 		none:        <?php echo wp_json_encode( __( 'None', 'wp-command-center' ) ); ?>,
-		empty:       <?php echo wp_json_encode( __( 'No changes recorded yet. Once an AI agent or API client modifies this site, every change will be listed here.', 'wp-command-center' ) ); ?>,
+		empty:       <?php echo wp_json_encode( __( 'No changes recorded yet. As soon as AI or an app changes this site, every change appears here — with a way to undo it.', 'wp-command-center' ) ); ?>,
 		emptySess:   <?php echo wp_json_encode( __( 'No agent sessions found. Changes made without a session id appear in the Timeline view.', 'wp-command-center' ) ); ?>,
 		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'wp-command-center' ) ); ?>,
 		reversible:  <?php echo wp_json_encode( __( 'Reversible', 'wp-command-center' ) ); ?>,
@@ -199,9 +251,9 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		allChanges:  <?php echo wp_json_encode( __( 'all changes', 'wp-command-center' ) ); ?>,
 		view:        <?php echo wp_json_encode( __( 'View', 'wp-command-center' ) ); ?>,
 		actor:       <?php echo wp_json_encode( __( 'Actor', 'wp-command-center' ) ); ?>,
-		restore:     <?php echo wp_json_encode( __( 'Restore', 'wp-command-center' ) ); ?>,
-		restoreQ:    <?php echo wp_json_encode( __( 'Revert this change? It will be reversed through the same approval and safety pipeline as the agent API — destructive and high-risk reversals require extra confirmation.', 'wp-command-center' ) ); ?>,
-		restoreOk:   <?php echo wp_json_encode( __( 'Change reversed. Reloading…', 'wp-command-center' ) ); ?>,
+		restore:     <?php echo wp_json_encode( __( 'Undo', 'wp-command-center' ) ); ?>,
+		restoreQ:    <?php echo wp_json_encode( __( 'Undo this change? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'wp-command-center' ) ); ?>,
+		restoreOk:   <?php echo wp_json_encode( __( 'Change undone. Reloading…', 'wp-command-center' ) ); ?>,
 		sentApprove: <?php echo wp_json_encode( __( 'This restore needs administrator approval and has been sent to the Approval Center.', 'wp-command-center' ) ); ?>,
 		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'wp-command-center' ) ); ?>,
 		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'wp-command-center' ) ); ?>,
@@ -210,8 +262,8 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		openApprove: <?php echo wp_json_encode( __( 'Open Approval Center', 'wp-command-center' ) ); ?>,
 		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'wp-command-center' ) ); ?>,
 		close:       <?php echo wp_json_encode( __( 'Close', 'wp-command-center' ) ); ?>,
-		emptyRev:    <?php echo wp_json_encode( __( 'No reversible changes. Changes that can be rolled back will appear here.', 'wp-command-center' ) ); ?>,
-		restoreOne:  <?php echo wp_json_encode( __( 'Restore this change', 'wp-command-center' ) ); ?>,
+		emptyRev:    <?php echo wp_json_encode( __( 'Nothing to undo yet. Changes that can be reversed will appear here.', 'wp-command-center' ) ); ?>,
+		restoreOne:  <?php echo wp_json_encode( __( 'Undo this change', 'wp-command-center' ) ); ?>,
 		colRuntimes: <?php echo wp_json_encode( __( 'Runtimes', 'wp-command-center' ) ); ?>,
 		colLastAct:  <?php echo wp_json_encode( __( 'Last activity', 'wp-command-center' ) ); ?>,
 		dRuntimes:   <?php echo wp_json_encode( __( 'runtimes', 'wp-command-center' ) ); ?>,
@@ -229,7 +281,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		lCounts:     <?php echo wp_json_encode( __( 'Counts', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d updated, %3$d skipped, %4$d errors */
 		countsFmt:   <?php echo wp_json_encode( __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'wp-command-center' ) ); ?>,
-		restoreBusy: <?php echo wp_json_encode( __( 'Restoring…', 'wp-command-center' ) ); ?>
+		restoreBusy: <?php echo wp_json_encode( __( 'Undoing…', 'wp-command-center' ) ); ?>
 	};
 	var REQUIRED_PHRASE = 'ROLLBACK_CHANGE';
 	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-approval-center' ) ); ?>;

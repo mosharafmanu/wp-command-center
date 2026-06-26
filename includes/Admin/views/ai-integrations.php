@@ -83,11 +83,12 @@ $wpcc_selected_token_id = sanitize_text_field( (string) ( $_GET['token_id'] ?? '
 if ( $wpcc_selected_token_id && $wpcc_config ) {
 	$selected = array_filter( $wpcc_all_tokens, fn( $t ) => $t['id'] === $wpcc_selected_token_id );
 	if ( ! empty( $selected ) ) {
-		$selected_record = reset( $selected );
+		// A selected token keeps the same minimal env as the default config: only the
+		// WPCC_TOKEN placeholder is swapped to the clearer "paste your token here" form.
+		// The token value is shown only once at creation, so it stays a placeholder; no
+		// token metadata (id/label/scope) is added — the relay needs only the token value
+		// plus the runtime env vars.
 		$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN'] = 'wpcc_YOUR_TOKEN_HERE';
-		$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN_ID'] = $selected_record['id'];
-		$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN_LABEL'] = $selected_record['label'];
-		$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN_SCOPE'] = $selected_record['scope'];
 		$wpcc_config_json = wp_json_encode( $wpcc_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 	}
 }
@@ -105,53 +106,135 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 }
 ?>
 <style>
-	.wpcc-ai-wrap { max-width: 960px; }
-	.wpcc-ai-tabs { display: flex; gap: 4px; border-bottom: 2px solid #c3c4c7; margin-bottom: 24px; }
-	.wpcc-ai-tab { padding: 10px 18px; border-radius: 4px 4px 0 0; border: 1px solid transparent; cursor: pointer; font-size: 13px; font-weight: 600; background: #f0f0f1; color: #50575e; text-decoration: none; }
-	.wpcc-ai-tab--active { background: #fff; border-color: #c3c4c7 #c3c4c7 #fff; color: #1d2327; }
-	.wpcc-ai-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 24px; }
-	.wpcc-ai-stat { background: #fff; border: 1px solid #c3c4c7; padding: 16px; text-align: center; border-radius: 4px; }
-	.wpcc-ai-stat__value { font-size: 26px; font-weight: 700; color: #2271b1; line-height: 1.2; }
-	.wpcc-ai-stat__label { font-size: 12px; color: #646970; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
-	.wpcc-ai-stat--good .wpcc-ai-stat__value { color: #00a32a; }
-	.wpcc-ai-panel { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; margin-bottom: 20px; }
-	.wpcc-ai-panel__header { padding: 14px 20px; border-bottom: 1px solid #e5e5e5; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
-	.wpcc-ai-panel__body { padding: 20px; }
-	.wpcc-ai-config { background: #1d2327; color: #c3c4c7; padding: 16px; border-radius: 4px; font-family: monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; position: relative; }
-	.wpcc-ai-code { background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 4px; padding: 8px 12px; font-family: monospace; font-size: 13px; word-break: break-all; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+	/* AI Clients — scoped polish. Premium, light, wp-admin compatible. Reuses CDS
+	   chip classes (wpcc-cds-chip--*) loaded site-wide; everything else is scoped. */
+	.wpcc-ai-wrap { max-width: 1020px; }
+	.wpcc-ai-wrap h1 { margin-bottom: 4px; }
+	.wpcc-ai-wrap a:focus-visible,
+	.wpcc-ai-wrap button:focus-visible,
+	.wpcc-ai-tab:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; border-radius: 7px; }
+
+	/* Hero / explainer */
+	.wpcc-ai-hero { background: #fff; border: 1px solid #e3e5ec; border-radius: 14px; padding: 24px 26px; margin: 14px 0 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.05); }
+	.wpcc-ai-hero .wpcc-ai-lead { font-size: 16px; line-height: 1.55; color: #1d2327; max-width: 70ch; margin: 0 0 10px; font-weight: 600; }
+	.wpcc-ai-hero p { font-size: 14.5px; line-height: 1.6; color: #4b5161; max-width: 72ch; margin: 0; }
+	.wpcc-ai-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; align-items: center; }
+	.wpcc-ai-chips .lbl { font-size: 12.5px; font-weight: 600; color: #646970; margin-right: 2px; }
+
+	/* Tabs */
+	.wpcc-ai-tabs { display: flex; gap: 6px; border-bottom: 1px solid #e3e5ec; margin-bottom: 24px; }
+	.wpcc-ai-tab { padding: 10px 16px; border-radius: 8px 8px 0 0; border: 1px solid transparent; border-bottom: none; cursor: pointer; font-size: 13px; font-weight: 600; background: transparent; color: #50575e; text-decoration: none; transition: background .12s ease, color .12s ease; }
+	.wpcc-ai-tab:hover { background: #f2f3f7; color: #1d2327; }
+	.wpcc-ai-tab--active { background: #fff; border-color: #e3e5ec; box-shadow: 0 -2px 0 #2271b1 inset; color: #1d2327; }
+
+	/* Metric cards */
+	.wpcc-ai-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 26px; }
+	.wpcc-ai-stat { background: #fff; border: 1px solid #e3e5ec; padding: 18px 20px; border-radius: 12px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+	.wpcc-ai-stat__value { font-size: 30px; font-weight: 700; color: #1d2327; line-height: 1.1; letter-spacing: -.01em; }
+	.wpcc-ai-stat__label { font-size: 11.5px; color: #646970; margin-top: 6px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+	.wpcc-ai-stat--good .wpcc-ai-stat__value { color: #008a25; }
+
+	/* Panels */
+	.wpcc-ai-panel { background: #fff; border: 1px solid #e3e5ec; border-radius: 12px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(16,24,40,.04); overflow: hidden; }
+	.wpcc-ai-panel__header { padding: 15px 22px; border-bottom: 1px solid #eef0f4; font-size: 14.5px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+	.wpcc-ai-panel__body { padding: 22px; }
+	.wpcc-ai-panel__hint { margin: 14px 0 0; color: #646970; font-size: 12.5px; }
+
+	/* Config + code blocks (functional — Configuration tab) */
+	.wpcc-ai-config { background: #1d2327; color: #c3c4c7; padding: 18px; border-radius: 10px; font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; position: relative; }
+	.wpcc-ai-code { background: #f6f7f9; border: 1px solid #e3e5ec; border-radius: 9px; padding: 9px 12px; font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 13px; word-break: break-all; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
 	.wpcc-ai-code__text { flex: 1; margin-right: 10px; }
+
+	/* Tables */
 	.wpcc-ai-token-table { width: 100%; border-collapse: collapse; }
-	.wpcc-ai-token-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #c3c4c7; font-weight: 600; }
-	.wpcc-ai-token-table td { padding: 8px 10px; border-bottom: 1px solid #e5e5e5; }
-	.wpcc-ai-verify-result { margin-top: 12px; padding: 12px; border-radius: 4px; display: none; }
+	.wpcc-ai-token-table th { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e3e5ec; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; color: #646970; }
+	.wpcc-ai-token-table td { padding: 11px 12px; border-bottom: 1px solid #eef0f4; font-size: 13.5px; }
+	.wpcc-ai-token-table tbody tr:hover { background: #fafbfc; }
+	.wpcc-ai-token-table tbody tr:last-child td { border-bottom: none; }
+
+	.wpcc-ai-verify-result { margin-top: 12px; padding: 14px; border-radius: 10px; display: none; }
 	.wpcc-ai-verify-result--success { background: #edfaef; border: 1px solid #00a32a; display: block; }
 	.wpcc-ai-verify-result--fail { background: #fcf0f1; border: 1px solid #d63638; display: block; }
 	.wpcc-ai-verify-result--loading { background: #f0f6fc; border: 1px solid #2271b1; display: block; }
-	.wpcc-ai-security-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-	.wpcc-ai-security-list li { padding: 10px 14px; background: #f6f7f7; border-left: 3px solid #00a32a; border-radius: 0 4px 4px 0; }
-	.wpcc-ai-security-list li strong { display: block; margin-bottom: 3px; }
-	.wpcc-ai-security-list li span { font-size: 12px; color: #646970; }
-	.wpcc-badge { display: inline-block; padding: 2px 10px; border-radius: 3px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
-	.wpcc-badge--good { background: #edfaef; color: #00a32a; }
-	.wpcc-badge--neutral { background: #f0f0f1; color: #50575e; }
+
+	.wpcc-ai-security-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+	.wpcc-ai-security-list li { padding: 13px 16px; background: #f7f8fb; border: 1px solid #eef0f4; border-left: 3px solid #00a32a; border-radius: 0 10px 10px 0; }
+	.wpcc-ai-security-list li strong { display: block; margin-bottom: 4px; }
+	.wpcc-ai-security-list li span { font-size: 12.5px; color: #646970; }
+
+	.wpcc-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+	.wpcc-badge--good { background: #e7f6ee; color: #008a25; }
+	.wpcc-badge--neutral { background: #eef0f4; color: #50575e; }
 	.wpcc-badge--critical { background: #fcf0f1; color: #d63638; }
-	.wpcc-badge--info { background: #f0f6fc; color: #2271b1; }
+	.wpcc-badge--info { background: #eef4fc; color: #1f5fa8; }
 	.wpcc-ai-notice { margin: 0 0 16px 0; }
 	.wpcc-ai-copied { color: #00a32a; font-size: 12px; display: inline-block; margin-left: 8px; opacity: 0; transition: opacity .2s; }
 	.wpcc-ai-copied--visible { opacity: 1; }
-	.wpcc-ai-client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-	.wpcc-ai-client-card { background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; padding: 16px; }
+
+	/* Active client cards */
+	.wpcc-ai-client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+	.wpcc-ai-client-card { background: #fff; border: 1px solid #e3e5ec; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(16,24,40,.04); transition: transform .12s ease, box-shadow .12s ease; }
+	.wpcc-ai-client-card:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 10px 26px rgba(16,24,40,.07); }
 	.wpcc-ai-client-card--active { border-left: 4px solid #00a32a; }
 	.wpcc-ai-client-card--planned { border-left: 4px solid #c3c4c7; opacity: 0.7; }
-	.wpcc-ai-client-card h3 { margin: 0 0 4px; font-size: 15px; }
-	.wpcc-ai-client-card .vendor { font-size: 12px; color: #646970; }
-	.wpcc-ai-client-card .type { font-size: 11px; color: #646970; margin-top: 4px; }
-	.wpcc-ai-client-card .desc { font-size: 12px; color: #3c434a; margin-top: 8px; }
+	.wpcc-ai-client-card h3 { margin: 0 0 4px; font-size: 15.5px; }
+	.wpcc-ai-client-card .vendor { font-size: 12.5px; color: #646970; }
+	.wpcc-ai-client-card .type { font-size: 11px; color: #646970; margin-top: 6px; }
+	.wpcc-ai-client-card .desc { font-size: 13px; color: #3c434a; margin-top: 10px; line-height: 1.5; }
+	@media (max-width: 600px) { .wpcc-ai-hero { padding: 20px; } }
+
+	/* MCP setup page */
+	.wpcc-ai-setup .wpcc-ai-panel__header { gap:10px; }
+	.wpcc-setup-status { font-size:12.5px;font-weight:600;color:#008a25;display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0; }
+	.wpcc-setup-dot { width:9px;height:9px;border-radius:50%;background:#00a32a;box-shadow:0 0 0 3px #e7f6ee;display:inline-block; }
+	.wpcc-ai-field { margin:0 0 20px; }
+	.wpcc-ai-field:last-child { margin-bottom:0; }
+	.wpcc-ai-field__label { display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#646970;margin-bottom:6px; }
+	.wpcc-ai-field__hint { font-size:12.5px;color:#646970;margin:6px 0 0; }
+	.wpcc-ai-field__status { font-size:13.5px;color:#3c434a;margin:0; }
+	.wpcc-ai-field__status--ok { color:#1d6b3f; }
+	.wpcc-ai-url { display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f6f7f9;border:1px solid #e3e5ec;border-radius:9px;padding:8px 10px 8px 14px; }
+	.wpcc-ai-url__text { flex:1;min-width:200px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#1d2327;word-break:break-all;background:none; }
+	.wpcc-ai-setup__actions { display:flex;gap:10px;flex-wrap:wrap;margin-top:6px; }
+	.wpcc-ai-steps { margin:0;padding:0;list-style:none;counter-reset:wpcc-step; }
+	.wpcc-ai-steps li { counter-increment:wpcc-step;position:relative;padding:8px 0 8px 38px;font-size:14px;color:#3c434a;border-top:1px solid #f0f1f4; }
+	.wpcc-ai-steps li:first-child { border-top:none; }
+	.wpcc-ai-steps li::before { content:counter(wpcc-step);position:absolute;left:0;top:7px;width:26px;height:26px;border-radius:50%;background:#eef4fc;color:#1f5fa8;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center; }
+	.wpcc-ai-presets { display:flex;flex-wrap:wrap;gap:10px; }
+	.wpcc-ai-preset { display:inline-flex;align-items:center;gap:12px;justify-content:space-between;min-width:200px;background:#fff;border:1px solid #e3e5ec;border-radius:10px;padding:11px 14px;text-decoration:none;color:#1d2327;font-weight:600;font-size:13.5px;box-shadow:0 1px 2px rgba(16,24,40,.04);transition:border-color .12s ease,box-shadow .12s ease; }
+	.wpcc-ai-preset:hover { border-color:#2271b1;box-shadow:0 1px 2px rgba(16,24,40,.04),0 6px 16px rgba(16,24,40,.06); }
+	.wpcc-ai-preset__go { font-size:12px;color:#2271b1;font-weight:600;white-space:nowrap; }
+	.wpcc-ai-advanced { max-width:1020px;margin:6px 0 20px;border:1px solid #e3e5ec;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(16,24,40,.04); }
+	.wpcc-ai-advanced > summary { cursor:pointer;padding:14px 20px;font-weight:600;font-size:14px;color:#1d2327;list-style:none;user-select:none; }
+	.wpcc-ai-advanced > summary::-webkit-details-marker { display:none; }
+	.wpcc-ai-advanced > summary::after { content:"\203A";float:right;color:#646970;font-weight:700;transition:transform .12s ease; }
+	.wpcc-ai-advanced[open] > summary::after { transform:rotate(90deg); }
+	.wpcc-ai-advanced__body { padding:6px 20px 20px; }
+	.wpcc-ai-advanced__body .wpcc-ai-panel,.wpcc-ai-advanced__body .wpcc-ai-grid { margin-bottom:18px; }
+
+	/* Configuration tab — safety note */
+	.wpcc-ai-safe-note { display:flex;gap:14px;align-items:flex-start;max-width:1020px;background:#f4f8f4;border:1px solid #cfe6d4;border-left:4px solid #00a32a;border-radius:12px;padding:16px 20px;margin:6px 0 20px; }
+	.wpcc-ai-safe-note__icon { font-size:20px;line-height:1.3;flex:0 0 auto; }
+	.wpcc-ai-safe-note strong { display:block;margin-bottom:6px;color:#1d2327; }
+	.wpcc-ai-safe-note ul { margin:0;padding-left:18px;color:#3c434a;font-size:13px;line-height:1.65; }
+	.wpcc-ai-config { border-radius:0 0 12px 12px; }
 </style>
 
 <div class="wrap wpcc-ai-wrap">
 	<h1><?php esc_html_e( 'AI Clients', 'wp-command-center' ); ?></h1>
-	<p style="max-width:680px;"><?php esc_html_e( 'An AI client is an assistant like Claude Desktop, Cursor, Codex, Continue, or Gemini CLI, running on your computer. Connect one here so it can help with WordPress tasks on this site — safely, with your approval, a full record, and one-click undo. New to this? Start with the short guide below.', 'wp-command-center' ); ?></p>
+
+	<section class="wpcc-ai-hero">
+		<p class="wpcc-ai-lead"><?php esc_html_e( 'Connect AI assistants — Claude Desktop, Cursor, Codex, ChatGPT, Gemini CLI, and more — to this site, safely. Every action they take waits for your approval, is recorded, and can be undone.', 'wp-command-center' ); ?></p>
+		<p><?php esc_html_e( 'An AI client is an assistant like Claude Desktop, Cursor, Codex, Continue, or Gemini CLI, running on your computer. Connect one here so it can help with WordPress tasks on this site — safely, with your approval, a full record, and one-click undo. New to this? Start with the short guide below.', 'wp-command-center' ); ?></p>
+		<div class="wpcc-ai-chips" role="note" aria-label="<?php esc_attr_e( 'How every assistant stays safe', 'wp-command-center' ); ?>">
+			<span class="lbl"><?php esc_html_e( 'Every assistant is:', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--approval"><?php esc_html_e( 'Requires approval', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--scoped"><?php esc_html_e( 'Scoped access', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip"><?php esc_html_e( 'Your site, your token', 'wp-command-center' ); ?></span>
+		</div>
+	</section>
 
 	<details class="wpcc-agent-explainer" style="max-width:760px;margin:10px 0 20px;border:1px solid #c3c4c7;border-radius:6px;background:#f0f6fc;padding:14px 18px;" open>
 		<summary style="cursor:pointer;font-weight:700;font-size:14px;"><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'wp-command-center' ); ?></summary>
@@ -198,37 +281,114 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	<div class="wpcc-ai-tabs">
 		<?php foreach ( $wpcc_tabs as $tab_id => $tab_label ) : ?>
 			<a href="<?php echo esc_url( add_query_arg( 'tab', $tab_id, admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>"
-			   class="wpcc-ai-tab<?php echo $tab_id === $wpcc_tab ? ' wpcc-ai-tab--active' : ''; ?>"><?php echo esc_html( $tab_label ); ?></a>
+			   class="wpcc-ai-tab<?php echo $tab_id === $wpcc_tab ? ' wpcc-ai-tab--active' : ''; ?>"<?php echo $tab_id === $wpcc_tab ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $tab_label ); ?></a>
 		<?php endforeach; ?>
 	</div>
 
 	<?php if ( 'clients' === $wpcc_tab ) : ?>
 		<!-- ===== CLIENTS TAB ===== -->
 
-		<div class="wpcc-ai-grid">
-			<div class="wpcc-ai-stat wpcc-ai-stat--good">
-				<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_counts['active'] ); ?></div>
-				<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Active Clients', 'wp-command-center' ); ?></div>
+		<?php
+		$wpcc_mcp_url     = rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE . '/mcp' );
+		$wpcc_token_count = is_array( $wpcc_all_tokens ) ? count( $wpcc_all_tokens ) : 0;
+		$wpcc_cfg_url     = esc_url( add_query_arg( [ 'tab' => 'configuration' ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) );
+		?>
+
+		<!-- ===== Primary setup panel ===== -->
+		<div class="wpcc-ai-panel wpcc-ai-setup">
+			<div class="wpcc-ai-panel__header">
+				<?php esc_html_e( 'Connect your assistant', 'wp-command-center' ); ?>
+				<span class="wpcc-setup-status"><span class="wpcc-setup-dot"></span> <?php esc_html_e( 'Connection ready', 'wp-command-center' ); ?></span>
 			</div>
-			<div class="wpcc-ai-stat">
-				<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_counts['total'] ); ?></div>
-				<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Total Supported', 'wp-command-center' ); ?></div>
-			</div>
-			<div class="wpcc-ai-stat">
-				<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_tool_count ); ?></div>
-				<div class="wpcc-ai-stat__label"><?php esc_html_e( 'MCP Tools', 'wp-command-center' ); ?></div>
-			</div>
-			<div class="wpcc-ai-stat">
-				<div class="wpcc-ai-stat__value">7</div>
-				<div class="wpcc-ai-stat__label"><?php esc_html_e( 'MCP Resources', 'wp-command-center' ); ?></div>
-			</div>
-			<div class="wpcc-ai-stat wpcc-ai-stat--good">
-				<div class="wpcc-ai-stat__value"><?php esc_html_e( 'Active', 'wp-command-center' ); ?></div>
-				<div class="wpcc-ai-stat__label"><?php esc_html_e( 'MCP Server', 'wp-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__body">
+				<div class="wpcc-ai-field">
+					<label class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'wp-command-center' ); ?></label>
+					<div class="wpcc-ai-url">
+						<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_mcp_url ); ?></code>
+						<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'wp-command-center' ); ?></button>
+						<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'wp-command-center' ); ?></span>
+					</div>
+					<p class="wpcc-ai-field__hint"><?php esc_html_e( 'Your assistant connects to this site at this address — on your own server, with your own token.', 'wp-command-center' ); ?></p>
+				</div>
+
+				<div class="wpcc-ai-field">
+					<label class="wpcc-ai-field__label"><?php esc_html_e( 'Access token', 'wp-command-center' ); ?></label>
+					<?php if ( $wpcc_token_count > 0 ) : ?>
+						<p class="wpcc-ai-field__status wpcc-ai-field__status--ok">&#10003; <?php
+							/* translators: %d: number of access tokens */
+							printf( esc_html( _n( '%d access token ready.', '%d access tokens ready.', $wpcc_token_count, 'wp-command-center' ) ), (int) $wpcc_token_count );
+						?> <a href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Manage tokens', 'wp-command-center' ); ?></a></p>
+					<?php else : ?>
+						<p class="wpcc-ai-field__status"><?php esc_html_e( 'No access token yet — your assistant needs one to connect.', 'wp-command-center' ); ?> <a href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Create an access token', 'wp-command-center' ); ?></a></p>
+					<?php endif; ?>
+					<p class="wpcc-ai-field__hint"><?php esc_html_e( 'A token is like a password for your assistant. It’s shown once, stays on your site, and you can revoke it anytime.', 'wp-command-center' ); ?></p>
+				</div>
+
+				<div class="wpcc-ai-setup__actions">
+					<a class="button button-primary" href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Get my configuration', 'wp-command-center' ); ?></a>
+					<a class="button" href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Test connection', 'wp-command-center' ); ?></a>
+				</div>
 			</div>
 		</div>
 
-		<!-- Compatibility Matrix -->
+		<!-- ===== Setup steps ===== -->
+		<div class="wpcc-ai-panel">
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'How to connect — 5 steps', 'wp-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__body">
+				<ol class="wpcc-ai-steps">
+					<li><?php esc_html_e( 'Create or choose an access token.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Copy the configuration for your assistant.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Paste it into your AI assistant’s settings.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Run a safe, read-only test to confirm it connected.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'From then on, any change your assistant makes waits for your approval — and you can undo it.', 'wp-command-center' ); ?></li>
+				</ol>
+			</div>
+		</div>
+
+		<!-- ===== Common assistants (compact presets) ===== -->
+		<?php $wpcc_presets = array_slice( $wpcc_active_clients, 0, 6, true ); ?>
+		<?php if ( ! empty( $wpcc_presets ) ) : ?>
+		<div class="wpcc-ai-panel">
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Popular assistants', 'wp-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__body">
+				<div class="wpcc-ai-presets">
+					<?php foreach ( $wpcc_presets as $wpcc_pid => $wpcc_pc ) : ?>
+						<a class="wpcc-ai-preset" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $wpcc_pid ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>">
+							<span class="wpcc-ai-preset__name"><?php echo esc_html( $wpcc_pc['name'] ); ?></span>
+							<span class="wpcc-ai-preset__go"><?php esc_html_e( 'Set up →', 'wp-command-center' ); ?></span>
+						</a>
+					<?php endforeach; ?>
+				</div>
+				<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'Any assistant that speaks the same connection protocol can connect — see the full list under Advanced below.', 'wp-command-center' ); ?></p>
+			</div>
+		</div>
+		<?php endif; ?>
+
+		<!-- ===== Advanced: stats + full supported clients ===== -->
+		<details class="wpcc-ai-advanced">
+			<summary><?php esc_html_e( 'Advanced — all supported assistants & details', 'wp-command-center' ); ?></summary>
+			<div class="wpcc-ai-advanced__body">
+
+				<div class="wpcc-ai-grid">
+					<div class="wpcc-ai-stat wpcc-ai-stat--good">
+						<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_counts['active'] ); ?></div>
+						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Assistants connected', 'wp-command-center' ); ?></div>
+					</div>
+					<div class="wpcc-ai-stat">
+						<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_counts['total'] ); ?></div>
+						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Clients supported', 'wp-command-center' ); ?></div>
+					</div>
+					<div class="wpcc-ai-stat">
+						<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_tool_count ); ?></div>
+						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Actions available', 'wp-command-center' ); ?></div>
+					</div>
+					<div class="wpcc-ai-stat wpcc-ai-stat--good">
+						<div class="wpcc-ai-stat__value"><?php esc_html_e( 'Ready', 'wp-command-center' ); ?></div>
+						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Safe connection', 'wp-command-center' ); ?></div>
+					</div>
+				</div>
+
+				<!-- Compatibility Matrix -->
 		<div class="wpcc-ai-panel">
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Supported Clients', 'wp-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
@@ -238,7 +398,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<th><?php esc_html_e( 'Vendor', 'wp-command-center' ); ?></th>
 						<th><?php esc_html_e( 'Type', 'wp-command-center' ); ?></th>
 						<th><?php esc_html_e( 'Certification', 'wp-command-center' ); ?></th>
-						<th><?php esc_html_e( 'MCP', 'wp-command-center' ); ?></th>
+						<th><?php esc_html_e( 'Connects', 'wp-command-center' ); ?></th>
 					</tr></thead>
 					<tbody>
 					<?php foreach ( $wpcc_matrix as $row ) : ?>
@@ -267,35 +427,21 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<?php endforeach; ?>
 					</tbody>
 				</table>
-				<p style="margin-top:12px;color:#646970;font-size:12px;"><?php esc_html_e( 'Certification levels: Planned → Compatible → Active → Bronze → Silver → Gold. All clients connect through the same MCP endpoint.', 'wp-command-center' ); ?></p>
+				<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'Certification shows how thoroughly each assistant has been tested: Planned → Compatible → Active → Bronze → Silver → Gold. Every assistant connects the same safe way — none gets special access or skips your approval.', 'wp-command-center' ); ?></p>
 			</div>
 		</div>
 
-		<!-- Active Client Cards -->
-		<h2><?php esc_html_e( 'Active Clients', 'wp-command-center' ); ?></h2>
-		<div class="wpcc-ai-client-grid">
-			<?php foreach ( $wpcc_active_clients as $id => $client ) : ?>
-				<div class="wpcc-ai-client-card wpcc-ai-client-card--active">
-					<h3><?php echo esc_html( $client['name'] ); ?></h3>
-					<div class="vendor"><?php echo esc_html( $client['vendor'] ); ?></div>
-					<div class="type"><span class="wpcc-badge wpcc-badge--neutral"><?php echo esc_html( $client['type'] ); ?></span></div>
-					<div class="desc"><?php echo esc_html( $client['description'] ); ?></div>
-					<div style="margin-top:10px;">
-						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>" class="button button-small">
-							<?php esc_html_e( 'Configure', 'wp-command-center' ); ?>
-						</a>
-					</div>
-				</div>
-			<?php endforeach; ?>
-		</div>
+			</div>
+		</details>
 
 	<?php elseif ( 'configuration' === $wpcc_tab ) : ?>
 		<!-- ===== CONFIGURATION TAB ===== -->
 
-		<!-- Client selector -->
+		<!-- Assistant selector -->
 		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Client', 'wp-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Choose your assistant', 'wp-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
+				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'Pick the assistant you’re connecting — the configuration below updates to match.', 'wp-command-center' ); ?></p>
 				<div style="display: flex; gap: 10px; flex-wrap: wrap;">
 					<?php foreach ( $wpcc_active_clients as $id => $client ) : ?>
 						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>"
@@ -307,96 +453,141 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			</div>
 		</div>
 
-		<!-- Token + Config two-column -->
-		<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
-			<div>
-				<div class="wpcc-ai-panel">
-					<div class="wpcc-ai-panel__header"><?php esc_html_e( 'API Tokens', 'wp-command-center' ); ?></div>
-					<div class="wpcc-ai-panel__body">
-						<form method="post">
-							<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
-							<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-								<button type="submit" name="wpcc_token_action" value="generate_read_only" class="button button-primary">
-									<?php esc_html_e( 'Generate Read-Only Token', 'wp-command-center' ); ?>
-								</button>
-								<button type="submit" name="wpcc_token_action" value="generate_full" class="button">
-									<?php esc_html_e( 'Generate Full Access Token', 'wp-command-center' ); ?>
-								</button>
+		<?php
+		$wpcc_cfg_mcp_url   = rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE . '/mcp' );
+		$wpcc_cfg_tok_count = is_array( $wpcc_all_tokens ) ? count( $wpcc_all_tokens ) : 0;
+		?>
+
+		<!-- Setup card: your configuration -->
+		<?php if ( $wpcc_config ) : ?>
+			<div class="wpcc-ai-panel">
+				<div class="wpcc-ai-panel__header">
+					<?php printf( esc_html__( 'Your %s configuration', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?>
+					<button type="button" class="button button-primary wpcc-copy-btn" data-copy-target="wpcc-config-block">
+						<?php esc_html_e( 'Copy configuration', 'wp-command-center' ); ?>
+					</button>
+					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'wp-command-center' ); ?></span>
+				</div>
+				<div class="wpcc-ai-panel__body">
+					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php printf( esc_html__( 'Copy this and paste it into %s to connect it to this site. It includes your connection address and access token.', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?></p>
+					<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
+						<p class="wpcc-ai-field__status wpcc-ai-field__status--ok" style="margin:0 0 12px;">&#10003; <?php
+							/* translators: %d: number of access tokens */
+							printf( esc_html( _n( '%d access token ready.', '%d access tokens ready.', $wpcc_cfg_tok_count, 'wp-command-center' ) ), (int) $wpcc_cfg_tok_count );
+						?></p>
+					<?php else : ?>
+						<p class="wpcc-ai-field__status" style="margin:0 0 12px;"><?php esc_html_e( 'No access token yet — create one in “Access tokens” below, then it appears in this configuration.', 'wp-command-center' ); ?></p>
+					<?php endif; ?>
+				</div>
+				<div class="wpcc-ai-panel__body" style="padding:0;">
+					<pre class="wpcc-ai-config" id="wpcc-config-block"><?php echo esc_html( $wpcc_config_json ); ?></pre>
+				</div>
+				<div class="wpcc-ai-panel__body" style="padding-top:14px;">
+					<details class="wpcc-ai-advanced" style="margin:0;">
+						<summary><?php esc_html_e( 'Connection address & where to paste', 'wp-command-center' ); ?></summary>
+						<div class="wpcc-ai-advanced__body">
+							<div class="wpcc-ai-field">
+								<label class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'wp-command-center' ); ?></label>
+								<div class="wpcc-ai-url">
+									<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_cfg_mcp_url ); ?></code>
+									<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'wp-command-center' ); ?></button>
+								</div>
 							</div>
-						</form>
-						<?php if ( ! empty( $wpcc_all_tokens ) ) : ?>
-							<h4 style="margin: 16px 0 10px;"><?php esc_html_e( 'Existing Tokens', 'wp-command-center' ); ?></h4>
-							<table class="wpcc-ai-token-table">
-								<thead><tr><th><?php esc_html_e( 'Label', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Scope', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th><th></th></tr></thead>
-								<tbody>
-								<?php foreach ( $wpcc_all_tokens as $t ) : ?>
-									<tr>
-										<td><?php echo esc_html( $t['label'] ); ?><br><small style="color:#646970"><?php echo esc_html( $t['token_preview'] ); ?>...</small></td>
-										<td><?php echo esc_html( AuthTokens::scope_label( $t['scope'] ) ); ?></td>
-										<td><?php echo AuthTokens::status_badge( $t ); // phpcs:ignore ?></td>
-										<td><button type="button" class="button button-small wpcc-select-token-btn" data-token-id="<?php echo esc_attr( $t['id'] ); ?>"><?php esc_html_e( 'Use', 'wp-command-center' ); ?></button></td>
-									</tr>
-								<?php endforeach; ?>
-								</tbody>
-							</table>
-						<?php else : ?>
-							<p style="color:#646970;margin-top:12px;"><?php esc_html_e( 'No tokens yet.', 'wp-command-center' ); ?></p>
-						<?php endif; ?>
+							<?php if ( ! empty( $wpcc_current_client['config_paths'] ) ) : ?>
+								<div class="wpcc-ai-field">
+									<label class="wpcc-ai-field__label"><?php esc_html_e( 'Where to paste this', 'wp-command-center' ); ?></label>
+									<table class="widefat" style="border:none;">
+										<?php foreach ( $wpcc_current_client['config_paths'] as $os => $path ) : ?>
+											<tr><td style="padding:6px 0;width:80px;"><strong><?php echo esc_html( ucfirst( $os ) ); ?></strong></td><td style="padding:6px 0;"><code><?php echo esc_html( $path ); ?></code></td></tr>
+										<?php endforeach; ?>
+									</table>
+								</div>
+							<?php endif; ?>
+						</div>
+					</details>
+				</div>
+			</div>
+		<?php else : ?>
+			<div class="wpcc-ai-panel">
+				<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Your configuration', 'wp-command-center' ); ?></div>
+				<div class="wpcc-ai-panel__body">
+					<p style="color:#646970;"><?php esc_html_e( 'A ready-made configuration isn’t available for this assistant yet. You can still connect it manually using the connection address and an access token below.', 'wp-command-center' ); ?></p>
+					<div class="wpcc-ai-field" style="margin-top:14px;">
+						<label class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'wp-command-center' ); ?></label>
+						<div class="wpcc-ai-url">
+							<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_cfg_mcp_url ); ?></code>
+							<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'wp-command-center' ); ?></button>
+							<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'wp-command-center' ); ?></span>
+						</div>
 					</div>
 				</div>
 			</div>
+		<?php endif; ?>
 
-			<div>
-				<?php if ( $wpcc_config ) : ?>
-					<div class="wpcc-ai-panel">
-						<div class="wpcc-ai-panel__header">
-							<?php printf( esc_html__( '%s MCP Configuration', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?>
-							<button type="button" class="button button-primary wpcc-copy-btn" data-copy-target="wpcc-config-block">
-								<?php esc_html_e( 'Copy Config', 'wp-command-center' ); ?>
-							</button>
-							<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'wp-command-center' ); ?></span>
-						</div>
-						<div class="wpcc-ai-panel__body" style="padding:0;">
-							<pre class="wpcc-ai-config" id="wpcc-config-block"><?php echo esc_html( $wpcc_config_json ); ?></pre>
-						</div>
+		<!-- Access tokens -->
+		<div class="wpcc-ai-panel">
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Access tokens', 'wp-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__body">
+				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'A token is your assistant’s key to this site. Start with read-only so it can look around safely; with full access, every change still waits for your approval.', 'wp-command-center' ); ?></p>
+				<form method="post">
+					<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
+					<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+						<button type="submit" name="wpcc_token_action" value="generate_read_only" class="button button-primary">
+							<?php esc_html_e( 'Create read-only token', 'wp-command-center' ); ?>
+						</button>
+						<button type="submit" name="wpcc_token_action" value="generate_full" class="button">
+							<?php esc_html_e( 'Create full-access token', 'wp-command-center' ); ?>
+						</button>
 					</div>
-
-					<?php if ( ! empty( $wpcc_current_client['config_paths'] ) ) : ?>
-						<div class="wpcc-ai-panel">
-							<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Where to paste this config', 'wp-command-center' ); ?></div>
-							<div class="wpcc-ai-panel__body">
-								<table class="widefat" style="border:none;">
-									<?php foreach ( $wpcc_current_client['config_paths'] as $os => $path ) : ?>
-										<tr><td style="padding: 6px 0;width:80px;"><strong><?php echo esc_html( ucfirst( $os ) ); ?></strong></td><td style="padding: 6px 0;"><code><?php echo esc_html( $path ); ?></code></td></tr>
-									<?php endforeach; ?>
-								</table>
-							</div>
-						</div>
-					<?php endif; ?>
+				</form>
+				<?php if ( ! empty( $wpcc_all_tokens ) ) : ?>
+					<h4 style="margin: 18px 0 10px;"><?php esc_html_e( 'Your tokens', 'wp-command-center' ); ?></h4>
+					<table class="wpcc-ai-token-table">
+						<thead><tr><th><?php esc_html_e( 'Label', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Scope', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th><th></th></tr></thead>
+						<tbody>
+						<?php foreach ( $wpcc_all_tokens as $t ) : ?>
+							<tr>
+								<td><?php echo esc_html( $t['label'] ); ?><br><small style="color:#646970"><?php echo esc_html( $t['token_preview'] ); ?>...</small></td>
+								<td><?php echo esc_html( AuthTokens::scope_label( $t['scope'] ) ); ?></td>
+								<td><?php echo AuthTokens::status_badge( $t ); // phpcs:ignore ?></td>
+								<td><button type="button" class="button button-small wpcc-select-token-btn" data-token-id="<?php echo esc_attr( $t['id'] ); ?>"><?php esc_html_e( 'Use in config', 'wp-command-center' ); ?></button></td>
+							</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+					<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'A token is shown in full only once, when you create it. Manage or revoke tokens anytime in Settings → Access.', 'wp-command-center' ); ?></p>
 				<?php else : ?>
-					<div class="wpcc-ai-panel">
-						<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Configuration', 'wp-command-center' ); ?></div>
-						<div class="wpcc-ai-panel__body">
-							<p style="color:#646970;"><?php esc_html_e( 'Configuration generator not yet implemented for this client.', 'wp-command-center' ); ?></p>
-						</div>
-					</div>
+					<p style="color:#646970;margin-top:12px;"><?php esc_html_e( 'No access tokens yet. Create one above to finish your configuration.', 'wp-command-center' ); ?></p>
 				<?php endif; ?>
 			</div>
 		</div>
 
-		<!-- Connection Test -->
+		<!-- Test the connection safely -->
 		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Connection Test', 'wp-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Test the connection safely', 'wp-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Verify the MCP endpoint is reachable and returning valid responses using an API token.', 'wp-command-center' ); ?></p>
+				<p><?php esc_html_e( 'Run a quick read-only test to confirm your assistant can connect. This only reads — it never changes anything on your site.', 'wp-command-center' ); ?></p>
 				<div style="margin-bottom: 12px;">
-					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'API Token', 'wp-command-center' ); ?></label>
+					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'Access token', 'wp-command-center' ); ?></label>
 					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="wpcc_..." style="width: 100%; max-width: 500px; font-family: monospace;"
 						value="<?php echo esc_attr( $wpcc_new_token ); ?>">
-					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php esc_html_e( 'Paste a token from the Configuration tab, or generate a new one above.', 'wp-command-center' ); ?></p>
+					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php esc_html_e( 'Paste an access token, or create one in “Access tokens” above.', 'wp-command-center' ); ?></p>
 				</div>
-				<button type="button" class="button button-primary" id="wpcc-test-connection"><?php esc_html_e( 'Test Connection', 'wp-command-center' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-test-connection"><?php esc_html_e( 'Run read-only test', 'wp-command-center' ); ?></button>
 				<div class="wpcc-ai-verify-result" id="wpcc-verify-result"></div>
+			</div>
+		</div>
+
+		<!-- Safety note -->
+		<div class="wpcc-ai-safe-note" role="note">
+			<span class="wpcc-ai-safe-note__icon" aria-hidden="true">&#128274;</span>
+			<div>
+				<strong><?php esc_html_e( 'Connecting an assistant is safe by design.', 'wp-command-center' ); ?></strong>
+				<ul>
+					<li><?php esc_html_e( 'Any change your assistant makes waits for your approval first.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Every action is recorded in History.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Reversible changes can be undone with one click.', 'wp-command-center' ); ?></li>
+				</ul>
 			</div>
 		</div>
 
