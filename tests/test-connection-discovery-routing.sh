@@ -81,9 +81,9 @@ $_POST=["wpcc_model"=>"../evil"];
 $ok($rm->invoke($ctrl,"openai")!=="../evil","path-ish id NOT accepted (falls back)");
 $s->delete($id);
 
-// routing eligibility: OpenAI is testable but NOT runtime-usable; Anthropic IS.
+// routing eligibility (Phase D): OpenAI-compatible AND Anthropic are runtime-usable.
 $ok($s->runtime_usable(["provider"=>"anthropic","dialect"=>"anthropic"])===true,"Anthropic runtime-usable");
-$ok($s->runtime_usable(["provider"=>"openai","dialect"=>"openai"])===false,"OpenAI NOT runtime-usable (intentional)");
+$ok($s->runtime_usable(["provider"=>"openai","dialect"=>"openai"])===true,"OpenAI runtime-usable (Phase D)");
 echo ($f===0 ? "FUNC_OK $p" : "FUNC_BAD $f")."\n";
 PHP
 OUT="$(wp eval-file "$PHPF" --path="$WP_PATH" 2>/dev/null)"; rm -f "$PHPF"

@@ -55,7 +55,7 @@ echo "== 4. Dialect architecture =="
 has "anthropic dialect" "ANTHROPIC = 'anthropic'" "$DIAL"
 has "openai-compatible dialect" "OPENAI    = 'openai-compatible'" "$DIAL"
 has "gemini dialect" "GEMINI    = 'gemini'" "$DIAL"
-has "only anthropic runtime-supported" "'runtime_supported' => true" "$DIAL"
+has "anthropic + openai runtime-supported (Phase D)" "'runtime_supported' => true" "$DIAL"
 has "tester reuses anthropic transport" "AnthropicClient" "$TEST"
 has "openai-compatible base_url test" "/models" "$TEST"
 
@@ -84,11 +84,11 @@ delete_option('wpcc_ai_default_conn');delete_option('wpcc_ai_routes');
 // dialects + catalogue
 $ok(count(D::all())===3,'three dialects');
 $ok(D::runtime_supported('anthropic')===true,'anthropic dialect runtime');
-$ok(D::runtime_supported(D::OPENAI)===false,'openai-compatible NOT runtime (honest)');
+$ok(D::runtime_supported(D::OPENAI)===true,'openai-compatible runtime-supported (Phase D)');
 $ok(D::test_supported(D::OPENAI)===true,'openai-compatible testable');
 $ok(C::dialect_of('ollama')===D::OPENAI,'ollama uses openai-compatible dialect');
 $ok(C::dialect_of('groq')===D::OPENAI,'groq uses openai-compatible dialect');
-$ok(C::runtime_usable('openai')===false && C::runtime_usable('anthropic')===true,'runtime honesty by dialect');
+$ok(C::runtime_usable('openai')===true && C::runtime_usable('anthropic')===true,'runtime honesty by dialect (Phase D: +openai)');
 $ok(C::test_supported('ollama')===true,'ollama testable (dialect)');
 $ok(count(C::all())>=12,'catalogue has many providers via 3 dialects');
 
@@ -99,9 +99,9 @@ $ok(strpos($id,'conn_')===0,'opaque connection id generated');
 $c=$s->get($id);
 $ok($c && $c['provider']==='ollama' && $c['dialect']===D::OPENAI,'connection stored with provider+dialect');
 $ok($c['endpoint']==='http://localhost:11434/v1','endpoint stored (local base_url)');
-$ok($s->runtime_usable($c)===false,'ollama connection not runtime-usable (honest)');
-$ok($s->set_default($id)===false,'CANNOT default to non-runtime connection');
-$ok($s->set_route('seo_meta',$id)===false,'CANNOT route a feature to non-runtime connection');
+$ok($s->runtime_usable($c)===true,'ollama connection runtime-usable (Phase D)');
+$ok($s->set_default($id)===true,'CAN default to a runtime connection (Phase D)');
+$ok($s->set_route('seo_meta',$id)===true,'CAN route a feature to a runtime connection (Phase D)');
 
 // two connections of the SAME provider (environments) — the thing Program-6 could not do
 $id2=$s->create('openai',['name'=>'Prod GPT']);

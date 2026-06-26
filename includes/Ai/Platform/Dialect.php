@@ -13,8 +13,8 @@
  *                       LM Studio, Ollama, vLLM, internal gateways…)
  *   gemini            → Google Generative Language API
  *
- * `runtime_supported` is honest: only the Anthropic dialect is wired to WPCC's
- * feature generators today. The others are CONFIGURABLE + (where a tester exists)
+ * `runtime_supported` is honest: as of Phase D the Anthropic and OpenAI-compatible
+ * dialects are wired to WPCC's feature generators. Gemini is CONFIGURABLE +
  * TESTABLE, but not used by the runtime — never faked.
  */
 
@@ -47,7 +47,7 @@ final class Dialect {
 				'endpoint_editable' => true,  // base_url — enables OpenRouter/Groq/Ollama/LM Studio/self-hosted.
 				'default_endpoint'  => 'https://api.openai.com/v1',
 				'test_supported'    => true,
-				'runtime_supported' => false, // configurable + testable; not used by runtime yet.
+				'runtime_supported' => true,  // Phase D: OpenAI-compatible generation transport.
 			],
 			self::GEMINI => [
 				'label'             => __( 'Google Gemini', 'wp-command-center' ),
