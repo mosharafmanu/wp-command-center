@@ -40,6 +40,7 @@ namespace WPCommandCenter\Ai;
 use WPCommandCenter\Ai\Contract\GenerationImagePart;
 use WPCommandCenter\Ai\Contract\GenerationMessage;
 use WPCommandCenter\Ai\Contract\GenerationRequest;
+use WPCommandCenter\Ai\Contract\GenerationResult;
 use WPCommandCenter\Ai\Contract\GenerationTextPart;
 use WPCommandCenter\Ai\Transport\AnthropicTransport;
 
@@ -123,13 +124,22 @@ final class AnthropicClient {
 		$timeout = isset( $opts['timeout'] ) ? (int) $opts['timeout'] : self::DEFAULT_TIMEOUT;
 
 		$request = new GenerationRequest( $model, $max_tokens, $this->neutral_messages( $messages ), $timeout );
-		$result  = $this->transport->generate( $request, $this->key() );
+		$result  = $this->generate( $request );
 
 		if ( $result->is_ok() ) {
 			return [ 'ok' => true, 'text' => $result->text(), 'model' => $result->model() ];
 		}
 
 		return [ 'ok' => false, 'code' => $result->code(), 'message' => $result->message(), 'model' => $result->model() ];
+	}
+
+	/**
+	 * Execute a neutral GenerationRequest and return the neutral GenerationResult.
+	 * Resolves the key and delegates to the transport — the single execution path
+	 * shared by the legacy send() above and the AiRuntime used by feature code.
+	 */
+	public function generate( GenerationRequest $request ): GenerationResult {
+		return $this->transport->generate( $request, $this->key() );
 	}
 
 	/**

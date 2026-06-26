@@ -45,7 +45,7 @@ lacks "generator no option write"             "update_option"        "$GEN"
 
 echo
 echo "== 2. Static: provider is a pure suggestion source (delegates transport) =="
-has  "provider uses shared AnthropicClient"   "AnthropicClient"      "$PROV"
+has  "provider uses the neutral runtime"      "AiRuntime"            "$PROV"
 has  "provider returns SeoMetaResult"         "SeoMetaResult"        "$PROV"
 lacks "provider no direct wp_remote_post"     "wp_remote_post"       "$PROV"
 lacks "provider no ProposalStore use"         "new ProposalStore"    "$PROV"

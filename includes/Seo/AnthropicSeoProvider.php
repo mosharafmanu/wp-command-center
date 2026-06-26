@@ -1,21 +1,28 @@
 <?php
 /**
- * STEP 111 — GA#2 Slice 2b: BYO-key Anthropic SEO meta provider.
+ * STEP 111 — GA#2 Slice 2b: BYO-key SEO meta provider.
+ * Phase B — Universal AI Provider Runtime: provider-neutral prompt builder.
  *
- * The first concrete SeoMetaProvider. It is a pure TEXT suggestion source: it owns
- * the SEO prompt + the JSON response parsing, and delegates the outbound call,
- * key/model resolution, timeout, and redaction to the shared AnthropicClient
- * (Slice 2a). It returns suggestions as a SeoMetaResult — never throws.
+ * The concrete SeoMetaProvider. It is a pure TEXT suggestion source: it owns the
+ * SEO prompt + the JSON response parsing, and delegates execution to the neutral
+ * AiRuntime. It builds a provider-agnostic GenerationRequest and reads a neutral
+ * GenerationResult — it does NOT construct wire messages, parse transport
+ * responses, or know any endpoint/header/body. It returns a SeoMetaResult and
+ * never throws.
  *
  * Strict boundaries — this class NEVER:
  *   - writes WordPress data (no post/meta/option writes),
  *   - touches ProposalStore / ProposalApplyService / OperationExecutor / SeoProvider::write,
- *   - performs the HTTP call itself (the shared client does, and redacts errors).
+ *   - performs the HTTP call or knows provider wire format (the runtime/transport do).
  */
 
 namespace WPCommandCenter\Seo;
 
-use WPCommandCenter\Ai\AnthropicClient;
+use WPCommandCenter\Ai\AiRuntime;
+use WPCommandCenter\Ai\Contract\GenerationMessage;
+use WPCommandCenter\Ai\Contract\GenerationRequest;
+use WPCommandCenter\Ai\Contract\GenerationTextPart;
+use WPCommandCenter\Ai\JsonObjectExtractor;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -29,10 +36,10 @@ final class AnthropicSeoProvider implements SeoMetaProvider {
 	private const DESC_MIN  = 120;
 	private const DESC_MAX  = 160;
 
-	private AnthropicClient $client;
+	private AiRuntime $runtime;
 
-	public function __construct( ?AnthropicClient $client = null ) {
-		$this->client = $client ?? new AnthropicClient();
+	public function __construct( ?AiRuntime $runtime = null ) {
+		$this->runtime = $runtime ?? new AiRuntime();
 	}
 
 	public function id(): string {
@@ -40,32 +47,29 @@ final class AnthropicSeoProvider implements SeoMetaProvider {
 	}
 
 	public function is_configured(): bool {
-		return $this->client->is_configured();
+		return $this->runtime->is_configured();
 	}
 
 	public function suggest_meta( array $content, array $context = [] ): SeoMetaResult {
-		$model = $this->client->model( self::DEFAULT_MODEL );
+		$model = $this->runtime->model( self::DEFAULT_MODEL );
 
-		if ( ! $this->client->is_configured() ) {
+		if ( ! $this->runtime->is_configured() ) {
 			return SeoMetaResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $this->id(), $model );
 		}
 
-		$messages = [
-			[
-				'role'    => 'user',
-				'content' => [
-					[ 'type' => 'text', 'text' => $this->prompt( $content ) ],
-				],
-			],
-		];
+		$request = new GenerationRequest(
+			$model,
+			self::MAX_TOKENS,
+			[ new GenerationMessage( 'user', [ new GenerationTextPart( $this->prompt( $content ) ) ] ) ]
+		);
 
-		$res = $this->client->send( $messages, self::MAX_TOKENS, $model );
+		$result = $this->runtime->generate( $request );
 
-		if ( empty( $res['ok'] ) ) {
-			return SeoMetaResult::error( (string) ( $res['code'] ?? 'request_failed' ), (string) ( $res['message'] ?? '' ), $this->id(), $model );
+		if ( ! $result->is_ok() ) {
+			return SeoMetaResult::error( $result->code(), $result->message(), $this->id(), $model );
 		}
 
-		$parsed = self::extract_meta( (string) ( $res['text'] ?? '' ) );
+		$parsed = self::extract_meta( $result->text() );
 		if ( null === $parsed ) {
 			return SeoMetaResult::error( 'invalid_response', __( 'The provider did not return valid SEO meta JSON.', 'wp-command-center' ), $this->id(), $model );
 		}
@@ -74,30 +78,15 @@ final class AnthropicSeoProvider implements SeoMetaProvider {
 	}
 
 	/**
-	 * Tolerant JSON extraction: accepts a bare JSON object, a ```json fenced block,
-	 * or JSON embedded in prose (first "{" … last "}"). Requires both keys to be
-	 * non-empty strings; returns null otherwise (never fabricates).
+	 * Tolerant JSON extraction (shared decoder + SEO key-shape validation): requires
+	 * both keys to be non-empty strings; returns null otherwise (never fabricates).
 	 *
 	 * @return array{meta_title:string,meta_description:string}|null
 	 */
 	public static function extract_meta( string $text ): ?array {
-		$text = trim( $text );
-		if ( '' === $text ) {
+		$decoded = JsonObjectExtractor::to_array( $text );
+		if ( null === $decoded ) {
 			return null;
-		}
-
-		$decoded = json_decode( $text, true );
-		if ( ! is_array( $decoded ) ) {
-			// Strip a leading/trailing markdown fence, then try the first {...} span.
-			$start = strpos( $text, '{' );
-			$end   = strrpos( $text, '}' );
-			if ( false === $start || false === $end || $end <= $start ) {
-				return null;
-			}
-			$decoded = json_decode( substr( $text, $start, $end - $start + 1 ), true );
-			if ( ! is_array( $decoded ) ) {
-				return null;
-			}
 		}
 
 		$title = isset( $decoded['meta_title'] ) && is_string( $decoded['meta_title'] ) ? trim( $decoded['meta_title'] ) : '';

@@ -25,6 +25,9 @@ defined( 'ABSPATH' ) || exit;
 
 final class GenerationRequest {
 
+	/** Default request timeout in seconds when the caller does not specify one. */
+	public const DEFAULT_TIMEOUT = 30;
+
 	private string $model;
 	private int $max_tokens;
 
@@ -43,11 +46,11 @@ final class GenerationRequest {
 	 * @param string                        $model
 	 * @param int                           $max_tokens
 	 * @param array<int, GenerationMessage> $messages
-	 * @param int                           $timeout          Request timeout in seconds.
+	 * @param int                           $timeout          Request timeout in seconds (defaults to DEFAULT_TIMEOUT).
 	 * @param array<string, mixed>          $provider_options Opaque passthrough (empty in Phase A).
 	 * @param array<string, mixed>          $meta             Optional, non-wire metadata.
 	 */
-	public function __construct( string $model, int $max_tokens, array $messages, int $timeout, array $provider_options = [], array $meta = [] ) {
+	public function __construct( string $model, int $max_tokens, array $messages, int $timeout = self::DEFAULT_TIMEOUT, array $provider_options = [], array $meta = [] ) {
 		$this->model            = $model;
 		$this->max_tokens       = $max_tokens;
 		$this->messages         = array_values( $messages );

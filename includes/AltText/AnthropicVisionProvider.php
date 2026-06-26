@@ -1,24 +1,29 @@
 <?php
 /**
- * STEP 110 — Phase 2 (AI Alt Text), Task 7B: BYO-key Anthropic vision provider.
- * STEP 111 — GA#2 Slice 2a: transport extracted to the shared AnthropicClient.
+ * STEP 110 — Phase 2 (AI Alt Text), Task 7B: BYO-key vision provider.
+ * Phase B — Universal AI Provider Runtime: provider-neutral prompt builder.
  *
- * The first concrete AltTextProvider. It is a pure VISION suggestion source — it
- * owns only the image-specific concerns (validation, the image+text message, alt
- * text parsing) and delegates the outbound call, key/model resolution, timeout,
- * and redaction to the shared AnthropicClient. Behaviour is unchanged from the
- * pre-extraction provider: same success/error results, same image size guard,
- * same legacy key/model names (now honoured by the client for back-compat).
+ * The concrete AltTextProvider. It owns only the image-specific concerns
+ * (validation, the image+text request, alt-text reading) and delegates execution
+ * to the neutral AiRuntime. It builds a provider-agnostic GenerationRequest
+ * (image part + text part) and reads a neutral GenerationResult — it does NOT
+ * construct wire messages, parse transport responses, or know any endpoint/
+ * header/body. Behaviour is unchanged: same success/error results, same image
+ * size guard.
  *
  * Strict boundaries — this class NEVER:
  *   - writes WordPress data (no post/meta/option writes),
  *   - touches ProposalStore / ProposalApplyService / OperationExecutor,
- *   - performs the HTTP call itself (the shared client does, and redacts errors).
+ *   - performs the HTTP call or knows provider wire format (the runtime/transport do).
  */
 
 namespace WPCommandCenter\AltText;
 
-use WPCommandCenter\Ai\AnthropicClient;
+use WPCommandCenter\Ai\AiRuntime;
+use WPCommandCenter\Ai\Contract\GenerationImagePart;
+use WPCommandCenter\Ai\Contract\GenerationMessage;
+use WPCommandCenter\Ai\Contract\GenerationRequest;
+use WPCommandCenter\Ai\Contract\GenerationTextPart;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -30,10 +35,10 @@ final class AnthropicVisionProvider implements AltTextProvider {
 
 	private const PROMPT = 'Write concise, descriptive alt text for this image for accessibility (WCAG). Describe the visible content in one sentence, under 125 characters. Do not start with "image of" or "picture of". Return only the alt text, no quotes or preamble.';
 
-	private AnthropicClient $client;
+	private AiRuntime $runtime;
 
-	public function __construct( ?AnthropicClient $client = null ) {
-		$this->client = $client ?? new AnthropicClient();
+	public function __construct( ?AiRuntime $runtime = null ) {
+		$this->runtime = $runtime ?? new AiRuntime();
 	}
 
 	public function id(): string {
@@ -41,13 +46,13 @@ final class AnthropicVisionProvider implements AltTextProvider {
 	}
 
 	public function is_configured(): bool {
-		return $this->client->is_configured();
+		return $this->runtime->is_configured();
 	}
 
 	public function suggest_alt( array $image, array $context = [] ): ProviderResult {
-		$model = $this->client->model( self::DEFAULT_MODEL );
+		$model = $this->runtime->model( self::DEFAULT_MODEL );
 
-		if ( ! $this->client->is_configured() ) {
+		if ( ! $this->runtime->is_configured() ) {
 			return ProviderResult::error( 'not_configured', __( 'No vision API key configured.', 'wp-command-center' ), $this->id(), $model );
 		}
 
@@ -74,26 +79,27 @@ final class AnthropicVisionProvider implements AltTextProvider {
 			$prompt .= ' Context hint (may be irrelevant): ' . wp_strip_all_tags( $hint );
 		}
 
-		$messages = [
+		$request = new GenerationRequest(
+			$model,
+			self::MAX_TOKENS,
 			[
-				'role'    => 'user',
-				'content' => [
+				new GenerationMessage(
+					'user',
 					[
-						'type'   => 'image',
-						'source' => [ 'type' => 'base64', 'media_type' => $mime, 'data' => base64_encode( $bytes ) ],
-					],
-					[ 'type' => 'text', 'text' => $prompt ],
-				],
-			],
-		];
+						new GenerationImagePart( $mime, base64_encode( $bytes ) ),
+						new GenerationTextPart( $prompt ),
+					]
+				),
+			]
+		);
 
-		$res = $this->client->send( $messages, self::MAX_TOKENS, $model );
+		$result = $this->runtime->generate( $request );
 
-		if ( empty( $res['ok'] ) ) {
-			return ProviderResult::error( (string) ( $res['code'] ?? 'request_failed' ), (string) ( $res['message'] ?? '' ), $this->id(), $model );
+		if ( ! $result->is_ok() ) {
+			return ProviderResult::error( $result->code(), $result->message(), $this->id(), $model );
 		}
 
-		$text = (string) ( $res['text'] ?? '' );
+		$text = $result->text();
 		if ( '' === $text ) {
 			return ProviderResult::error( 'empty_response', __( 'The provider returned no suggestion.', 'wp-command-center' ), $this->id(), $model );
 		}

@@ -231,16 +231,17 @@ done <<< "$PRES"
 
 # ── Static: provider-layer boundaries ────────────────────────────────────────
 ALT_TMP="$(mktemp /tmp/wpcc-altcode-XXXXXX)"
-# 6/7: Slice 2a extracted the transport — wp_remote_* now lives ONLY in the shared
-# AI transport (AnthropicClient), not in any alt-text provider-layer file.
+# 6/7: Phase A moved the raw HTTP into the shared AiHttpClient; Phase B re-pointed
+# the provider to the neutral AiRuntime. wp_remote_* now lives ONLY in AiHttpClient
+# — never in any alt-text provider-layer file, the provider, or the facade.
 WP_REMOTE_FILES=""
-for f in includes/AltText/AltTextProvider.php includes/AltText/ProviderResult.php includes/AltText/AnthropicVisionProvider.php includes/AltText/ProviderResolver.php includes/Ai/AnthropicClient.php; do
+for f in includes/AltText/AltTextProvider.php includes/AltText/ProviderResult.php includes/AltText/AnthropicVisionProvider.php includes/AltText/ProviderResolver.php includes/Ai/AnthropicClient.php includes/Ai/Http/AiHttpClient.php; do
   grep -vE '^[[:space:]]*(\*|/\*|//)' "$f" > "$ALT_TMP"
   if grep -qE 'wp_remote_(post|get|request)' "$ALT_TMP"; then WP_REMOTE_FILES="${WP_REMOTE_FILES}$(basename "$f") "; fi
 done
-assert_eq "wp_remote_* only in the shared AnthropicClient transport" "AnthropicClient.php " "$WP_REMOTE_FILES"
-grep -vE '^[[:space:]]*(\*|/\*|//)' includes/Ai/AnthropicClient.php > "$ALT_TMP"
-assert_eq "shared transport sets a timeout" "yes" "$(grep -q "'timeout'" "$ALT_TMP" && echo yes || echo no)"
+assert_eq "wp_remote_* only in the shared AI HTTP client" "AiHttpClient.php " "$WP_REMOTE_FILES"
+grep -vE '^[[:space:]]*(\*|/\*|//)' includes/Ai/Http/AiHttpClient.php > "$ALT_TMP"
+assert_eq "shared HTTP client sets a timeout" "yes" "$(grep -q "'timeout'" "$ALT_TMP" && echo yes || echo no)"
 
 # 11/12: NO provider-layer file mutates WP or touches the engine/store.
 for f in includes/AltText/AltTextProvider.php includes/AltText/ProviderResult.php includes/AltText/AnthropicVisionProvider.php includes/AltText/ProviderResolver.php; do

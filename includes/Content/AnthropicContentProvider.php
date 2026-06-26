@@ -1,21 +1,28 @@
 <?php
 /**
- * Content-field AI generation — BYO-key Anthropic content-field provider.
+ * Content-field AI generation — BYO-key content-field provider.
+ * Phase B — Universal AI Provider Runtime: provider-neutral prompt builder.
  *
- * The first concrete ContentFieldProvider. It is a pure TEXT suggestion source: it
- * owns the per-kind content prompts + the JSON response parsing, and delegates the
- * outbound call, key/model resolution, timeout, and redaction to the shared
- * AnthropicClient. It returns suggestions as a ContentFieldResult — never throws.
+ * The concrete ContentFieldProvider. It is a pure TEXT suggestion source: it owns
+ * the per-kind content prompts + the JSON response parsing, and delegates
+ * execution to the neutral AiRuntime. It builds a provider-agnostic
+ * GenerationRequest and reads a neutral GenerationResult — it does NOT construct
+ * wire messages, parse transport responses, or know any endpoint/header/body. It
+ * returns a ContentFieldResult and never throws.
  *
  * Strict boundaries — this class NEVER:
  *   - writes WordPress data (no post/meta/option writes),
  *   - touches ProposalStore / ProposalApplyService / OperationExecutor / ContentManager,
- *   - performs the HTTP call itself (the shared client does, and redacts errors).
+ *   - performs the HTTP call or knows provider wire format (the runtime/transport do).
  */
 
 namespace WPCommandCenter\Content;
 
-use WPCommandCenter\Ai\AnthropicClient;
+use WPCommandCenter\Ai\AiRuntime;
+use WPCommandCenter\Ai\Contract\GenerationMessage;
+use WPCommandCenter\Ai\Contract\GenerationRequest;
+use WPCommandCenter\Ai\Contract\GenerationTextPart;
+use WPCommandCenter\Ai\JsonObjectExtractor;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -24,10 +31,10 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 	private const DEFAULT_MODEL = 'claude-sonnet-4-6'; // short structured output; cost/quality balance
 	private const MAX_TOKENS    = 300;
 
-	private AnthropicClient $client;
+	private AiRuntime $runtime;
 
-	public function __construct( ?AnthropicClient $client = null ) {
-		$this->client = $client ?? new AnthropicClient();
+	public function __construct( ?AiRuntime $runtime = null ) {
+		$this->runtime = $runtime ?? new AiRuntime();
 	}
 
 	public function id(): string {
@@ -35,36 +42,33 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 	}
 
 	public function is_configured(): bool {
-		return $this->client->is_configured();
+		return $this->runtime->is_configured();
 	}
 
 	public function suggest( string $kind, array $content, array $context = [] ): ContentFieldResult {
-		$model = $this->client->model( self::DEFAULT_MODEL );
+		$model = $this->runtime->model( self::DEFAULT_MODEL );
 
 		if ( 'title' !== $kind && 'excerpt' !== $kind ) {
 			return ContentFieldResult::error( 'invalid_kind', __( 'Unknown content field kind.', 'wp-command-center' ), $this->id(), $model );
 		}
 
-		if ( ! $this->client->is_configured() ) {
+		if ( ! $this->runtime->is_configured() ) {
 			return ContentFieldResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $this->id(), $model );
 		}
 
-		$messages = [
-			[
-				'role'    => 'user',
-				'content' => [
-					[ 'type' => 'text', 'text' => $this->prompt( $kind, $content ) ],
-				],
-			],
-		];
+		$request = new GenerationRequest(
+			$model,
+			self::MAX_TOKENS,
+			[ new GenerationMessage( 'user', [ new GenerationTextPart( $this->prompt( $kind, $content ) ) ] ) ]
+		);
 
-		$res = $this->client->send( $messages, self::MAX_TOKENS, $model );
+		$result = $this->runtime->generate( $request );
 
-		if ( empty( $res['ok'] ) ) {
-			return ContentFieldResult::error( (string) ( $res['code'] ?? 'request_failed' ), (string) ( $res['message'] ?? '' ), $this->id(), $model );
+		if ( ! $result->is_ok() ) {
+			return ContentFieldResult::error( $result->code(), $result->message(), $this->id(), $model );
 		}
 
-		$value = self::extract_field( (string) ( $res['text'] ?? '' ), $kind );
+		$value = self::extract_field( $result->text(), $kind );
 		if ( null === $value ) {
 			return ContentFieldResult::error( 'invalid_response', __( 'The provider did not return a valid content field JSON.', 'wp-command-center' ), $this->id(), $model );
 		}
@@ -73,29 +77,14 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 	}
 
 	/**
-	 * Tolerant JSON extraction: accepts a bare JSON object, a ```json fenced block,
-	 * or JSON embedded in prose (first "{" … last "}"). Returns the trimmed,
-	 * non-empty string for the given key ('title'|'excerpt'); returns null otherwise
-	 * (never fabricates).
+	 * Tolerant JSON extraction (shared decoder + content key-shape validation):
+	 * returns the trimmed, non-empty string for the given key ('title'|'excerpt');
+	 * returns null otherwise (never fabricates).
 	 */
 	public static function extract_field( string $text, string $key ): ?string {
-		$text = trim( $text );
-		if ( '' === $text ) {
+		$decoded = JsonObjectExtractor::to_array( $text );
+		if ( null === $decoded ) {
 			return null;
-		}
-
-		$decoded = json_decode( $text, true );
-		if ( ! is_array( $decoded ) ) {
-			// Strip a leading/trailing markdown fence, then try the first {...} span.
-			$start = strpos( $text, '{' );
-			$end   = strrpos( $text, '}' );
-			if ( false === $start || false === $end || $end <= $start ) {
-				return null;
-			}
-			$decoded = json_decode( substr( $text, $start, $end - $start + 1 ), true );
-			if ( ! is_array( $decoded ) ) {
-				return null;
-			}
 		}
 
 		$value = isset( $decoded[ $key ] ) && is_string( $decoded[ $key ] ) ? trim( $decoded[ $key ] ) : '';
