@@ -1,5 +1,22 @@
 # WP Command Center — Product Master Plan (Post STEP-109)
 
+> 🧭 **AS-BUILT STATUS OVERLAY (2026-06-26).** This master plan is the **strategy** doc (written 2026-06-18, intentionally "no implementation detail"); it is **not** rewritten here. For the **current as-built truth**, read [`CURRENT-PRODUCT-STATUS.md`](CURRENT-PRODUCT-STATUS.md) (fastest onboarding) and [`SESSION-HANDOFF-2026-06-26.md`](SESSION-HANDOFF-2026-06-26.md) (repo state). Implementation since this plan was written has followed the **UX/Platform Blueprint §15 phased rollout** (Phase 1/2/2.5/4 below) — a *different* numbering from this plan's product phases B–F (§6). Mapping + state:
+>
+> | Implemented work (blueprint rollout) | Maps to plan §6 | State |
+> |---|---|---|
+> | **Phase 1** — Narrative + six-section IA | Phase C (UX/IA) | ✅ **Completed** — [`phase-1-ia/`](phase-1-ia/) |
+> | **Phase 2** — Runtime page migration/retirement | Phase C (IA cleanup) | ✅ **Completed** — [`phase-2-runtime-migration/`](phase-2-runtime-migration/) |
+> | **Phase 2.5** — Experience polish (CDS, titles, trust strip) | Phase C (Design System) | ✅ **Completed** — [`phase-2-5-builtin-ai/`](phase-2-5-builtin-ai/), [`phase-2-5-global/`](phase-2-5-global/) |
+> | **Phase 4** — Design-partner readiness (in-admin AI enablement) | Phase D precursor (Governed Action surfacing) | ✅ **Completed** — [`phase-4-design-partner-readiness/`](phase-4-design-partner-readiness/) |
+> | Strategy/validation reviews (Phase 3/3A/3B/5) | cross-cutting | ✅ **Completed** — [`phase-3-5-reviews/`](phase-3-5-reviews/) |
+> | Generation Adapters (multi-provider execution) | Phase D/§5.2 | 🚧 **Deferred** (Anthropic-only today, honestly marked) |
+> | Capability-scoped tokens · key encryption-at-rest | Phase B/§2.3 | 🚧 **Deferred** |
+> | Governed action console (scheduling, notifications, metering) | **Phase D** | 🔮 **Future** |
+> | AI-assisted multi-step workflows | **Phase E** | 🔮 **Future** |
+> | Free/Pro tiering · marketplace · enterprise (SSO/RBAC/fleet) | **Phase F** | 🔮 **Future** (post-PMF) |
+>
+> **Current gating decision (Phase 5):** the next move is **not** a build phase — recruit 3–5 design partners and validate the wedge (see [`phase-3-5-reviews/PHASE-5-DESIGN-PARTNER-VALIDATION.md`](phase-3-5-reviews/PHASE-5-DESIGN-PARTNER-VALIDATION.md)). The strategy, positioning, and phase intent in this plan remain valid; the **§6 phase letters and §3 debt table predate the as-built work above and should be read through this overlay.**
+
 > ✅ **Production status update (2026-06-24):** prod HEAD = **`2657810`** — **PROGRAM-4 Rollback Integrity DEPLOYED & VERIFIED** (consolidated P4.0–P4.10 + certified: GATE-1 serial T2 net-new attributable = 0, GATE-1A, independent audit GO, prod functional validation green). **F-1 (rollback over-reach) now CLOSED** for the certified surfaces — SEO, Settings, Media metadata, Content, Comments, Users, Woo Products, Bulk, ACF value_update, Elementor (+ Pattern-C: Patch, Media bytes, Media Enhancement) — all field-scoped / atomic, drift-aware, sibling-safe, honest. Invariants unchanged **34/23/40/40/2.5.0**; AI dormant (key unset, SEO Meta/AI Content/Alt Text UI all OFF, security mode `developer`). **Dormant-safe on prod:** Woo Products + Elementor certified code deployed but inactive (WooCommerce/Elementor plugins not active on prod; runtimes no-op safely). **Honest boundaries (NOT certified):** ACF definition ops (whole-def + fingerprint drift-guard), Woo orders/variation/coupon updates, CPT/Forms/Menu/Widgets/SiteBuilder/OptionManager, plugin/theme update (honest `reversible:false`). A2-1 uncatchable-fatal reaper still deferred (schema-bearing). **Next phase: not started.** Authoritative current-state doc: [`SESSION-HANDOFF-PHASE-3.md`](SESSION-HANDOFF-PHASE-3.md) §0.
 >
 > *(Prior 2026-06-23 state, now superseded: prod was `7aa7e84` with governance Phase 1+2+3 deployed and F-1 open systemically for sibling runtimes — Program-4 closed that for the certified set.)*

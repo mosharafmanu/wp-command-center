@@ -1,3 +1,5 @@
+> ⤳ **SUPERSEDED — historical.** The current authoritative handoff is [`SESSION-HANDOFF-2026-06-26.md`](SESSION-HANDOFF-2026-06-26.md); the fastest onboarding doc is [`CURRENT-PRODUCT-STATUS.md`](CURRENT-PRODUCT-STATUS.md). The repository-state table below reflects this file's own date (2026-06-25, HEAD `90210a0`, ahead 22) and is **not** current (as of 2026-06-26 the tip is `214f623`, ahead 31). Kept for history; do not treat its repo-state numbers as live.
+
 # Session Handoff — 2026-06-25 (RC-2 / Concierge Beta staged)
 
 ## TL;DR
