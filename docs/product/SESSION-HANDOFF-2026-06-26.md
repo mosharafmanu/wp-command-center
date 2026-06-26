@@ -1,6 +1,6 @@
-# Session Handoff — 2026-06-26 (current)
+# Session Handoff — 2026-06-26 (historical)
 
-> **This is the current authoritative handoff.** Supersedes `SESSION-HANDOFF-2026-06-25.md` (now historical). Fastest product onboarding: [`CURRENT-PRODUCT-STATUS.md`](CURRENT-PRODUCT-STATUS.md).
+> **⚠ Superseded by [`SESSION-HANDOFF-2026-06-27.md`](SESSION-HANDOFF-2026-06-27.md).** Kept for history. Since this handoff, the Universal AI Provider Runtime (A–D) and the Connect/History UX redesign landed (HEAD is now `87a18f2`, ahead 39), and the product entered the **Real-World Validation** phase. Fastest product onboarding: [`CURRENT-PRODUCT-STATUS.md`](CURRENT-PRODUCT-STATUS.md).
 
 ## TL;DR
 Implementation Phases **1 · 2 · 2.5 · 4** are complete, validation-green, and **staged on local `main` (NOT pushed).** Production is untouched. The first governed-AI demo now runs end-to-end without code editing. Strategy/validation reviews (Phases 3/3A/3B/5) are captured in `phase-3-5-reviews/`. The standing recommendation (Phase 5): **stop building, recruit 3–5 design partners.**

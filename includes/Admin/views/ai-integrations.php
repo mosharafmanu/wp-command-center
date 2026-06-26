@@ -143,6 +143,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	/* Config + code blocks (functional — Configuration tab) */
 	.wpcc-ai-config { background: #1d2327; color: #c3c4c7; padding: 18px; border-radius: 10px; font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 13px; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; position: relative; }
 	.wpcc-ai-code { background: #f6f7f9; border: 1px solid #e3e5ec; border-radius: 9px; padding: 9px 12px; font-family: ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 13px; word-break: break-all; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; }
+	/* High-contrast, readable text selection inside dark + light code/config blocks. */
+	.wpcc-ai-config::selection, .wpcc-ai-config *::selection,
+	#wpcc-config-block::selection, #wpcc-config-block *::selection,
+	.wpcc-ai-code::selection, .wpcc-ai-code *::selection { background: #bcdcff; color: #10233b; text-shadow: none; }
+	.wpcc-ai-config::-moz-selection, .wpcc-ai-config *::-moz-selection,
+	#wpcc-config-block::-moz-selection, #wpcc-config-block *::-moz-selection,
+	.wpcc-ai-code::-moz-selection, .wpcc-ai-code *::-moz-selection { background: #bcdcff; color: #10233b; text-shadow: none; }
 	.wpcc-ai-code__text { flex: 1; margin-right: 10px; }
 
 	/* Tables */
