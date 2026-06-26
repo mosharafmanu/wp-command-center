@@ -52,7 +52,7 @@ $server  = $data['server'];
 $debug   = $data['debug'];
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'Site Intelligence', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Site report', 'wp-command-center' ); ?></h1>
 	<p><?php esc_html_e( 'A structured snapshot of this site for AI agents — WordPress & PHP versions, active theme/plugins, WooCommerce status, cache configuration, server capabilities, debug status, and file permissions.', 'wp-command-center' ); ?></p>
 
 	<p class="wpcc-scan-meta">

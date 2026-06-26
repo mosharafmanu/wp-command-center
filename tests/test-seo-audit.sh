@@ -91,7 +91,7 @@ echo "== 4b. UX polish (U1.1 intro, U1.3 tab badges, U3 dashboard) =="
 lacks "no stale read-only intro"           "this page does not change anything" "$VIEW"
 # Phase 2.5A: the reversibility/approval/audit message moved from the intro sentence into
 # the shared Built-in AI trust strip (Reviewed · Requires approval · Audited · Reversible).
-has  "surfaces the trust strip"            "builtin-ai-trust"  "$VIEW"
+has  "surfaces the trust strip"            "trust-strip"  "$VIEW"
 # U1.3 — tab count badges.
 has  "Review tab count badge"              "wpcc-seo-tabcount-review"      "$VIEW"
 has  "Suggestions tab count badge"         "wpcc-seo-tabcount-suggestions" "$VIEW"

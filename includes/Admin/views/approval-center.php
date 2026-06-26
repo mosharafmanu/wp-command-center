@@ -33,7 +33,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 }
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'Approval Center', 'wp-command-center' ); ?>
+	<h1><?php esc_html_e( 'Approvals', 'wp-command-center' ); ?>
 		<span id="wpcc-pending-badge" style="display:none;margin-left:8px;background:var(--wpcc-red-600);color:var(--wpcc-white);font-size:12px;border-radius:10px;padding:2px 8px;vertical-align:middle;"></span>
 	</h1>
 
@@ -75,7 +75,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	?>
 
 	<?php if ( '' !== $detail_id ) : ?>
-	<p><a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="button">&larr; <?php esc_html_e( 'Back to Approval Center', 'wp-command-center' ); ?></a></p>
+	<p><a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="button">&larr; <?php esc_html_e( 'Back to Approvals', 'wp-command-center' ); ?></a></p>
 	<div id="wpcc-detail" data-id="<?php echo esc_attr( $detail_id ); ?>">
 		<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></p>
 	</div>

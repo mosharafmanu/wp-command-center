@@ -915,3 +915,33 @@
 	font-weight: 700;
 	margin-right: var( --wpcc-space-1 );
 }
+
+/* Settings hub second-level sub-nav (Phase 2.5B) — one CDS sub-nav style that
+   replaces the per-hub bespoke pills. Token-driven; subtle hover; visible focus. */
+.wpcc-cds-subnav {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var( --wpcc-space-1 );
+	margin: var( --wpcc-space-1 ) 0 var( --wpcc-space-5 );
+	border-bottom: 1px solid var( --wpcc-border-subtle );
+	padding-bottom: var( --wpcc-space-2 );
+}
+.wpcc-cds-subnav__item {
+	padding: var( --wpcc-space-2 ) var( --wpcc-space-4 );
+	border-radius: var( --wpcc-radius-sm );
+	font-size: var( --wpcc-fs-small );
+	font-weight: 600;
+	text-decoration: none;
+	background: var( --wpcc-gray-100 );
+	color: var( --wpcc-gray-700 );
+	transition: background-color .12s ease, color .12s ease;
+}
+.wpcc-cds-subnav__item:hover { background: var( --wpcc-gray-300 ); color: var( --wpcc-gray-900 ); }
+.wpcc-cds-subnav__item.is-active { background: var( --wpcc-blue-600 ); color: var( --wpcc-gray-0 ); }
+.wpcc-cds-subnav__item:focus-visible {
+	outline: var( --wpcc-focus-ring-width ) solid var( --wpcc-border-focus );
+	outline-offset: 2px;
+}
+@media ( prefers-reduced-motion: reduce ) {
+	.wpcc-cds-subnav__item { transition: none; }
+}

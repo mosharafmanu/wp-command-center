@@ -36,11 +36,10 @@ if ( ! isset( $wpcc_adv_panes[ $wpcc_adv_active ] ) ) {
 	$wpcc_adv_active = (string) array_key_first( $wpcc_adv_panes );
 }
 ?>
-<nav class="wpcc-subnav" aria-label="<?php esc_attr_e( 'Advanced sections', 'wp-command-center' ); ?>" style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 18px;border-bottom:1px solid #dcdcde;padding-bottom:8px;">
+<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Advanced sections', 'wp-command-center' ); ?>">
 	<?php foreach ( $wpcc_adv_panes as $key => $pane ) : ?>
-		<a class="wpcc-subnav__item<?php echo $key === $wpcc_adv_active ? ' is-active' : ''; ?>"
+		<a class="wpcc-cds-subnav__item<?php echo $key === $wpcc_adv_active ? ' is-active' : ''; ?>"
 			href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=' . $key ) ); ?>"
-			style="padding:6px 12px;border-radius:4px;font-size:13px;font-weight:600;text-decoration:none;<?php echo $key === $wpcc_adv_active ? 'background:#2271b1;color:#fff;' : 'background:#f0f0f1;color:#50575e;'; ?>"
 			<?php echo $key === $wpcc_adv_active ? 'aria-current="page"' : ''; ?>>
 			<?php echo esc_html( $pane['label'] ); ?>
 		</a>

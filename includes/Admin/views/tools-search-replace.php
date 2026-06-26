@@ -221,6 +221,7 @@ $sr_preview_js = $sr_preview ? [
 	<p class="description" style="max-width:680px;">
 		<?php esc_html_e( 'Governed maintenance tools. Each runs through the same engine as everything else: changes are previewed, approved, audited, and reversible where supported.', 'wp-command-center' ); ?>
 	</p>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<?php if ( ! empty( $sr_success_msg ) ) : ?>
 		<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $sr_success_msg ); ?></p></div>

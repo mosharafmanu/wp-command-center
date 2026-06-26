@@ -128,7 +128,8 @@ has "change-set section"                 "secChangeset"                "$VIEW"
 has "diff section"                       "secDiff"                     "$VIEW"
 has "audit trail section"                "wpcc-audit-trail"            "$VIEW"
 has "history rows link to detail"        '&view=. \+ escHtml\(r.request_id\)' "$VIEW"
-has "back link to approval center"       "Back to Approval Center"     "$VIEW"
+# Phase 2.5B: H1 + back link renamed "Approval Center" → "Approvals" (matches nav).
+has "back link to approvals"             "Back to Approvals"           "$VIEW"
 
 echo
 echo "== 6c. STEP 106.2: detail endpoint reuses shared DiffRenderer (no fork) =="

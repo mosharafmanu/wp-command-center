@@ -106,6 +106,7 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 	<p class="description" style="max-width:720px;">
 		<?php esc_html_e( 'Things worth your attention on this site — detected by deterministic checks, never invented. Review a finding, dismiss it, or mark it resolved. Suggested fixes that need your sign-off appear at the bottom.', 'wp-command-center' ); ?>
 	</p>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<?php if ( $wpcc_rec_notice ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( $wpcc_rec_notice ); ?></p></div><?php endif; ?>
 	<?php if ( $wpcc_rec_error ) : ?><div class="notice notice-error is-dismissible"><p><?php echo esc_html( $wpcc_rec_error ); ?></p></div><?php endif; ?>

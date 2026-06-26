@@ -38,7 +38,8 @@ has "needs attention" "Needs attention" "$V"
 has "operations timeline" "Operations timeline" "$V"
 has "review & undo" "Review & undo" "$V"
 has "system activity" "System activity" "$V"
-has "data coverage / honesty" "Data coverage" "$V"
+# Phase 2.5B: "Data coverage" → customer language "What's measured".
+has "data coverage / honesty" "What’s measured" "$V"
 
 echo "== 5. Honest empty states =="
 has "empty: no operations" "No operations recorded yet" "$V"

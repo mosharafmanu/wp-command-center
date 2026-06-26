@@ -40,7 +40,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-history">
-	<h1><?php esc_html_e( 'Change History', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'History', 'wp-command-center' ); ?></h1>
 	<p class="description">
 		<?php esc_html_e( 'Every AI- or API-driven change to this site, newest first. Reversible changes show a Restore button — restoring runs through the same approval, safety check, and audit trail as any other change.', 'wp-command-center' ); ?>
 	</p>

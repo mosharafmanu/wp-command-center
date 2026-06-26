@@ -40,7 +40,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<p class="description" style="max-width:720px;">
 		<?php esc_html_e( 'Generate clear SEO titles and descriptions for posts and pages that need them. Review each suggestion, then approve to apply — nothing changes until you say so.', 'wp-command-center' ); ?>
 	</p>
-	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
 		<a href="#" class="nav-tab nav-tab-active" id="wpcc-seo-tab-review"><?php esc_html_e( 'Review', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-review"></span></a>

@@ -37,7 +37,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-tokens">
-	<h1><?php esc_html_e( 'Tokens & Capabilities', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Access', 'wp-command-center' ); ?></h1>
 	<p class="description">
 		<?php esc_html_e( 'Create access tokens for your AI agents and see exactly what each one can do, based on its scope and capabilities. The token secret is shown once at creation; revoke any token instantly. Capabilities are assigned through the same audited engine as the agent API.', 'wp-command-center' ); ?>
 	</p>

@@ -47,7 +47,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<p class="description" style="max-width:720px;">
 		<?php esc_html_e( 'Draft titles and excerpts for your posts and pages with AI. Review and edit each suggestion, then approve to apply — you’re always in control.', 'wp-command-center' ); ?>
 	</p>
-	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
 		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'wp-command-center' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>

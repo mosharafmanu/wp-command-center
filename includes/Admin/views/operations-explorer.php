@@ -29,7 +29,7 @@ $view_id = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view
 $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' ) ) );
 ?>
 <div class="wrap wpcc-wrap wpcc-operations">
-	<h1><?php esc_html_e( 'Operations Explorer', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Capabilities', 'wp-command-center' ); ?></h1>
 	<p class="description">
 		<?php esc_html_e( 'Every operation the platform exposes, with its risk tier, the capability it requires, whether it needs approval in the current security mode, and whether it is available on this site right now. Read-only — this page does not run operations.', 'wp-command-center' ); ?>
 	</p>

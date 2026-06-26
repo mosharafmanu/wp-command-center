@@ -212,7 +212,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		<?php endforeach; ?>
 	</div>
 
-	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<!-- ===== Recent AI activity ===== -->
 	<h2><?php esc_html_e( 'Recent AI activity', 'wp-command-center' ); ?></h2>

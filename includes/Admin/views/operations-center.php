@@ -66,7 +66,7 @@ $wpcc_dur = static function ( $ms ): string {
 <div class="wrap wpcc-oc">
 	<div class="wpcc-oc-hero">
 		<div>
-			<h1><?php esc_html_e( 'Operations Center', 'wp-command-center' ); ?></h1>
+			<h1><?php esc_html_e( 'Live activity', 'wp-command-center' ); ?></h1>
 			<p><?php esc_html_e( 'A live view of what needs you, what happened, and what you can review or undo — built from real activity. Figures shown as “unknown” or “not tracked yet” are not measured; they are never guessed.', 'wp-command-center' ); ?></p>
 		</div>
 		<div class="wpcc-oc-pills">
@@ -136,12 +136,12 @@ $wpcc_dur = static function ( $ms ): string {
 			</div>
 
 			<!-- 5. DATA HONESTY -->
-			<h2><?php esc_html_e( 'Data coverage', 'wp-command-center' ); ?></h2>
+			<h2><?php esc_html_e( 'What’s measured', 'wp-command-center' ); ?></h2>
 			<div class="wpcc-oc-card" style="font-size:13px;">
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Operation telemetry', 'wp-command-center' ); ?></span><strong style="color:<?php echo $wpcc_honest['telemetry_active'] ? '#0a7a33' : '#646970'; ?>;"><?php echo $wpcc_honest['telemetry_active'] ? esc_html__( 'Active', 'wp-command-center' ) : esc_html__( 'No data yet', 'wp-command-center' ); ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Activity tracking', 'wp-command-center' ); ?></span><strong style="color:<?php echo $wpcc_honest['telemetry_active'] ? '#0a7a33' : '#646970'; ?>;"><?php echo $wpcc_honest['telemetry_active'] ? esc_html__( 'Active', 'wp-command-center' ) : esc_html__( 'No data yet', 'wp-command-center' ); ?></strong></div>
 				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Token usage', 'wp-command-center' ); ?></span><strong class="muted"><?php echo $wpcc_honest['tokens_tracked'] ? esc_html__( 'Partly tracked', 'wp-command-center' ) : esc_html__( 'Not tracked yet', 'wp-command-center' ); ?></strong></div>
 				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Cost', 'wp-command-center' ); ?></span><strong class="muted"><?php esc_html_e( 'Not tracked yet', 'wp-command-center' ); ?></strong></div>
-				<p class="muted" style="font-size:11px;margin:8px 0 0;"><?php esc_html_e( 'Per-token usage and cost are measured only once the AI runtime is instrumented — no figure is estimated here.', 'wp-command-center' ); ?></p>
+				<p class="muted" style="font-size:11px;margin:8px 0 0;"><?php esc_html_e( 'Usage and cost appear here only once AI usage reporting is available — nothing is estimated.', 'wp-command-center' ); ?></p>
 			</div>
 		</div>
 	</div>

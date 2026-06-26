@@ -36,7 +36,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 	<p class="description" style="max-width:720px;">
 		<?php esc_html_e( 'Generate clear, descriptive alt text for your images — better for accessibility and SEO. Review each suggestion, then approve to apply. Nothing is saved until you do.', 'wp-command-center' ); ?>
 	</p>
-	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-trust.php'; ?>
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<!-- Readiness header -->
 	<div id="wpcc-at-readiness" class="wpcc-cds-card" style="display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;">
