@@ -303,12 +303,21 @@ final class AppShell {
 		return $tree;
 	}
 
-	/** A build/dev flag: true if the constant is truthy OR the filter returns true. */
+	/**
+	 * Build/dev flag with Phase-4 in-admin enablement, in strict precedence:
+	 *   1. A DEFINED constant is site configuration and wins (on OR off).
+	 *   2. A truthy `wpcc_*_ui` filter is a programmatic opt-in.
+	 *   3. Otherwise the in-admin per-tool option governs (default off; only the three
+	 *      built-in AI tools are option-backed — other flags resolve to false here).
+	 */
 	private static function flag( string $const, string $filter ): bool {
-		if ( defined( $const ) && constant( $const ) ) {
+		if ( defined( $const ) ) {
+			return (bool) constant( $const );
+		}
+		if ( (bool) apply_filters( $filter, false ) ) {
 			return true;
 		}
-		return (bool) apply_filters( $filter, false );
+		return BuiltinAiSettings::enabled_by_option( $const );
 	}
 
 	/**

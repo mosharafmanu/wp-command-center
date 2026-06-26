@@ -214,6 +214,9 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
+	<!-- ===== Built-in AI tools enablement (Phase 4) ===== -->
+	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-tools.php'; ?>
+
 	<!-- ===== Recent AI activity ===== -->
 	<h2><?php esc_html_e( 'Recent AI activity', 'wp-command-center' ); ?></h2>
 	<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;">

@@ -61,6 +61,14 @@ $wpcc_total_count   = count( $wpcc_checklist );
 global $wpdb;
 $wpcc_rec_open      = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}wpcc_recommendations WHERE status = %s", 'open' ) );
 $wpcc_recs_url      = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=recommendations' );
+
+// Phase 4 — design-partner first-value: the single next step toward the first
+// governed AI change (read-only, real state). One action focus; details collapsed.
+$wpcc_dpr_ready   = \WPCommandCenter\Admin\DesignPartnerReadiness::can_run_first_workflow();
+$wpcc_dpr_next    = \WPCommandCenter\Admin\DesignPartnerReadiness::next_action();
+$wpcc_dpr_prog    = \WPCommandCenter\Admin\DesignPartnerReadiness::progress();
+$wpcc_dpr_list    = \WPCommandCenter\Admin\DesignPartnerReadiness::checklist();
+$wpcc_builtin_url = admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' );
 ?>
 <div class="wpcc-home">
 	<p class="description">
@@ -83,6 +91,57 @@ $wpcc_recs_url      = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=recommen
 
 	<?php if ( $wpcc_show_firstrun ) : ?>
 		<section class="wpcc-firstrun" aria-labelledby="wpcc-firstrun-h" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #2271b1;border-radius:6px;padding:18px 20px;margin:0 0 20px;max-width:840px;">
+
+			<!-- Phase 4 — first governed AI change: one next action, details collapsed. -->
+			<div class="wpcc-firstvalue" style="margin:0 0 18px;padding:14px 16px;border-radius:8px;background:<?php echo $wpcc_dpr_ready ? 'linear-gradient(135deg,#f2fbf5,#eaf7ef)' : '#f0f6fc'; ?>;border:1px solid <?php echo $wpcc_dpr_ready ? '#b6e3c5' : '#c5d9ee'; ?>;">
+				<?php if ( $wpcc_dpr_ready ) : ?>
+					<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;">
+						<span style="font-size:14px;"><span class="dashicons dashicons-yes-alt" aria-hidden="true" style="color:#00a32a;"></span> <strong><?php esc_html_e( 'You’re ready to run your first governed AI change.', 'wp-command-center' ); ?></strong> <?php esc_html_e( 'Generate a suggestion, review it, approve it, then undo it from History.', 'wp-command-center' ); ?></span>
+						<a class="button button-primary" href="<?php echo esc_url( $wpcc_builtin_url ); ?>"><?php esc_html_e( 'Open Built-in AI', 'wp-command-center' ); ?></a>
+					</div>
+				<?php else : ?>
+					<div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;">
+						<span style="font-size:14px;">
+							<strong><?php esc_html_e( 'Get to your first governed AI change', 'wp-command-center' ); ?></strong>
+							<span style="display:block;color:#50575e;font-size:13px;margin-top:2px;">
+								<?php
+								/* translators: 1: completed steps, 2: total steps */
+								printf( esc_html__( '%1$d of %2$d ready.', 'wp-command-center' ), (int) $wpcc_dpr_prog['done'], (int) $wpcc_dpr_prog['total'] );
+								if ( $wpcc_dpr_next ) {
+									echo ' ';
+									/* translators: %s: the next step label */
+									printf( esc_html__( 'Next: %s.', 'wp-command-center' ), esc_html( $wpcc_dpr_next['label'] ) );
+								}
+								?>
+							</span>
+						</span>
+						<?php if ( $wpcc_dpr_next ) : ?>
+							<a class="button button-primary" href="<?php echo esc_url( $wpcc_dpr_next['action_url'] ); ?>"><?php echo esc_html( $wpcc_dpr_next['action_label'] ); ?> &rarr;</a>
+						<?php endif; ?>
+					</div>
+				<?php endif; ?>
+				<details style="margin-top:10px;">
+					<summary style="cursor:pointer;font-size:13px;color:#2271b1;"><?php esc_html_e( 'Show all readiness steps', 'wp-command-center' ); ?></summary>
+					<ul style="list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;">
+						<?php foreach ( $wpcc_dpr_list as $wpcc_ri ) :
+							$wpcc_icon = 'pass' === $wpcc_ri['status'] ? 'dashicons-yes' : ( 'blocked' === $wpcc_ri['status'] ? 'dashicons-marker' : 'dashicons-warning' );
+							$wpcc_col  = 'pass' === $wpcc_ri['status'] ? '#00a32a' : ( 'blocked' === $wpcc_ri['status'] ? '#c3c4c7' : '#bd8600' );
+							?>
+							<li style="display:flex;gap:8px;align-items:flex-start;font-size:13px;">
+								<span class="dashicons <?php echo esc_attr( $wpcc_icon ); ?>" aria-hidden="true" style="color:<?php echo esc_attr( $wpcc_col ); ?>;"></span>
+								<span style="flex:1;">
+									<?php echo esc_html( wp_strip_all_tags( $wpcc_ri['label'] ) ); ?>
+									<?php if ( 'pass' !== $wpcc_ri['status'] && '' !== $wpcc_ri['action_label'] ) : ?>
+										— <a href="<?php echo esc_url( $wpcc_ri['action_url'] ); ?>"><?php echo esc_html( $wpcc_ri['action_label'] ); ?></a>
+									<?php endif; ?>
+									<span style="display:block;color:#646970;font-size:12px;"><?php echo esc_html( wp_strip_all_tags( $wpcc_ri['detail'] ) ); ?></span>
+								</span>
+							</li>
+						<?php endforeach; ?>
+					</ul>
+				</details>
+			</div>
+
 			<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;">
 				<h2 id="wpcc-firstrun-h" style="margin:0;font-size:16px;"><?php esc_html_e( 'Set up WP Command Center', 'wp-command-center' ); ?></h2>
 				<span style="color:#646970;font-size:13px;">
