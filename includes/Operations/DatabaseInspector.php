@@ -23,7 +23,7 @@ final class DatabaseInspector {
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		$action = sanitize_key( $params['action'] ?? '' );
 		if ( ! in_array( $action, DatabaseRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_db_action', __( 'Invalid database inspection action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_db_action', InvalidAction::message( 'database inspection', $action, DatabaseRegistry::ACTIONS ) );
 		}
 
 		// Block write keywords in any input

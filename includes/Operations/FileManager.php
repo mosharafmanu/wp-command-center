@@ -27,7 +27,7 @@ final class FileManager {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, self::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_file_action', sprintf( __( 'Invalid action: %s. Use file_read, file_tree, or file_metadata.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_file_action', InvalidAction::message( 'file', $action, self::ACTIONS ) );
 		}
 
 		$path = isset( $params['path'] ) ? (string) $params['path'] : '';

@@ -36,7 +36,7 @@ final class WidgetsRuntimeManager {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, WidgetsRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_widgets_action', __( 'Invalid widgets action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_widgets_action', InvalidAction::message( 'widgets', $action, WidgetsRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

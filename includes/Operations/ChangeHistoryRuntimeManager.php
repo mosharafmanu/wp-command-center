@@ -57,10 +57,10 @@ final class ChangeHistoryRuntimeManager {
 			case 'operation_status':
 				return $this->operation_status( $p );
 			default:
-				return $this->err( 'wpcc_invalid_history_action', sprintf(
-					/* translators: %s: action */
-					__( 'Unknown change_history action: %s. Supported: history_list, history_get, history_timeline, rollback_discover, rollback_target, operation_status.', 'wp-command-center' ),
-					$action
+				return $this->err( 'wpcc_invalid_history_action', InvalidAction::message(
+					'change_history',
+					$action,
+					[ 'history_list', 'history_get', 'history_timeline', 'rollback_discover', 'rollback_target', 'operation_status' ]
 				) );
 		}
 	}

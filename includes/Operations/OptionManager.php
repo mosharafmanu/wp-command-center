@@ -57,6 +57,15 @@ final class OptionManager {
 	 */
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		$action    = sanitize_key( $params['action'] ?? '' );
+
+		// Validate the action before any option-specific checks so an unknown
+		// action returns the self-describing invalid-action error (with the
+		// valid-actions list) instead of a misleading "option_id is required".
+		$valid_actions = [ 'option_get', 'option_update', 'option_rollback' ];
+		if ( ! in_array( $action, $valid_actions, true ) ) {
+			return new \WP_Error( 'wpcc_invalid_option_action', InvalidAction::message( 'option', $action, $valid_actions ) );
+		}
+
 		$option_id = sanitize_text_field( $params['option_id'] ?? '' );
 
 		// STEP 104.3 — option_rollback is drivable by rollback_id alone (e.g. from

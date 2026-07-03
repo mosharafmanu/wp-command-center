@@ -25,7 +25,7 @@ final class ApprovalRuntimeManager {
 	public function run( array $p, array $cx = [] ): array|\WP_Error {
 		$action = (string) ( $p['action'] ?? '' );
 		if ( ! in_array( $action, ApprovalRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_approval_action', __( 'Invalid approval action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_approval_action', InvalidAction::message( 'approval', $action, ApprovalRegistry::ACTIONS ) );
 		}
 
 		$actor = $cx['actor'] ?? [];

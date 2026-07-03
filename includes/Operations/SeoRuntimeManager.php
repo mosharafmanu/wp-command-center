@@ -44,7 +44,7 @@ final class SeoRuntimeManager {
 		$action = (string) ( $payload['action'] ?? '' );
 
 		if ( ! in_array( $action, SeoRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_seo_action', __( 'Invalid SEO action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_seo_action', InvalidAction::message( 'SEO', $action, SeoRegistry::ACTIONS ) );
 		}
 
 		// Every action needs an SEO provider except none-specific reporting.

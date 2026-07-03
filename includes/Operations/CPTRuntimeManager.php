@@ -36,7 +36,7 @@ final class CPTRuntimeManager {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, CPTRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_cpt_action', __( 'Invalid CPT action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_cpt_action', InvalidAction::message( 'CPT', $action, CPTRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

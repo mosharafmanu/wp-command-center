@@ -28,7 +28,7 @@ final class ContentManager {
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		$action = sanitize_key( $params['action'] ?? '' );
 		if ( ! in_array( $action, ContentRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_content_action', __( 'Invalid content action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_content_action', InvalidAction::message( 'content', $action, ContentRegistry::ACTIONS ) );
 		}
 
 		$content_id = (int) ( $params['content_id'] ?? 0 );

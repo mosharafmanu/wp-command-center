@@ -54,7 +54,7 @@ final class BulkRuntimeManager {
 
 	public function run(array $p,array $cx=[]):array{
 		$a=(string)($p['action']??'');
-		if(!in_array($a,BulkRegistry::ACTIONS,true))return $this->err('invalid',__('Invalid action.','wp-command-center'));
+		if(!in_array($a,BulkRegistry::ACTIONS,true))return $this->err('wpcc_invalid_bulk_action',InvalidAction::message('bulk',$a,BulkRegistry::ACTIONS));
 		$result=match($a){
 			BulkRegistry::A_BULK_CONTENT=>$this->bulk_content($p,$cx),
 			BulkRegistry::A_BULK_PUBLISH=>$this->bulk_status($p,'publish',$cx),

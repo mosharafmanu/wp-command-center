@@ -11,7 +11,7 @@ final class SearchRuntimeManager {
 
 	public function run(array $p,array $cx=[]):array{
 		$a=(string)($p['action']??'');
-		if(!in_array($a,SearchRegistry::ACTIONS,true))return $this->err('invalid',__('Invalid action.','wp-command-center'));
+		if(!in_array($a,SearchRegistry::ACTIONS,true))return $this->err('wpcc_invalid_search_action',InvalidAction::message('search',$a,SearchRegistry::ACTIONS));
 		$this->audit->record("search.$a",['query'=>$p['search']??'']);
 		$r=match($a){
 			SearchRegistry::A_SEARCH_ALL=>$this->search_all($p),

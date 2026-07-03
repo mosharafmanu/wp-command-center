@@ -19,7 +19,7 @@ final class CommentsRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$action = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $action, CommentsRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_comment_action', __( 'Invalid comment action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_comment_action', InvalidAction::message( 'comment', $action, CommentsRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

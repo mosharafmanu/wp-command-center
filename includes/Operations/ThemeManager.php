@@ -27,7 +27,7 @@ final class ThemeManager {
 		$slug   = sanitize_text_field( $params['slug'] ?? '' );
 
 		if ( ! in_array( $action, ThemeRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_theme_action', sprintf( __( 'Invalid action: %s. Use theme_list, theme_install, theme_activate, theme_update, or theme_delete.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_theme_action', InvalidAction::message( 'theme', $action, ThemeRegistry::ACTIONS ) );
 		}
 
 		if ( ThemeRegistry::ACTION_LIST !== $action && 'theme_rollback' !== $action && '' === $slug ) {

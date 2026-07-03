@@ -41,7 +41,7 @@ final class PluginManager {
 		$slug   = sanitize_text_field( $params['slug'] ?? '' );
 
 		if ( ! in_array( $action, PluginRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_plugin_action', sprintf( __( 'Invalid action: %s. Use plugin_list, plugin_install, plugin_activate, plugin_deactivate, plugin_update, or plugin_delete.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_plugin_action', InvalidAction::message( 'plugin', $action, PluginRegistry::ACTIONS ) );
 		}
 
 		if ( PluginRegistry::ACTION_LIST !== $action && 'plugin_rollback' !== $action && '' === $slug ) {

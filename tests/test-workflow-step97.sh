@@ -127,7 +127,7 @@ echo "== 10. Structured errors =="
 assert_eq "execute missing workflow" "nf" "$(wf '{"action":"workflow_execute","workflow_id":"does_not_exist"}' | jq -r '.code')"
 assert_eq "rollback missing execution_id" "missing_execution_id" "$(wf '{"action":"workflow_rollback"}' | jq -r '.code')"
 assert_eq "rollback unknown execution" "execution_not_found" "$(wf '{"action":"workflow_rollback","execution_id":"nope-123"}' | jq -r '.code')"
-assert_eq "invalid action" "invalid" "$(wf '{"action":"workflow_bogus"}' | jq -r '.code')"
+assert_eq "invalid action" "wpcc_invalid_workflow_action" "$(wf '{"action":"workflow_bogus"}' | jq -r '.code')"
 
 echo
 echo "================================================"

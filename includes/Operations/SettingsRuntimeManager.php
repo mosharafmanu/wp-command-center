@@ -14,7 +14,7 @@ final class SettingsRuntimeManager {
 
 	public function run(array $p,array $cx=[]):array|\WP_Error{
 		$a=(string)($p['action']??'');
-		if(!in_array($a,SettingsRegistry::ACTIONS,true))return new \WP_Error('wpcc_invalid_settings_action',__('Invalid settings action.','wp-command-center'));
+		if(!in_array($a,SettingsRegistry::ACTIONS,true))return new \WP_Error('wpcc_invalid_settings_action',InvalidAction::message('settings',$a,SettingsRegistry::ACTIONS));
 		$opts=[
 			SettingsRegistry::A_GENERAL_GET=>['general_get',false],SettingsRegistry::A_GENERAL_UPDATE=>['general_update',true],
 			SettingsRegistry::A_READING_GET=>['reading_get',false],SettingsRegistry::A_READING_UPDATE=>['reading_update',true],

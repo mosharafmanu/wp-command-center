@@ -23,7 +23,7 @@ final class WorkflowRuntimeManager {
 
 	public function run(array $p,array $cx=[]):array{
 		$a=(string)($p['action']??'');
-		if(!in_array($a,WorkflowRegistry::ACTIONS,true))return $this->err('invalid',__('Invalid workflow action.','wp-command-center'));
+		if(!in_array($a,WorkflowRegistry::ACTIONS,true))return $this->err('wpcc_invalid_workflow_action',InvalidAction::message('workflow',$a,WorkflowRegistry::ACTIONS));
 		$result=match($a){
 			WorkflowRegistry::A_LIST=>$this->list_workflows(),
 			WorkflowRegistry::A_GET=>$this->get_workflow($p),

@@ -23,7 +23,7 @@ final class FormsRuntimeManager {
 		$p = $this->providers[ $provider ];
 		$a = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $a, FormsRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_forms_action', __( 'Invalid forms action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_forms_action', InvalidAction::message( 'forms', $a, FormsRegistry::ACTIONS ) );
 		}
 
 		$result = match ( $a ) {

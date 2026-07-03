@@ -58,7 +58,7 @@ final class PatchOperation {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, self::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_patch_action', sprintf( __( 'Invalid action: %s. Use patch_preview, patch_create, patch_apply, patch_verify, or patch_status.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_patch_action', InvalidAction::message( 'patch', $action, self::ACTIONS ) );
 		}
 
 		$unknown = $this->reject_unknown_params( $params );

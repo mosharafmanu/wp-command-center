@@ -30,7 +30,7 @@ final class RollbackOperation {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, self::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_rollback_action', sprintf( __( 'Invalid action: %s. Use rollback_list, rollback_get, rollback_apply, or rollback_verify.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_rollback_action', InvalidAction::message( 'rollback', $action, self::ACTIONS ) );
 		}
 
 		return match ( $action ) {

@@ -21,7 +21,7 @@ final class CapabilityManager {
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		$action = sanitize_key( $params['action'] ?? '' );
 		if ( ! in_array( $action, CapabilityRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_capability_action', __( 'Invalid capability action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_capability_action', InvalidAction::message( 'capability', $action, CapabilityRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

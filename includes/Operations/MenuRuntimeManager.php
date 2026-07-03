@@ -14,7 +14,7 @@ final class MenuRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$a = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $a, MenuRegistry::ACTIONS, true ) ) {
-			return $this->err( 'wpcc_invalid_menu_action', __( 'Invalid menu action.', 'wp-command-center' ) );
+			return $this->err( 'wpcc_invalid_menu_action', InvalidAction::message( 'menu', $a, MenuRegistry::ACTIONS ) );
 		}
 		return match ( $a ) {
 			MenuRegistry::A_MENU_LIST       => $this->menu_list(),

@@ -22,7 +22,7 @@ final class MediaRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$action = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $action, MediaRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_media_action', __( 'Invalid media action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_media_action', InvalidAction::message( 'media', $action, MediaRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

@@ -33,7 +33,7 @@ final class SnapshotManager {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, SnapshotRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_snapshot_action', __( 'Invalid snapshot action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_snapshot_action', InvalidAction::message( 'snapshot', $action, SnapshotRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

@@ -25,7 +25,7 @@ final class SiteBuilderRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$action = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $action, SiteBuilderRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_site_builder_action', __( 'Invalid site builder action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_site_builder_action', InvalidAction::message( 'site builder', $action, SiteBuilderRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

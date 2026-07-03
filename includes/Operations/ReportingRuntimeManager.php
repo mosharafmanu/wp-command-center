@@ -56,7 +56,7 @@ final class ReportingRuntimeManager {
 	public function run( array $p, array $cx = [] ): array|\WP_Error {
 		$a = (string) ( $p['action'] ?? '' );
 		if ( ! in_array( $a, ReportingRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_report_action', __( 'Invalid report action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_report_action', InvalidAction::message( 'report', $a, ReportingRegistry::ACTIONS ) );
 		}
 
 		$report = match ( $a ) {

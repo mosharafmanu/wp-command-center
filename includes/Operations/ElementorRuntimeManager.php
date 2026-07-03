@@ -42,7 +42,7 @@ final class ElementorRuntimeManager {
 		}
 		$action = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $action, ElementorRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_elementor_action', __( 'Invalid Elementor action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_elementor_action', InvalidAction::message( 'Elementor', $action, ElementorRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

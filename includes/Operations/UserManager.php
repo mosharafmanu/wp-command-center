@@ -32,7 +32,7 @@ final class UserManager {
 		$action = (string) ( $payload['action'] ?? '' );
 
 		if ( ! in_array( $action, UserRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_user_action', __( 'Invalid user action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_user_action', InvalidAction::message( 'user', $action, UserRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {

@@ -150,7 +150,7 @@ final class MediaEnhancementRuntimeManager {
 	public function run( array $p, array $cx = [] ): array|\WP_Error {
 		$a = (string) ( $p['action'] ?? '' );
 		if ( ! in_array( $a, MediaEnhancementRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_media_enhance_action', __( 'Invalid media enhance action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_media_enhance_action', InvalidAction::message( 'media enhance', $a, MediaEnhancementRegistry::ACTIONS ) );
 		}
 
 		$report = match ( $a ) {

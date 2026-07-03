@@ -130,7 +130,7 @@ assert_true "bex: results is array" "$(echo "$BATCH" | jq -r 'if (.results | typ
 # ── 11. Validation — Invalid action ──
 echo "== 11. Validation =="
 BAD=$(api_post -d '{"action":"nonexistent_action"}' "$WPCC_BASE/operations/bulk_manage/run")
-assert_contains "val: invalid action error" "$BAD" "Invalid action"
+assert_contains "val: invalid action error" "$BAD" "Valid actions:"
 
 # Missing ids
 MISSING=$(api_post -d '{"action":"bulk_content"}' "$WPCC_BASE/operations/bulk_manage/run")
