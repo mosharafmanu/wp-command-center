@@ -158,7 +158,7 @@ else
 	CAPS="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
 	assert_eq "ALL_CAPABILITIES stays 23" "23" "$CAPS"
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
-	assert_eq "operation catalogue stays 40" "40" "$CAT"
+	assert_eq "operation catalogue stays 42" "42" "$CAT"
 	DBV="$(wpe 'echo get_option("wpcc_db_version");')"
 	assert_eq "DB_VERSION stays 2.5.0" "2.5.0" "$DBV"
 fi

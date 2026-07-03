@@ -79,7 +79,10 @@ final class ChangeRecorder {
 
 		$action         = (string) ( $payload['action'] ?? '' );
 		$effective_risk = SecurityModeManager::effective_risk( $operation, $action );
-		$is_failure     = 'failed' === $status;
+		// 'rejected' (validation failure) is treated like 'failed' here so neither is
+		// skipped by the low-tier no-footprint rule below — a rejected attempt must
+		// still be visible in history, never silently dropped or shown as applied.
+		$is_failure     = in_array( $status, [ 'failed', 'rejected' ], true );
 
 		// Read/diagnostic executions are not changes.
 		if ( SecurityModeManager::RISK_DIAGNOSTIC === $effective_risk ) {

@@ -20,11 +20,11 @@
 #   - View: posture strip + invariant strip + summary cards, escaped output, NO
 #     write/run controls
 #   - Functional (wp-cli, real bootstrap path): the overview envelope carries the
-#     posture, the invariants (op map 34 / caps 23 / catalogue 40 / mcp 40 /
+#     posture, the invariants (op map 34 / caps 23 / catalogue 42 / mcp 42 /
 #     db 2.4.0), and each subsystem summary, and the numbers match the surfaces
 #     that own them (no drift, no new source of truth)
-#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 40,
-#     MCP tools stay 40, DB_VERSION stays 2.4.0 (this step adds no runtime op, MCP
+#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 42,
+#     MCP tools stay 42, DB_VERSION stays 2.4.0 (this step adds no runtime op, MCP
 #     tool, capability, or schema)
 #
 # Requires: php, rg, wp-cli, wpcc-env.sh. (Admin routes are cookie+nonce, so the
@@ -133,9 +133,9 @@ else
 	INV_CAPS="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["capabilities"];')"
 	assert_eq "invariants.capabilities = 23" "23" "$INV_CAPS"
 	INV_CAT="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["catalogue"];')"
-	assert_eq "invariants.catalogue = 40" "40" "$INV_CAT"
+	assert_eq "invariants.catalogue = 42" "42" "$INV_CAT"
 	INV_MCP="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["mcp_tools"];')"
-	assert_eq "invariants.mcp_tools = 40 (one per operation)" "40" "$INV_MCP"
+	assert_eq "invariants.mcp_tools = 42 (one per operation)" "42" "$INV_MCP"
 	INV_DB="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (string) $r["invariants"]["db_version"];')"
 	assert_eq "invariants.db_version = 2.5.0" "2.5.0" "$INV_DB"
 
@@ -217,7 +217,7 @@ else
 	assert_eq "operations_explorer off -> operations gated, no count leaked" "ok" \
 		"$(w2 operations_explorer 'echo ( !empty($r["operations"]["gated"]) && !isset($r["operations"]["total"]) && !isset($r["operations"]["by_risk"]) ) ? "ok" : "leak";')"
 	assert_eq "operations_explorer off -> invariants strip still accurate (34/40/40)" "ok" \
-		"$(w2 operations_explorer 'echo ( (int)$r["invariants"]["operation_map"]===34 && (int)$r["invariants"]["catalogue"]===40 && (int)$r["invariants"]["mcp_tools"]===40 ) ? "ok" : "drift";')"
+		"$(w2 operations_explorer 'echo ( (int)$r["invariants"]["operation_map"]===34 && (int)$r["invariants"]["catalogue"]===42 && (int)$r["invariants"]["mcp_tools"]===42 ) ? "ok" : "drift";')"
 
 	# (e) Change History gated off -> change_history block gated AND the activity feed
 	#     is an empty list (no session data leaked through recent_activity).
@@ -233,15 +233,15 @@ else
 		"$(wpe 'add_filter("wpcc_feature_allowed", function($a,$f){ return ("approval_center"===$f) ? false : $a; }, 10, 2); $s = ( new \WPCommandCenter\Admin\ApprovalAdminQuery() )->summary(); echo isset($s["pending"]) ? "ok" : "bad";')"
 
 	echo
-	echo "== 7. Invariants unchanged (34 ops mapped / 23 caps / 40 catalogue / 40 MCP / 2.4.0) =="
+	echo "== 7. Invariants unchanged (34 ops mapped / 23 caps / 42 catalogue / 42 MCP / 2.4.0) =="
 	OPMAP="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
 	assert_eq "OPERATION_MAP stays 34" "34" "$OPMAP"
 	CAPS="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
 	assert_eq "ALL_CAPABILITIES stays 23" "23" "$CAPS"
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
-	assert_eq "operation catalogue stays 40" "40" "$CAT"
+	assert_eq "operation catalogue stays 42" "42" "$CAT"
 	MCP="$(wpe '$r = ( new \WPCommandCenter\Mcp\McpServerRuntime() )->handle( [ "jsonrpc" => "2.0", "id" => 1, "method" => "tools/list" ], [] ); echo isset( $r["result"]["tools"] ) ? count( $r["result"]["tools"] ) : -1;')"
-	assert_eq "MCP tools stay 40" "40" "$MCP"
+	assert_eq "MCP tools stay 42" "42" "$MCP"
 	DBV="$(wpe 'echo get_option("wpcc_db_version");')"
 	assert_eq "DB_VERSION stays 2.5.0" "2.5.0" "$DBV"
 fi

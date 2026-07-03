@@ -101,8 +101,8 @@ else
 	INV="$(wpe '$i=(new WPCommandCenter\Admin\DashboardAdminQuery())->overview()["invariants"]; echo $i["operation_map"].",".$i["capabilities"].",".$i["catalogue"].",".$i["mcp_tools"].",".$i["db_version"];')"
 	assert_eq "OPERATION_MAP 34" "34" "$(echo "$INV"|cut -d, -f1)"
 	assert_eq "CAPABILITIES 23"  "23" "$(echo "$INV"|cut -d, -f2)"
-	assert_eq "catalogue 40"     "40" "$(echo "$INV"|cut -d, -f3)"
-	assert_eq "MCP tools 40"     "40" "$(echo "$INV"|cut -d, -f4)"
+	assert_eq "catalogue 42"     "42" "$(echo "$INV"|cut -d, -f3)"
+	assert_eq "MCP tools 42"     "42" "$(echo "$INV"|cut -d, -f4)"
 	assert_eq "DB_VERSION 2.5.0" "2.5.0" "$(echo "$INV"|cut -d, -f5)"
 fi
 

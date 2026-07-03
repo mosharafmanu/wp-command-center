@@ -237,6 +237,16 @@ final class PatchApproval {
 		foreach ( $targets as $target ) {
 			$check = $this->verify_file( $target['real'] );
 
+			// Content integrity (ISSUE 1) — confirm the bytes on disk are EXACTLY the
+			// expected merged result, not just that they parse. This is what catches a
+			// partial/interfered write, or a change set whose same-file ops did not
+			// compose as intended: on mismatch we fail and the transactional restore
+			// below reverts every file, rather than reporting "applied + verified" for
+			// content that does not match the proposal.
+			$written = is_readable( $target['real'] ) ? (string) file_get_contents( $target['real'] ) : null;
+			$check['content_match'] = ( $written === $target['file']['modified'] );
+			$check['passed']        = $check['passed'] && $check['content_match'];
+
 			// Post-write header verification for plugin/theme bootstrap files: if
 			// the written file lost its header, fail so the auto-revert below
 			// restores it (the site never sees an invalid-header plugin/theme).

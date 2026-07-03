@@ -248,6 +248,11 @@ final class PatchOperation {
 			}
 		}
 
+		// Advisory: targets inside a git working tree may be reverted by a deploy
+		// pipeline (e.g. a theme's acf-json/, or theme/plugin files under a deploy
+		// repo). Non-blocking — just flag it so the change is also committed upstream.
+		$deploy_tracked = self::deploy_tracked_paths( array_map( static fn( array $f ): string => $f['path'], $files ) );
+
 		// PatchManager already audits patch.created.
 		return array_merge( [
 			'action'        => 'patch_create',
@@ -258,6 +263,8 @@ final class PatchOperation {
 			'file_count'    => count( $patch['files'] ),
 			'risk_level'    => $change_set['risk_level'],
 			'change_set'    => $change_set,
+			'deploy_tracked'      => $deploy_tracked,
+			'deploy_tracked_note' => empty( $deploy_tracked ) ? '' : __( 'One or more target files are inside a version-controlled (git) directory. If this site uses a deploy pipeline, changes applied here may be overwritten by the next deploy — commit them to the source repository as well.', 'wp-command-center' ),
 			// Echo how each file's edit was interpreted so the agent can confirm a
 			// partial edit was not silently treated as a whole-file replacement.
 			'files'         => array_map(
@@ -446,6 +453,8 @@ final class PatchOperation {
 
 		$guard      = new PathGuard();
 		$normalized = [];
+		$by_path    = []; // canonical path => index in $normalized, so repeat ops on
+		                  // one file chain onto each other instead of clobbering.
 
 		foreach ( $files as $file ) {
 			if ( ! is_array( $file ) ) {
@@ -467,26 +476,111 @@ final class PatchOperation {
 				return new \WP_Error( 'wpcc_not_readable', sprintf( __( '%s is not readable.', 'wp-command-center' ), $path ) );
 			}
 
-			$original = (string) file_get_contents( $real );
+			// Multiple ops on the same file within one change set must compose: each
+			// op resolves against the running (evolving) content — the previous op's
+			// output for an already-seen path, otherwise the current on-disk content.
+			// This fixes the "last write wins / first op clobbered" bug where every
+			// op was resolved against the same disk original. The true disk `original`
+			// is preserved (for diffing, snapshotting, and rollback), and same-path
+			// ops collapse into a single cumulative entry the rest of the engine
+			// writes exactly once.
+			$chained = isset( $by_path[ $path ] );
+			if ( $chained ) {
+				$original = $normalized[ $by_path[ $path ] ]['original'];
+				$base     = $normalized[ $by_path[ $path ] ]['modified'];
+			} else {
+				$original = (string) file_get_contents( $real );
+				$base     = $original;
+			}
 
-			// Resolve the patch mode against the real on-disk content. This both
-			// rejects unknown per-file fields and turns a precise edit (append,
-			// replace_text, …) into the full modified body.
-			$resolved = PatchModeResolver::resolve( array_merge( $file, [ 'path' => $path ] ), $original );
+			// Resolve the patch mode against the running content. This both rejects
+			// unknown per-file fields and turns a precise edit (append, replace_text,
+			// …) into the full modified body.
+			$resolved = PatchModeResolver::resolve( array_merge( $file, [ 'path' => $path ] ), $base );
 			if ( is_wp_error( $resolved ) ) {
+				// If a LATER op on an already-edited file cannot apply (e.g. its
+				// replace_text `find` no longer matches because an earlier op in the
+				// same change set changed that text), reject the WHOLE change set with
+				// a clear, path-named conflict error. Nothing is written at create
+				// time, so this is inherently atomic — no partial change lands.
+				if ( $chained ) {
+					return new \WP_Error(
+						'wpcc_change_set_conflict',
+						sprintf(
+							/* translators: 1: file path, 2: underlying resolver message */
+							__( 'Conflicting edits on "%1$s" in one change set: a later op could not apply on the result of the earlier op(s) — %2$s. The whole change set was rejected so no partial change is written; re-express the edits against the evolving content, or split them into separate change sets.', 'wp-command-center' ),
+							$path,
+							$resolved->get_error_message()
+						)
+					);
+				}
 				return $resolved;
 			}
 
-			$normalized[] = [
+			if ( $chained ) {
+				$idx = $by_path[ $path ];
+				$normalized[ $idx ]['modified'] = $resolved['modified'];
+				// The entry now represents several chained ops applied in order; the
+				// cumulative body is a full-file result. Track the op count and keep a
+				// readable, combined summary.
+				$normalized[ $idx ]['meta']['chained_ops'] = ( $normalized[ $idx ]['meta']['chained_ops'] ?? 1 ) + 1;
+				if ( ! empty( $resolved['meta']['summary'] ) ) {
+					$prev = (string) ( $normalized[ $idx ]['meta']['summary'] ?? '' );
+					$normalized[ $idx ]['meta']['summary'] = '' === $prev
+						? $resolved['meta']['summary']
+						: $prev . '; ' . $resolved['meta']['summary'];
+				}
+				continue;
+			}
+
+			$normalized[]     = [
 				'path'     => $path,
 				'modified' => $resolved['modified'],
 				'mode'     => $resolved['mode'],
 				'meta'     => $resolved['meta'],
 				'original' => $original,
 			];
+			$by_path[ $path ] = array_key_last( $normalized );
 		}
 
 		return $normalized;
+	}
+
+	/**
+	 * Detect change-set targets that live inside a git working tree — a proxy for
+	 * "managed by a deploy pipeline." Writes to such paths (e.g. a theme's
+	 * acf-json/, or theme/plugin files tracked in a deploy repo) can be silently
+	 * overwritten by the next deploy, so callers surface a non-blocking advisory.
+	 * Read-only stat walk from each file up toward the filesystem root, depth-capped.
+	 *
+	 * @param array<int,string> $paths wp-content-relative paths.
+	 * @return array<int,string> The subset that sits under a .git working tree.
+	 */
+	private static function deploy_tracked_paths( array $paths ): array {
+		$guard   = new PathGuard();
+		$tracked = [];
+
+		foreach ( array_unique( $paths ) as $path ) {
+			$real = $guard->resolve( $path );
+			if ( is_wp_error( $real ) ) {
+				continue;
+			}
+
+			$dir = dirname( $real );
+			for ( $depth = 0; $depth < 10 && '' !== $dir && '/' !== $dir && '.' !== $dir; $depth++ ) {
+				if ( is_dir( $dir . '/.git' ) ) {
+					$tracked[] = $path;
+					break;
+				}
+				$parent = dirname( $dir );
+				if ( $parent === $dir ) {
+					break;
+				}
+				$dir = $parent;
+			}
+		}
+
+		return array_values( $tracked );
 	}
 
 	/**

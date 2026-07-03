@@ -394,10 +394,47 @@ final class McpServerRuntime {
 			}
 		}
 
+		// Idempotency (write ops only): a client-supplied key lets a retried call —
+		// e.g. after a transport timeout — return the recorded result instead of
+		// executing a second time and leaving duplicate/orphan state. Reads are
+		// naturally safe to repeat, so they skip this. No key → unchanged behavior.
+		$idem_key   = isset( $params['idempotency_key'] ) ? substr( sanitize_text_field( (string) $params['idempotency_key'] ), 0, 64 ) : '';
+		$idem_store = null;
+		if ( '' !== $idem_key && $cap_reg->requires_full_scope( $tool_name ) ) {
+			$idem_store = new IdempotencyStore();
+			$claim      = $idem_store->claim( $idem_key, (string) $tool_name );
+			if ( 'done' === $claim['claim'] ) {
+				$this->audit( 'mcp.idempotent.replay', [ 'tool' => $tool_name ], $context );
+				return $claim['result'];
+			}
+			if ( 'in_progress' === $claim['claim'] ) {
+				$this->audit( 'mcp.idempotent.in_progress', [ 'tool' => $tool_name ], $context );
+				return $this->tool_error( 'wpcc_idempotent_in_progress', __( 'This request is already being processed (same idempotency key). It was not run again — check History for the outcome.', 'wp-command-center' ) );
+			}
+		}
+
 		// Execute via OperationExecutor
 		$executor = new OperationExecutor();
 		$result   = $executor->run( $tool_name, $args, $context );
 
+		$response = $this->build_tool_response( $result, $mode );
+
+		// Record the terminal outcome (success OR failure) under the idempotency key
+		// so any retry with the same key returns exactly this instead of re-running.
+		if ( null !== $idem_store ) {
+			$idem_store->complete( $idem_key, $response );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Shape an OperationExecutor result into the MCP tools/call response: the
+	 * STEP 89 in-band error convention, then context-mode optimization + redaction.
+	 *
+	 * @param array<string,mixed> $result OperationExecutor::run() return.
+	 */
+	private function build_tool_response( array $result, string $mode ): array {
 		if ( ! $result['success'] ) {
 			$err = $result['errors'][0] ?? [ 'code' => 'unknown_error', 'message' => 'Unknown error' ];
 			return $this->tool_error( (string) ( $err['code'] ?? 'unknown_error' ), (string) ( $err['message'] ?? 'Unknown error' ) );

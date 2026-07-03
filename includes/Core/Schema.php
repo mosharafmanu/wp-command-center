@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Schema {
 
-	public const DB_VERSION = '2.5.0';
+	public const DB_VERSION = '2.6.0';
 
 	/**
 	 * Install schema changes when the active plugin code is newer than the
@@ -56,6 +56,7 @@ final class Schema {
 		$health_results_table = $wpdb->prefix . 'wpcc_health_verifications';
 		$change_log_table     = $wpdb->prefix . 'wpcc_change_log';
 		$proposals_table      = $wpdb->prefix . 'wpcc_proposals';
+		$idempotency_table    = $wpdb->prefix . 'wpcc_idempotency';
 
 		dbDelta( "CREATE TABLE {$patches_table} (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -384,6 +385,24 @@ final class Schema {
 			KEY target (target_type, target_id),
 			KEY created_at (created_at),
 			KEY expires_at (expires_at)
+		) {$charset_collate};" );
+
+		// Idempotency journal for MCP write operations. A client-supplied key is
+		// claimed (atomic INSERT on the UNIQUE idem_key) BEFORE the operation runs,
+		// so a timed-out call that is retried with the same key never executes twice
+		// — the retry gets the recorded result instead. See IdempotencyStore.
+		dbDelta( "CREATE TABLE {$idempotency_table} (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			idem_key VARCHAR(64) NOT NULL,
+			tool VARCHAR(191) NOT NULL,
+			status VARCHAR(20) NOT NULL,
+			result_json LONGTEXT NULL,
+			created_at BIGINT UNSIGNED NOT NULL,
+			completed_at BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY idem_key (idem_key),
+			KEY status (status),
+			KEY created_at (created_at)
 		) {$charset_collate};" );
 
 		update_option( 'wpcc_db_version', self::DB_VERSION );

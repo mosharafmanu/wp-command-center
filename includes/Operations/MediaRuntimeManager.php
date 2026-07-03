@@ -176,9 +176,11 @@ final class MediaRuntimeManager {
 	}
 
 	private function search_media( array $payload ): array {
-		$search = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
+		// Accept the schema-advertised `search` plus common aliases the caller may
+		// reach for (query/s), so a reasonable parameter name never dead-ends.
+		$search = sanitize_text_field( (string) ( $payload['search'] ?? $payload['query'] ?? $payload['s'] ?? '' ) );
 		if ( '' === $search ) {
-			return $this->error( 'wpcc_media_empty_search', __( 'Search term is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_empty_search', __( "media_search requires a 'search' parameter (the keyword to look for; aliases: query, s).", 'wp-command-center' ) );
 		}
 
 		$query = new \WP_Query( [

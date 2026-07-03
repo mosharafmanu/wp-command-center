@@ -31,6 +31,7 @@ final class ACFRegistry {
 	const ACTION_JSON_DIFF        = 'acf_json_diff';
 	const ACTION_VALUE_GET        = 'acf_value_get';
 	const ACTION_VALUE_UPDATE     = 'acf_value_update';
+	const ACTION_VALUE_SET        = 'acf_value_set';
 	const ACTION_BULK_VALUE_UPDATE = 'acf_bulk_value_update';
 	const ACTION_INVENTORY         = 'acf_inventory';
 	// STEP 92 — flexible-content layout management.
@@ -58,7 +59,7 @@ final class ACFRegistry {
 		self::ACTION_FIELD_DELETE, self::ACTION_FIELD_DUPLICATE,
 		self::ACTION_LOCATION_LIST, self::ACTION_LOCATION_ASSIGN, self::ACTION_LOCATION_REMOVE,
 		self::ACTION_JSON_STATUS, self::ACTION_JSON_EXPORT, self::ACTION_JSON_IMPORT, self::ACTION_JSON_SYNC, self::ACTION_JSON_DIFF,
-		self::ACTION_VALUE_GET, self::ACTION_VALUE_UPDATE, self::ACTION_BULK_VALUE_UPDATE,
+		self::ACTION_VALUE_GET, self::ACTION_VALUE_UPDATE, self::ACTION_VALUE_SET, self::ACTION_BULK_VALUE_UPDATE,
 		self::ACTION_INVENTORY,
 		self::ACTION_LAYOUT_CREATE, self::ACTION_LAYOUT_UPDATE,
 	];
@@ -74,7 +75,7 @@ final class ACFRegistry {
 			self::ACTION_GROUP_LIST => $L, self::ACTION_GROUP_GET => $L, self::ACTION_FIELD_LIST => $L,
 			self::ACTION_FIELD_GET => $L, self::ACTION_INVENTORY => $L, self::ACTION_JSON_STATUS => $L,
 			self::ACTION_VALUE_GET => $L, self::ACTION_LOCATION_LIST => $L,
-			self::ACTION_VALUE_UPDATE => $M, self::ACTION_BULK_VALUE_UPDATE => $M,
+			self::ACTION_VALUE_UPDATE => $M, self::ACTION_VALUE_SET => $M, self::ACTION_BULK_VALUE_UPDATE => $M,
 			self::ACTION_LOCATION_ASSIGN => $M, self::ACTION_LOCATION_REMOVE => $M,
 			self::ACTION_JSON_SYNC => $M, self::ACTION_JSON_DIFF => $M, self::ACTION_JSON_EXPORT => $M,
 			self::ACTION_GROUP_CREATE => $H, self::ACTION_GROUP_UPDATE => $H, self::ACTION_GROUP_DELETE => $H,

@@ -322,6 +322,51 @@ final class OperationExecutor {
 			return $this->fail( $operation_id, $error_code, $result->get_error_message() );
 		}
 
+		// STEP 89 parity in the executor (ISSUE 4 — audit integrity): some handlers
+		// report failure in-band as { error:true, code, message } rather than a
+		// WP_Error (e.g. acf_manage's invalid-action guard, media_*). Without this,
+		// such a result flows into the success path below and is recorded in the
+		// change log as "applied" — poisoning the audit trail with a change that
+		// never happened. Detect it here and route it through a truthful failure
+		// record: 'rejected' for validation-type rejections, 'failed' otherwise.
+		if ( is_array( $result ) && ! empty( $result['error'] ) && isset( $result['code'] ) && is_string( $result['code'] ) ) {
+			$error_code    = (string) $result['code'];
+			$error_message = (string) ( $result['message'] ?? __( 'Operation failed.', 'wp-command-center' ) );
+			$is_rejection  = (bool) preg_match( '/(invalid|missing|unknown|not_found|unsupported|denied|required)/', $error_code );
+			$change_status = $is_rejection ? 'rejected' : 'failed';
+
+			$res_id = $res_manager->create( array_merge( $res_base, [
+				'status'      => 'failed',
+				'error_count' => 1,
+				'error_json'  => wp_json_encode( [ 'code' => $error_code, 'message' => $error_message ] ),
+			] ) );
+
+			$audit->record( "operation.{$operation_id}.{$change_status}", array_merge( $links, [
+				'error_code'    => $error_code,
+				'error_message' => $error_message,
+				'actor'         => $actor ? AuditLog::resolve_actor( $actor ) : null,
+			] ) );
+
+			// Record the attempt truthfully (never "applied") so history is honest.
+			( new ChangeRecorder() )->record( [
+				'operation'    => $operation,
+				'operation_id' => $operation_id,
+				'payload'      => $payload,
+				'context'      => $context,
+				'links'        => $links,
+				'status'       => $change_status,
+				'result'       => [],
+				'result_ref'   => $res_id,
+				'counts'       => [ 0, 0, 0, 1 ],
+			] );
+
+			if ( $is_requested ) {
+				( new OperationManager() )->finalize_execution( (string) $context['request_id'], false );
+			}
+
+			return $this->fail( $operation_id, $error_code, $error_message );
+		}
+
 		// 4. Normalize response.
 		$normalized = $this->normalize_success( $operation_id, $result );
 
@@ -501,6 +546,10 @@ final class OperationExecutor {
 				return new WooCommerceRuntimeManager();
 			case 'acf_manage':
 				return new ACFRuntimeManager();
+			case 'term_manage':
+				return new TermRuntimeManager();
+			case 'cache_manage':
+				return new CacheRuntimeManager();
 			case 'forms_manage':
 				return new FormsRuntimeManager();
 			case 'menu_manage':

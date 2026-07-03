@@ -118,7 +118,7 @@ final class CapabilityRegistry {
 	 * regardless of CapabilityRegistry::OPERATION_MAP mapping). Every other
 	 * operation requires a `full`-scope token, mirroring RestApi::require_write().
 	 */
-	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search', 'change_history' ];
+	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search', 'change_history', 'term_manage' ];
 
 	/**
 	 * Step 79 — Capability profiles. Single source of truth for the

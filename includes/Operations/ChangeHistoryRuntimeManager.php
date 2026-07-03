@@ -54,13 +54,49 @@ final class ChangeHistoryRuntimeManager {
 				return $this->rollback_discover( $p );
 			case 'rollback_target':
 				return $this->rollback_target( $p, $cx );
+			case 'operation_status':
+				return $this->operation_status( $p );
 			default:
 				return $this->err( 'wpcc_invalid_history_action', sprintf(
 					/* translators: %s: action */
-					__( 'Unknown change_history action: %s. Supported: history_list, history_get, history_timeline, rollback_discover, rollback_target.', 'wp-command-center' ),
+					__( 'Unknown change_history action: %s. Supported: history_list, history_get, history_timeline, rollback_discover, rollback_target, operation_status.', 'wp-command-center' ),
 					$action
 				) );
 		}
+	}
+
+	/**
+	 * ISSUE 2 — operation_status: a client that lost a response to a transport
+	 * timeout can ask "did my request with idempotency key X commit?" instead of
+	 * guessing (which previously led to duplicate writes). Reads the idempotency
+	 * journal populated by the MCP write path. The relay logs the key it used per
+	 * tools/call to stderr, so a timed-out session can recover it.
+	 *
+	 * @param array<string,mixed> $p
+	 * @return array<string,mixed>
+	 */
+	private function operation_status( array $p ): array {
+		$key = sanitize_text_field( (string) ( $p['idempotency_key'] ?? '' ) );
+		if ( '' === $key ) {
+			return $this->err( 'wpcc_missing_idempotency_key', __( 'idempotency_key is required for operation_status.', 'wp-command-center' ) );
+		}
+
+		$entry  = ( new \WPCommandCenter\Mcp\IdempotencyStore() )->lookup( $key );
+		$status = $entry['status'] ?? 'unknown';
+
+		return [
+			'action'          => 'operation_status',
+			'idempotency_key' => $key,
+			'found'           => (bool) $entry['found'],
+			'status'          => $status,
+			// committed=true means the write completed server-side and is safe NOT to
+			// retry; found=false means it never reached the journal (safe to retry).
+			'committed'       => 'done' === $status,
+			'tool'            => $entry['tool'] ?? null,
+			'created_at'      => $entry['created_at'] ?? null,
+			'completed_at'    => $entry['completed_at'] ?? null,
+			'result'          => $entry['result'] ?? null,
+		];
 	}
 
 	// ── history_list ────────────────────────────────────────────────

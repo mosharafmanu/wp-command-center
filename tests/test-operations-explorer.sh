@@ -15,11 +15,11 @@
 #     capability straight from CapabilityRegistry::OPERATION_MAP
 #   - Menu: "Operations Explorer" submenu added, FeatureGate-gated
 #   - View: filterable catalogue table, escaped output, NO write/run controls
-#   - Functional (wp-cli, real bootstrap path): catalogue = 40 operations, exactly
-#     34 carry a required capability (LEFT JOIN over OPERATION_MAP), 6 unrestricted,
+#   - Functional (wp-cli, real bootstrap path): catalogue = 42 operations, exactly
+#     34 carry a required capability (LEFT JOIN over OPERATION_MAP), 8 unrestricted,
 #     the 5 read-only-scope operations are flagged, per-action risk preserved, and
 #     availability mirrors OperationRegistry::get_operations()
-#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 40
+#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 42
 #     (this step adds no runtime op, MCP tool, or capability)
 #
 # Requires: php, rg, wp-cli, wpcc-env.sh. (Admin routes are cookie+nonce, so the
@@ -284,7 +284,7 @@ else
 	assert_eq "exactly 34 operations carry a required capability" "34" "$MAPPED"
 
 	UNMAPPED="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->summary(); echo (int) $r["unmapped_count"];')"
-	assert_eq "summary unmapped_count = 6" "6" "$UNMAPPED"
+	assert_eq "summary unmapped_count = 8" "8" "$UNMAPPED"
 
 	SUM_TOTAL="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->summary(); echo (int) $r["total"];')"
 	assert_eq "summary total = 40" "40" "$SUM_TOTAL"
@@ -372,19 +372,19 @@ else
 	assert_eq "gating is per-key (change_history unaffected)" "yes" "$FG_OTHER"
 
 	echo
-	echo "== 7. Invariants unchanged (34 ops mapped / 23 caps / 40 catalogue) =="
+	echo "== 7. Invariants unchanged (34 ops mapped / 23 caps / 42 catalogue) =="
 	OPMAP="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
 	assert_eq "OPERATION_MAP stays 34" "34" "$OPMAP"
 	CAPS="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
 	assert_eq "ALL_CAPABILITIES stays 23" "23" "$CAPS"
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
-	assert_eq "operation catalogue stays 40" "40" "$CAT"
+	assert_eq "operation catalogue stays 42" "42" "$CAT"
 
 	# MCP tools = one per catalogue operation (McpServerRuntime tools/list). Assert
 	# via the runtime handle (no token needed at this layer) so the 40-tool invariant
 	# is proven, not merely inferred from the catalogue count.
 	MCP="$(wpe '$r = ( new \WPCommandCenter\Mcp\McpServerRuntime() )->handle( [ "jsonrpc" => "2.0", "id" => 1, "method" => "tools/list" ], [] ); echo isset( $r["result"]["tools"] ) ? count( $r["result"]["tools"] ) : -1;')"
-	assert_eq "MCP tools stay 40" "40" "$MCP"
+	assert_eq "MCP tools stay 42" "42" "$MCP"
 
 	# DB schema version is untouched by this admin-only step.
 	DBV="$(wpe 'echo get_option("wpcc_db_version");')"

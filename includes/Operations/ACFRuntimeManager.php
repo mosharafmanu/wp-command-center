@@ -30,8 +30,20 @@ final class ACFRuntimeManager {
 			return $this->error( 'wpcc_acf_inactive', __( 'Advanced Custom Fields is not active.', 'wp-command-center' ) );
 		}
 		$a = (string) ( $payload['action'] ?? '' );
+		if ( 'acf_describe' === $a ) {
+			return $this->describe();
+		}
 		if ( ! in_array( $a, ACFRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_acf_action', __( 'Invalid ACF action.', 'wp-command-center' ) );
+			return $this->error(
+				'wpcc_invalid_acf_action',
+				sprintf(
+					/* translators: 1: the invalid action, 2: comma-separated valid actions */
+					__( 'Invalid ACF action "%1$s". Valid actions: %2$s. Call action="acf_describe" for details.', 'wp-command-center' ),
+					$a,
+					implode( ', ', ACFRegistry::ACTIONS )
+				),
+				[ 'valid_actions' => ACFRegistry::ACTIONS ]
+			);
 		}
 		return match ( $a ) {
 			ACFRegistry::ACTION_GROUP_LIST       => $this->group_list( $payload ),
@@ -57,6 +69,7 @@ final class ACFRuntimeManager {
 			ACFRegistry::ACTION_JSON_DIFF        => $this->json_diff( $payload ),
 			ACFRegistry::ACTION_VALUE_GET        => $this->value_get( $payload ),
 			ACFRegistry::ACTION_VALUE_UPDATE     => $this->value_update( $payload, $context ),
+			ACFRegistry::ACTION_VALUE_SET        => $this->value_set( $payload, $context ),
 			ACFRegistry::ACTION_BULK_VALUE_UPDATE => $this->bulk_value_update( $payload, $context ),
 			ACFRegistry::ACTION_INVENTORY         => $this->inventory( $payload ),
 			ACFRegistry::ACTION_LAYOUT_CREATE     => $this->layout_create( $payload, $context ),
@@ -558,11 +571,58 @@ final class ACFRuntimeManager {
 	}
 
 	private function value_get( array $p ): array {
-		$post_id = (int) ( $p['post_id'] ?? 0 );
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? $p['field_name'] ?? '' ) );
 		if ( '' === $key ) return $this->error( 'wpcc_missing_field', __( 'Field key or name is required.', 'wp-command-center' ) );
-		$value = get_field( $key, $post_id ?: false );
-		return [ 'action' => 'acf_value_get', 'post_id' => $post_id, 'field_key' => $key, 'value' => $value ];
+
+		// ISSUE 10 — route through the same selector resolution as acf_value_set so a
+		// term/user/option value is read from the RIGHT object. Never silently fall
+		// back to post_id 0 (which returns value:false and hides a real value).
+		$object_type = sanitize_key( (string) ( $p['object_type'] ?? '' ) );
+		if ( '' === $object_type && isset( $p['post_id'] ) ) {
+			$object_type = 'post';
+		}
+		if ( '' !== $object_type ) {
+			$object_id = (int) ( $p['object_id'] ?? $p['post_id'] ?? 0 );
+			$selector  = $this->resolve_acf_selector( $object_type, $object_id );
+			if ( is_array( $selector ) ) {
+				return $selector; // error() — object params present but unresolvable
+			}
+		} else {
+			// No object identity supplied: legacy behavior (current/global context).
+			$selector = false;
+		}
+
+		$value = get_field( $key, $selector );
+		return [
+			'action'      => 'acf_value_get',
+			'object_type' => '' !== $object_type ? $object_type : null,
+			'selector'    => is_bool( $selector ) ? null : (string) $selector,
+			'post_id'     => is_int( $selector ) ? $selector : 0,
+			'field_key'   => $key,
+			'value'       => $value,
+		];
+	}
+
+	/**
+	 * ISSUE 9 — self-describe: list the runtime's actions with risk/approval so a
+	 * caller never has to read plugin source to learn valid action names. Generated
+	 * from ACFRegistry (the same source of truth the risk/approval maps use).
+	 */
+	private function describe(): array {
+		$actions = [];
+		foreach ( ACFRegistry::ACTIONS as $act ) {
+			$actions[] = [
+				'action'            => $act,
+				'risk'              => ACFRegistry::get_risk( $act ),
+				'requires_approval' => ACFRegistry::requires_approval( $act ),
+			];
+		}
+		return [
+			'action'  => 'acf_describe',
+			'runtime' => 'acf_manage',
+			'actions' => $actions,
+			'notes'   => __( 'acf_value_set/get accept {object_type: post|term|user|option, object_id}. acf_value_set takes fields:{field_key:value}. Definition ops (group_*/field_*) are high-risk and approval-gated.', 'wp-command-center' ),
+		];
 	}
 
 	private function value_update( array $p, array $cx ): array {
@@ -603,6 +663,161 @@ final class ACFRuntimeManager {
 		}
 		$this->audit->record( 'acf.value.bulk_updated', [ 'post_id' => $post_id, 'count' => count( $updated ) ] );
 		return [ 'action' => 'acf_bulk_value_update', 'post_id' => $post_id, 'updated_fields' => $updated ];
+	}
+
+	/**
+	 * Location-rule params that legitimately target each ACF object type. Used to
+	 * reject writing a field to an object its field group does not apply to.
+	 */
+	private const LOCATION_PARAMS = [
+		'post'   => [ 'post_type', 'post_template', 'post_status', 'post_format', 'post_category', 'post_taxonomy', 'page_template', 'page_type', 'page_parent', 'page' ],
+		'term'   => [ 'taxonomy' ],
+		'user'   => [ 'user_form', 'user_role' ],
+		'option' => [ 'options_page' ],
+	];
+
+	/**
+	 * ISSUE 3 — set an ACF field value on any object type (post/term/user/option),
+	 * not just posts. Routes to the correct native ACF selector so a term/user id
+	 * can never be mistaken for a post id and silently corrupt unrelated postmeta.
+	 * Backward compatible: a bare post_id still works (mapped to object_type=post).
+	 * Snapshots prior values and returns a rollback_id like other mutating ops.
+	 */
+	private function value_set( array $p, array $cx ): array {
+		$object_type = sanitize_key( (string) ( $p['object_type'] ?? '' ) );
+		if ( '' === $object_type && isset( $p['post_id'] ) ) {
+			$object_type = 'post';
+		}
+		$object_id = (int) ( $p['object_id'] ?? $p['post_id'] ?? 0 );
+
+		$fields = (array) ( $p['fields'] ?? [] );
+		if ( empty( $fields ) && ( isset( $p['field_key'] ) || isset( $p['field_name'] ) ) ) {
+			$single = (string) ( $p['field_key'] ?? $p['field_name'] ?? '' );
+			if ( '' !== $single ) {
+				$fields = [ $single => $p['value'] ?? null ];
+			}
+		}
+		if ( empty( $fields ) ) {
+			return $this->error( 'wpcc_no_fields', __( 'No fields supplied. Provide fields:{field_key:value} (or field_key + value).', 'wp-command-center' ) );
+		}
+
+		// Resolve to a native ACF selector and validate the target object EXISTS.
+		// This is the guard against wrong-table corruption: term/user/option values
+		// go to their own selector, never to a post's meta.
+		$selector = $this->resolve_acf_selector( $object_type, $object_id );
+		if ( is_array( $selector ) ) {
+			return $selector; // error() shape
+		}
+
+		// Validate each field exists AND its group location applies to this object
+		// type; capture the prior raw value for rollback.
+		$before = [ 'selector' => $selector, 'object_type' => $object_type, 'object_id' => $object_id, 'fields' => [] ];
+		foreach ( array_keys( $fields ) as $rawk ) {
+			$k = sanitize_text_field( (string) $rawk );
+			$field_object = acf_get_field( $k );
+			if ( ! $field_object ) {
+				return $this->error( 'wpcc_unknown_acf_field', sprintf( __( 'ACF field "%s" not found.', 'wp-command-center' ), $k ) );
+			}
+			if ( 'no' === $this->field_targets_object_type( $field_object, $object_type ) ) {
+				return $this->error( 'wpcc_acf_location_mismatch', sprintf(
+					/* translators: 1: field key, 2: object type */
+					__( 'ACF field "%1$s" does not apply to a %2$s — its field group location targets a different object type. Refusing to write to avoid corrupting unrelated data.', 'wp-command-center' ),
+					$k,
+					$object_type
+				) );
+			}
+			$before['fields'][ $k ] = get_field( $k, $selector, false );
+		}
+
+		// Apply.
+		foreach ( $fields as $rawk => $value ) {
+			update_field( sanitize_text_field( (string) $rawk ), $value, $selector );
+		}
+
+		$rid = $this->store_rollback( (string) $selector, 'value_set', $before, $cx );
+		$this->audit->record( 'acf.value.set', [ 'object_type' => $object_type, 'object_id' => $object_id, 'fields' => array_keys( $before['fields'] ) ] );
+
+		return [
+			'action'      => 'acf_value_set',
+			'object_type' => $object_type,
+			'object_id'   => $object_id,
+			'selector'    => (string) $selector,
+			'field_count' => count( $fields ),
+			'rollback_id' => '' !== $rid ? $rid : null,
+		];
+	}
+
+	/**
+	 * Resolve an object_type + id into the native ACF selector, validating the
+	 * target exists. Returns an int|string selector, or an error() array.
+	 *
+	 * @return int|string|array<string,mixed>
+	 */
+	private function resolve_acf_selector( string $type, int $id ) {
+		switch ( $type ) {
+			case 'post':
+				if ( $id <= 0 || ! get_post( $id ) ) {
+					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent post ID.', 'wp-command-center' ) );
+				}
+				return $id;
+			case 'term':
+				$term = $id > 0 ? get_term( $id ) : null;
+				if ( ! $term || is_wp_error( $term ) ) {
+					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent term ID.', 'wp-command-center' ) );
+				}
+				return 'term_' . $id;
+			case 'user':
+				if ( $id <= 0 || ! get_userdata( $id ) ) {
+					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent user ID.', 'wp-command-center' ) );
+				}
+				return 'user_' . $id;
+			case 'option':
+				return 'option';
+			default:
+				return $this->error( 'wpcc_invalid_object_type', __( 'object_type must be one of: post, term, user, option.', 'wp-command-center' ) );
+		}
+	}
+
+	/**
+	 * Best-effort check that a field's group location rules target $object_type.
+	 * Returns 'no' only on a CLEAR mismatch (the group has location rules and none
+	 * apply to the object type); 'unknown' when indeterminate (permissive).
+	 */
+	private function field_targets_object_type( array $field_object, string $type ): string {
+		$group = $this->resolve_field_group( $field_object );
+		$rules = $group['location'] ?? [];
+		$expected = self::LOCATION_PARAMS[ $type ] ?? [];
+		if ( empty( $rules ) || empty( $expected ) ) {
+			return 'unknown';
+		}
+		foreach ( $rules as $group_rules ) {
+			foreach ( (array) $group_rules as $rule ) {
+				if ( in_array( $rule['param'] ?? '', $expected, true ) ) {
+					return 'yes';
+				}
+			}
+		}
+		return 'no';
+	}
+
+	/** Resolve the top-level field group for a field, walking up sub-field parents. */
+	private function resolve_field_group( array $field_object ): array {
+		$parent = $field_object['parent'] ?? '';
+		$guard  = 0;
+		while ( is_string( $parent ) && str_starts_with( $parent, 'field_' ) && $guard++ < 10 ) {
+			$pf = acf_get_field( $parent );
+			if ( ! $pf ) {
+				break;
+			}
+			$parent = $pf['parent'] ?? '';
+		}
+		if ( is_string( $parent ) && '' !== $parent ) {
+			$g = acf_get_field_group( $parent );
+			if ( $g ) {
+				return $g;
+			}
+		}
+		return [];
 	}
 
 	private function inventory( array $p ): array {
@@ -671,6 +886,11 @@ final class ACFRuntimeManager {
 			if ( $g ) acf_update_field_group( array_merge( $g, [ 'location' => $before['location'] ?? [] ] ) );
 		} elseif ( 'value_update' === $act ) {
 			if ( isset( $before['post_id'], $before['key'] ) ) update_field( $before['key'], $before['value'], $before['post_id'] );
+		} elseif ( 'value_set' === $act ) {
+			$selector = $before['selector'] ?? $eid;
+			foreach ( (array) ( $before['fields'] ?? [] ) as $key => $val ) {
+				update_field( (string) $key, $val, $selector );
+			}
 		} elseif ( in_array( $act, [ 'layout_create', 'layout_update' ], true ) ) {
 			$f = acf_get_field( $eid );
 			if ( $f ) { $f['layouts'] = $before['layouts'] ?? []; acf_update_field( $f ); }
@@ -687,7 +907,7 @@ final class ACFRuntimeManager {
 	 */
 	private const ROLLBACKABLE = [
 		'group_create', 'group_update', 'group_delete', 'field_create', 'field_update',
-		'field_delete', 'location_assign', 'location_remove', 'value_update', 'json_import',
+		'field_delete', 'location_assign', 'location_remove', 'value_update', 'value_set', 'json_import',
 		'layout_create', 'layout_update',
 	];
 
@@ -826,7 +1046,16 @@ final class ACFRuntimeManager {
 	}
 
 	private function summarize_group( array $g ): array {
-		return [ 'key' => $g['key'] ?? '', 'title' => $g['title'] ?? '', 'active' => $g['active'] ?? true, 'location' => count( $g['location'] ?? [] ), 'field_count' => 0 ];
+		// field_count was hardcoded to 0; resolve the group's actual fields so the
+		// summary reflects reality (acf_get_fields accepts the group array or key).
+		$fields = function_exists( 'acf_get_fields' ) ? acf_get_fields( $g ) : [];
+		return [
+			'key'         => $g['key'] ?? '',
+			'title'       => $g['title'] ?? '',
+			'active'      => $g['active'] ?? true,
+			'location'    => count( $g['location'] ?? [] ),
+			'field_count' => is_array( $fields ) ? count( $fields ) : 0,
+		];
 	}
 
 	private function summarize_field( array $f ): array {
@@ -892,7 +1121,14 @@ final class ACFRuntimeManager {
 		return $out;
 	}
 
-	private function error( string $code, string $message ): array {
-		return [ 'error' => true, 'code' => $code, 'message' => $message ];
+	/**
+	 * Structured error envelope. $extra can carry discoverability fields such as
+	 * valid_actions or expected_params so a caller can self-correct in one retry.
+	 *
+	 * @param array<string,mixed> $extra
+	 * @return array<string,mixed>
+	 */
+	private function error( string $code, string $message, array $extra = [] ): array {
+		return array_merge( [ 'error' => true, 'code' => $code, 'message' => $message ], $extra );
 	}
 }

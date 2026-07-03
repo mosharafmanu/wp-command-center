@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WP Command Center — Safe AI for WordPress</title>
+<meta name="description" content="The safe way to let AI change your WordPress site. Review every AI change before it goes live. Undo any change with one click.">
+<style>
+  :root{
+    --bg:#f6f7fb; --surface:#ffffff; --ink:#1d2231; --muted:#5b6172;
+    --line:#e7e9f2; --indigo:#4f46e5; --indigo-soft:#eef0fe; --indigo-ink:#3730a3;
+    --green:#16794a; --green-soft:#e7f6ee; --radius:16px; --radius-sm:10px;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 14px 36px rgba(16,24,40,.07);
+    --shadow-soft:0 1px 2px rgba(16,24,40,.04), 0 6px 18px rgba(16,24,40,.05);
+    --container:1060px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--indigo); text-decoration:none}
+  .wrap{max-width:var(--container); margin:0 auto; padding:0 22px}
+  h1,h2,h3{line-height:1.2; letter-spacing:-.01em; margin:0}
+  p{margin:0}
+  .muted{color:var(--muted)}
+
+  /* Top bar */
+  .topbar{padding:18px 0}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:-.02em}
+  .brand .dot{width:22px; height:22px; border-radius:7px; background:linear-gradient(135deg,#6366f1,#4f46e5)}
+
+  /* Buttons */
+  .btn{
+    display:inline-block; background:var(--indigo); color:#fff; font-weight:600;
+    padding:13px 22px; border-radius:11px; box-shadow:var(--shadow);
+    transition:transform .04s ease, background .15s ease;
+  }
+  .btn:hover{background:#4338ca}
+  .btn:active{transform:translateY(1px)}
+  .btn-ghost{
+    display:inline-block; color:var(--indigo-ink); font-weight:600;
+    padding:13px 18px; border-radius:11px; border:1px solid var(--line); background:#fff;
+  }
+
+  /* Hero */
+  .hero{padding:48px 0 30px}
+  .hero-grid{display:grid; grid-template-columns:1.06fr .94fr; gap:52px; align-items:center}
+  .eyebrow{
+    display:inline-block; font-size:12.5px; font-weight:600; color:var(--indigo-ink);
+    background:var(--indigo-soft); padding:6px 13px; border-radius:999px; margin-bottom:22px;
+  }
+  .hero h1{font-size:52px; line-height:1.07; letter-spacing:-.026em; margin-bottom:18px}
+  .hero .sub{font-size:20px; line-height:1.5; color:var(--muted); max-width:34ch; margin-bottom:28px}
+  .cta-row{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+  .note{font-size:13.5px; color:var(--muted); margin-top:14px}
+  .trust{
+    margin-top:26px; display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .trust span{
+    font-size:12.5px; font-weight:600; color:#3a4051; background:#fff;
+    border:1px solid var(--line); padding:7px 12px; border-radius:999px; white-space:nowrap;
+  }
+  .trust span b{color:var(--green); font-weight:700}
+
+  /* Mockup cards */
+  .mock{display:flex; flex-direction:column; gap:16px}
+  .card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius); box-shadow:var(--shadow); padding:16px 18px;
+  }
+  .card .k{font-size:12px; font-weight:700; letter-spacing:.02em; text-transform:uppercase; color:var(--muted)}
+  .pill{font-size:11.5px; font-weight:600; padding:4px 9px; border-radius:999px; display:inline-block}
+  .pill.pending{background:#fff7e6; color:#9a6a00}
+  .pill.applied{background:var(--green-soft); color:var(--green)}
+  .pill.live{background:var(--indigo-soft); color:var(--indigo-ink)}
+  .row{display:flex; align-items:center; justify-content:space-between; gap:12px}
+  .swatch{width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#dfe3ff,#c9cffb); flex:none}
+  .mini-actions{display:flex; gap:8px; margin-top:12px}
+  .mini-actions .a{font-size:13px; font-weight:600; padding:7px 14px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink)}
+  .mini-actions .a.primary{background:var(--indigo); color:#fff; border-color:var(--indigo)}
+  .undo{font-weight:600}
+  .hist-line{display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-top:1px dashed var(--line)}
+  .hist-line:first-of-type{border-top:0}
+  .dotg{width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; margin-right:8px}
+
+  /* Sections */
+  section{padding:46px 0}
+  .section-tag{font-size:13px; font-weight:700; color:var(--indigo-ink); text-transform:uppercase; letter-spacing:.04em; margin-bottom:10px}
+  h2{font-size:28px; margin-bottom:12px}
+  .lead{font-size:18px; color:var(--muted); max-width:62ch}
+  .pain-line{font-size:18px; font-weight:600; color:var(--ink); max-width:60ch; margin-top:18px}
+  .divider{height:1px; background:var(--line); border:0; margin:0}
+
+  /* How it works */
+  .steps{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:26px}
+  .step{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:22px; box-shadow:var(--shadow-soft); transition:transform .14s ease, box-shadow .14s ease}
+  .step:hover{transform:translateY(-2px); box-shadow:var(--shadow)}
+  .step .n{width:30px; height:30px; border-radius:9px; background:var(--indigo-soft); color:var(--indigo-ink); font-weight:700; display:flex; align-items:center; justify-content:center; margin-bottom:12px}
+  .step h3{font-size:16px; margin-bottom:6px}
+  .step p{font-size:14.5px; color:var(--muted)}
+
+  /* Who / safe */
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:start}
+  .honest{
+    background:#fff; border:1px solid var(--line); border-left:3px solid var(--indigo);
+    border-radius:12px; padding:16px 18px; font-size:14.5px; color:var(--muted); margin-top:18px;
+  }
+  .safe-list{list-style:none; margin:18px 0 0; padding:0; display:grid; gap:12px}
+  .safe-list li{display:flex; gap:12px; align-items:flex-start; font-size:16px}
+  .check{flex:none; width:22px; height:22px; border-radius:7px; background:var(--green-soft); color:var(--green); font-weight:800; display:flex; align-items:center; justify-content:center; font-size:13px; margin-top:2px}
+
+  /* CTA band */
+  .cta-band{background:linear-gradient(135deg,#eef0fe,#f6f7fb); border:1px solid var(--line); border-radius:22px; padding:40px; text-align:center}
+  .cta-band h2{font-size:26px}
+  .cta-band p{max-width:54ch; margin:12px auto 22px}
+  .scarcity{font-size:13px; color:var(--muted); margin:16px auto 0}
+
+  /* FAQ */
+  .faq{display:grid; gap:10px; margin-top:24px}
+  .faq details{background:#fff; border:1px solid var(--line); border-radius:12px; padding:6px 18px; box-shadow:var(--shadow)}
+  .faq summary{cursor:pointer; font-weight:600; padding:12px 0; list-style:none}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+"; float:right; color:var(--muted); font-weight:700}
+  .faq details[open] summary::after{content:"–"}
+  .faq details p{color:var(--muted); padding:0 0 14px; font-size:15px}
+
+  footer{padding:34px 0 48px; text-align:center; color:var(--muted); font-size:13.5px}
+
+  /* Responsive */
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr; gap:34px}
+    .hero h1{font-size:40px}
+    .hero .sub{max-width:none}
+    .steps{grid-template-columns:1fr 1fr}
+    .two{grid-template-columns:1fr; gap:26px}
+    .cta-band{padding:30px 20px}
+  }
+  @media (max-width:520px){
+    .steps{grid-template-columns:1fr}
+    .hero h1{font-size:33px}
+  }
+</style>
+</head>
+<body>
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="wrap brand"><span class="dot"></span> WP Command Center</div>
+  </div>
+
+  <!-- 1. Hero -->
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow">Design-partner pilot · now inviting 3–5</span>
+        <h1>The safe way to let AI change your WordPress site.</h1>
+        <p class="sub">Review every AI change before it goes live. Undo any change with one click.</p>
+        <div class="cta-row">
+          <a class="btn" href="mailto:YOUR_EMAIL_HERE?subject=WPCC%20Design%20Partner%20Pilot">Apply for the Design Partner Pilot</a>
+          <a class="btn-ghost" href="#how">See how it works</a>
+        </div>
+        <p class="note">Free, hands-on setup with the founder. One site. No credit card.</p>
+        <div class="trust">
+          <span><b>✓</b> Reviewed by you</span>
+          <span><b>✓</b> Requires approval</span>
+          <span><b>✓</b> Audited</span>
+          <span><b>✓</b> Reversible</span>
+        </div>
+      </div>
+
+      <!-- Simple visual mockup -->
+      <div class="mock" aria-hidden="true">
+        <div class="card">
+          <div class="row" style="margin-bottom:12px">
+            <span class="k">Alt text</span>
+            <span class="pill pending">Pending review — not applied</span>
+          </div>
+          <div class="row">
+            <span class="swatch"></span>
+            <div style="flex:1">
+              <div style="font-weight:600; font-size:14.5px">hero-team-photo.jpg</div>
+              <div class="muted" style="font-size:13.5px">“A small team working together at a shared desk.”</div>
+            </div>
+          </div>
+          <div class="mini-actions">
+            <span class="a primary">Approve</span>
+            <span class="a">Skip</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="margin-bottom:6px">
+            <span class="k">History</span>
+            <span class="pill applied">Reversible</span>
+          </div>
+          <div class="hist-line">
+            <span><span class="dotg"></span>SEO title updated · home</span>
+            <a class="undo" href="#">Undo</a>
+          </div>
+          <div class="hist-line">
+            <span><span class="dotg"></span>Alt text added · 12 images</span>
+            <a class="undo" href="#">Undo</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div>
+              <span class="k">Your AI key</span>
+              <div style="font-weight:600; margin-top:4px">Anthropic (Claude)</div>
+              <div class="muted" style="font-size:13.5px">Runs on your site · your key</div>
+            </div>
+            <span class="pill live">Connected</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <hr class="divider">
+
+  <!-- 2. Problem -->
+  <section>
+    <div class="wrap">
+      <div class="section-tag">The problem</div>
+      <h2>AI is fast on WordPress — and a little scary.</h2>
+      <p class="lead">You can have AI rewrite alt text, titles, and content across a site in minutes. But the moment it changes something you didn’t expect on a client’s live site, it stops saving time and starts causing problems. Most people just hope it gets it right.</p>
+      <p class="pain-line">One unexpected AI change on a client’s live site can cost hours of cleanup — and their trust.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- 3. How it works -->
+  <section id="how">
+    <div class="wrap">
+      <div class="section-tag">How it works</div>
+      <h2>See it. Approve it. Undo it.</h2>
+      <p class="lead">WP Command Center puts you in front of every AI change. The AI proposes the work — nothing goes live until you approve it. Everything is recorded, so you always know what happened. And if you don’t like a change later, you undo it in one click.</p>
+      <div class="steps">
+        <div class="step">
+          <div class="n">1</div>
+          <h3>Connect your AI</h3>
+          <p>Use your own key. It runs on your site, not ours.</p>
+        </div>
+        <div class="step">
+          <div class="n">2</div>
+          <h3>AI proposes</h3>
+          <p>Alt text, SEO titles, content. You see exactly what it wants to change.</p>
+        </div>
+        <div class="step">
+          <div class="n">3</div>
+          <h3>Review and approve</h3>
+          <p>Keep the good ones, skip the rest. Nothing changes until you say so.</p>
+        </div>
+        <div class="step">
+          <div class="n">4</div>
+          <h3>Undo anytime</h3>
+          <p>Every change is one click from reverting.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- 4. Who it's for & 5. Why it's safe -->
+  <section>
+    <div class="wrap two">
+      <div>
+        <div class="section-tag">Who it’s for</div>
+        <h2>Built for people already using AI on real sites.</h2>
+        <p class="lead">WordPress agencies, freelancers, and developers who want the speed of AI without the “what did it just break?”</p>
+        <div class="honest">
+          <strong>Honest note.</strong> This is an early, hands-on pilot. It works on one site at a time, setup is done with you, and there’s no pricing yet — your feedback shapes what’s next. It’s not built for large teams or single sign-on today.
+        </div>
+      </div>
+      <div>
+        <div class="section-tag">Why it’s safe</div>
+        <h2>You stay in control the whole way.</h2>
+        <ul class="safe-list">
+          <li><span class="check">✓</span> Nothing changes without your approval.</li>
+          <li><span class="check">✓</span> Your key, your server — no middleman in your data.</li>
+          <li><span class="check">✓</span> One-click undo on every change.</li>
+          <li><span class="check">✓</span> A full history of what changed and when.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Design partner CTA -->
+  <section>
+    <div class="wrap">
+      <div class="cta-band">
+        <h2>We’re inviting 3–5 design partners.</h2>
+        <p class="muted">Free setup with the founder. You run one safe AI task on a real site and tell us honestly what’s useful and what’s in the way.</p>
+        <a class="btn" href="mailto:YOUR_EMAIL_HERE?subject=WPCC%20Design%20Partner%20Pilot">Apply for the Design Partner Pilot</a>
+        <p class="scarcity">Applications close once the first pilot group is full.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. FAQ -->
+  <section>
+    <div class="wrap">
+      <div class="section-tag">FAQ</div>
+      <h2>Quick answers</h2>
+      <div class="faq">
+        <details>
+          <summary>Does AI change my site automatically?</summary>
+          <p>No. AI proposes; you approve. Nothing is ever applied without you.</p>
+        </details>
+        <details>
+          <summary>Can I undo a change?</summary>
+          <p>Yes — one click, anytime, from your history.</p>
+        </details>
+        <details>
+          <summary>Where do my key and content go?</summary>
+          <p>Your AI key stays on your own site. Your content is sent only to the provider you choose, when you run a task — never to us.</p>
+        </details>
+        <details>
+          <summary>Which AI providers work?</summary>
+          <p>Anthropic (Claude) and OpenAI-compatible providers can run the work today. Others can be connected and tested.</p>
+        </details>
+        <details>
+          <summary>Is it ready for big teams?</summary>
+          <p>Not yet. It’s built for single-site, hands-on pilots right now — and we’re honest about that.</p>
+        </details>
+        <details>
+          <summary>What does it cost?</summary>
+          <p>During the design-partner pilot, nothing. Pricing comes later, with your input.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">WP Command Center · Safe AI for WordPress · Design-partner pilot</div>
+  </footer>
+
+</body>
+</html>

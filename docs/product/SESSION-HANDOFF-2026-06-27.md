@@ -1,6 +1,6 @@
-# Session Handoff — 2026-06-27 (current)
+# Session Handoff — 2026-06-27 (historical)
 
-> **This is the current authoritative handoff.** Supersedes `SESSION-HANDOFF-2026-06-26.md` (now historical). Fastest product onboarding: [`CURRENT-PRODUCT-STATUS.md`](CURRENT-PRODUCT-STATUS.md).
+> **SUPERSEDED by [`SESSION-HANDOFF-2026-07-03.md`](SESSION-HANDOFF-2026-07-03.md)** (the current authoritative handoff — 12-issue production-session fix batch, invariants now 34·23·42·42·2.6.0). Kept for history. Supersedes `SESSION-HANDOFF-2026-06-26.md`. Fastest product onboarding: [`CURRENT-PRODUCT-STATUS.md`](CURRENT-PRODUCT-STATUS.md).
 
 ## TL;DR
 Implementation Phases **1 · 2 · 2.5 · 4**, the **Universal AI Provider Runtime (A–D)**, and the **Connect + History UX redesign** are complete, validation-green, and **staged on local `main` (NOT pushed).** Production is untouched. The architecture is **stable**; the product has entered the **Real-World Validation** phase. The standing recommendation is unchanged: **stop building infrastructure, validate real workflows** (Generate → Review → Approve → Apply → Undo) on live sites, then recruit 3–5 design partners.

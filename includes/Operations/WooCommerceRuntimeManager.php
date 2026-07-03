@@ -21,8 +21,24 @@ final class WooCommerceRuntimeManager {
 			return $this->error( 'wpcc_woo_inactive', __( 'WooCommerce is not active.', 'wp-command-center' ) );
 		}
 		$action = (string) ( $payload['action'] ?? '' );
+		if ( 'woo_describe' === $action ) {
+			$actions = [];
+			foreach ( WooCommerceRegistry::ACTIONS as $act ) {
+				$actions[] = [ 'action' => $act, 'risk' => WooCommerceRegistry::get_risk( $act ), 'requires_approval' => WooCommerceRegistry::requires_approval( $act ) ];
+			}
+			return [ 'action' => 'woo_describe', 'runtime' => 'woocommerce_manage', 'actions' => $actions ];
+		}
 		if ( ! in_array( $action, WooCommerceRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_woo_action', __( 'Invalid WooCommerce action.', 'wp-command-center' ) );
+			return $this->error(
+				'wpcc_invalid_woo_action',
+				sprintf(
+					/* translators: 1: invalid action, 2: comma-separated valid actions */
+					__( 'Invalid WooCommerce action "%1$s". Valid actions: %2$s. Call action="woo_describe" for details.', 'wp-command-center' ),
+					$action,
+					implode( ', ', WooCommerceRegistry::ACTIONS )
+				),
+				[ 'valid_actions' => WooCommerceRegistry::ACTIONS ]
+			);
 		}
 		return match ( $action ) {
 			WooCommerceRegistry::ACTION_PRODUCT_LIST      => $this->product_list( $payload ),
@@ -854,7 +870,7 @@ final class WooCommerceRuntimeManager {
 		return $out;
 	}
 
-	private function error( string $code, string $message ): array {
-		return [ 'error' => true, 'code' => $code, 'message' => $message ];
+	private function error( string $code, string $message, array $extra = [] ): array {
+		return array_merge( [ 'error' => true, 'code' => $code, 'message' => $message ], $extra );
 	}
 }

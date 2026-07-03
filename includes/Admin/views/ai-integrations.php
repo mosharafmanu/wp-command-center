@@ -78,19 +78,23 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 	}
 }
 
-// Config with selected token
+// Config with a selected existing token.
+//
+// Tokens are stored as salted hashes and the raw value is shown only once, at
+// creation (see AuthTokens). An existing token's secret therefore cannot be
+// re-injected into the config here. Rather than silently leaving the placeholder
+// (which makes "Use in config" look like it did nothing), we resolve the selected
+// token's metadata so the Configuration tab can show a clear note telling the user
+// exactly which saved token to paste in place of the WPCC_TOKEN placeholder.
 $wpcc_selected_token_id = sanitize_text_field( (string) ( $_GET['token_id'] ?? '' ) );
-if ( $wpcc_selected_token_id && $wpcc_config ) {
-	$selected = array_filter( $wpcc_all_tokens, fn( $t ) => $t['id'] === $wpcc_selected_token_id );
-	if ( ! empty( $selected ) ) {
-		// A selected token keeps the same minimal env as the default config: only the
-		// WPCC_TOKEN placeholder is swapped to the clearer "paste your token here" form.
-		// The token value is shown only once at creation, so it stays a placeholder; no
-		// token metadata (id/label/scope) is added — the relay needs only the token value
-		// plus the runtime env vars.
-		$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN'] = 'wpcc_YOUR_TOKEN_HERE';
-		$wpcc_config_json = wp_json_encode( $wpcc_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-	}
+$wpcc_selected_token    = null;
+if ( $wpcc_selected_token_id ) {
+	$selected            = array_filter( $wpcc_all_tokens, fn( $t ) => $t['id'] === $wpcc_selected_token_id );
+	$wpcc_selected_token = ! empty( $selected ) ? reset( $selected ) : null;
+}
+if ( $wpcc_selected_token && $wpcc_config ) {
+	$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN'] = 'wpcc_YOUR_TOKEN_HERE';
+	$wpcc_config_json = wp_json_encode( $wpcc_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
 }
 
 // Active tab
@@ -476,7 +480,21 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'wp-command-center' ); ?></span>
 				</div>
 				<div class="wpcc-ai-panel__body">
-					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php printf( esc_html__( 'Copy this and paste it into %s to connect it to this site. It includes your connection address and access token.', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?></p>
+					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php printf( esc_html__( 'Copy this and paste it into %s to connect it to this site. It includes your connection address — add your access token where it says wpcc_YOUR_TOKEN_HERE.', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?></p>
+					<?php if ( ! empty( $wpcc_selected_token ) ) : ?>
+						<div class="notice notice-info inline" style="margin:0 0 12px;padding:10px 12px;">
+							<p style="margin:0;">
+								<?php
+								printf(
+									/* translators: 1: token label, 2: token preview prefix */
+									esc_html__( 'Using “%1$s” (starts with %2$s…). Paste that saved token in the field below to drop it straight into the configuration. For security, a token is shown in full only once — if you didn’t save it, create a new token below.', 'wp-command-center' ),
+									esc_html( $wpcc_selected_token['label'] ),
+									esc_html( $wpcc_selected_token['token_preview'] )
+								);
+								?>
+							</p>
+						</div>
+					<?php endif; ?>
 					<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 						<p class="wpcc-ai-field__status wpcc-ai-field__status--ok" style="margin:0 0 12px;">&#10003; <?php
 							/* translators: %d: number of access tokens */
@@ -487,7 +505,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<?php endif; ?>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding:0;">
-					<pre class="wpcc-ai-config" id="wpcc-config-block"><?php echo esc_html( $wpcc_config_json ); ?></pre>
+					<div class="wpcc-ai-field" style="padding:14px 22px 0;margin:0;">
+							<label class="wpcc-ai-field__label" for="wpcc-token-fill"><?php esc_html_e( 'Paste your access token to complete the configuration', 'wp-command-center' ); ?></label>
+							<input type="text" id="wpcc-token-fill" class="regular-text" placeholder="wpcc_..." autocomplete="off" spellcheck="false" style="width:100%;max-width:520px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;" value="<?php echo esc_attr( $wpcc_new_token ); ?>">
+							<p class="wpcc-ai-field__hint" style="margin:6px 0 0;"><?php esc_html_e( 'Your token is inserted into the configuration below right here in your browser — it is never sent back to the server or stored. Then click “Copy configuration” to copy the complete, ready-to-use config.', 'wp-command-center' ); ?></p>
+						</div>
+						<pre class="wpcc-ai-config" id="wpcc-config-block"><?php echo esc_html( $wpcc_config_json ); ?></pre>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding-top:14px;">
 					<details class="wpcc-ai-advanced" style="margin:0;">
@@ -669,6 +692,27 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 <script>
 (function() {
+	// Live, browser-only token fill: insert the pasted access token into the
+	// displayed configuration so "Copy configuration" copies a complete, ready
+	// config. The token is substituted in the DOM only — it is never sent back to
+	// the server or persisted (the server stores only a salted hash of tokens).
+	var tokenFill  = document.getElementById('wpcc-token-fill');
+	var configBlock = document.getElementById('wpcc-config-block');
+	if (tokenFill && configBlock) {
+		var configTemplate = configBlock.textContent;
+		var PLACEHOLDER = 'wpcc_YOUR_TOKEN_HERE';
+		var applyToken = function() {
+			var v = tokenFill.value.trim();
+			configBlock.textContent = v ? configTemplate.split(PLACEHOLDER).join(v) : configTemplate;
+		};
+		tokenFill.addEventListener('input', applyToken);
+		applyToken(); // apply any pre-filled (just-created) token on load
+		// If the user arrived via "Use in config", focus the field so they can paste.
+		if (window.location.hash === '#wpcc-token-fill' && !tokenFill.value) {
+			tokenFill.focus();
+		}
+	}
+
 	document.querySelectorAll('.wpcc-copy-btn').forEach(function(btn) {
 		btn.addEventListener('click', function() {
 			var targetId = this.getAttribute('data-copy-target');
@@ -701,6 +745,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			var tid = this.getAttribute('data-token-id');
 			var url = new URL(window.location.href);
 			url.searchParams.set('token_id', tid);
+			url.hash = 'wpcc-token-fill';
 			window.location.href = url.toString();
 		});
 	});

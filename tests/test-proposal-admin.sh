@@ -84,7 +84,7 @@ assert_has "cross-links to Change History"  "$VIEW_SRC" "wpcc-change-history"
 # ── Invariants (only DB_VERSION may have moved earlier; nothing here) ─────────
 assert_eq "invariant: OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "invariant: capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-assert_eq "invariant: catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+assert_eq "invariant: catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
 assert_eq "invariant: DB_VERSION 2.5.0"    "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 
 echo ""
