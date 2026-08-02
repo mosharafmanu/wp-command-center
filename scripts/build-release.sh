@@ -53,6 +53,20 @@ copy "includes"
 copy "assets"
 copy "languages"
 
+# The MCP relay is not optional. The configuration this plugin generates for
+# Claude Desktop, Cursor, Codex and the rest tells the user's machine to fetch
+# this exact file from their own site and run it — see
+# Integration\BaseClientIntegration::relay_url(). If it is missing from the
+# package the fetch 404s, the connector never starts, and every connection
+# fails. The unreferenced sdk/ samples stay out; only the runtime file ships.
+# Copied leniently so a missing source file is reported by the explicit
+# verification below, with a message that says what to do about it, rather than
+# aborting here on a bare "cp: No such file or directory".
+if [[ -f "$ROOT/sdk/javascript/wpcc-mcp-relay.mjs" ]]; then
+  mkdir -p "$DEST/sdk/javascript"
+  cp "$ROOT/sdk/javascript/wpcc-mcp-relay.mjs" "$DEST/sdk/javascript/"
+fi
+
 # ── Scrub anything that rode along inside a copied directory ────────────────
 find "$DEST" \( -name '.DS_Store' -o -name 'Thumbs.db' -o -name '*.map' \
   -o -name '*.local.php' -o -name '*.local.json' \) -delete
@@ -83,6 +97,16 @@ if grep -rIlE 'localhost|127\.0\.0\.1' "$DEST" >/dev/null 2>&1; then
   echo "NOTE: loopback references (expected for local AI providers) in:" >&2
   grep -rIlE 'localhost|127\.0\.0\.1' "$DEST" | sed "s|$DEST/|  |" >&2
 fi
+
+# Every runtime file the generated client configuration fetches must be in the
+# package. Shipping a config that points at a file we did not ship is a silent,
+# total connection failure for every user, so it fails the build.
+for required in "sdk/javascript/wpcc-mcp-relay.mjs"; do
+  if [[ ! -f "$DEST/$required" ]]; then
+    echo "ERROR: required runtime file missing from package: $required" >&2
+    fail=1
+  fi
+done
 
 # Every PHP file must parse.
 while IFS= read -r php_file; do
