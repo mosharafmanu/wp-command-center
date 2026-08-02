@@ -212,7 +212,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Capability action.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => CapabilityRegistry::ACTIONS, 'description' => 'Capability action.' ],
 					[ 'name' => 'subject', 'type' => 'string', 'required' => false ],
 					[ 'name' => 'subject_id', 'type' => 'string', 'required' => false ],
 					[ 'name' => 'capability', 'type' => 'string', 'required' => false ],
@@ -253,7 +253,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Content operation: content_list, content_get, content_create, content_update, content_delete, content_publish, content_unpublish, content_schedule, taxonomy_assign, featured_image_assign.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => ContentRegistry::ACTIONS, 'description' => 'Content operation: content_list, content_get, content_create, content_update, content_delete, content_publish, content_unpublish, content_schedule, taxonomy_assign, featured_image_assign.' ],
 					[ 'name' => 'content_id', 'type' => 'integer', 'required' => false ],
 					[ 'name' => 'title', 'type' => 'string', 'required' => false ],
 					[ 'name' => 'content', 'type' => 'string', 'required' => false ],
@@ -381,7 +381,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'User operation: user_list, user_get, user_search, user_create, user_update, user_delete, user_suspend, user_reset_password, user_assign_role, user_remove_role.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => UserRegistry::ACTIONS, 'description' => 'User operation: user_list, user_get, user_search, user_create, user_update, user_delete, user_suspend, user_reset_password, user_assign_role, user_remove_role.' ],
 				],
 				'available'         => true,
 			],
@@ -412,7 +412,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Media operation: media_list, media_get, media_search, media_upload, media_update, media_replace, media_delete, media_restore, media_set_featured (alias featured_image_assign), media_remove_featured (alias featured_image_remove), media_regenerate_metadata.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => MediaRegistry::ACTIONS, 'description' => 'Media operation: media_list, media_get, media_search, media_upload, media_update, media_replace, media_delete, media_restore, media_set_featured (alias featured_image_assign), media_remove_featured (alias featured_image_remove), media_regenerate_metadata.' ],
 					[ 'name' => 'media_id', 'type' => 'integer', 'required' => false, 'description' => 'Attachment ID (required for get/update/replace/delete/featured operations).' ],
 						[ 'name' => 'search', 'type' => 'string', 'required' => false, 'description' => 'Search keyword for media_search (matches title/filename/content). Aliases accepted: query, s.' ],
 					[ 'name' => 'title', 'type' => 'string', 'required' => false, 'description' => 'Media title (media_upload, media_update).' ],
@@ -477,7 +477,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'WooCommerce operation' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => array_merge( WooCommerceRegistry::ACTIONS, [ 'woo_describe' ] ), 'description' => 'WooCommerce operation' ],
 				],
 				'available'         => class_exists( 'WooCommerce' ),
 			],
@@ -514,7 +514,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'ACF operation (acf_group_*, acf_field_*, acf_layout_create, acf_layout_update, acf_layout_usage, acf_location_*, acf_value_*, etc.).' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => array_merge( ACFRegistry::ACTIONS, [ 'acf_describe' ] ), 'description' => 'ACF operation (acf_group_*, acf_field_*, acf_layout_create, acf_layout_update, acf_layout_usage, acf_location_*, acf_value_*, etc.).' ],
 					[ 'name' => 'group_id', 'type' => 'string', 'required' => false, 'description' => 'Field group key.' ],
 					[ 'name' => 'title', 'type' => 'string', 'required' => false, 'description' => 'Field group title (acf_group_create).' ],
 					[ 'name' => 'parent', 'type' => 'string', 'required' => false, 'description' => 'Parent for acf_field_create: a group key, or a repeater/group field key, or a flexible_content field key (with parent_layout).' ],
@@ -608,7 +608,7 @@ final class OperationRegistry {
 					'form_delete'   => 'medium',
 				],
 				'requires_approval' => true,
-				'parameters'        => [[ 'name' => 'action', 'type' => 'string', 'required' => true ], [ 'name' => 'provider', 'type' => 'string', 'required' => false, 'description' => 'Form provider: cf7, fluentforms, wpforms, gravityforms' ]],
+				'parameters'        => [[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => FormsRegistry::ACTIONS ], [ 'name' => 'provider', 'type' => 'string', 'required' => false, 'description' => 'Form provider: cf7, fluentforms, wpforms, gravityforms' ]],
 				'available'         => true,
 			],
 			'menu_manage' => [
@@ -640,7 +640,7 @@ final class OperationRegistry {
 					'menu_import'        => 'medium',
 				],
 				'requires_approval' => true,
-				'parameters'        => [[ 'name' => 'action', 'type' => 'string', 'required' => true ]],
+				'parameters'        => [[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => MenuRegistry::ACTIONS ]],
 				'available'         => true,
 			],
 			'settings_manage' => [
@@ -714,7 +714,11 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Bulk operation: bulk_content, bulk_publish, bulk_unpublish, bulk_media, bulk_woocommerce, bulk_acf, batch_execute.' ],
+					// Listed literally, not as BulkRegistry::ACTIONS / WorkflowRegistry::ACTIONS:
+					// both classes are declared inside their *RuntimeManager.php file, so the
+					// autoloader cannot resolve them by name while this catalogue is built.
+					// Keep in step with those consts — they are the runtime's own allow-list.
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'bulk_content', 'bulk_publish', 'bulk_unpublish', 'bulk_media', 'bulk_woocommerce', 'bulk_acf', 'batch_execute' ], 'description' => 'Bulk operation: bulk_content, bulk_publish, bulk_unpublish, bulk_media, bulk_woocommerce, bulk_acf, batch_execute.' ],
 					[ 'name' => 'ids', 'type' => 'array', 'required' => false, 'description' => 'Array of post/attachment/product IDs to operate on.' ],
 					[ 'name' => 'fields', 'type' => 'object', 'required' => false, 'description' => 'Fields to update (for bulk_content).' ],
 				],
@@ -739,7 +743,11 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Workflow action: workflow_list, workflow_get, workflow_create, workflow_update, workflow_delete, workflow_execute, workflow_import, workflow_export, workflow_history, workflow_rollback.' ],
+					// Listed literally, not as BulkRegistry::ACTIONS / WorkflowRegistry::ACTIONS:
+					// both classes are declared inside their *RuntimeManager.php file, so the
+					// autoloader cannot resolve them by name while this catalogue is built.
+					// Keep in step with those consts — they are the runtime's own allow-list.
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'workflow_list', 'workflow_get', 'workflow_create', 'workflow_update', 'workflow_delete', 'workflow_execute', 'workflow_import', 'workflow_export', 'workflow_history', 'workflow_rollback' ], 'description' => 'Workflow action: workflow_list, workflow_get, workflow_create, workflow_update, workflow_delete, workflow_execute, workflow_import, workflow_export, workflow_history, workflow_rollback.' ],
 					[ 'name' => 'workflow_id', 'type' => 'string', 'required' => false, 'description' => 'Workflow identifier (required for get, update, delete, execute, export).' ],
 					[ 'name' => 'steps', 'type' => 'array', 'required' => false, 'description' => 'Ordered steps for create/update: each is { operation_id, payload }.' ],
 					[ 'name' => 'on_failure', 'type' => 'string', 'required' => false, 'enum' => [ 'stop', 'continue', 'rollback' ], 'description' => 'workflow_execute failure policy: stop (default), continue, or rollback (auto-reverse completed steps).' ],
@@ -764,7 +772,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Comment operation: comment_list, comment_get, comment_approve, comment_unapprove, comment_spam, comment_trash, comment_delete, comment_reply.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => CommentsRegistry::ACTIONS, 'description' => 'Comment operation: comment_list, comment_get, comment_approve, comment_unapprove, comment_spam, comment_trash, comment_delete, comment_reply.' ],
 					[ 'name' => 'comment_id', 'type' => 'integer', 'required' => false, 'description' => 'The comment ID (required for get, approve, unapprove, spam, trash, delete, reply).' ],
 				],
 				'available'         => true,
@@ -785,7 +793,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'Widget operation: widget_list, widget_get, widget_add, widget_update, widget_remove, sidebar_assign, sidebar_remove.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => WidgetsRegistry::ACTIONS, 'description' => 'Widget operation: widget_list, widget_get, widget_add, widget_update, widget_remove, sidebar_assign, sidebar_remove.' ],
 					[ 'name' => 'widget_id', 'type' => 'string', 'required' => false, 'description' => 'Widget ID (required for get, update, remove, sidebar_assign, sidebar_remove).' ],
 					[ 'name' => 'sidebar_id', 'type' => 'string', 'required' => false, 'description' => 'Sidebar ID (required for add, assign, remove).' ],
 					[ 'name' => 'widget_type', 'type' => 'string', 'required' => false, 'description' => 'Widget base type (required for add).' ],
@@ -810,7 +818,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'CPT operation: cpt_list, cpt_get, cpt_create, cpt_update, cpt_disable, taxonomy_list, taxonomy_create, taxonomy_update.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => CPTRegistry::ACTIONS, 'description' => 'CPT operation: cpt_list, cpt_get, cpt_create, cpt_update, cpt_disable, taxonomy_list, taxonomy_create, taxonomy_update.' ],
 					[ 'name' => 'name', 'type' => 'string', 'required' => false, 'description' => 'Post type or taxonomy name (required for get, create, update, disable).' ],
 					[ 'name' => 'label', 'type' => 'string', 'required' => false, 'description' => 'Human-readable label (required for create).' ],
 					[ 'name' => 'config', 'type' => 'object', 'required' => false, 'description' => 'Configuration array (for create/update).' ],
