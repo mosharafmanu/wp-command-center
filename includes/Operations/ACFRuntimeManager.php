@@ -254,6 +254,49 @@ final class ACFRuntimeManager {
 		return [ 'action' => 'acf_field_get', 'field' => $this->detail_field( $f ) ];
 	}
 
+	/**
+	 * Numeric post ID for a field-group or field KEY.
+	 *
+	 * acf_update_field() only links a new field when `parent` is the numeric post
+	 * ID of the owning group/field; a key string leaves post_parent = 0 and the
+	 * field belongs to nothing.
+	 *
+	 * Resolving that with acf_get_field_group()/acf_get_field() alone is not
+	 * enough. When a site has ACF local JSON enabled — standard practice for
+	 * agencies, and the case on the site this was found on — those functions
+	 * return the JSON copy, whose `ID` is 0. The old guard tested `$grp['ID']`,
+	 * got 0, fell through, and stored the key. Every field created through WPCC on
+	 * such a site was therefore orphaned: acf_get_fields() returned the same flat
+	 * pile of parentless fields for every group, wp-admin showed the group empty,
+	 * and the acf-json file kept "fields": [].
+	 *
+	 * So fall back to the database, where ACF stores the key as post_name.
+	 */
+	private function parent_post_id( string $key ): int {
+		foreach ( [ 'acf_get_field_group', 'acf_get_field' ] as $fn ) {
+			$obj = $fn( $key );
+			if ( is_array( $obj ) && ! empty( $obj['ID'] ) ) {
+				return (int) $obj['ID'];
+			}
+		}
+
+		foreach ( [ 'acf-field-group', 'acf-field' ] as $post_type ) {
+			$found = get_posts( [
+				'post_type'        => $post_type,
+				'name'             => $key,
+				'post_status'      => 'any',
+				'numberposts'      => 1,
+				'fields'           => 'ids',
+				'suppress_filters' => false,
+			] );
+			if ( ! empty( $found ) ) {
+				return (int) $found[0];
+			}
+		}
+
+		return 0;
+	}
+
 	private function field_create( array $p, array $cx ): array {
 		// Parent may be a field group, a repeater/group field key, or — together
 		// with parent_layout — a flexible-content field key.
@@ -273,15 +316,16 @@ final class ACFRuntimeManager {
 		// acf_update_field only links a field when the parent is the numeric post
 		// ID of the parent group/field — a KEY string leaves it orphaned
 		// (post_parent = 0), which corrupts ACF. Resolve the key to its post ID.
-		$parent_ref = $parent;
-		$grp        = acf_get_field_group( $parent );
-		if ( $grp && isset( $grp['ID'] ) && $grp['ID'] ) {
-			$parent_ref = (int) $grp['ID'];
-		} else {
-			$pf = acf_get_field( $parent );
-			if ( $pf && isset( $pf['ID'] ) && $pf['ID'] ) {
-				$parent_ref = (int) $pf['ID'];
-			}
+		$parent_ref = $this->parent_post_id( $parent );
+		if ( 0 === $parent_ref ) {
+			return $this->error(
+				'wpcc_acf_parent_unresolved',
+				sprintf(
+					/* translators: %s: the field group or field key that could not be resolved */
+					__( 'Could not resolve "%s" to a stored field group or field, so the new field would not be attached to anything. Nothing was created.', 'wp-command-center' ),
+					$parent
+				)
+			);
 		}
 
 		$key   = 'field_' . uniqid();
