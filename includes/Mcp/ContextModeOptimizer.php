@@ -15,7 +15,6 @@ final class ContextModeOptimizer {
 	public const MODES    = [ self::COMPACT, self::STANDARD, self::VERBOSE ];
 
 	private const PREVIEW_ITEMS = 5;
-	private const MAX_STRING_BYTES = 500;
 
 	public static function normalize( mixed $mode ): string {
 		$mode = sanitize_key( (string) $mode );
@@ -32,14 +31,30 @@ final class ContextModeOptimizer {
 	}
 
 	private function compact( mixed $value ): mixed {
-		if ( is_string( $value ) ) {
-			if ( strlen( $value ) <= self::MAX_STRING_BYTES ) {
-				return $value;
-			}
-
-			return substr( $value, 0, self::MAX_STRING_BYTES ) . '...';
-		}
-
+		/*
+		 * Strings are returned whole, deliberately.
+		 *
+		 * Compact mode used to cut every string over 500 bytes down to
+		 * `substr( $value, 0, 500 ) . '...'`. A truncated LIST is wrapped in the
+		 * self-describing envelope below so an agent can never mistake a preview
+		 * for the full set — but a truncated STRING got no marker at all, and the
+		 * sibling metadata describing it was left untouched and therefore lying.
+		 *
+		 * file_read on a 1442-byte, 68-line theme file returned
+		 * `truncated: false, returned_bytes: 1442, returned_lines: 68` alongside
+		 * 503 bytes of content. Feeding that back into patch_manage — the
+		 * documented read-then-patch workflow — produced a whole-file patch of
+		 * +2/-46 lines: it would have deleted 46 of the 68 lines of a real
+		 * customer's theme file, with both the assistant and the site owner told
+		 * the read was complete. compact is the default context mode in every
+		 * client configuration this plugin generates, so this was the default path.
+		 *
+		 * Operations that return large strings already carry their own explicit
+		 * truncation contract (total_bytes / returned_bytes / next_byte_offset /
+		 * truncated) and page properly. Transport-level trimming did not cooperate
+		 * with that contract, it invalidated it. Context savings come from
+		 * previewing long lists, which is preserved below.
+		 */
 		if ( ! is_array( $value ) ) {
 			return $value;
 		}
