@@ -137,7 +137,7 @@ assert_eq "operation_map stays 34" "34" "$(pj "$M" '.capability_management.opera
 assert_eq "capabilities stay 23"   "23" "$(pj "$M" '.capability_management.capabilities | length')"
 assert_eq "DB_VERSION 2.6.0"       "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 TOOLS=$(curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$WPCC_BASE/mcp" | jq -r '.result.tools | length')
-assert_eq "MCP tool count stays 40" "40" "$TOOLS"
+assert_eq "MCP tool count stays 42" "42" "$TOOLS"
 
 echo
 echo "== Summary =="

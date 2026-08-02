@@ -1416,7 +1416,10 @@ final class RestApi {
 			$status = $default;
 		}
 
-		$error->add_data( [ 'status' => $status ] );
+		// MERGE, never replace. WP_Error::add_data() overwrites the data for a code, so
+		// attaching the status used to discard whatever the error already carried —
+		// silently throwing away structured detail on its way out to the caller.
+		$error->add_data( array_merge( is_array( $data ) ? $data : [], [ 'status' => $status ] ) );
 
 		return $error;
 	}
@@ -2821,7 +2824,15 @@ final class RestApi {
 
 		if ( ! $result['success'] ) {
 			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
-			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
+
+			// Carry the runtime's structured detail out with the error. A partial
+			// rollback is the case that made this matter: it reports which fields it
+			// restored and which it skipped as drifted, and that detail existed only
+			// inside the prose message once the envelope was flattened to code+message.
+			// An assistant cannot act on prose; it can act on skipped_fields.
+			$details = isset( $error['details'] ) && is_array( $error['details'] ) ? $error['details'] : [];
+
+			return $this->with_status( new \WP_Error( $error['code'], $error['message'], $details ) );
 		}
 
 		return new \WP_REST_Response( $result['result'] );

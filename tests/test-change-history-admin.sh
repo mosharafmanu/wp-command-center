@@ -284,14 +284,16 @@ assert_eq   "restore: original row stamped rolled_back" "rolled_back" "$(pj "$RB
 assert_eq   "restore: value reverted to pre-change"    "$SAVED_BLOG" "$(pj "$RB" '.blogname')"
 
 # Idempotency guard: rolling back an already-rolled-back change is refused with
-# an in-band wpcc_already_rolled_back error (the engine never re-runs it).
+# wpcc_already_rolled_back (the engine never re-runs it). The refusal is surfaced
+# through the normalized executor envelope — success:false with the code in errors[] —
+# not as result.code, which is where an earlier response shape put it.
 DUP=$(wpe "
 global \$wpdb; \$t = \$wpdb->prefix . 'wpcc_change_log';
 \$cid = \$wpdb->get_var( \$wpdb->prepare( \"SELECT change_id FROM {\$t} WHERE session_id = %s AND status = 'rolled_back' ORDER BY id DESC LIMIT 1\", '$RB_SESSION' ) );
 \$req = new WP_REST_Request( 'POST', '/' );
 \$req->set_param( 'change_id', \$cid );
 \$d = ( new \WPCommandCenter\Admin\AdminRestApi() )->history_rollback( \$req )->get_data();
-echo wp_json_encode( [ 'code' => \$d['result']['code'] ?? '', 'is_error' => ( \$d['result']['error'] ?? false ) ] );
+echo wp_json_encode( [ 'code' => \$d['errors'][0]['code'] ?? ( \$d['result']['code'] ?? '' ), 'is_error' => ( false === ( \$d['success'] ?? true ) ) ] );
 ")
 assert_eq "restore: double-rollback refused (wpcc_already_rolled_back)" "wpcc_already_rolled_back" "$(pj "$DUP" '.code')"
 

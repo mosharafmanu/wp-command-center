@@ -566,7 +566,12 @@ final class OperationExecutor {
 				( new OperationManager() )->finalize_execution( (string) $context['request_id'], false );
 			}
 
-			return $this->fail( $operation_id, $error_code, $error_message );
+			// Everything the runtime reported beyond the bare code/message is structured
+			// detail the caller needs — a partial rollback's restored_fields and
+			// skipped_fields being the case that proved it. Pass it through.
+			$details = array_diff_key( $result, array_flip( [ 'error', 'code', 'message' ] ) );
+
+			return $this->fail( $operation_id, $error_code, $error_message, $details );
 		}
 
 		// 4. Normalize response.
@@ -964,14 +969,24 @@ final class OperationExecutor {
 	/**
 	 * Standard result shape for failures.
 	 */
-	private function fail( string $operation_id, string $code, string $message ): array {
+	/**
+	 * @param array<string,mixed> $details Structured detail the runtime attached to the
+	 *                                     failure (e.g. a partial rollback's
+	 *                                     restored_fields/skipped_fields). Carried to the
+	 *                                     caller instead of being flattened away.
+	 */
+	private function fail( string $operation_id, string $code, string $message, array $details = [] ): array {
+		$error = [ 'code' => $code, 'message' => $message ];
+
+		if ( [] !== $details ) {
+			$error['details'] = $details;
+		}
+
 		return [
 			'operation_id' => $operation_id,
 			'success'      => false,
 			'result'       => [],
-			'errors'       => [
-				[ 'code' => $code, 'message' => $message ],
-			],
+			'errors'       => [ $error ],
 			'created'      => [],
 			'updated'      => [],
 			'skipped'      => [],
