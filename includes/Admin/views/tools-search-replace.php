@@ -19,8 +19,10 @@ global $wpdb;
 $op_manager = new \WPCommandCenter\Operations\OperationManager();
 $op_queue   = new \WPCommandCenter\Operations\OperationQueue();
 
-// AuditLog::resolve_actor() requires an array; OperationQueue::run_item() forwards
-// context['actor'] straight to it, so build it as an array here.
+// OperationQueue::run_item() forwards context['actor'] straight to
+// AuditLog::resolve_actor(). That now normalises a malformed actor rather than
+// throwing, but a scalar is only ever recorded as an unverified label — build the
+// full array here so the audit trail carries real admin attribution.
 $wpcc_actor_context = [
 	'actor' => [
 		'type'       => 'admin',

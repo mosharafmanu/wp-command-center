@@ -206,12 +206,33 @@ final class AuditLog {
 	 * Build an actor descriptor for an audit entry. If `$actor` is empty,
 	 * fall back to the currently logged-in admin user (or 'unknown').
 	 *
-	 * @param array<string, mixed> $actor
+	 * The parameter is deliberately untyped. This is a public entry point that
+	 * several callers reach with a caller-supplied `$context['actor']` they do not
+	 * validate — OperationQueue::enqueue() forwards it straight here. When that
+	 * value arrived as a scalar the TypeError was fatal, and because
+	 * OperationManager::approve_request() marks the request APPROVED before it
+	 * enqueues, the throw left the request approved, never queued, and with no
+	 * audit entry: a silently stuck approval and a missing audit record. Audit
+	 * must never be the reason a governed change is lost, so a malformed actor is
+	 * normalised into an honest descriptor instead of aborting the write.
+	 *
+	 * Well-formed array actors are returned exactly as before.
+	 *
+	 * @param mixed $actor Array descriptor, or a scalar label from a lax caller.
 	 * @return array<string, mixed>
 	 */
-	public static function resolve_actor( array $actor ): array {
-		if ( ! empty( $actor ) ) {
+	public static function resolve_actor( $actor ): array {
+		if ( is_array( $actor ) && ! empty( $actor ) ) {
 			return $actor;
+		}
+
+		// A scalar is recorded as an unverified caller-supplied label. It is
+		// deliberately NOT promoted to a trusted type — nothing authenticated it.
+		if ( is_scalar( $actor ) && '' !== (string) $actor ) {
+			return [
+				'type'  => 'unknown',
+				'label' => sanitize_text_field( (string) $actor ),
+			];
 		}
 
 		$user_id = get_current_user_id();
