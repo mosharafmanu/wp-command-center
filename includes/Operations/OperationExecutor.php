@@ -185,6 +185,75 @@ final class OperationExecutor {
 			}
 		}
 
+		/*
+		 * 1b-ter. V1 Phase 2 — refuse a call that cannot possibly execute, before it
+		 * can spend a customer's approval decision.
+		 *
+		 * The action guard above covers operations that dispatch on `action`. Six do
+		 * not — content_seed, acf_seed, woo_product_seed, safe_search_replace,
+		 * media_import, safe_updates — and for those a call with none of its required
+		 * parameters sailed through to the approval queue at the operation's
+		 * worst-case risk. Measured: a parameter-less safe_search_replace sat in the
+		 * queue as CRITICAL, and approving it produced "Errors 1" and changed nothing.
+		 * The owner spent a decision on a request that never had a chance.
+		 *
+		 * Deliberately limited to operations WITHOUT a required `action`. Where an
+		 * operation dispatches on action, its other "required" parameters are only
+		 * required for SOME actions — option_manage declares option_id, but
+		 * option_rollback takes rollback_id instead — so a blanket check there would
+		 * reject valid work. That is the mistake this codebase already made once by
+		 * deriving actions from action_risks, and it is not repeated here.
+		 *
+		 * This only ever rejects, never admits: it cannot widen what a runtime would
+		 * have accepted, and the runtime remains the final authority.
+		 */
+		if ( ! $is_queued && ! $is_requested ) {
+			$declared_params = (array) ( $operation['parameters'] ?? [] );
+			$dispatches      = false;
+			$required_names  = [];
+			foreach ( $declared_params as $param ) {
+				$name = (string) ( $param['name'] ?? '' );
+				if ( '' === $name || empty( $param['required'] ) ) {
+					continue;
+				}
+				if ( 'action' === $name ) {
+					$dispatches = true;
+					break;
+				}
+				$required_names[] = $name;
+			}
+
+			if ( ! $dispatches && [] !== $required_names ) {
+				$missing = [];
+				foreach ( $required_names as $name ) {
+					$value = $payload[ $name ] ?? null;
+					if ( null === $value || '' === $value || [] === $value ) {
+						$missing[] = $name;
+					}
+				}
+
+				if ( [] !== $missing ) {
+					$audit->record( 'operation.missing_parameters', [
+						'operation_id' => $operation_id,
+						'missing'      => $missing,
+						'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+					] );
+
+					return $this->fail(
+						$operation_id,
+						'wpcc_missing_parameters',
+						sprintf(
+							/* translators: 1: operation id, 2: comma-separated missing parameters, 3: comma-separated required parameters */
+							__( '%1$s cannot run without %2$s. It requires: %3$s. Nothing was queued for approval — a request that cannot execute should not need your decision.', 'wp-command-center' ),
+							$operation_id,
+							implode( ', ', $missing ),
+							implode( ', ', $required_names )
+						)
+					);
+				}
+			}
+		}
+
 		// 1c. STEP 84 — Destructive operation guardrail.
 		// Fires in EVERY security mode (including Developer) on the fresh-call
 		// path. A permanent delete / live DB mutation can neither execute nor be
