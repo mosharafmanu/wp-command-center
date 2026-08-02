@@ -23,7 +23,14 @@ assert_true "context: capability_management_available" "$(echo "$CONTEXT" | jq -
 
 echo "== 3. Invalid action =="
 BAD=$(api POST /operations/capability_manage/run '{"action":"evil"}')
-assert_eq "invalid action" "wpcc_invalid_capability_action" "$(echo "$BAD" | jq -r '.code // "none"')"
+# capability_manage now declares its action enum, so OperationExecutor's generic
+# pre-gate refuses an unknown action BEFORE the approval gate and answers with the
+# uniform 'wpcc_invalid_action' — the same code the other pre-gated operations
+# return. It used to fall through to the runtime (and, in a gating mode, be filed
+# as a pending approval that could only fail). Either code is correct; what the
+# contract actually promises is that the MESSAGE names the valid actions.
+assert_true "invalid action: refused" "$(echo "$BAD" | jq -r 'if (.code=="wpcc_invalid_action" or .code=="wpcc_invalid_capability_action") then "true" else "false" end')"
+echo "$BAD" | grep -q "capability_list" && pass "invalid action: message lists valid actions" || fail "invalid action: message lists valid actions"
 
 echo "== 4. Assign capability =="
 ASSIGN=$(api POST /operations/capability_manage/run '{"action":"capability_assign","subject":"token","subject_id":"test-cap-token","capability":"plugin.manage"}')
