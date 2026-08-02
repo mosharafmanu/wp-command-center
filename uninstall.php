@@ -37,6 +37,16 @@ const WPCC_UNINSTALL_TABLES = [
 	'wpcc_proposals',
 	'wpcc_recommendations',
 	'wpcc_snapshots',
+	/*
+	 * Created lazily by TelemetryStore on its first write (CREATE TABLE IF NOT
+	 * EXISTS), deliberately decoupled from Schema::DB_VERSION — so it is absent
+	 * from the schema installer and was absent here too. The consequence: a site
+	 * that had ever recorded telemetry kept an orphaned `wpcc_telemetry` table
+	 * after the owner explicitly opted into deleting all data. Uninstall must
+	 * honour that choice completely; DROP TABLE IF EXISTS is a no-op where the
+	 * lazy table was never created.
+	 */
+	'wpcc_telemetry',
 ];
 
 /** Upload subdirectories created by the plugin. */
