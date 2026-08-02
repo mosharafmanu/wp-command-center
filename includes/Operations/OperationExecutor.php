@@ -91,6 +91,35 @@ final class OperationExecutor {
 			}
 		}
 
+		/*
+		 * 1a-bis. V1 Phase 5 — accept the reasonable synonym.
+		 *
+		 * The catalogue names a post identifier `content_id`, `page_id`, `media_id` or
+		 * `object_id` depending on which runtime you are addressing. Each is sensible
+		 * alone; together they cost an assistant a wrong first call. Aliases are
+		 * normalised into the declared name BEFORE validation, so the rest of the
+		 * engine — required-parameter checks, the runtime, the audit record — only ever
+		 * sees the canonical contract, unchanged.
+		 *
+		 * Supplying the canonical name AND an alias with different values is refused
+		 * rather than guessed: choosing one would be a coin flip over which object the
+		 * customer meant to change.
+		 */
+		$vocabulary = ParameterVocabulary::normalize( $operation_id, $payload );
+		if ( null !== $vocabulary['conflict'] ) {
+			return $this->fail(
+				$operation_id,
+				'wpcc_conflicting_parameters',
+				sprintf(
+					/* translators: 1: canonical parameter name, 2: alias supplied alongside it */
+					__( 'Both %1$s and %2$s were supplied with different values, and they mean the same thing. Send one. Nothing was changed.', 'wp-command-center' ),
+					$vocabulary['conflict']['canonical'],
+					$vocabulary['conflict']['alias']
+				)
+			);
+		}
+		$payload = $vocabulary['payload'];
+
 		$is_queued    = ! empty( $context['queue_id'] );
 		$is_requested = ! empty( $context['request_id'] );
 
@@ -248,7 +277,7 @@ final class OperationExecutor {
 							$operation_id,
 							implode( ', ', $missing ),
 							implode( ', ', $required_names )
-						)
+						) . ( '' !== ParameterVocabulary::hint( $operation_id ) ? ' ' . ParameterVocabulary::hint( $operation_id ) : '' )
 					);
 				}
 			}
