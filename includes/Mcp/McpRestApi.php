@@ -30,7 +30,12 @@ final class McpRestApi {
 		// Resolve across servers that never expose Authorization to WordPress.
 		$raw = AuthTokens::bearer_from_request( $request );
 		if ( '' === $raw ) {
-			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'wp-command-center' ) );
+			// The 401 is not decorative. Without an explicit status WordPress sends
+			// this as HTTP 500, so an unauthenticated request looks like a broken
+			// server: clients retry it as transient instead of asking for a token,
+			// and security scanners flag the endpoint. An invalid token already
+			// returns 401 via AuthTokens::validate() — a missing one must match.
+			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'wp-command-center' ), [ 'status' => 401 ] );
 		}
 		$auth  = new AuthTokens();
 		$token = $auth->validate( $raw );
