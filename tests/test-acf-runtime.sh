@@ -112,9 +112,11 @@ fi
 
 echo "== 17. Validation — Invalid Action =="
 BAD=$(api_post -d '{"action":"bad"}' "$WPCC_BASE/operations/acf_manage/run")
-# acf_manage declares its action enum, so OperationExecutor's generic pre-gate now
-# refuses an unknown action BEFORE the approval gate and names every valid action.
-assert_contains "val: bad" "$BAD" "wpcc_invalid_action"
+# The pre-approval guard refuses an unknown action BEFORE the approval gate, but it
+# answers in the RUNTIME'S own code and phrasing (see InvalidActionContract) — the
+# earlier generic `wpcc_invalid_action` was a regression, not the contract.
+assert_contains "val: bad" "$BAD" "wpcc_invalid_acf_action"
+assert_contains "val: bad msg" "$BAD" "Invalid ACF action"
 
 echo "== 18. Validation — Not Found =="
 NF=$(api_post -d '{"action":"acf_group_get","group_id":"nonexistent_key"}' "$WPCC_BASE/operations/acf_manage/run")
