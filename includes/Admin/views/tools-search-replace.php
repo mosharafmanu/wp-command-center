@@ -75,9 +75,22 @@ $sr_error         = '';
 $sr_success_msg   = '';
 
 if ( isset( $_POST['wpcc_sr_action'] ) && check_admin_referer( 'wpcc_sr_action' ) && current_user_can( 'manage_options' ) ) {
-	$search    = (string) ( $_POST['search'] ?? '' );
-	$replace   = (string) ( $_POST['replace'] ?? '' );
-	$tables    = array_map( 'sanitize_text_field', (array) ( $_POST['tables'] ?? [] ) );
+	/*
+	 * wp_unslash() FIRST. WordPress slashes $_POST, so without it a search for
+	 * O'Brien was sent to the operation as O\'Brien and matched nothing — and a
+	 * replacement containing a quote or backslash wrote the escaped form into the
+	 * customer's content. The redisplay further down this file already unslashed
+	 * these two fields, which is what made the omission here visible.
+	 *
+	 * search/replace are deliberately NOT sanitized beyond unslashing: this tool
+	 * exists to find and replace arbitrary content, including markup, and
+	 * sanitizing would corrupt the very strings the operator typed. They are never
+	 * interpolated into SQL — SearchReplace binds them with $wpdb->prepare().
+	 * REST and MCP callers are unaffected either way; they never arrive slashed.
+	 */
+	$search    = (string) wp_unslash( $_POST['search'] ?? '' );
+	$replace   = (string) wp_unslash( $_POST['replace'] ?? '' );
+	$tables    = array_map( 'sanitize_text_field', array_map( 'wp_unslash', (array) ( $_POST['tables'] ?? [] ) ) );
 	$dry_run   = ! empty( $_POST['dry_run'] );
 	$confirmed = '1' === ( (string) ( $_POST['confirmed'] ?? '0' ) );
 
