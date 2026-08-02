@@ -1142,6 +1142,7 @@ final class OperationRegistry {
 				'requires_approval' => false,
 				'parameters'        => [
 					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'history_list', 'history_get', 'history_timeline', 'rollback_discover', 'rollback_target', 'operation_status' ], 'description' => 'The action: history_list, history_get, history_timeline, rollback_discover (read), rollback_target (write — reverse a change), or operation_status (read — did a write with a given idempotency_key commit?).' ],
+					[ 'name' => 'rollback_id', 'type' => 'string', 'required' => false, 'description' => 'The handle a reversible write returned. rollback_target accepts this in place of change_id.' ],
 					[ 'name' => 'change_id', 'type' => 'string', 'required' => false, 'description' => 'history_get / rollback_discover / rollback_target: the change_id.' ],
 						[ 'name' => 'idempotency_key', 'type' => 'string', 'required' => false, 'description' => 'operation_status: the idempotency key to look up (from the relay log of a timed-out call).' ],
 					[ 'name' => 'runtime', 'type' => 'string', 'required' => false, 'description' => 'history_list: filter by runtime (e.g. option, content, patch).' ],

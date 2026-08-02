@@ -276,13 +276,40 @@ final class ChangeHistoryRuntimeManager {
 		global $wpdb;
 		$table = $wpdb->prefix . 'wpcc_change_log';
 
-		$change_id = sanitize_text_field( (string) ( $p['change_id'] ?? '' ) );
-		if ( '' === $change_id ) {
-			return $this->err( 'wpcc_missing_change_id', __( 'change_id is required for rollback_target.', 'wp-command-center' ) );
+		$change_id   = sanitize_text_field( (string) ( $p['change_id'] ?? '' ) );
+		$rollback_id = sanitize_text_field( (string) ( $p['rollback_id'] ?? '' ) );
+		$cols        = implode( ', ', self::COLUMNS );
+
+		/*
+		 * V1 Phase 3 — accept the handle a write actually returns.
+		 *
+		 * Every reversible write answers with `rollback_id`; change_id is minted by the
+		 * change recorder afterwards and the caller never sees it. Requiring change_id
+		 * here meant the one general undo entry point could not consume the one value
+		 * an assistant is holding, which is how a valid rollback_id ended up at
+		 * rollback_manage — the route that only understands patches.
+		 *
+		 * change_id still works and is still preferred when known.
+		 */
+		if ( '' === $change_id && '' !== $rollback_id ) {
+			$change_id = (string) $wpdb->get_var( $wpdb->prepare(
+				"SELECT change_id FROM {$table} WHERE rollback_id = %s ORDER BY id DESC LIMIT 1",
+				$rollback_id
+			) );
+			if ( '' === $change_id ) {
+				return $this->err( 'wpcc_rollback_id_not_found', sprintf(
+					/* translators: %s: rollback id */
+					__( 'No recorded change carries rollback_id %s. It may belong to a patch — reverse those with patch_manage — or the change may predate change recording.', 'wp-command-center' ),
+					$rollback_id
+				) );
+			}
 		}
 
-		$cols = implode( ', ', self::COLUMNS );
-		$row  = $wpdb->get_row( $wpdb->prepare( "SELECT {$cols} FROM {$table} WHERE change_id = %s LIMIT 1", $change_id ), ARRAY_A );
+		if ( '' === $change_id ) {
+			return $this->err( 'wpcc_missing_change_id', __( 'Pass change_id, or rollback_id as returned by the write you want to undo.', 'wp-command-center' ) );
+		}
+
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT {$cols} FROM {$table} WHERE change_id = %s LIMIT 1", $change_id ), ARRAY_A );
 
 		if ( ! is_array( $row ) ) {
 			return $this->err( 'wpcc_change_not_found', sprintf(

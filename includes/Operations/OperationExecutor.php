@@ -994,6 +994,18 @@ final class OperationExecutor {
 			$base['result']['rollback_available'] = true;
 			$base['rollback_id']        = $rollback_id;
 			$base['rollback_available'] = true;
+
+			/*
+			 * V1 Phase 3 — say where to take the handle, not just that one exists.
+			 *
+			 * Decorated HERE rather than on the way in, because many runtimes never
+			 * return a rollback_id themselves: it is recovered from RollbackContext a
+			 * few lines above. woocommerce_manage's price_update is one — decorating
+			 * the handler's own return silently skipped every operation of that shape.
+			 */
+			if ( ! isset( $base['result']['rollback'] ) ) {
+				$base['result']['rollback'] = RollbackContract::describe( $operation_id, $rollback_id );
+			}
 		}
 
 		return $base;
