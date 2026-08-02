@@ -194,7 +194,7 @@ $redactor = new \WPCommandCenter\Security\Redactor();
 
 $sample = [
 	'site_summary' => [
-		'note' => 'Found AWS key AKIAFAKEID01234567890 and Stripe key sk_fake_test_4eC39HqLyjWDarjtT1zdp7dc in config.',
+		'note' => 'Found AWS key AKIAIOSFODNN7EXAMPLE and Stripe key sk_test_EXAMPLEONLYZZZZZZZZZZZZZZ in config.',
 	],
 	'context' => [
 		'private_key' => "-----BEGIN RSA PRIVATE KEY-----\nMIIBOwIBAAJBAKj34GkxFhD90vcNLYLInFEX6Ppy1tPf9Cnzj4p4WGeKLs1Pt8Qu\n-----END RSA PRIVATE KEY-----",
@@ -216,8 +216,8 @@ assert_true "context redactor: count > 0" "$(echo "$REDACTOR_RESULT" | jq -r '(.
 
 REDACTOR_NOTE=$(echo "$REDACTOR_RESULT" | jq -r '.data.site_summary.note // empty')
 assert_contains "context redactor: AWS/Stripe keys replaced" "$REDACTOR_NOTE" "[REDACTED_SECRET]"
-assert_not_contains "context redactor: raw AWS key removed" "$REDACTOR_NOTE" "AKIAFAKEID01234567890"
-assert_not_contains "context redactor: raw Stripe key removed" "$REDACTOR_NOTE" "sk_fake_test_4eC39HqLyjWDarjtT1zdp7dc"
+assert_not_contains "context redactor: raw AWS key removed" "$REDACTOR_NOTE" "AKIAIOSFODNN7EXAMPLE"
+assert_not_contains "context redactor: raw Stripe key removed" "$REDACTOR_NOTE" "sk_test_EXAMPLEONLYZZZZZZZZZZZZZZ"
 
 REDACTOR_PEM=$(echo "$REDACTOR_RESULT" | jq -r '.data.context.private_key // empty')
 assert_contains "context redactor: PEM block replaced" "$REDACTOR_PEM" "[REDACTED_SECRET]"
