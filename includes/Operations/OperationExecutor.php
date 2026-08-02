@@ -388,7 +388,27 @@ final class OperationExecutor {
 
 		// 2. Validation: Operation is available.
 		if ( empty( $operation['available'] ) ) {
-			return $this->fail( $operation_id, 'operation_not_available', __( 'Operation is not available in the current environment.', 'wp-command-center' ) );
+			/*
+			 * Say WHAT is missing. "Operation is not available in the current
+			 * environment" told a caller nothing it could act on — and the operations
+			 * that answer at the runtime instead (elementor_manage, forms_manage) were
+			 * giving strictly better errors ("Elementor is not active"), which is a
+			 * poor reason for the gated ones to stay vague.
+			 */
+			$needs = OperationDescriptor::integration_label( $operation_id );
+
+			return $this->fail(
+				$operation_id,
+				'operation_not_available',
+				'' !== $needs
+					? sprintf(
+						/* translators: 1: operation id, 2: the integration it requires */
+						__( '%1$s requires %2$s, which is not active on this site.', 'wp-command-center' ),
+						$operation_id,
+						$needs
+					)
+					: __( 'Operation is not available in the current environment.', 'wp-command-center' )
+			);
 		}
 
 		// 3. Dispatch to handler.

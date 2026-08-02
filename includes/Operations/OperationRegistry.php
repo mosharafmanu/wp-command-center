@@ -610,7 +610,9 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => FormsRegistry::ACTIONS ], [ 'name' => 'provider', 'type' => 'string', 'required' => false, 'description' => 'Form provider: cf7, fluentforms, wpforms, gravityforms' ]],
-				'available'         => true,
+				// Computed — see elementor_manage. Hardcoded true contradicted the
+				// requirements block on a site with no forms plugin.
+				'available'         => class_exists( 'WPCF7' ),
 			],
 			'menu_manage' => [
 				'id'          => 'menu_manage',
@@ -1046,7 +1048,10 @@ final class OperationRegistry {
 					[ 'name' => 'url', 'type' => 'string', 'required' => false, 'description' => 'Button link URL (update_button).' ],
 					[ 'name' => 'rollback_id', 'type' => 'string', 'required' => false, 'description' => 'Rollback record ID.' ],
 				],
-				'available'         => true,
+				// Computed, like every other integration-dependent operation. It used to be
+				// hardcoded true, so discovery advertised the operation as available while
+				// its own requirements block said the integration was missing.
+				'available'         => class_exists( 'Elementor\\Plugin' ),
 			],
 			// ── STEP 98 — Reporting runtime ──
 			'report_manage' => [

@@ -140,21 +140,39 @@ final class OperationDescriptor {
 			];
 		}
 
-		$integrations = [
-			'woocommerce_manage' => [ 'WooCommerce', 'WooCommerce' ],
-			'acf_manage'         => [ 'Advanced Custom Fields', 'acf_get_field_groups' ],
-			'elementor_manage'   => [ 'Elementor', 'Elementor\\Plugin' ],
-			'forms_manage'       => [ 'a supported forms plugin', 'WPCF7' ],
-			'seo_manage'         => [ 'Rank Math or Yoast SEO', '' ],
-		];
-		if ( isset( $integrations[ $id ] ) ) {
-			[ $label, $probe ] = $integrations[ $id ];
-			$satisfied = '' === $probe
-				? ( class_exists( 'RankMath' ) || defined( 'WPSEO_VERSION' ) )
-				: ( class_exists( $probe ) || function_exists( $probe ) );
-			$out['needs'][] = [ 'what' => $label, 'satisfied' => $satisfied ];
+		$label = self::integration_label( $id );
+		if ( '' !== $label ) {
+			$out['needs'][] = [ 'what' => $label, 'satisfied' => self::integration_satisfied( $id ) ];
 		}
 
 		return $out;
+	}
+
+	/**
+	 * The integration an operation needs, or '' when it needs none.
+	 *
+	 * @var array<string,array{0:string,1:string}> operation id => [ label, class/function probe ]
+	 */
+	private const INTEGRATIONS = [
+		'woocommerce_manage' => [ 'WooCommerce', 'WooCommerce' ],
+		'acf_manage'         => [ 'Advanced Custom Fields', 'acf_get_field_groups' ],
+		'elementor_manage'   => [ 'Elementor', 'Elementor\\Plugin' ],
+		'forms_manage'       => [ 'a supported forms plugin (Contact Form 7)', 'WPCF7' ],
+		'seo_manage'         => [ 'Rank Math or Yoast SEO', '' ],
+	];
+
+	public static function integration_label( string $operation_id ): string {
+		return self::INTEGRATIONS[ $operation_id ][0] ?? '';
+	}
+
+	public static function integration_satisfied( string $operation_id ): bool {
+		if ( ! isset( self::INTEGRATIONS[ $operation_id ] ) ) {
+			return true;
+		}
+		$probe = self::INTEGRATIONS[ $operation_id ][1];
+
+		return '' === $probe
+			? ( class_exists( 'RankMath' ) || defined( 'WPSEO_VERSION' ) )
+			: ( class_exists( $probe ) || function_exists( $probe ) );
 	}
 }
