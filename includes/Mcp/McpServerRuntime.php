@@ -294,6 +294,23 @@ final class McpServerRuntime {
 
 	// ── Tools ──
 
+	/**
+	 * The description an MCP client sees for one operation.
+	 *
+	 * @param array<string,mixed> $op
+	 */
+	private static function tool_description( array $op, string $mode ): string {
+		$title = (string) ( $op['title'] ?? ( $op['id'] ?? '' ) );
+		$note  = trim( (string) ( $op['agent_note'] ?? '' ) );
+
+		if ( ContextModeOptimizer::COMPACT !== $mode ) {
+			$full = $title . ': ' . (string) ( $op['description'] ?? '' );
+			return '' === $note ? $full : $full . ' ' . $note;
+		}
+
+		return '' === $note ? $title : $title . ' — ' . $note;
+	}
+
 	private function tools_list( array $params = [] ): array {
 		$mode    = ContextModeOptimizer::normalize( $params['context_mode'] ?? null );
 		$ops     = ( new OperationRegistry() )->get_operations();
@@ -349,7 +366,16 @@ final class McpServerRuntime {
 			}
 			$tools[] = [
 				'name'        => $op['id'],
-				'description' => ContextModeOptimizer::COMPACT === $mode ? $op['title'] : $op['title'] . ': ' . $op['description'],
+				/*
+				 * Compact mode drops the operation description to save context — and
+				 * compact is the default in every client configuration this plugin
+				 * generates, so in practice an agent never read it. That is fine for
+				 * prose, but not for a BOUNDARY: "this cannot create files", "this
+				 * needs a capability your host may not have". Those have to survive
+				 * compaction or the agent only discovers them by failing. An
+				 * operation opts in with `agent_note`, which is kept in every mode.
+				 */
+				'description' => self::tool_description( $op, $mode ),
 				'inputSchema' => [
 					'type'       => 'object',
 					'properties' => $props,

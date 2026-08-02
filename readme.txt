@@ -125,11 +125,26 @@ Revoke it under **Settings → Connections**. It stops working immediately on th
 
 = Does it work on WordPress Multisite? =
 
-Version 1 is built and tested for a single site. Activate it per site rather than
-network-wide: its tables and settings are created for the site it is activated on, so
-network activation would leave the other sites in the network without them. Nothing
-breaks if that happens — those sites simply show an empty Command Center — but the
-plugin will not do anything useful there until it is activated on that site.
+Version 1 is built and tested for a single site, and it now enforces that rather than
+just recommending it: network activation is refused with an explanation, because it
+would create the plugin's tables and settings for one site while showing the Command
+Center on all of them. Activate it from each site's own Plugins screen instead. If a
+network was already network-activated before this version, an admin notice says so.
+
+= Can it create or delete files? =
+
+No. It edits files that already exist — a patch is a change to a known file, taken with
+a snapshot first so it can be undone. It will not create a new template or delete one,
+and it says so if you ask: the request is refused rather than half-performed. Creating
+and removing files stays with you, your editor, or your deployment process.
+
+= What happens if my host blocks PHP process execution? =
+
+Everything except the WP-CLI bridge keeps working. That one operation needs the host to
+allow proc_open and a reachable WP-CLI binary; where a host disables it — which is
+common on shared hosting — the operation reports itself as unavailable instead of
+failing halfway, and the rest of the plugin is unaffected. You can see exactly what your
+host allows under Command Center -> Settings -> Advanced -> Diagnostics.
 
 = Does it need SSH, WP-CLI, or file permissions? =
 
