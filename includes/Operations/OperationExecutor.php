@@ -819,7 +819,18 @@ final class OperationExecutor {
 			'risk_level'         => $risk_level,
 			'security_mode'      => $mode,
 			'rollback_available' => null !== $destructive ? (bool) $destructive['backup_capable'] : true,
-			'approval_url'       => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ),
+			/*
+			 * V1 Phase 10 — deep-link to THIS request, not the approvals list.
+			 *
+			 * The list is where the owner had to go hunting: after asking for an undo
+			 * they landed on every pending item and had to identify their own among
+			 * them. The approvals screen already renders a single request when given
+			 * `view`, complete with its diff and its Approve control, so send them
+			 * straight there. Nothing about the decision changes — they still read it
+			 * and still approve it; they simply stop searching for it first.
+			 */
+			'approval_url'       => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals&view=' . rawurlencode( (string) $request['request_id'] ) ),
+			'approvals_list_url' => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ),
 		];
 
 		// STEP 84 — flag destructive requests so the AI and the approval card

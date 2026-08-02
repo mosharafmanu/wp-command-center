@@ -582,7 +582,14 @@ final class ActionLabels {
 	 * @param array<string,mixed> $payload
 	 */
 	private static function undo_target( array $payload ): string {
-		foreach ( [ 'change_id', 'target_change_id', 'rollback_id' ] as $key ) {
+		/*
+		 * An undo names its target by change_id OR by rollback_id — the latter is the
+		 * handle a write returns and, since the rollback routing contract, the value a
+		 * caller is most likely to send. Look the row up by the matching COLUMN;
+		 * searching change_id for a rollback_id silently found nothing and the row fell
+		 * back to a bare "Undo a change".
+		 */
+		foreach ( [ 'change_id' => 'change_id', 'target_change_id' => 'change_id', 'rollback_id' => 'rollback_id' ] as $key => $column ) {
 			$id = isset( $payload[ $key ] ) && is_scalar( $payload[ $key ] ) ? (string) $payload[ $key ] : '';
 			if ( '' === $id ) {
 				continue;
@@ -592,7 +599,7 @@ final class ActionLabels {
 			$table = $wpdb->prefix . 'wpcc_change_log';
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table, single indexed row, display only.
 			$row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT operation_id, action, target_summary FROM {$table} WHERE change_id = %s LIMIT 1", $id ),
+				$wpdb->prepare( "SELECT operation_id, action, target_summary FROM {$table} WHERE {$column} = %s ORDER BY id DESC LIMIT 1", $id ),
 				ARRAY_A
 			);
 			if ( ! $row ) {
