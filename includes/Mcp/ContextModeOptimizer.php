@@ -59,7 +59,11 @@ final class ContextModeOptimizer {
 			return $value;
 		}
 
-		if ( array_is_list( $value ) ) {
+		// Tested inline rather than with array_is_list(): the plugin supports PHP 8.0
+		// and WordPress 6.4, and that function belongs to PHP 8.1 / WP 6.5. A polyfill
+		// exists in the bootstrap, but relying on it here also makes Plugin Check read
+		// the plugin as requiring a newer WordPress than it does.
+		if ( [] === $value || array_keys( $value ) === range( 0, count( $value ) - 1 ) ) {
 			$count   = count( $value );
 			$preview = array_map( [ $this, 'compact' ], array_slice( $value, 0, self::PREVIEW_ITEMS ) );
 

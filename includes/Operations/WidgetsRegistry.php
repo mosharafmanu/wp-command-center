@@ -46,10 +46,33 @@ final class WidgetsRegistry {
 		return ! in_array( $action, [ self::ACTION_WIDGET_LIST, self::ACTION_WIDGET_GET ], true );
 	}
 
+	/**
+	 * The sidebar → widget-id map, read the same way this runtime writes it.
+	 *
+	 * self::sidebars_widgets() is marked private in core and is on Plugin Check's
+	 * forbidden list, so the directory build cannot ship it. Every write in this
+	 * runtime already goes through update_option( 'sidebars_widgets', … ), so
+	 * reading the same option is both the public route and the symmetric one — a
+	 * read/modify/write round-trip can no longer disagree with itself.
+	 *
+	 * `array_version` is core's schema marker inside that option, not a sidebar;
+	 * it is dropped so callers never iterate it as one.
+	 *
+	 * @return array<string,array<int,string>>
+	 */
+	public static function sidebars_widgets(): array {
+		$stored = get_option( 'sidebars_widgets', [] );
+		if ( ! is_array( $stored ) ) {
+			return [];
+		}
+		unset( $stored['array_version'] );
+		return $stored;
+	}
+
 	public function get_widgets(): array {
 		global $wp_registered_widgets;
 
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = self::sidebars_widgets();
 		$result = [];
 
 		foreach ( $wp_registered_widgets as $widget_id => $widget ) {
@@ -84,7 +107,7 @@ final class WidgetsRegistry {
 
 	public function get_sidebars(): array {
 		global $wp_registered_sidebars;
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = self::sidebars_widgets();
 		$result = [];
 
 		foreach ( $wp_registered_sidebars as $sidebar_id => $sidebar ) {

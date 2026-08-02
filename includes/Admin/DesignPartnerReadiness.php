@@ -190,7 +190,6 @@ final class DesignPartnerReadiness {
 			'post_status'      => [ 'publish', 'draft' ],
 			'numberposts'      => 1,
 			'fields'           => 'ids',
-			'suppress_filters' => true,
 		] );
 		$images = get_posts( [
 			'post_type'        => 'attachment',
@@ -198,7 +197,6 @@ final class DesignPartnerReadiness {
 			'post_status'      => 'inherit',
 			'numberposts'      => 1,
 			'fields'           => 'ids',
-			'suppress_filters' => true,
 		] );
 		return [ 'has_post' => ! empty( $posts ), 'has_image' => ! empty( $images ) ];
 	}

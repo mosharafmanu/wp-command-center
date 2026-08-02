@@ -100,7 +100,7 @@ final class WidgetsRuntimeManager {
 			];
 		}
 
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
 		if ( ! isset( $sidebars_widgets[ $sidebar_id ] ) ) {
 			$sidebars_widgets[ $sidebar_id ] = [];
 		}
@@ -147,7 +147,7 @@ final class WidgetsRuntimeManager {
 		}
 
 		// Find widget in sidebars to verify existence
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
 		$found = false;
 		foreach ( $sidebars_widgets as $widgets ) {
 			if ( is_array( $widgets ) && in_array( $widget_id, $widgets, true ) ) {
@@ -199,7 +199,7 @@ final class WidgetsRuntimeManager {
 			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'wp-command-center' ) );
 		}
 
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
 		$found_sidebar = null;
 		foreach ( $sidebars_widgets as $sid => $widgets ) {
 			if ( is_array( $widgets ) && in_array( $widget_id, $widgets, true ) ) {
@@ -248,7 +248,7 @@ final class WidgetsRuntimeManager {
 			return new \WP_Error( 'wpcc_missing_sidebar_id', __( 'sidebar_id is required.', 'wp-command-center' ) );
 		}
 
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
 
 		// Remove from current sidebar
 		$previous_sidebar = null;
@@ -296,7 +296,7 @@ final class WidgetsRuntimeManager {
 			return new \WP_Error( 'wpcc_missing_params', __( 'widget_id and sidebar_id are required.', 'wp-command-center' ) );
 		}
 
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
 		if ( ! isset( $sidebars_widgets[ $sidebar_id ] ) ) {
 			return new \WP_Error( 'wpcc_sidebar_not_found', __( 'Sidebar not found.', 'wp-command-center' ) );
 		}
@@ -347,7 +347,7 @@ final class WidgetsRuntimeManager {
 		}
 
 		$action = $record['action'];
-		$sidebars_widgets = wp_get_sidebars_widgets();
+		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
 
 		switch ( $action ) {
 			case 'widget_add':
