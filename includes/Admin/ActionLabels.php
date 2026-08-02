@@ -553,11 +553,73 @@ final class ActionLabels {
 	public static function describe( string $operation_id, string $action, array $payload = [], string $fallback = '' ): string {
 		$title  = self::action( $action, $operation_id, $fallback );
 		$target = self::target( $payload );
+
+		// An undo carries only the id of the change it reverses, and `change_id` is
+		// not a name or an object id, so target() found nothing and the approval row
+		// read a bare "Undo a change". With one undo pending that is merely terse;
+		// with several it is genuinely ambiguous — the owner cannot tell which change
+		// they are approving the reversal of. Name the original instead.
+		if ( '' === $target ) {
+			$target = self::undo_target( $payload );
+		}
+
 		if ( '' === $target ) {
 			return $title;
 		}
 		/* translators: 1: what the change does, 2: which item it affects */
 		return sprintf( _x( '%1$s — %2$s', 'change summary', 'wp-command-center' ), $title, $target );
+	}
+
+	/**
+	 * Describe the change an undo request reverses, e.g. `Update price — #1185`.
+	 *
+	 * One indexed, read-only lookup on change_id (the column is unique-keyed), and
+	 * the original row is then run through this same humanizer, so the words on the
+	 * undo approval are identical to the words on the change it undoes. Returns ''
+	 * whenever the change cannot be resolved — a missing original must never stop an
+	 * approval row from rendering.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
+	private static function undo_target( array $payload ): string {
+		foreach ( [ 'change_id', 'target_change_id', 'rollback_id' ] as $key ) {
+			$id = isset( $payload[ $key ] ) && is_scalar( $payload[ $key ] ) ? (string) $payload[ $key ] : '';
+			if ( '' === $id ) {
+				continue;
+			}
+
+			global $wpdb;
+			$table = $wpdb->prefix . 'wpcc_change_log';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- plugin-owned table, single indexed row, display only.
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT operation_id, action, target_summary FROM {$table} WHERE change_id = %s LIMIT 1", $id ),
+				ARRAY_A
+			);
+			if ( ! $row ) {
+				continue;
+			}
+
+			// target_summary stores an ALREADY-RENDERED label (quotes included), not a
+			// raw payload — running it back through target() would wrap it a second
+			// time and print ““like this””. Take the title from the humanizer and the
+			// label verbatim.
+			$summary = json_decode( (string) ( $row['target_summary'] ?? '' ), true );
+			$title   = self::action( (string) ( $row['action'] ?? '' ), (string) ( $row['operation_id'] ?? '' ) );
+			$label   = is_array( $summary ) && isset( $summary['label'] ) && is_scalar( $summary['label'] )
+				? trim( (string) $summary['label'] )
+				: '';
+
+			if ( '' === $title ) {
+				return $label;
+			}
+			if ( '' === $label ) {
+				return $title;
+			}
+			/* translators: 1: what the original change did, 2: which item it affected */
+			return sprintf( _x( '%1$s — %2$s', 'change summary', 'wp-command-center' ), $title, $label );
+		}
+
+		return '';
 	}
 
 	/**
