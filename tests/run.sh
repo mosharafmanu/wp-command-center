@@ -23,6 +23,7 @@
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WP_ROOT="$(cd "$ROOT/../../.." && pwd)"   # wp-content/plugins/<plugin> -> WordPress root
 cd "$ROOT"
 MAP="tests/regression-map.tsv"
 QUAR="tests/regression-quarantine.txt"
@@ -122,9 +123,43 @@ lint_changed() {
   return $lint_fail
 }
 
+# ── Governance-state isolation ───────────────────────────────────
+# Around twenty suites change the site's protection mode or capability enforcement to
+# exercise gating, and most do it without a trap — so any early exit leaves the wrong
+# mode behind and the NEXT suite fails for reasons that have nothing to do with it.
+# Proven: test-capability-runtime drops 11 assertions when it inherits `enterprise`,
+# because its writes are gated and the timeline entries it asserts never appear.
+#
+# Restoring here, after every suite, makes the full run deterministic regardless of any
+# individual suite's hygiene. It is the runner's job: a suite cannot be trusted to clean
+# up after a failure it did not expect.
+GOV_SNAPSHOT() {
+  wp --path="$WP_ROOT" eval '
+    echo wp_json_encode( [
+      "mode" => get_option( "wpcc_security_mode" ),
+      "caps" => get_option( "wpcc_enforce_capabilities" ),
+    ] );' 2>/dev/null
+}
+GOV_RESTORE() {
+  local snap="$1"
+  [ -z "$snap" ] && return 0
+  wp --path="$WP_ROOT" eval '
+    $s = json_decode( $argv[0], true );
+    if ( ! is_array( $s ) ) { return; }
+    if ( null !== $s["mode"] && get_option( "wpcc_security_mode" ) !== $s["mode"] ) {
+      update_option( "wpcc_security_mode", $s["mode"] );
+    }
+    if ( null !== $s["caps"] && get_option( "wpcc_enforce_capabilities" ) != $s["caps"] ) {
+      update_option( "wpcc_enforce_capabilities", $s["caps"] );
+    }' "$snap" >/dev/null 2>&1
+}
+export -f GOV_SNAPSHOT GOV_RESTORE
+export WP_ROOT
+
 # ── Run a single suite (network suites retry once) ───────────────
 run_one() {
-  local suite="$1" out p f
+  local suite="$1" out p f gov
+  gov="$(GOV_SNAPSHOT)"
   out="$(bash "tests/$suite" 2>&1)"
   p="$(echo "$out" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+')"; p="${p:-0}"
   f="$(echo "$out" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+')"; f="${f:-0}"
@@ -133,6 +168,7 @@ run_one() {
     p="$(echo "$out" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+')"; p="${p:-0}"
     f="$(echo "$out" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+')"; f="${f:-0}"
   fi
+  GOV_RESTORE "$gov"
   printf '%s\t%s\t%s\n' "$suite" "$p" "$f"
 }
 export -f run_one is_network

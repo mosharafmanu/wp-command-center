@@ -111,6 +111,8 @@ No. Connecting an AI assistant over MCP uses your assistant's own AI. A provider
 
 Any MCP-compatible client. Setup instructions are provided for Claude, Cursor, Codex, ChatGPT, Gemini, and others, plus a generic option.
 
+The setup the plugin generates runs a small connector (shipped inside the plugin, served from your own site — nothing is downloaded from npm). **Node.js must be installed on the computer running your assistant**, not on your web host. If your assistant connects but shows no tools, a missing Node is the usual cause.
+
 = Can the AI change my site without asking? =
 
 Not in the default setting. On a fresh install the site runs in Standard protection, where anything that could affect your visitors waits for your approval — low-risk edits still go straight through. Strict approval gates every change without exception. There is also a Development setting that removes the approval step for local and staging sites; it warns you before you switch to it, and it is never the default — including when the setting is missing or corrupt.
