@@ -470,6 +470,21 @@ final class PatchOperation {
 
 			$real = $guard->resolve( $path );
 			if ( is_wp_error( $real ) ) {
+				// PathGuard's "the requested path does not exist" is right for a read,
+				// but here it reads like a typo when the caller is in fact trying to
+				// CREATE a file. Patches only ever edit files that already exist —
+				// say so, so an assistant stops re-trying the path instead of learning
+				// that new files are out of scope.
+				if ( 'wpcc_not_found' === $real->get_error_code() ) {
+					return new \WP_Error(
+						'wpcc_patch_target_missing',
+						sprintf(
+							/* translators: %s: the wp-content-relative file path that was requested */
+							__( 'There is no file at "%s". A patch edits a file that already exists — it cannot create one. Create the file another way first, then patch it.', 'wp-command-center' ),
+							$path
+						)
+					);
+				}
 				return $real;
 			}
 			if ( ! is_file( $real ) || ! is_readable( $real ) ) {
