@@ -234,17 +234,25 @@ final class ACFRuntimeManager {
 	private function field_list( array $p ): array {
 		$group_id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		if ( '' !== $group_id ) {
-			$fields = acf_get_fields( $group_id );
+			$fields = $this->group_fields( $group_id );
 		} else {
-			$all_groups = acf_get_field_groups();
 			$fields = [];
-			foreach ( $all_groups as $g ) {
-				$f = acf_get_fields( $g['key'] );
-				if ( $f ) $fields = array_merge( $fields, $f );
+			foreach ( acf_get_field_groups() as $g ) {
+				$fields = array_merge( $fields, $this->group_fields( (string) ( $g['key'] ?? '' ) ) );
 			}
 		}
-		$items = array_map( [ $this, 'detail_field' ], $fields ?: [] );
-		return [ 'action' => 'acf_field_list', 'fields' => $items, 'total' => count( $items ) ];
+
+		$counts = self::count_field_tree( $fields );
+		$items  = array_map( [ $this, 'detail_field' ], $fields );
+
+		return array_merge( [
+			'action' => 'acf_field_list',
+			'fields' => $items,
+			// `total` is the number of fields IN the group. Sub-fields of a
+			// repeater/group/flexible layout are reported separately rather than
+			// inflating it — a repeater with two sub-fields is one field, not three.
+			'total'  => $counts['top_level_fields'],
+		], $counts );
 	}
 
 	private function field_get( array $p ): array {
@@ -295,6 +303,85 @@ final class ACFRuntimeManager {
 		}
 
 		return 0;
+	}
+
+	/**
+	 * A field group array whose `ID` is the stored post ID.
+	 *
+	 * acf_get_field_group() may return the LOCAL JSON copy of a group, whose `ID`
+	 * is 0. acf_get_fields() cannot collect a group's fields from that, so every
+	 * read that starts from a group key — field_list, inventory, json_export —
+	 * silently returned an empty set on a site with ACF local JSON enabled. That
+	 * is standard practice for agencies, so it was the common case, not the edge.
+	 *
+	 * @return array<string,mixed> Empty array when the group cannot be resolved.
+	 */
+	private function group_with_id( string $group_key ): array {
+		$group = acf_get_field_group( $group_key );
+		if ( ! is_array( $group ) ) {
+			return [];
+		}
+		if ( empty( $group['ID'] ) ) {
+			$group['ID'] = $this->parent_post_id( $group_key );
+		}
+		return empty( $group['ID'] ) ? [] : $group;
+	}
+
+	/**
+	 * Every field of a group, resolved through the stored post ID.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function group_fields( string $group_key ): array {
+		$group = $this->group_with_id( $group_key );
+		if ( [] === $group ) {
+			return [];
+		}
+		$fields = acf_get_fields( $group );
+		return is_array( $fields ) ? $fields : [];
+	}
+
+	/**
+	 * Count a field tree honestly.
+	 *
+	 * A repeater with two sub-fields is ONE field in the group, not three. The
+	 * previous `total` counted whatever acf_get_fields() returned, which invited
+	 * "this group has more fields than it does".
+	 *
+	 * @param array<int,array<string,mixed>> $fields
+	 * @return array{top_level_fields:int,nested_sub_fields:int,total_nodes:int}
+	 */
+	private static function count_field_tree( array $fields ): array {
+		$nested = 0;
+
+		$walk = static function ( array $nodes ) use ( &$walk, &$nested ): void {
+			foreach ( $nodes as $node ) {
+				if ( ! is_array( $node ) ) {
+					continue;
+				}
+				$children = [];
+				if ( ! empty( $node['sub_fields'] ) && is_array( $node['sub_fields'] ) ) {
+					$children = $node['sub_fields'];
+				}
+				foreach ( (array) ( $node['layouts'] ?? [] ) as $layout ) {
+					if ( is_array( $layout ) && ! empty( $layout['sub_fields'] ) && is_array( $layout['sub_fields'] ) ) {
+						$children = array_merge( $children, $layout['sub_fields'] );
+					}
+				}
+				if ( [] !== $children ) {
+					$nested += count( $children );
+					$walk( $children );
+				}
+			}
+		};
+		$walk( $fields );
+
+		$top = count( $fields );
+		return [
+			'top_level_fields'  => $top,
+			'nested_sub_fields' => $nested,
+			'total_nodes'       => $top + $nested,
+		];
 	}
 
 	private function field_create( array $p, array $cx ): array {
@@ -652,7 +739,21 @@ final class ACFRuntimeManager {
 				return $selector; // error() — object params present but unresolvable
 			}
 		} else {
-			// No object identity supplied: legacy behavior (current/global context).
+			/*
+			 * No object identity supplied. In a REST/MCP request there is no "current
+			 * post", so get_field() answers null — indistinguishable from a field that
+			 * is genuinely empty. Reporting that as `value: null` told callers the
+			 * field was empty when it held a value; the usual cause is simply the
+			 * wrong parameter name. Only fall through to the global context when one
+			 * actually exists (a template render), otherwise say what is missing.
+			 */
+			$current = function_exists( 'get_the_ID' ) ? (int) get_the_ID() : 0;
+			if ( $current <= 0 ) {
+				return $this->error(
+					'wpcc_acf_no_object_context',
+					__( 'No object to read the field from. Pass object_type ("post", "term", "user" or "option") together with object_id — for a post, post_id also works. Without one of those there is no current object in an API request, and an empty answer would be indistinguishable from a field that has no value.', 'wp-command-center' )
+				);
+			}
 			$selector = false;
 		}
 
@@ -661,7 +762,25 @@ final class ACFRuntimeManager {
 		// no sub-field payload at all).
 		$format    = sanitize_key( (string) ( $p['format'] ?? 'formatted' ) );
 		$formatted = 'raw' !== $format;
-		$value     = get_field( $key, $selector, $formatted );
+
+		/*
+		 * get_field() returns null both for "no such field" and for "this field has
+		 * no value". Ask the registry which one it is, so the caller is not left to
+		 * guess whether they mistyped the key or the field is simply blank.
+		 */
+		$definition = acf_get_field( $key );
+		if ( ! $definition ) {
+			return $this->error(
+				'wpcc_acf_field_not_found',
+				sprintf(
+					/* translators: %s: the field key or name that was requested */
+					__( 'No ACF field named "%s" is registered on this site. Use acf_field_list to see the fields of a group; an unknown field is reported here rather than as an empty value.', 'wp-command-center' ),
+					$key
+				)
+			);
+		}
+
+		$value = get_field( $key, $selector, $formatted );
 
 		$base = [
 			'action'      => 'acf_value_get',
@@ -669,6 +788,11 @@ final class ACFRuntimeManager {
 			'selector'    => is_bool( $selector ) ? null : (string) $selector,
 			'post_id'     => is_int( $selector ) ? $selector : 0,
 			'field_key'   => $key,
+			'field_type'  => (string) ( $definition['type'] ?? '' ),
+			// The field is known to exist by this point; say whether it holds a value
+			// so `null` is never ambiguous.
+			'field_exists' => true,
+			'value_state'  => ( null === $value || '' === $value || [] === $value || false === $value ) ? 'empty' : 'has_value',
 		];
 
 		// layouts_only — for a flexible-content value, skip all sub-field payload

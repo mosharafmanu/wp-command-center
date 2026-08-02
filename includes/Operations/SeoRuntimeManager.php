@@ -158,17 +158,82 @@ final class SeoRuntimeManager {
 		$content = strtolower( wp_strip_all_tags( (string) $post->post_content ) );
 		$haystk  = strtolower( $title . ' ' . get_the_title( $post ) );
 
+		$title_len = mb_strlen( $title );
+		$desc_len  = mb_strlen( $desc );
+
 		$checks = [];
-		$checks[] = $this->check( 'title_present', '' !== $title, __( 'An SEO title is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'title_length', '' !== $title && mb_strlen( $title ) <= self::TITLE_MAX, sprintf( /* translators: 1: maximum characters allowed, 2: actual length */ __( 'SEO title is within %1$d characters (is %2$d).', 'wp-command-center' ), self::TITLE_MAX, mb_strlen( $title ) ) );
-		$checks[] = $this->check( 'description_present', '' !== $desc, __( 'A meta description is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'description_length', mb_strlen( $desc ) >= self::DESC_MIN && mb_strlen( $desc ) <= self::DESC_MAX, sprintf( /* translators: 1: minimum characters, 2: maximum characters, 3: actual length */ __( 'Meta description is %1$d–%2$d characters (is %3$d).', 'wp-command-center' ), self::DESC_MIN, self::DESC_MAX, mb_strlen( $desc ) ) );
-		$checks[] = $this->check( 'focus_keyword_present', '' !== $kw, __( 'A focus keyword is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'focus_keyword_in_title', '' !== $kw && str_contains( $haystk, $kw ), __( 'Focus keyword appears in the title.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'focus_keyword_in_description', '' !== $kw && str_contains( strtolower( $desc ), $kw ), __( 'Focus keyword appears in the meta description.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'focus_keyword_in_content', '' !== $kw && str_contains( $content, $kw ), __( 'Focus keyword appears in the content.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'canonical_set', '' !== (string) $seo['canonical'], __( 'A canonical URL is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'open_graph_set', '' !== (string) $seo['og_title'] || '' !== (string) $seo['og_description'], __( 'Open Graph metadata is set.', 'wp-command-center' ) );
+		$checks[] = $this->check(
+			'title_present',
+			'' !== $title,
+			__( 'An SEO title is set.', 'wp-command-center' ),
+			__( 'No SEO title is set. Add one so search results do not fall back to the post title.', 'wp-command-center' )
+		);
+		$checks[] = $this->check(
+			'title_length',
+			'' !== $title && $title_len <= self::TITLE_MAX,
+			sprintf( /* translators: 1: maximum characters allowed, 2: actual length */ __( 'SEO title is within %1$d characters (is %2$d).', 'wp-command-center' ), self::TITLE_MAX, $title_len ),
+			'' === $title
+				? sprintf( /* translators: %d: maximum characters allowed */ __( 'No SEO title to measure; the recommended maximum is %d characters.', 'wp-command-center' ), self::TITLE_MAX )
+				: sprintf( /* translators: 1: actual length, 2: maximum characters allowed */ __( 'SEO title is %1$d characters, longer than the recommended %2$d. Shorten it or search engines may truncate it.', 'wp-command-center' ), $title_len, self::TITLE_MAX ),
+			[ 'measured' => $title_len, 'max' => self::TITLE_MAX, 'unit' => 'characters' ]
+		);
+		$checks[] = $this->check(
+			'description_present',
+			'' !== $desc,
+			__( 'A meta description is set.', 'wp-command-center' ),
+			__( 'No meta description is set. Add one so search engines do not compose their own.', 'wp-command-center' )
+		);
+		$checks[] = $this->check(
+			'description_length',
+			$desc_len >= self::DESC_MIN && $desc_len <= self::DESC_MAX,
+			sprintf( /* translators: 1: minimum characters, 2: maximum characters, 3: actual length */ __( 'Meta description is %1$d–%2$d characters (is %3$d).', 'wp-command-center' ), self::DESC_MIN, self::DESC_MAX, $desc_len ),
+			$desc_len < self::DESC_MIN
+				? sprintf( /* translators: 1: actual length, 2: minimum characters */ __( 'Meta description is %1$d characters, shorter than the recommended minimum of %2$d. Add more detail.', 'wp-command-center' ), $desc_len, self::DESC_MIN )
+				: sprintf( /* translators: 1: actual length, 2: maximum characters */ __( 'Meta description is %1$d characters, longer than the recommended %2$d. Shorten it or it may be truncated.', 'wp-command-center' ), $desc_len, self::DESC_MAX ),
+			[ 'measured' => $desc_len, 'min' => self::DESC_MIN, 'max' => self::DESC_MAX, 'unit' => 'characters' ]
+		);
+		$checks[] = $this->check(
+			'focus_keyword_present',
+			'' !== $kw,
+			__( 'A focus keyword is set.', 'wp-command-center' ),
+			__( 'No focus keyword is set, so the keyword checks below cannot be assessed.', 'wp-command-center' )
+		);
+		$checks[] = $this->check(
+			'focus_keyword_in_title',
+			'' !== $kw && str_contains( $haystk, $kw ),
+			__( 'Focus keyword appears in the title.', 'wp-command-center' ),
+			'' === $kw
+				? __( 'No focus keyword is set, so this cannot be checked against the title.', 'wp-command-center' )
+				: __( 'Focus keyword does not appear in the SEO title or the post title.', 'wp-command-center' )
+		);
+		$checks[] = $this->check(
+			'focus_keyword_in_description',
+			'' !== $kw && str_contains( strtolower( $desc ), $kw ),
+			__( 'Focus keyword appears in the meta description.', 'wp-command-center' ),
+			'' === $kw
+				? __( 'No focus keyword is set, so this cannot be checked against the meta description.', 'wp-command-center' )
+				: __( 'Focus keyword does not appear in the meta description.', 'wp-command-center' )
+		);
+		$checks[] = $this->check(
+			'focus_keyword_in_content',
+			'' !== $kw && str_contains( $content, $kw ),
+			__( 'Focus keyword appears in the content.', 'wp-command-center' ),
+			'' === $kw
+				? __( 'No focus keyword is set, so this cannot be checked against the content.', 'wp-command-center' )
+				: __( 'Focus keyword does not appear in the content.', 'wp-command-center' )
+		);
+		$checks[] = $this->check(
+			'canonical_set',
+			'' !== (string) $seo['canonical'],
+			__( 'A canonical URL is set.', 'wp-command-center' ),
+			__( 'No canonical URL is set. This is normal unless this content is duplicated elsewhere.', 'wp-command-center' )
+		);
+		$checks[] = $this->check(
+			'open_graph_set',
+			'' !== (string) $seo['og_title'] || '' !== (string) $seo['og_description'],
+			__( 'Open Graph metadata is set.', 'wp-command-center' ),
+			__( 'No Open Graph title or description is set, so social shares fall back to the page content.', 'wp-command-center' )
+		);
 
 		$passed = count( array_filter( $checks, static fn( $c ) => $c['passed'] ) );
 		$score  = (int) round( ( $passed / count( $checks ) ) * 100 );
@@ -422,8 +487,25 @@ final class SeoRuntimeManager {
 		return $issues;
 	}
 
-	private function check( string $name, bool $passed, string $detail ): array {
-		return [ 'check' => $name, 'passed' => $passed, 'detail' => $detail ];
+	/**
+	 * One analysis check.
+	 *
+	 * Takes BOTH outcomes. Every check used to carry a single sentence written as
+	 * the passing statement, and that sentence was shown whatever the result — so a
+	 * failing check asserted the opposite of its own verdict ("SEO title is within
+	 * 60 characters (is 62)." with passed:false). The detail now always agrees with
+	 * `passed`, and the measured value and threshold travel alongside it so a caller
+	 * can act without re-deriving them.
+	 *
+	 * @param array<string,mixed> $measured Optional measured/threshold context.
+	 * @return array<string,mixed>
+	 */
+	private function check( string $name, bool $passed, string $pass_detail, string $fail_detail = '', array $measured = [] ): array {
+		return array_merge( [
+			'check'  => $name,
+			'passed' => $passed,
+			'detail' => $passed ? $pass_detail : ( '' !== $fail_detail ? $fail_detail : $pass_detail ),
+		], $measured );
 	}
 
 	/**
