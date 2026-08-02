@@ -106,6 +106,7 @@ final class ACFRuntimeManager {
 		$id = $g['key'];
 		$this->store_rollback( $id, 'group_create', [], $cx );
 		$this->audit->record( 'acf.group.created', [ 'group_id' => $id, 'title' => $title ] );
+				AcfLocalJson::sync_for_group( (string) $g['key'], 'acf_group_create' );
 		return [ 'action' => 'acf_group_create', 'group_id' => $id, 'key' => $g['key'], 'title' => $title ];
 	}
 
@@ -125,6 +126,7 @@ final class ACFRuntimeManager {
 		if ( ! $result ) return $this->error( 'wpcc_group_update_failed', __( 'Failed to update field group.', 'wp-command-center' ) );
 		$this->store_rollback( $id, 'group_update', $before, $cx );
 		$this->audit->record( 'acf.group.updated', [ 'group_id' => $id ] );
+				AcfLocalJson::sync_for_group( (string) ( $g['key'] ?? $id ), 'acf_group_update' );
 		return [ 'action' => 'acf_group_update', 'group_id' => $id ];
 	}
 
@@ -207,6 +209,7 @@ final class ACFRuntimeManager {
 
 		$new_id = (string) $dup['key'];
 		$this->store_rollback( $new_id, 'group_create', [], $cx );
+		AcfLocalJson::sync_for_group( (string) ( $dup['key'] ?? '' ), 'acf_group_duplicate' );
 		return [
 			'action'      => 'acf_group_duplicate',
 			'group_id'    => $new_id,
@@ -220,6 +223,11 @@ final class ACFRuntimeManager {
 		$g = acf_get_field_group( $id );
 		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
 		acf_update_field_group( array_merge( $g, [ 'active' => true ] ) );
+		// acf_update_field_group() fires ACF's own JSON writer, which appends
+		// acf_get_fields( $g ) — and $g came from a key lookup, so on a site with a
+		// stale file that hook can write the group back with NO fields. Rebuild from
+		// the database afterwards so a toggle can never empty a good file.
+		AcfLocalJson::sync_for_group( (string) ( $g['key'] ?? $id ), 'acf_group_activate' );
 		return [ 'action' => 'acf_group_activate', 'group_id' => $id ];
 	}
 
@@ -228,6 +236,7 @@ final class ACFRuntimeManager {
 		$g = acf_get_field_group( $id );
 		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
 		acf_update_field_group( array_merge( $g, [ 'active' => false ] ) );
+		AcfLocalJson::sync_for_group( (string) ( $g['key'] ?? $id ), 'acf_group_deactivate' );
 		return [ 'action' => 'acf_group_deactivate', 'group_id' => $id ];
 	}
 
@@ -384,6 +393,63 @@ final class ACFRuntimeManager {
 		];
 	}
 
+	/**
+	 * Rebuild the owning group's acf-json after a field-level change.
+	 *
+	 * The database is the source of truth; AcfLocalJson resolves the group by its
+	 * stored post ID so it can never read back the stale file it is replacing.
+	 */
+	private function sync_json_for_field( string $field_key, string $because ): void {
+		AcfLocalJson::sync_for_group( $this->group_key_for_field( $field_key ), $because );
+	}
+
+	/**
+	 * The owning field-group KEY for a field key, resolved from the database.
+	 *
+	 * Deliberately not via acf_get_field(). Once a group has a local JSON file, ACF
+	 * answers field lookups from it — so a field the STALE file does not yet know
+	 * about cannot be found, which is precisely the field whose creation should have
+	 * triggered the rebuild. That chicken-and-egg left field_update, field_delete and
+	 * layout writes silently un-synced.
+	 *
+	 * ACF stores a field's key as post_name and its owner as post_parent, so walking
+	 * the post tree answers the question without consulting any cache.
+	 */
+	private function group_key_for_field( string $field_key ): string {
+		if ( '' === $field_key ) {
+			return '';
+		}
+
+		$found = get_posts( [
+			'post_type'        => 'acf-field',
+			'name'             => $field_key,
+			'post_status'      => 'any',
+			'numberposts'      => 1,
+			'suppress_filters' => false,
+		] );
+		if ( empty( $found ) ) {
+			return '';
+		}
+
+		$parent = (int) $found[0]->post_parent;
+		$guard  = 0;
+		while ( $parent > 0 && $guard++ < 10 ) {
+			$post = get_post( $parent );
+			if ( ! $post ) {
+				return '';
+			}
+			if ( 'acf-field-group' === $post->post_type ) {
+				return (string) $post->post_name;
+			}
+			if ( 'acf-field' !== $post->post_type ) {
+				return '';
+			}
+			$parent = (int) $post->post_parent;
+		}
+
+		return '';
+	}
+
 	private function field_create( array $p, array $cx ): array {
 		// Parent may be a field group, a repeater/group field key, or — together
 		// with parent_layout — a flexible-content field key.
@@ -466,6 +532,7 @@ final class ACFRuntimeManager {
 			}
 		}
 
+		$this->sync_json_for_field( $key, 'acf_field_create' );
 		$rollback_id = $this->store_rollback( $key, 'field_create', [], $cx );
 		$this->audit->record( 'acf.field.created', [ 'field_key' => $key, 'parent' => $parent, 'type' => $type ] );
 
@@ -489,7 +556,31 @@ final class ACFRuntimeManager {
 		if ( isset( $p['label'] ) ) $f['label'] = sanitize_text_field( (string) $p['label'] );
 		if ( isset( $p['type'] ) ) $f['type'] = sanitize_key( (string) $p['type'] );
 		if ( isset( $p['instructions'] ) ) $f['instructions'] = sanitize_textarea_field( (string) $p['instructions'] );
+
+		/*
+		 * Preserve the STORED parent, and take the stored post ID with it.
+		 *
+		 * acf_get_field() answers from the local JSON registration once a group has a
+		 * file, and that copy carries no post ID and a `parent` that is a key string or
+		 * 0. Writing it straight back made acf_update_field() insert a fresh, PARENTLESS
+		 * row: measured on staging, renaming a field left its post with parent 0, so the
+		 * field vanished from its group while reporting success. This is the same defect
+		 * fixed for field_create in 3b6fe49, which the update path still had.
+		 */
+		$stored = get_posts( [
+			'post_type'        => 'acf-field',
+			'name'             => $key,
+			'post_status'      => 'any',
+			'numberposts'      => 1,
+			'suppress_filters' => false,
+		] );
+		if ( ! empty( $stored ) ) {
+			$f['ID']     = (int) $stored[0]->ID;
+			$f['parent'] = (int) $stored[0]->post_parent;
+		}
+
 		acf_update_field( $f );
+		$this->sync_json_for_field( $key, 'acf_field_update' );
 		$this->store_rollback( $key, 'field_update', $before, $cx );
 		$this->audit->record( 'acf.field.updated', [ 'field_key' => $key ] );
 		return [ 'action' => 'acf_field_update', 'field_key' => $key ];
@@ -501,12 +592,63 @@ final class ACFRuntimeManager {
 		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'wp-command-center' ) );
 		$before = $this->summarize_field( $f );
 		$this->store_rollback( $key, 'field_delete', $before, $cx );
-		acf_delete_field( $key );
+		// Resolved before the delete — afterwards the field is gone and its owning
+		// group can no longer be walked to.
+		$owning_group = $this->group_key_for_field( $key );
+
+		/*
+		 * Delete by STORED post ID, not by key. acf_delete_field() resolves a key
+		 * through acf_get_field(), which on a site with local JSON returns the file's
+		 * copy — ID 0 — so the delete matched nothing and silently removed nothing
+		 * while reporting success. Measured on staging: field count unchanged in the
+		 * database after a delete that returned a rollback id.
+		 */
+		$stored = get_posts( [
+			'post_type'        => 'acf-field',
+			'name'             => $key,
+			'post_status'      => 'any',
+			'numberposts'      => 1,
+			'fields'           => 'ids',
+			'suppress_filters' => false,
+		] );
+		if ( ! empty( $stored ) ) {
+			acf_delete_field( (int) $stored[0] );
+		} else {
+			acf_delete_field( $key );
+		}
+		AcfLocalJson::sync_for_group( $owning_group, 'acf_field_delete' );
 		$this->audit->record( 'acf.field.deleted', [ 'field_key' => $key ] );
 		return [ 'action' => 'acf_field_delete', 'field_key' => $key ];
 	}
 
 	// ── STEP 92 — flexible-content layouts ───────────────────────
+
+	/**
+	 * Restore a field array's stored identity before writing it back.
+	 *
+	 * acf_get_field() answers from the local JSON registration once a group has a
+	 * file, and that copy carries no post ID and a `parent` that is a key string or 0.
+	 * Writing it back makes acf_update_field() insert a fresh, PARENTLESS row — the
+	 * field silently leaves its group while the call reports success. Measured on
+	 * staging for the rename path; the layout paths reload the same way.
+	 *
+	 * @param array<string,mixed> $field
+	 * @return array<string,mixed>
+	 */
+	private function with_stored_identity( array $field, string $field_key ): array {
+		$stored = get_posts( [
+			'post_type'        => 'acf-field',
+			'name'             => $field_key,
+			'post_status'      => 'any',
+			'numberposts'      => 1,
+			'suppress_filters' => false,
+		] );
+		if ( ! empty( $stored ) ) {
+			$field['ID']     = (int) $stored[0]->ID;
+			$field['parent'] = (int) $stored[0]->post_parent;
+		}
+		return $field;
+	}
 
 	private function layout_create( array $p, array $cx ): array {
 		$field_key = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
@@ -517,6 +659,7 @@ final class ACFRuntimeManager {
 		if ( 'flexible_content' !== ( $f['type'] ?? '' ) ) {
 			return $this->error( 'wpcc_acf_not_flexible', __( 'Layouts can only be added to a flexible_content field.', 'wp-command-center' ) );
 		}
+		$f = $this->with_stored_identity( $f, $field_key );
 
 		$name  = sanitize_title( (string) ( $p['name'] ?? $p['label'] ?? 'layout' ) );
 		$label = sanitize_text_field( (string) ( $p['label'] ?? $name ) );
@@ -562,6 +705,7 @@ final class ACFRuntimeManager {
 		$rollback_id = $this->store_rollback( $field_key, 'layout_create', $before, $cx );
 		$this->audit->record( 'acf.layout.created', [ 'field_key' => $field_key, 'layout_key' => $layout_key, 'name' => $name ] );
 
+		$this->sync_json_for_field( $field_key, 'acf_layout_create' );
 		return [ 'action' => 'acf_layout_create', 'field_key' => $field_key, 'layout_key' => $layout_key, 'name' => $name, 'label' => $label, 'sub_fields' => $sub_created, 'rollback_id' => $rollback_id ];
 	}
 
@@ -572,6 +716,7 @@ final class ACFRuntimeManager {
 		if ( ! $f || 'flexible_content' !== ( $f['type'] ?? '' ) ) {
 			return $this->error( 'wpcc_acf_not_flexible', __( 'Flexible_content field not found.', 'wp-command-center' ) );
 		}
+		$f = $this->with_stored_identity( $f, $field_key );
 
 		$layouts = is_array( $f['layouts'] ?? null ) ? $f['layouts'] : [];
 		$target  = null;
@@ -604,6 +749,7 @@ final class ACFRuntimeManager {
 		$rollback_id = $this->store_rollback( $field_key, 'layout_update', $before, $cx );
 		$this->audit->record( 'acf.layout.updated', [ 'field_key' => $field_key, 'layout_key' => $layout_key ] );
 
+		$this->sync_json_for_field( $field_key, 'acf_layout_update' );
 		return [ 'action' => 'acf_layout_update', 'field_key' => $field_key, 'layout_key' => $layout_key, 'rollback_id' => $rollback_id ];
 	}
 
@@ -660,21 +806,58 @@ final class ACFRuntimeManager {
 	}
 
 	private function json_status( array $p ): array {
-		$groups = acf_get_field_groups();
-		$synced = $unsynced = 0;
-		foreach ( $groups as $g ) { if ( ! empty( $g['local'] ) && 'json' === $g['local'] ) $synced++; else $unsynced++; }
-		$json_path = acf_get_setting( 'save_json' );
-		return [ 'action' => 'acf_json_status', 'total_groups' => count( $groups ), 'synced' => $synced, 'unsynced' => $unsynced, 'json_path' => $json_path ];
+		/*
+		 * This used to count groups whose `local` flag was 'json' — that is where a
+		 * group was LOADED FROM, not whether the file agrees with the database. A
+		 * group with twelve fields whose file held none counted as "synced". Compare
+		 * content instead, per group.
+		 */
+		$groups   = acf_get_field_groups();
+		$synced   = 0;
+		$unsynced = 0;
+		$detail   = [];
+
+		foreach ( $groups as $g ) {
+			$key = (string) ( $g['key'] ?? '' );
+			if ( '' === $key ) {
+				continue;
+			}
+			$st = AcfLocalJson::status( $key );
+			if ( $st['in_sync'] ) {
+				$synced++;
+			} else {
+				$unsynced++;
+				$detail[] = [
+					'group'       => $key,
+					'title'       => (string) ( $g['title'] ?? '' ),
+					'reason'      => $st['reason'],
+					'db_fields'   => $st['db_fields'],
+					'json_fields' => $st['json_fields'],
+				];
+			}
+		}
+
+		return [
+			'action'         => 'acf_json_status',
+			'local_json'     => AcfLocalJson::enabled(),
+			'total_groups'   => count( $groups ),
+			'synced'         => $synced,
+			'unsynced'       => $unsynced,
+			'out_of_sync'    => $detail,
+			'json_path'      => AcfLocalJson::save_path(),
+			'compared'       => 'content',
+		];
 	}
 
 	private function json_export( array $p ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		if ( '' === $id ) return $this->error( 'wpcc_missing_id', __( 'Group ID is required for export.', 'wp-command-center' ) );
-		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
-		$fields = acf_get_fields( $id );
-		$json = wp_json_encode( [ 'key' => $g['key'], 'title' => $g['title'], 'fields' => $fields, 'location' => $g['location'] ?? [] ], JSON_PRETTY_PRINT );
-		return [ 'action' => 'acf_json_export', 'group_id' => $id, 'json' => $json ];
+		// Built from the stored post ID. acf_get_fields( $key ) answers from the local
+		// JSON copy once a file exists, so exporting by key exported the stale file.
+		$group = AcfLocalJson::build( $id );
+		if ( [] === $group ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		$json = wp_json_encode( $group, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		return [ 'action' => 'acf_json_export', 'group_id' => $id, 'field_count' => count( $group['fields'] ), 'json' => $json ];
 	}
 
 	private function json_import( array $p, array $cx ): array {
@@ -693,32 +876,111 @@ final class ACFRuntimeManager {
 	}
 
 	private function json_sync( array $p, array $cx ): array {
-		$groups     = acf_get_field_groups();
-		$json_files = acf_get_local_json_files();
-		$synced     = 0;
+		/*
+		 * Two directions, and the old code did neither usefully.
+		 *
+		 * It skipped every group with a `local` flag — which, once a JSON file exists,
+		 * is all of them — so it always reported synced_count 0. And it only ever went
+		 * JSON -> database, which cannot repair the case this plugin creates: a
+		 * database that is correct and a file that is stale.
+		 *
+		 * `direction` defaults to db_to_json, the repair an operator actually needs
+		 * after making changes through WPCC. json_to_db remains available and is what
+		 * ACF's own "Sync available" means.
+		 */
+		$direction = sanitize_key( (string) ( $p['direction'] ?? 'db_to_json' ) );
+		$only      = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
+		$all       = filter_var( $p['all_groups'] ?? false, FILTER_VALIDATE_BOOLEAN );
+
+		/*
+		 * Refuse to touch every group unless that is explicitly what was asked for.
+		 * A site-wide rewrite reaches field groups this plugin never created — the
+		 * customer's own, under version control — and even a correct rewrite of those
+		 * is an unrequested change to files someone else owns.
+		 */
+		if ( '' === $only && ! $all ) {
+			return $this->error(
+				'wpcc_acf_sync_scope_required',
+				__( 'Pass group_id to synchronise one field group, or all_groups: true to synchronise every group on the site. Rewriting every acf-json file by default would touch groups this plugin did not create.', 'wp-command-center' )
+			);
+		}
+		$groups    = acf_get_field_groups();
+		$written   = [];
+		$failed    = [];
+		$imported  = 0;
+
+		if ( 'json_to_db' === $direction ) {
+			$json_files = acf_get_local_json_files();
+			foreach ( $groups as $g ) {
+				$key = (string) ( $g['key'] ?? '' );
+				if ( '' === $key || ( '' !== $only && $key !== $only ) ) {
+					continue;
+				}
+				$file = $json_files[ $key ] ?? null;
+				if ( ! $file ) {
+					continue;
+				}
+				$data = json_decode( (string) file_get_contents( $file ), true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- ACF-owned artefact.
+				if ( is_array( $data ) ) {
+					acf_import_field_group( $data );
+					$imported++;
+				}
+			}
+			$this->audit->record( 'acf.json.synced', [ 'direction' => 'json_to_db', 'count' => $imported ] );
+			return [ 'action' => 'acf_json_sync', 'direction' => 'json_to_db', 'synced_count' => $imported ];
+		}
+
+		if ( ! AcfLocalJson::enabled() ) {
+			return $this->error( 'wpcc_acf_json_disabled', __( 'ACF local JSON is not enabled, or its save directory is not writable, so there is nothing to write.', 'wp-command-center' ) );
+		}
+
 		foreach ( $groups as $g ) {
-			if ( ! empty( $g['local'] ) ) continue;
-			$json_file = $json_files[ $g['key'] ] ?? null;
-			if ( ! $json_file ) continue;
-			$json_data = json_decode( file_get_contents( $json_file ), true );
-			if ( $json_data ) {
-				acf_import_field_group( $json_data );
-				$synced++;
+			$key = (string) ( $g['key'] ?? '' );
+			if ( '' === $key || ( '' !== $only && $key !== $only ) ) {
+				continue;
+			}
+			$st = AcfLocalJson::status( $key );
+			if ( $st['in_sync'] ) {
+				continue;
+			}
+			$r = AcfLocalJson::write( $key );
+			if ( $r['written'] ) {
+				$written[] = [ 'group' => $key, 'fields' => $r['fields'] ];
+			} else {
+				$failed[] = [ 'group' => $key, 'reason' => $r['reason'] ];
 			}
 		}
-		$this->audit->record( 'acf.json.synced', [ 'count' => $synced ] );
-		return [ 'action' => 'acf_json_sync', 'synced_count' => $synced ];
+
+		$this->audit->record( 'acf.json.synced', [ 'direction' => 'db_to_json', 'count' => count( $written ), 'failed' => count( $failed ) ] );
+
+		return [
+			'action'       => 'acf_json_sync',
+			'direction'    => 'db_to_json',
+			'synced_count' => count( $written ),
+			'written'      => $written,
+			'failed'       => $failed,
+		];
 	}
 
 	private function json_diff( array $p ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		if ( '' === $id ) return $this->error( 'wpcc_missing_id', __( 'Group ID required.', 'wp-command-center' ) );
-		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
-		$json_files = acf_get_local_json_files();
-		$json_file  = $json_files[ $g['key'] ?? '' ] ?? null;
-		$json_data  = $json_file ? json_decode( file_get_contents( $json_file ), true ) : null;
-		return [ 'action' => 'acf_json_diff', 'group_id' => $id, 'db_exists' => true, 'json_exists' => (bool) $json_data, 'json_path' => $json_file ];
+		// Reported only whether each side EXISTED, which cannot reveal a file that is
+		// present and wrong — the actual failure. Compare the definitions.
+		$st = AcfLocalJson::status( $id );
+		if ( 'group_not_stored' === $st['reason'] ) {
+			return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		}
+		return [
+			'action'      => 'acf_json_diff',
+			'group_id'    => $id,
+			'in_sync'     => $st['in_sync'],
+			'reason'      => $st['reason'],
+			'db_fields'   => $st['db_fields'],
+			'json_fields' => $st['json_fields'],
+			'json_exists' => $st['json_exists'],
+			'json_path'   => AcfLocalJson::save_path() . '/' . $id . '.json',
+		];
 	}
 
 	private function value_get( array $p ): array {
