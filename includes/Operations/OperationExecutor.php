@@ -466,26 +466,50 @@ final class OperationExecutor {
 		// it so /agent/context and history never expose file bodies.
 		$storable = $this->strip_for_storage( $normalized );
 
+		/*
+		 * A transactional apply that failed and rolled itself back is success-SHAPED
+		 * — no WP_Error, no in-band {error, code} — so it used to flow through here
+		 * as a completed result with error_count 0. The change log was corrected
+		 * further down from change_set_status, but the durable result row was not,
+		 * and the result row is what the Approvals screen reads.
+		 *
+		 * Measured on staging: a patch that put a syntax error in the live theme's
+		 * functions.php was caught by `php -l`, restored from the pre-apply snapshot
+		 * (correct, and the site never broke) — and the owner was then shown
+		 * "EXECUTED · COMPLETED · Created 0 · Updated 0 · Skipped 0 · Errors 0".
+		 * They would believe the edit shipped. It did not; it was reverted.
+		 *
+		 * Decide the outcome once, here, and let the result row, the audit trail,
+		 * the change record and the request status all report the same thing.
+		 */
+		$apply_failed  = 'transactional_apply_failed' === ( $normalized['result']['change_set_status'] ?? '' );
+		$change_status = $apply_failed ? 'transactional_apply_failed' : 'applied';
+
 		$res_id = $res_manager->create( array_merge( $res_base, [
-			'status'        => 'completed',
+			'status'        => $apply_failed ? 'failed' : 'completed',
 			'created_count' => count( $normalized['created'] ),
 			'updated_count' => count( $normalized['updated'] ),
 			'skipped_count' => count( $normalized['skipped'] ),
+			'error_count'   => $apply_failed ? 1 : 0,
+			'error_json'    => $apply_failed ? wp_json_encode( [
+				'code'    => 'wpcc_transactional_apply_failed',
+				'message' => __( 'The change did not apply and was rolled back. The site is unchanged.', 'wp-command-center' ),
+			] ) : null,
 			'result_json'   => wp_json_encode( $storable ),
 		] ) );
 
-		$audit->record( 'operation.result.completed', array_merge( $links, [
+		$audit->record( $apply_failed ? 'operation.result.failed' : 'operation.result.completed', array_merge( $links, [
 			'result_id'    => $res_id,
 			'operation_id' => $operation_id,
 			'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 		] ) );
 
-		$audit->record( "operation.{$operation_id}.completed", array_merge( $links, [
+		$audit->record( "operation.{$operation_id}." . ( $apply_failed ? 'failed' : 'completed' ), array_merge( $links, [
 			'result' => $this->strip_for_storage( is_array( $result ) ? $result : [] ),
 			'actor'  => $actor ? AuditLog::resolve_actor( $actor ) : null,
 		] ) );
 
-		$audit->record( 'operation.execution.completed', array_merge( $links, [
+		$audit->record( $apply_failed ? 'operation.execution.failed' : 'operation.execution.completed', array_merge( $links, [
 			'operation_id' => $operation_id,
 			'result'       => $storable,
 			'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
@@ -496,10 +520,6 @@ final class OperationExecutor {
 		// ids, paths preserved; raw file `contents` stripped). A transactional
 		// change-set apply that failed atomically is still a success-shaped
 		// result; its status is taken from change_set_status.
-		$change_status = ( 'transactional_apply_failed' === ( $normalized['result']['change_set_status'] ?? '' ) )
-			? 'transactional_apply_failed'
-			: 'applied';
-
 		( new ChangeRecorder() )->record( [
 			'operation'    => $operation,
 			'operation_id' => $operation_id,
@@ -513,7 +533,7 @@ final class OperationExecutor {
 				count( $normalized['created'] ),
 				count( $normalized['updated'] ),
 				count( $normalized['skipped'] ),
-				0,
+				$apply_failed ? 1 : 0,
 			],
 		] );
 
@@ -521,7 +541,7 @@ final class OperationExecutor {
 		// Applies to every request-bound path (admin synchronous, queue worker, MCP),
 		// so the worker/MCP path no longer leaves the request stuck at 'approved'.
 		if ( $is_requested ) {
-			( new OperationManager() )->finalize_execution( (string) $context['request_id'], true );
+			( new OperationManager() )->finalize_execution( (string) $context['request_id'], ! $apply_failed );
 		}
 
 		return $normalized;
