@@ -104,8 +104,14 @@ R=$(gate_result '{"jsonrpc":"2.0","id":24,"method":"tools/call","params":{"name"
 assert_eq "client: user_manage/user_list (diagnostic action) → immediate" "immediate" "$R"
 
 # Medium — gated in client
-R=$(gate_result '{"jsonrpc":"2.0","id":25,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Test","status":"draft"}}}')
-assert_eq "client: content_manage/create (medium) → pending_approval" "pending_approval" "$R"
+R=$(gate_result '{"jsonrpc":"2.0","id":25,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"content_create","post_type":"post","title":"Test","status":"draft"}}}')
+assert_eq "client: content_manage/content_create (medium) → pending_approval" "pending_approval" "$R"
+
+# A BOGUS action must be refused outright, never filed as an approval. This used to
+# queue a critical-risk request that could only ever fail once approved.
+R=$(gate_result '{"jsonrpc":"2.0","id":251,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Test"}}}')
+[ "$R" != "pending_approval" ] && pass "client: bogus action refused, not queued for approval" \
+  || fail "client: bogus action refused, not queued for approval"
 
 # High — gated in client
 R=$(gate_result '{"jsonrpc":"2.0","id":26,"method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_install","plugin":"hello-dolly"}}}')
@@ -151,8 +157,12 @@ R=$(gate_result '{"jsonrpc":"2.0","id":33,"method":"tools/call","params":{"name"
 assert_eq "enterprise: user_manage/user_list (diagnostic action) → immediate" "immediate" "$R"
 
 # Medium — gated in enterprise
-R=$(gate_result '{"jsonrpc":"2.0","id":34,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Enterprise Test","status":"draft"}}}')
-assert_eq "enterprise: content_manage/create (medium) → pending_approval" "pending_approval" "$R"
+R=$(gate_result '{"jsonrpc":"2.0","id":34,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"content_create","post_type":"post","title":"Enterprise Test","status":"draft"}}}')
+assert_eq "enterprise: content_manage/content_create (medium) → pending_approval" "pending_approval" "$R"
+
+R=$(gate_result '{"jsonrpc":"2.0","id":341,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Enterprise Test"}}}')
+[ "$R" != "pending_approval" ] && pass "enterprise: bogus action refused, not queued for approval" \
+  || fail "enterprise: bogus action refused, not queued for approval"
 
 # High — gated in enterprise
 R=$(gate_result '{"jsonrpc":"2.0","id":35,"method":"tools/call","params":{"name":"theme_manage","arguments":{"action":"theme_install","theme":"twentytwentyfive"}}}')

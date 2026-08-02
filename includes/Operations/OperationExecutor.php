@@ -200,16 +200,15 @@ final class OperationExecutor {
 					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 				] );
 
+				/*
+				 * Speak in the runtime's own voice. Catching the bogus action here (so it
+				 * cannot be filed as an approval) must not change the CODE or the MESSAGE
+				 * callers have always seen — see InvalidActionContract.
+				 */
 				return $this->fail(
 					$operation_id,
-					'wpcc_invalid_action',
-					sprintf(
-						/* translators: 1: the action that was requested, 2: the operation id, 3: comma-separated list of valid actions. */
-						__( 'Invalid action "%1$s" for %2$s. Valid actions: %3$s.', 'wp-command-center' ),
-						$requested_action,
-						$operation_id,
-						implode( ', ', $declared_actions )
-					)
+					InvalidActionContract::code_for( $operation_id ),
+					InvalidActionContract::message_for( $operation_id, $requested_action, $declared_actions )
 				);
 			}
 		}
@@ -253,10 +252,24 @@ final class OperationExecutor {
 			}
 
 			if ( ! $dispatches && [] !== $required_names ) {
+				/*
+				 * ABSENT only — never merely empty.
+				 *
+				 * Treating '' and [] as missing rejected legitimate work: `replace` is a
+				 * required parameter of safe_search_replace, and replacing a string with
+				 * the EMPTY string is how you delete that text everywhere. An empty value
+				 * is a supplied value, and what it means is the runtime's judgement, not
+				 * this gate's — SearchReplace answers empties with its own specific codes
+				 * (wpcc_empty_search, wpcc_no_tables_selected), which this must not
+				 * pre-empt or flatten.
+				 *
+				 * The case this gate exists for is unaffected: a parameter-LESS call still
+				 * has no keys at all, so it is still refused before it can spend an
+				 * approval.
+				 */
 				$missing = [];
 				foreach ( $required_names as $name ) {
-					$value = $payload[ $name ] ?? null;
-					if ( null === $value || '' === $value || [] === $value ) {
+					if ( ! array_key_exists( $name, $payload ) || null === $payload[ $name ] ) {
 						$missing[] = $name;
 					}
 				}
