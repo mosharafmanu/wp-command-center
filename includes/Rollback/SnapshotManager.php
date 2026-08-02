@@ -111,7 +111,7 @@ final class SnapshotManager {
 			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to store the snapshot.', 'wp-command-center' ) );
 		}
 		if ( ! @rename( $tmp, $dest ) ) {
-			@unlink( $tmp );
+			wp_delete_file( $tmp );
 			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to finalize the snapshot.', 'wp-command-center' ) );
 		}
 

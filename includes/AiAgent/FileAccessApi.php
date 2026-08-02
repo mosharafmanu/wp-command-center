@@ -69,7 +69,7 @@ final class FileAccessApi {
 			'total_lines' => $this->count_lines_capped( $real, $total_bytes ),
 			'modified'    => filemtime( $real ),
 			'extension'   => strtolower( pathinfo( $real, PATHINFO_EXTENSION ) ),
-			'writable'    => is_writable( $real ),
+			'writable'    => wp_is_writable( $real ),
 		];
 
 		$has_line = isset( $opts['line_start'] ) || isset( $opts['line_count'] )
@@ -289,7 +289,7 @@ final class FileAccessApi {
 			'path'     => $this->to_relative_path( $real ),
 			'size'     => filesize( $real ),
 			'modified' => filemtime( $real ),
-			'writable' => is_writable( $real ),
+			'writable' => wp_is_writable( $real ),
 			'hash'     => (string) hash_file( 'sha1', $real ),
 		];
 	}

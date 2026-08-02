@@ -69,14 +69,14 @@ final class MediaImport {
 
 		$filesize = filesize( $tmp_file );
 		if ( $filesize > self::MAX_FILE_SIZE ) {
-			@unlink( $tmp_file );
+			wp_delete_file( $tmp_file );
 			return new \WP_Error( 'wpcc_file_too_large', __( 'File exceeds the maximum allowed size of 10MB.', 'wp-command-center' ) );
 		}
 
 		if ( function_exists( 'mime_content_type' ) ) {
 			$real_mime = mime_content_type( $tmp_file );
 			if ( ! $real_mime || ( ! str_starts_with( $real_mime, 'image/' ) && 'application/pdf' !== $real_mime ) ) {
-				@unlink( $tmp_file );
+				wp_delete_file( $tmp_file );
 				return new \WP_Error( 'wpcc_invalid_mime_type', __( 'Invalid or unsafe file content detected.', 'wp-command-center' ) );
 			}
 		}
@@ -93,7 +93,7 @@ final class MediaImport {
 		$attachment_id = media_handle_sideload( $file_array, $post_id, $description );
 
 		if ( is_wp_error( $attachment_id ) ) {
-			@unlink( $tmp_file );
+			wp_delete_file( $tmp_file );
 			return new \WP_Error( 'wpcc_sideload_failed', $attachment_id->get_error_message() );
 		}
 

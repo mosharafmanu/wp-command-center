@@ -74,7 +74,7 @@ final class DebugLogViewer {
 			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'wp-command-center' ) );
 		}
 
-		if ( ! is_writable( $path ) ) {
+		if ( ! wp_is_writable( $path ) ) {
 			return new \WP_Error( 'wpcc_unwritable_debug_log', __( 'debug.log exists but is not writable.', 'wp-command-center' ) );
 		}
 

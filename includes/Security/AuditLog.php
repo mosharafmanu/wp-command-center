@@ -194,7 +194,7 @@ final class AuditLog {
 		rsort( $segments, SORT_STRING ); // Newest first.
 
 		foreach ( array_slice( $segments, self::MAX_SEGMENTS ) as $stale ) {
-			@unlink( $stale );
+			wp_delete_file( $stale );
 		}
 	}
 

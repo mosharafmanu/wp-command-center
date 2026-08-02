@@ -135,7 +135,7 @@ final class PatchApproval {
 				return $real;
 			}
 
-			if ( ! is_writable( $real ) ) {
+			if ( ! wp_is_writable( $real ) ) {
 				return new \WP_Error( 'wpcc_not_writable', sprintf(
 					/* translators: %s: file path */
 					__( '%s is not writable.', 'wp-command-center' ),

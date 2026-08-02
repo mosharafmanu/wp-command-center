@@ -115,11 +115,11 @@ function wpcc_uninstall_rmdir( string $path ): void {
 		return;
 	}
 	if ( is_link( $path ) ) {
-		@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		wp_delete_file( $path );
 		return;
 	}
 	if ( ! is_dir( $path ) ) {
-		@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		wp_delete_file( $path );
 		return;
 	}
 

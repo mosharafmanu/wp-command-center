@@ -169,8 +169,8 @@ final class ACFRuntimeManager {
 		$save = acf_get_setting( 'save_json' );
 		if ( ! is_string( $save ) || '' === $save ) return;
 		$file = untrailingslashit( wp_normalize_path( $save ) ) . '/' . $key . '.json';
-		if ( is_file( $file ) && is_writable( $file ) ) {
-			@unlink( $file );
+		if ( is_file( $file ) && wp_is_writable( $file ) ) {
+			wp_delete_file( $file );
 		}
 	}
 

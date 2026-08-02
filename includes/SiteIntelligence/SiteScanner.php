@@ -261,7 +261,7 @@ final class SiteScanner {
 			$result[ $label ] = [
 				'exists'      => true,
 				'permissions' => substr( sprintf( '%o', fileperms( $path ) ), -4 ),
-				'writable'    => is_writable( $path ),
+				'writable'    => wp_is_writable( $path ),
 			];
 		}
 

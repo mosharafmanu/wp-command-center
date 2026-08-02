@@ -271,7 +271,7 @@ final class MediaSnapshot {
 		}
 		foreach ( (array) glob( trailingslashit( $dir ) . '*' ) as $file ) {
 			if ( is_file( $file ) ) {
-				@unlink( $file );
+				wp_delete_file( $file );
 			}
 		}
 		@rmdir( $dir );

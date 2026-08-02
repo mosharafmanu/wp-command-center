@@ -996,7 +996,7 @@ final class MediaEnhancementRuntimeManager {
 		// Delete files created by the operation (regen/webp) — not part of the snapshot…
 		foreach ( (array) ( $record['created_files'] ?? [] ) as $abs ) {
 			if ( is_string( $abs ) && is_file( $abs ) ) {
-				@unlink( $abs );
+				wp_delete_file( $abs );
 			}
 		}
 		// …then restore the pre-operation bytes + metadata + _wp_attached_file.
@@ -1080,7 +1080,7 @@ final class MediaEnhancementRuntimeManager {
 	private function delete_created_files( array $before_files, int $id ): void {
 		foreach ( array_diff( $this->size_files_abs( $id ), $before_files ) as $abs ) {
 			if ( is_string( $abs ) && is_file( $abs ) ) {
-				@unlink( $abs );
+				wp_delete_file( $abs );
 			}
 		}
 	}
@@ -1347,7 +1347,7 @@ final class MediaEnhancementRuntimeManager {
 		if ( empty( $generated ) ) {
 			( new MediaSnapshot() )->restore( $snapshot_id );
 			foreach ( $created as $c ) {
-				if ( is_file( $c ) ) { @unlink( $c ); }
+				if ( is_file( $c ) ) { wp_delete_file( $c ); }
 			}
 			( new MediaSnapshot() )->delete( $snapshot_id );
 			return new \WP_Error( 'wpcc_webp_generate_failed', __( 'No WebP files could be generated; pre-generation state restored.', 'wp-command-center' ) );
@@ -1664,8 +1664,8 @@ final class MediaEnhancementRuntimeManager {
 			$tmp_in = $info['dirname'] . '/' . $info['filename'] . '.wpccopt-' . wp_generate_password( 6, false ) . '.' . $ext;
 			$saved  = $editor->save( $tmp_in, $mime );
 			if ( is_wp_error( $saved ) || empty( $saved['path'] ) || ! is_file( $saved['path'] ) ) {
-				if ( ! empty( $saved['path'] ) && is_file( $saved['path'] ) ) { @unlink( $saved['path'] ); }
-				if ( is_file( $tmp_in ) ) { @unlink( $tmp_in ); }
+				if ( ! empty( $saved['path'] ) && is_file( $saved['path'] ) ) { wp_delete_file( $saved['path'] ); }
+				if ( is_file( $tmp_in ) ) { wp_delete_file( $tmp_in ); }
 				$failed[] = [ 'role' => $f['role'], 'error' => is_wp_error( $saved ) ? $saved->get_error_message() : 'not written' ];
 				continue;
 			}
@@ -1677,7 +1677,7 @@ final class MediaEnhancementRuntimeManager {
 			if ( $delta >= self::OPTIMIZE_MIN_BYTES && $pct >= self::OPTIMIZE_MIN_PERCENT ) {
 				$plan[] = [ 'role' => $f['role'], 'file' => $f['file'], 'tmp' => $tmp, 'before' => $before, 'after' => $after, 'pct' => $pct ];
 			} else {
-				@unlink( $tmp );
+				wp_delete_file( $tmp );
 				$skipped[] = [ 'role' => $f['role'], 'before' => $before, 'after' => $after, 'reason' => 'insignificant_savings' ];
 			}
 		}
@@ -1699,7 +1699,7 @@ final class MediaEnhancementRuntimeManager {
 		// Snapshot BEFORE modifying any original (covers original + size files + metadata).
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'image_optimize' );
 		if ( is_wp_error( $snapshot ) ) {
-			foreach ( $plan as $p ) { if ( is_file( $p['tmp'] ) ) { @unlink( $p['tmp'] ); } }
+			foreach ( $plan as $p ) { if ( is_file( $p['tmp'] ) ) { wp_delete_file( $p['tmp'] ); } }
 			return new \WP_Error( 'wpcc_optimize_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before optimization: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
@@ -1714,7 +1714,7 @@ final class MediaEnhancementRuntimeManager {
 				$after_total  += $p['after'];
 				$optimized[]   = [ 'role' => $p['role'], 'before' => $p['before'], 'after' => $p['after'], 'saved' => $p['before'] - $p['after'], 'percent' => round( $p['pct'], 1 ) ];
 			} else {
-				if ( is_file( $p['tmp'] ) ) { @unlink( $p['tmp'] ); }
+				if ( is_file( $p['tmp'] ) ) { wp_delete_file( $p['tmp'] ); }
 				$failed[] = [ 'role' => $p['role'], 'error' => 'commit_failed' ];
 			}
 		}

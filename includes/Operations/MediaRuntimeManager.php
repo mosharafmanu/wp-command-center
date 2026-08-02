@@ -227,7 +227,7 @@ final class MediaRuntimeManager {
 
 		$attach_id = media_handle_sideload( $file_array, $post_id, $title );
 		if ( is_wp_error( $attach_id ) ) {
-			@unlink( $tmp );
+			wp_delete_file( $tmp );
 			return $this->error( 'wpcc_upload_failed', $attach_id->get_error_message() );
 		}
 
@@ -365,7 +365,7 @@ final class MediaRuntimeManager {
 
 		// The downloaded source must be a real image.
 		if ( false === getimagesize( $tmp ) ) {
-			@unlink( $tmp );
+			wp_delete_file( $tmp );
 			$this->discard_replace_snapshot( $rollback_id, $snapshot['id'] );
 			return $this->error( 'wpcc_replace_not_image', __( 'The source file is not a valid image.', 'wp-command-center' ) );
 		}
@@ -378,18 +378,18 @@ final class MediaRuntimeManager {
 		$old_meta  = wp_get_attachment_metadata( $media_id );
 
 		if ( ! $orig_path || ! @copy( $tmp, $orig_path ) ) {
-			@unlink( $tmp );
+			wp_delete_file( $tmp );
 			$this->discard_replace_snapshot( $rollback_id, $snapshot['id'] );
 			return $this->error( 'wpcc_replace_failed', __( 'Failed to write the replacement file.', 'wp-command-center' ) );
 		}
-		@unlink( $tmp );
+		wp_delete_file( $tmp );
 
 		// Remove the previous generated size files, then regenerate from new bytes.
 		if ( is_array( $old_meta ) && ! empty( $old_meta['sizes'] ) ) {
 			$dir = trailingslashit( dirname( $orig_path ) );
 			foreach ( $old_meta['sizes'] as $size ) {
 				if ( ! empty( $size['file'] ) ) {
-					@unlink( $dir . $size['file'] );
+					wp_delete_file( $dir . $size['file'] );
 				}
 			}
 		}
