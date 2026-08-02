@@ -162,8 +162,8 @@ final class AiActionRegistry {
 					? [ 'key' => 'title', 'label' => __( 'Title', 'wp-command-center' ), 'type' => 'text', 'prior' => 'title' ]
 					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
 			],
-			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-ai-content&tab=suggestions&kind=' . $kind ) ),
-			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-ai-content&tab=suggestions&kind=' . $kind ) ),
+			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
+			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
 			'supports'     => static fn ( \WP_Post $post ): bool => ContentFieldGenerator::is_supported_status( (string) $post->post_status ),
 		];
 	}
@@ -186,8 +186,8 @@ final class AiActionRegistry {
 				[ 'key' => 'title', 'label' => __( 'SEO title', 'wp-command-center' ), 'type' => 'text', 'prior' => 'title' ],
 				[ 'key' => 'description', 'label' => __( 'Meta description', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'description' ],
 			],
-			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-seo&tab=suggestions' ) ),
-			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-seo&tab=suggestions' ) ),
+			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
+			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
 			'supports'     => static fn ( \WP_Post $post ): bool => SeoMetaGenerator::is_supported_status( (string) $post->post_status ),
 		];
 	}
@@ -209,8 +209,8 @@ final class AiActionRegistry {
 			'fields'       => [
 				[ 'key' => 'alt', 'label' => __( 'Alt text', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'alt' ],
 			],
-			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-alt-text' ) ),
-			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-alt-text' ) ),
+			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),
+			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),
 			'supports'     => static fn ( \WP_Post $post ): bool => wp_attachment_is_image( $post->ID ),
 		];
 	}

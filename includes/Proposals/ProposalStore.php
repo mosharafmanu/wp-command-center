@@ -213,7 +213,7 @@ final class ProposalStore {
 		if ( self::STATUS_DRAFT !== $row['status'] ) {
 			return new \WP_Error(
 				'wpcc_proposal_not_editable',
-				sprintf( __( 'final_payload is editable only while draft (current: %s).', 'wp-command-center' ), (string) $row['status'] )
+				sprintf( /* translators: %s: value */ __( 'final_payload is editable only while draft (current: %s).', 'wp-command-center' ), (string) $row['status'] )
 			);
 		}
 
@@ -304,7 +304,7 @@ final class ProposalStore {
 		if ( in_array( $from, self::TERMINAL, true ) ) {
 			return new \WP_Error(
 				'wpcc_proposal_terminal',
-				sprintf( __( 'Proposal is terminal (%s); cannot transition to %s.', 'wp-command-center' ), $from, $to )
+				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Proposal is terminal (%1$s); cannot transition to %2$s.', 'wp-command-center' ), $from, $to )
 			);
 		}
 		// Legality.
@@ -312,7 +312,7 @@ final class ProposalStore {
 		if ( ! in_array( $to, $allowed, true ) ) {
 			return new \WP_Error(
 				'wpcc_proposal_invalid_transition',
-				sprintf( __( 'Illegal transition %s -> %s.', 'wp-command-center' ), $from, $to )
+				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Illegal transition %1$s -> %2$s.', 'wp-command-center' ), $from, $to )
 			);
 		}
 

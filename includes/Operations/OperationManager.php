@@ -398,7 +398,7 @@ final class OperationManager {
 			if ( $request['status'] === $status ) {
 				return true;
 			}
-			return new \WP_Error( 'wpcc_invalid_transition', sprintf( __( 'Cannot transition request from %s to %s.', 'wp-command-center' ), $request['status'], $status ) );
+			return new \WP_Error( 'wpcc_invalid_transition', sprintf( /* translators: 1: current status, 2: requested status */ __( 'Cannot transition request from %1$s to %2$s.', 'wp-command-center' ), $request['status'], $status ) );
 		}
 
 		return true;

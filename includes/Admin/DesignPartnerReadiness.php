@@ -25,7 +25,7 @@ final class DesignPartnerReadiness {
 	 * @return array<int,array{key:string,label:string,status:string,detail:string,action_label:string,action_url:string}>
 	 */
 	public static function checklist(): array {
-		$providers_url = admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' );
+		$providers_url = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' );
 		$security_url  = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=security' );
 		$history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 		$approvals_url = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
@@ -112,7 +112,7 @@ final class DesignPartnerReadiness {
 			'key'          => 'approvals_ready',
 			'label'        => __( 'Approvals are ready', 'wp-command-center' ),
 			'status'       => 'pass',
-			'detail'       => __( 'Changes that need your sign-off appear in Activity › Approvals.', 'wp-command-center' ),
+			'detail'       => __( 'Changes that need your sign-off appear under Approvals.', 'wp-command-center' ),
 			'action_label' => __( 'Open Approvals', 'wp-command-center' ),
 			'action_url'   => $approvals_url,
 		];

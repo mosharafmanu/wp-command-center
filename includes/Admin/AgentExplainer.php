@@ -35,7 +35,7 @@ final class AgentExplainer {
 			],
 			[
 				'q' => __( 'What talks to what?', 'wp-command-center' ),
-				'a' => __( 'Your AI assistant (on your computer) talks to WP Command Center (on this site) using the access token. WP Command Center then makes the change on WordPress — after your approval, with a full record and one-click undo. You bring your own AI key for the assistant; this site never sends your content anywhere except the AI provider you chose.', 'wp-command-center' ),
+				'a' => __( 'Your AI assistant (on your computer) talks to WP Command Center (on this site) using the access token. WP Command Center then makes the change on WordPress — after your approval, with a full record — and supported changes can be undone. You bring your own AI key for the assistant; this site never sends your content anywhere except the AI provider you chose.', 'wp-command-center' ),
 			],
 		];
 	}

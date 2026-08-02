@@ -95,7 +95,7 @@ $patches = $patch_manager->list();
 	<p><?php esc_html_e( 'AI-generated and manual patches — review the diff, explanation, and risk level, then approve, apply, or roll back.', 'wp-command-center' ); ?></p>
 
 	<?php if ( $notice ) : ?>
-		<div class="notice notice-<?php echo esc_attr( $notice['type'] ); ?>"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
+		<div class="notice inline notice-<?php echo esc_attr( $notice['type'] ); ?>"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
 	<?php endif; ?>
 
 	<?php if ( '' !== $view_id ) : ?>
@@ -104,7 +104,7 @@ $patches = $patch_manager->list();
 
 		<?php if ( is_wp_error( $patch ) ) : ?>
 
-			<div class="notice notice-error"><p><?php echo esc_html( $patch->get_error_message() ); ?></p></div>
+			<div class="notice inline notice-error"><p><?php echo esc_html( $patch->get_error_message() ); ?></p></div>
 
 		<?php else : ?>
 
@@ -309,7 +309,7 @@ $patches = $patch_manager->list();
 				<?php $loaded = ( new FileAccessApi() )->read( $prefill_path ); ?>
 
 				<?php if ( is_wp_error( $loaded ) ) : ?>
-					<div class="notice notice-error"><p><?php echo esc_html( $loaded->get_error_message() ); ?></p></div>
+					<div class="notice inline notice-error"><p><?php echo esc_html( $loaded->get_error_message() ); ?></p></div>
 				<?php else : ?>
 					<form method="post">
 						<?php wp_nonce_field( 'wpcc_patches' ); ?>

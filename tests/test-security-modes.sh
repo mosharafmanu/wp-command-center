@@ -210,7 +210,10 @@ assert_eq "wp eval: enterprise mode returns enterprise" "enterprise" "$CURRENT"
 # Unknown value falls back to developer
 wp eval "update_option('wpcc_security_mode', 'bogus'); echo 'ok';" --path="$WP_PATH" >/dev/null 2>&1
 CURRENT=$(wp eval "echo \WPCommandCenter\Operations\SecurityModeManager::current();" --path="$WP_PATH" 2>/dev/null)
-assert_eq "wp eval: invalid value falls back to developer" "developer" "$CURRENT"
+# V1 SAFETY FIX: an absent/invalid mode must fail CLOSED. Falling back to
+# developer meant a lost or corrupt option silently disabled the approval step
+# on a live site. DEFAULT_MODE is now client (Standard protection).
+assert_eq "wp eval: invalid value falls back to client (fail-safe)" "client" "$CURRENT"
 
 # ===================================================================
 # Always restore to developer to prevent mode state from leaking into other tests.

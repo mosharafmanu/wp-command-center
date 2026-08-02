@@ -109,6 +109,15 @@ final class DashboardAdminQuery {
 			'tokens'          => $this->allows( 'tokens' ) ? $this->tokens() : self::GATED,
 			'change_history'  => $history_open ? $this->change_history( $sessions ) : self::GATED,
 			'recent_activity' => $history_open ? $this->recent_activity( $sessions ) : [],
+			/*
+			 * Flat recent changes, used by Home when recent_activity is empty. The
+			 * session feed cannot see changes that arrived without a session_id —
+			 * which is every change made through the approval queue — so on the
+			 * product's primary flow Home reported "No changes yet" while the change
+			 * log was full. Additive: recent_activity is unchanged for callers that
+			 * want session grouping.
+			 */
+			'recent_changes'  => $history_open ? ( new ChangeHistoryAdminQuery() )->recent_changes( self::RECENT_LIMIT ) : [],
 		];
 	}
 
@@ -211,8 +220,16 @@ final class DashboardAdminQuery {
 	}
 
 	/**
-	 * Change History headline count — the number of distinct change sessions
-	 * recorded, read from the roll-up envelope's total_count. Read-only.
+	 * Change History headline counts. Read-only.
+	 *
+	 * `sessions` is the number of distinct change SESSIONS. `changes` is the number
+	 * of recorded CHANGES, and the two are not interchangeable: a change written by
+	 * the approval-queue path carries no session_id, so it belongs to no session and
+	 * never reaches a session roll-up. Home needs to know whether anything has ever
+	 * been changed — a question `sessions` cannot answer — so the count comes from
+	 * ChangeHistoryAdminQuery, the class that owns wpcc_change_log, exactly like
+	 * every other block here. The engine is NOT dispatched: this aggregator must
+	 * never execute an operation. No new route, table, or column.
 	 *
 	 * @param array<string,mixed> $sessions The ChangeHistoryAdminQuery::sessions() envelope.
 	 * @return array<string,int>
@@ -220,8 +237,10 @@ final class DashboardAdminQuery {
 	private function change_history( array $sessions ): array {
 		return [
 			'sessions' => (int) ( $sessions['total_count'] ?? 0 ),
+			'changes'  => ( new ChangeHistoryAdminQuery() )->total_changes(),
 		];
 	}
+
 
 	/**
 	 * STEP 109.2 — the recent change activity feed: a compact projection of the
@@ -244,6 +263,17 @@ final class DashboardAdminQuery {
 			}
 			$runtimes = is_array( $s['runtimes'] ?? null ) ? array_values( array_map( 'strval', $s['runtimes'] ) ) : [];
 
+			// Carry the plain-language area names through. This re-shape was dropping
+			// them, so Home's recent-changes list fell back to raw runtime IDs and
+			// showed "option · 101 change(s)" where the rest of the product says
+			// "Settings". Derived here when absent so the list is never left with IDs.
+			$areas = is_array( $s['areas'] ?? null ) && [] !== $s['areas']
+				? array_values( array_map( 'strval', $s['areas'] ) )
+				: array_values( array_unique( array_map(
+					static fn ( $runtime ) => ActionLabels::area( (string) $runtime ),
+					$runtimes
+				) ) );
+
 			$out[] = [
 				'session_id'       => (string) ( $s['session_id'] ?? '' ),
 				'last_at'          => (int) ( $s['last_at'] ?? 0 ),
@@ -251,6 +281,7 @@ final class DashboardAdminQuery {
 				'reversible_count' => (int) ( $s['reversible_count'] ?? 0 ),
 				'actor_summary'    => (string) ( $s['actor_summary'] ?? '' ),
 				'runtimes'         => $runtimes,
+				'areas'            => $areas,
 			];
 		}
 

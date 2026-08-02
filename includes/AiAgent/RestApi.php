@@ -10,6 +10,8 @@
 
 namespace WPCommandCenter\AiAgent;
 
+defined( 'ABSPATH' ) || exit;
+
 use WPCommandCenter\Core\Schema;
 use WPCommandCenter\Diagnostics\PerformanceDiagnostics;
 use WPCommandCenter\Diagnostics\SecurityDiagnostics;
@@ -72,7 +74,6 @@ use WPCommandCenter\Operations\WidgetsRuntimeManager;
 use WPCommandCenter\Operations\CPTRegistry;
 use WPCommandCenter\Operations\CPTRuntimeManager;
 
-defined( 'ABSPATH' ) || exit;
 
 final class RestApi {
 
@@ -1320,9 +1321,10 @@ final class RestApi {
 	}
 
 	private function check_token( \WP_REST_Request $request, string $required_scope ): bool|\WP_Error {
-		$header = $request->get_header( 'authorization' );
+		// Resolve across servers that never expose Authorization to WordPress.
+		$raw = AuthTokens::bearer_from_request( $request );
 
-		if ( ! $header || ! preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
+		if ( '' === $raw ) {
 			return new \WP_Error(
 				'wpcc_missing_token',
 				__( 'Missing API token. Provide an "Authorization: Bearer <token>" header.', 'wp-command-center' ),
@@ -1330,7 +1332,7 @@ final class RestApi {
 			);
 		}
 
-		$record = $this->tokens->validate( $matches[1] );
+		$record = $this->tokens->validate( $raw );
 
 		if ( is_wp_error( $record ) ) {
 			return $record;
@@ -1357,13 +1359,13 @@ final class RestApi {
 	 * stored record (id, label, scope, ...), or null if missing/invalid.
 	 */
 	private function validated_token( \WP_REST_Request $request ): ?array {
-		$header = $request->get_header( 'authorization' );
+		$raw = AuthTokens::bearer_from_request( $request );
 
-		if ( ! $header || ! preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
+		if ( '' === $raw ) {
 			return null;
 		}
 
-		$record = $this->tokens->validate( $matches[1] );
+		$record = $this->tokens->validate( $raw );
 
 		return is_wp_error( $record ) ? null : $record;
 	}
@@ -3056,73 +3058,94 @@ final class RestApi {
 		return new \WP_REST_Response( $result );
 	}
 
-	public function list_files( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		$path   = (string) $request->get_param( 'path' );
-		$result = ( new FileAccessApi() )->list_directory( $path );
-
-		if ( is_wp_error( $result ) ) {
-			return $this->with_status( $result );
+	/**
+	 * ISSUE 13 — these three convenience routes call FileAccessApi directly and
+	 * never touch OperationExecutor (which has its own Throwable-safe wrapper
+	 * around the file_manage handler), so without this catch a rare exception
+	 * here would fall through as an unhandled fatal instead of a structured
+	 * error response.
+	 */
+	private function catch_file_access( callable $fn ): \WP_REST_Response|\WP_Error {
+		try {
+			return $fn();
+		} catch ( \Throwable $e ) {
+			return $this->with_status( new \WP_Error( 'wpcc_file_access_exception', $e->getMessage() ), 500 );
 		}
+	}
 
-		return new \WP_REST_Response( $result );
+	public function list_files( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->catch_file_access( function () use ( $request ) {
+			$path   = (string) $request->get_param( 'path' );
+			$result = ( new FileAccessApi() )->list_directory( $path );
+
+			if ( is_wp_error( $result ) ) {
+				return $this->with_status( $result );
+			}
+
+			return new \WP_REST_Response( $result );
+		} );
 	}
 
 	public function read_file( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		$path = (string) $request->get_param( 'path' );
+		return $this->catch_file_access( function () use ( $request ) {
+			$path = (string) $request->get_param( 'path' );
 
-		if ( '' === $path ) {
-			return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'wp-command-center' ) ) );
-		}
-
-		// STEP 103.0A — paginated reads (line/byte range) so large live files can
-		// be inspected in chunks via REST, mirroring the file_manage MCP tool.
-		$opts = [];
-		foreach ( [ 'line_start', 'line_count', 'byte_offset', 'byte_limit', 'context_before', 'context_after' ] as $k ) {
-			$v = $request->get_param( $k );
-			if ( null !== $v && '' !== $v ) {
-				$opts[ $k ] = (int) $v;
-			}
-		}
-
-		$result = ( new FileAccessApi() )->read( $path, $opts );
-
-		if ( is_wp_error( $result ) ) {
-			if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
-				$this->record_security_event( $request, 'security.file_blocked', [
-					'path'     => $path,
-					'endpoint' => 'files/content',
-				] );
+			if ( '' === $path ) {
+				return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'wp-command-center' ) ) );
 			}
 
-			return $this->with_status( $result );
-		}
+			// STEP 103.0A — paginated reads (line/byte range) so large live files can
+			// be inspected in chunks via REST, mirroring the file_manage MCP tool.
+			$opts = [];
+			foreach ( [ 'line_start', 'line_count', 'byte_offset', 'byte_limit', 'context_before', 'context_after' ] as $k ) {
+				$v = $request->get_param( $k );
+				if ( null !== $v && '' !== $v ) {
+					$opts[ $k ] = (int) $v;
+				}
+			}
 
-		$result = $this->redact_field( $result, 'contents', 'files/content', $request );
+			$result = ( new FileAccessApi() )->read( $path, $opts );
 
-		return new \WP_REST_Response( $result );
+			if ( is_wp_error( $result ) ) {
+				if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
+					$this->record_security_event( $request, 'security.file_blocked', [
+						'path'     => $path,
+						'endpoint' => 'files/content',
+					] );
+				}
+
+				return $this->with_status( $result );
+			}
+
+			$result = $this->redact_field( $result, 'contents', 'files/content', $request );
+
+			return new \WP_REST_Response( $result );
+		} );
 	}
 
 	public function get_file_meta( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		$path = (string) $request->get_param( 'path' );
+		return $this->catch_file_access( function () use ( $request ) {
+			$path = (string) $request->get_param( 'path' );
 
-		if ( '' === $path ) {
-			return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'wp-command-center' ) ) );
-		}
-
-		$result = ( new FileAccessApi() )->meta( $path );
-
-		if ( is_wp_error( $result ) ) {
-			if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
-				$this->record_security_event( $request, 'security.file_blocked', [
-					'path'     => $path,
-					'endpoint' => 'files/meta',
-				] );
+			if ( '' === $path ) {
+				return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'wp-command-center' ) ) );
 			}
 
-			return $this->with_status( $result );
-		}
+			$result = ( new FileAccessApi() )->meta( $path );
 
-		return new \WP_REST_Response( $result );
+			if ( is_wp_error( $result ) ) {
+				if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
+					$this->record_security_event( $request, 'security.file_blocked', [
+						'path'     => $path,
+						'endpoint' => 'files/meta',
+					] );
+				}
+
+				return $this->with_status( $result );
+			}
+
+			return new \WP_REST_Response( $result );
+		} );
 	}
 
 	public function search_code( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
@@ -4213,14 +4236,14 @@ final class RestApi {
 		if ( ! $client ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_client_not_found',
-				sprintf( __( 'AI Client "%s" not found.', 'wp-command-center' ), $client_id ),
+				sprintf( /* translators: %s: value */ __( 'AI Client "%s" not found.', 'wp-command-center' ), $client_id ),
 			), 404 );
 		}
 
 		if ( ! $client['config_generator'] ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_client_not_configured',
-				sprintf( __( 'Configuration generator not yet implemented for "%s".', 'wp-command-center' ), $client['name'] ),
+				sprintf( /* translators: %s: value */ __( 'Configuration generator not yet implemented for "%s".', 'wp-command-center' ), $client['name'] ),
 			), 501 );
 		}
 

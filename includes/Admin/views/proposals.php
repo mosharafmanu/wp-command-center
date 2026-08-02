@@ -19,16 +19,16 @@ defined( 'ABSPATH' ) || exit;
 
 $nonce        = wp_create_nonce( 'wp_rest' );
 $api_base     = rest_url( 'wp-command-center/v1/admin' );
-$approval_url = admin_url( 'admin.php?page=wpcc-approval-center' );
-$history_url  = admin_url( 'admin.php?page=wpcc-change-history' );
+$approval_url = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
+$history_url  = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 ?>
 <div class="wrap wpcc-wrap">
 	<h1><?php esc_html_e( 'Governed Drafts (Dev)', 'wp-command-center' ); ?></h1>
 
-	<div class="notice notice-warning" style="margin-top:12px;">
+	<div class="notice inline notice-warning" style="margin-top:12px;">
 		<p>
 			<strong><?php esc_html_e( 'Developer validation surface.', 'wp-command-center' ); ?></strong>
-			<?php esc_html_e( 'This is not the AI Alt Text product UI. Applying a draft here runs a real governed action through the engine — it is audited and reversible. Approvals happen in the Approval Center; rollback happens in Change History.', 'wp-command-center' ); ?>
+			<?php esc_html_e( 'This is not the AI Alt Text product UI. Applying a draft here runs a real governed action through the engine — it is audited and reversible. Approvals happen on the Approvals screen; undo happens on the Changes screen.', 'wp-command-center' ); ?>
 		</p>
 	</div>
 
@@ -121,7 +121,7 @@ $history_url  = admin_url( 'admin.php?page=wpcc-change-history' );
 	function changeCell( p ) {
 		if ( p.status !== 'applied' || ! p.change_id ) { return '—'; }
 		const label = p.change_status === 'rolled_back' ? '<?php echo esc_js( __( 'Rolled back', 'wp-command-center' ) ); ?>' : '<?php echo esc_js( __( 'Applied', 'wp-command-center' ) ); ?>';
-		return esc( label ) + ' · <a href="' + esc( HISTORY_URL ) + '"><?php echo esc_js( __( 'Change History →', 'wp-command-center' ) ); ?></a>';
+		return esc( label ) + ' · <a href="' + esc( HISTORY_URL ) + '"><?php echo esc_js( __( 'Changes →', 'wp-command-center' ) ); ?></a>';
 	}
 
 	function load() {
@@ -148,8 +148,8 @@ $history_url  = admin_url( 'admin.php?page=wpcc-change-history' );
 				[ '<?php echo esc_js( __( 'Status', 'wp-command-center' ) ); ?>', esc( p.status ) ],
 				[ '<?php echo esc_js( __( 'Operation', 'wp-command-center' ) ); ?>', esc( ( p.operation_id || '' ) + ' / ' + ( p.action || '' ) ) ],
 				[ '<?php echo esc_js( __( 'Target', 'wp-command-center' ) ); ?>', esc( ( p.target_type || '' ) + ':' + ( p.target_id || '' ) ) ],
-				[ '<?php echo esc_js( __( 'Request ID', 'wp-command-center' ) ); ?>', p.request_id ? ( esc( p.request_id ) + ' · <a href="' + esc( APPROVAL_URL ) + '"><?php echo esc_js( __( 'Review in Approval Center →', 'wp-command-center' ) ); ?></a>' ) : '—' ],
-				[ '<?php echo esc_js( __( 'Change ID', 'wp-command-center' ) ); ?>', p.change_id ? ( esc( p.change_id ) + ' · <a href="' + esc( HISTORY_URL ) + '"><?php echo esc_js( __( 'View in Change History →', 'wp-command-center' ) ); ?></a>' ) : '—' ],
+				[ '<?php echo esc_js( __( 'Request ID', 'wp-command-center' ) ); ?>', p.request_id ? ( esc( p.request_id ) + ' · <a href="' + esc( APPROVAL_URL ) + '"><?php echo esc_js( __( 'Review in Approvals →', 'wp-command-center' ) ); ?></a>' ) : '—' ],
+				[ '<?php echo esc_js( __( 'Change ID', 'wp-command-center' ) ); ?>', p.change_id ? ( esc( p.change_id ) + ' · <a href="' + esc( HISTORY_URL ) + '"><?php echo esc_js( __( 'View in Changes →', 'wp-command-center' ) ); ?></a>' ) : '—' ],
 				[ '<?php echo esc_js( __( 'Change status', 'wp-command-center' ) ); ?>', p.change_status ? esc( p.change_status ) : '—' ],
 				[ '<?php echo esc_js( __( 'Payload', 'wp-command-center' ) ); ?>', '<code>' + esc( JSON.stringify( p.payload ) ) + '</code>' ],
 				[ '<?php echo esc_js( __( 'Final payload', 'wp-command-center' ) ); ?>', '<code>' + esc( JSON.stringify( p.final_payload ) ) + '</code>' ],

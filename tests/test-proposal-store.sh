@@ -6,7 +6,7 @@
 # There is NO ProposalStore service, ApplyService, Sync/Reconciler, REST route,
 # or UI yet — those are Tasks 2+. This asserts ONLY:
 #
-#   - DB_VERSION constant + stored option are 2.5.0
+#   - DB_VERSION constant + stored option are 2.6.0
 #   - wpcc_proposals exists with the full column set + indexes
 #   - dbDelta is idempotent (re-running install() does not error / re-shape)
 #   - the 2.4.0 -> 2.5.0 upgrade path creates the table on a normal load
@@ -36,8 +36,8 @@ echo "STEP 110 Task 1 — Proposal Store schema foundation"
 echo "WP_ROOT=$WP_ROOT"
 
 # ── 1. DB_VERSION constant + stored option ──────────────────────────────────
-assert_eq "DB_VERSION constant is 2.5.0" "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
-assert_eq "stored wpcc_db_version option is 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "DB_VERSION constant is 2.6.0" "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+assert_eq "stored wpcc_db_version option is 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 
 # ── 2. Table exists ─────────────────────────────────────────────────────────
 assert_eq "wpcc_proposals table exists" "yes" \
@@ -65,7 +65,7 @@ COLCOUNT_BEFORE="$(wpe 'global $wpdb; echo count($wpdb->get_col("DESC ".$wpdb->p
 wpe '\WPCommandCenter\Core\Schema::install();' >/dev/null
 COLCOUNT_AFTER="$(wpe 'global $wpdb; echo count($wpdb->get_col("DESC ".$wpdb->prefix."wpcc_proposals",0));')"
 assert_eq "install() is idempotent (column count stable)" "$COLCOUNT_BEFORE" "$COLCOUNT_AFTER"
-assert_eq "install() idempotent: db_version still 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "install() idempotent: db_version still 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 
 # ── 6. Upgrade path 2.4.0 -> 2.5.0 recreates the table on a normal load ──────
 # Must run in ONE wp-cli process: every wp invocation bootstraps the plugin and
@@ -89,7 +89,7 @@ IFS="|" read -r U_DROPPED U_VERB U_AFTER U_VERA U_PID U_CID <<< "$UPG"
 assert_eq "upgrade precondition: table dropped at 2.4.0"      "no"    "$U_DROPPED"
 assert_eq "upgrade precondition: version rolled back to 2.4.0" "2.4.0" "$U_VERB"
 assert_eq "upgrade: wpcc_proposals recreated by maybe_upgrade" "yes"   "$U_AFTER"
-assert_eq "upgrade: db_version advanced to 2.5.0"             "2.5.0" "$U_VERA"
+assert_eq "upgrade: db_version advanced to 2.6.0"             "2.6.0" "$U_VERA"
 assert_eq "upgrade: key column proposal_id present"          "yes"   "$U_PID"
 assert_eq "upgrade: key column change_id present"            "yes"   "$U_CID"
 

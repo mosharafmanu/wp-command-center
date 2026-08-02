@@ -5,7 +5,7 @@
 #   primary_suite  the single direct acceptance suite run in T0 for this group.
 #   suites         all suites for the group (T1).
 # Lines starting with # are ignored. Unknown/missing suite files are skipped at run time.
-acf	ACFRuntimeManager|ACFRegistry|AcfSeed|\bacf_manage\b|\bacf_seed\b	test-acf-group-delete-f31.sh	test-acf-runtime.sh,test-acf-runtime-step92.sh,test-acf-seed.sh,test-acf-group-delete-f31.sh,test-acf-nested-read-f32.sh
+acf	ACFRuntimeManager|ACFRegistry|AcfSeed|\bacf_manage\b|\bacf_seed\b	test-acf-group-delete-f31.sh	test-acf-runtime.sh,test-acf-runtime-step92.sh,test-acf-seed.sh,test-acf-group-delete-f31.sh,test-acf-nested-read-f32.sh,test-acf-value-context-and-layout-usage.sh
 media	MediaRuntimeManager|MediaRegistry|MediaSnapshot|MediaImport|\bmedia_manage\b|\bmedia_import\b	test-media-snapshot-step100-1.sh	test-media-snapshot-step100-1.sh,test-media-replace-step100-2.sh,test-media-runtime.sh,test-media-runtime-step90.sh,test-media-import.sh
 workflow	WorkflowRuntimeManager|\bworkflow_manage\b	test-workflow-rollback-f61.sh	test-workflow-runtime.sh,test-workflow-step97.sh,test-workflow-rollback-f61.sh,test-workflow-dataflow-f62.sh
 seo	SeoRuntimeManager|SeoProvider|SeoRegistry|\bseo_manage\b	test-seo-runtime-step91.sh	test-seo-runtime-step91.sh
@@ -40,7 +40,7 @@ capability	CapabilityRegistry|CapabilityManager|\bcapability_manage\b	test-capab
 tokens	TokenCapabilityAdminQuery|token-capability-manager|check_tokens_permission|admin/tokens|admin/operations-map|token_capability_manager|AuthTokens|test-token-capability	test-token-capability-admin.sh	test-token-capability-admin.sh
 recommendations	Recommend	test-recommendations.sh	test-recommendations.sh,test-recommendation-workflow.sh
 history	ChangeRecorder|ChangeHistoryRuntimeManager|ChangeHistoryAdminQuery|wpcc_change_log|change_history|change_log|maybe_backfill_change_log|change-history.php|test-change-history	test-change-history.sh	test-change-history.sh,test-change-history-runtime.sh,test-change-history-rollback.sh,test-change-history-admin.sh,test-actor-attribution.sh
-mcp	McpServerRuntime|McpServer|McpRestApi|ContextModeOptimizer|Mcp/|/mcp	test-mcp-timeout-budget-f22.sh	test-mcp-runtime.sh,test-mcp-error-surface.sh,test-mcp-tool-schema-compliance.sh,test-mcp-scope-enforcement.sh,test-mcp-timeout-budget-f22.sh,test-agent-search-ux.sh
+mcp	McpServerRuntime|McpServer|McpRestApi|ContextModeOptimizer|Mcp/|/mcp	test-mcp-timeout-budget-f22.sh	test-mcp-runtime.sh,test-mcp-error-surface.sh,test-mcp-tool-schema-compliance.sh,test-mcp-scope-enforcement.sh,test-mcp-timeout-budget-f22.sh,test-agent-search-ux.sh,test-error-envelope-universal.sh
 core	OperationExecutor|OperationRegistry|AiAgent/RestApi	test-operations-registry.sh	test-operations-registry.sh,test-operation-requests.sh,test-operation-retry.sh,test-operation-worker.sh,test-agent-manifest.sh,test-agent-actions.sh
 selection	SelectionResolver|SelectionContract|alt-text/selection|alt_text_selection|ai-alt-text|wpcc-at-sg-matchall|test-selection-resolver	test-selection-resolver.sh	test-selection-resolver.sh,test-alt-text-ui.sh
 seo_audit	SeoAuditQuery|admin/seo/audit|seo_audit|seo-meta|wpcc-seo|seo_meta_generator|seo_meta_ui|check_seo_permission|test-seo-audit	test-seo-audit.sh	test-seo-audit.sh

@@ -148,7 +148,7 @@ final class SiteBuilderRuntimeManager {
 
 		$available = array_merge( [ 'default' ], array_keys( wp_get_theme()->get_page_templates( null, 'page' ) ) );
 		if ( ! in_array( $template, $available, true ) ) {
-			return $this->error( 'wpcc_invalid_template', sprintf( __( 'Template not available in the active theme: %s', 'wp-command-center' ), esc_html( $template ) ) );
+			return $this->error( 'wpcc_invalid_template', sprintf( /* translators: %s: value */ __( 'Template not available in the active theme: %s', 'wp-command-center' ), esc_html( $template ) ) );
 		}
 
 		$before = [ 'template' => get_post_meta( $page->ID, '_wp_page_template', true ) ];

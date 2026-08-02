@@ -65,7 +65,7 @@ final class Cf7Seed {
 		if ( ! isset( self::TEMPLATES[ $template ] ) ) {
 			return new \WP_Error(
 				'wpcc_invalid_cf7_template',
-				sprintf( __( 'Invalid CF7 template "%s". Supported: contact_basic, newsletter, quote_request.', 'wp-command-center' ), $template )
+				sprintf( /* translators: %s: value */ __( 'Invalid CF7 template "%s". Supported: contact_basic, newsletter, quote_request.', 'wp-command-center' ), $template )
 			);
 		}
 

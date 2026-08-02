@@ -96,7 +96,7 @@ final class OptionManager {
 			case 'option_rollback':
 				return $this->option_rollback( $option, $params['rollback_id'] ?? '', $context );
 			default:
-				return new \WP_Error( 'wpcc_invalid_option_action', sprintf( __( 'Invalid action: %s. Use option_get or option_update.', 'wp-command-center' ), esc_html( $action ) ) );
+				return new \WP_Error( 'wpcc_invalid_option_action', sprintf( /* translators: %s: value */ __( 'Invalid action: %s. Use option_get or option_update.', 'wp-command-center' ), esc_html( $action ) ) );
 		}
 	}
 

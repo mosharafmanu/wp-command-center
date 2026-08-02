@@ -50,7 +50,7 @@ final class MediaImport {
 		$ext        = strtolower( $path_parts['extension'] ?? '' );
 
 		if ( ! in_array( $ext, self::ALLOWED_EXTS, true ) ) {
-			return new \WP_Error( 'wpcc_unsupported_file_extension', sprintf( __( 'Unsupported file extension: %s.', 'wp-command-center' ), $ext ) );
+			return new \WP_Error( 'wpcc_unsupported_file_extension', sprintf( /* translators: %s: value */ __( 'Unsupported file extension: %s.', 'wp-command-center' ), $ext ) );
 		}
 
 		if ( ! current_user_can( 'upload_files' ) ) {

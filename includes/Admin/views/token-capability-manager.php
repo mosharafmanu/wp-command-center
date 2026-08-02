@@ -92,6 +92,8 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 .wpcc-deny  { color:#b32d2e; }
 .wpcc-admin-note { background:#f0f6fc;border:1px solid #72aee6;border-radius:4px;padding:10px 14px;margin:10px 0;max-width:1000px;font-size:13px; }
 .wpcc-empty { background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:18px;max-width:1000px;color:#50575e; }
+
+.wpcc-token-filter { display:inline-flex; align-items:center; gap:6px; margin:0 0 10px; font-size:12px; color:var(--wpcc-text-secondary); }
 .wpcc-reason { font-size:11px;color:#646970; }
 .wpcc-cap-manage { background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:12px 14px;margin:10px 0 18px;max-width:1000px; }
 .wpcc-cap-assigned-row { display:flex;align-items:center;gap:8px;margin:4px 0; }
@@ -120,6 +122,9 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	var i18n = {
 		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'wp-command-center' ) ); ?>,
 		emptyTokens: <?php echo wp_json_encode( __( 'No API tokens yet. Use the form above to create one and connect an AI agent.', 'wp-command-center' ) ); ?>,
+		emptyActive: <?php echo wp_json_encode( __( 'No active tokens. Create one above, or show revoked tokens to review past access.', 'wp-command-center' ) ); ?>,
+		/* translators: %1$d and %2$d are both the number of revoked or expired tokens */
+		showRevoked: <?php echo wp_json_encode( /* translators: %1$d: number */ __( 'Show %1$d revoked or expired token(s)', 'wp-command-center' ) ); ?>,
 		emptyCaps:   <?php echo wp_json_encode( __( 'No capabilities are defined.', 'wp-command-center' ) ); ?>,
 		emptyOps:    <?php echo wp_json_encode( __( 'No operations are mapped.', 'wp-command-center' ) ); ?>,
 		notFound:    <?php echo wp_json_encode( __( 'Token not found. It may have been deleted.', 'wp-command-center' ) ); ?>,
@@ -143,7 +148,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		yes:         <?php echo wp_json_encode( __( 'Yes', 'wp-command-center' ) ); ?>,
 		no:          <?php echo wp_json_encode( __( 'No', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d allowed operations, %2$d total operations */
-		accessFmt:   <?php echo wp_json_encode( __( '%1$d / %2$d operations', 'wp-command-center' ) ); ?>,
+		accessFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d operations', 'wp-command-center' ) ); ?>,
 		dLabel:      <?php echo wp_json_encode( __( 'Label', 'wp-command-center' ) ); ?>,
 		dPreview:    <?php echo wp_json_encode( __( 'Token preview', 'wp-command-center' ) ); ?>,
 		dScope:      <?php echo wp_json_encode( __( 'Scope', 'wp-command-center' ) ); ?>,
@@ -176,12 +181,12 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		allAssigned: <?php echo wp_json_encode( __( 'All assignable capabilities are already granted.', 'wp-command-center' ) ); ?>,
 		adminLocked: <?php echo wp_json_encode( __( 'Capability editing is disabled for this token because system.admin already grants every operation.', 'wp-command-center' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmAssign: <?php echo wp_json_encode( __( 'Assign the capability "%s" to this token?', 'wp-command-center' ) ); ?>,
+		confirmAssign: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Assign the capability "%s" to this token?', 'wp-command-center' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmRemove: <?php echo wp_json_encode( __( 'Remove the capability "%s" from this token?', 'wp-command-center' ) ); ?>,
+		confirmRemove: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Remove the capability "%s" from this token?', 'wp-command-center' ) ); ?>,
 		working:     <?php echo wp_json_encode( __( 'Working…', 'wp-command-center' ) ); ?>,
 		doneReload:  <?php echo wp_json_encode( __( 'Done. Reloading…', 'wp-command-center' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This change needs administrator approval and has been sent to the Approval Center.', 'wp-command-center' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This change needs your approval. It has been sent to Approvals.', 'wp-command-center' ) ); ?>,
 		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'wp-command-center' ) ); ?>,
 		genericFail: <?php echo wp_json_encode( __( 'The change could not be completed.', 'wp-command-center' ) ); ?>,
 		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'wp-command-center' ) ); ?>,
@@ -202,14 +207,14 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'wp-command-center' ) ); ?>,
 		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'wp-command-center' ) ); ?>,
 		/* translators: %s: token label */
-		confirmRevoke: <?php echo wp_json_encode( __( 'Revoke the token "%s"? Any AI agent using it loses access immediately.', 'wp-command-center' ) ); ?>,
+		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any AI agent using it loses access immediately.', 'wp-command-center' ) ); ?>,
 		/* translators: %s: token label */
-		confirmDelete: <?php echo wp_json_encode( __( 'Permanently delete the token "%s"? This cannot be undone.', 'wp-command-center' ) ); ?>,
+		confirmDelete: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Permanently delete the token "%s"? This cannot be undone.', 'wp-command-center' ) ); ?>,
 		tokenCreated:  <?php echo wp_json_encode( __( 'Token created.', 'wp-command-center' ) ); ?>,
 		prev:          <?php echo wp_json_encode( __( '← Previous', 'wp-command-center' ) ); ?>,
 		next:          <?php echo wp_json_encode( __( 'Next →', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d first row on page, %2$d last row on page, %3$d total */
-		pageInfo:      <?php echo wp_json_encode( __( 'Tokens %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>
+		pageInfo:      <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Tokens %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>
 	};
 
 	function escHtml( s ) {
@@ -256,7 +261,13 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	function fail( id ) { setHtml( id, '<div class="wpcc-empty">' + escHtml( i18n.loadFail ) + '</div>' ); }
 
 	// ── Tokens list + lifecycle (STEP 107.4) ─────────────────────────────────
+	// Presentation-only filter state. No request changes; the same payload is
+	// simply rendered without the dead tokens unless asked for.
+	var showRevoked = false;
+	var lastTokens  = [];
+
 	function renderTokens( tokens ) {
+		lastTokens = tokens;
 		var h = '<div id="wpcc-new-token" class="wpcc-cap-result info" style="display:none;" role="status" aria-live="polite"></div>';
 
 		// Create form (reuses AuthTokens::create server-side; secret shown once).
@@ -286,6 +297,24 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			return h + '<div class="wpcc-empty">' + escHtml( i18n.emptyTokens ) + '</div>';
 		}
 
+		// Revoked and expired tokens are history, not access. A site that has been
+		// running for a while accumulates them (208 on the test install), and
+		// listing them by default buried the two tokens that actually work behind
+		// screens of dead ones. They are one checkbox away, never deleted.
+		var revokedCount = tokens.filter( function ( t ) { return t.effective_status !== 'active'; } ).length;
+		var shown = showRevoked ? tokens : tokens.filter( function ( t ) { return t.effective_status === 'active'; } );
+
+		if ( revokedCount > 0 ) {
+			h += '<label class="wpcc-token-filter">' +
+				'<input type="checkbox" id="wpcc-show-revoked"' + ( showRevoked ? ' checked' : '' ) + '> ' +
+				escHtml( sprintf2( i18n.showRevoked, revokedCount, revokedCount ) ) +
+			'</label>';
+		}
+
+		if ( ! shown.length ) {
+			return h + '<div class="wpcc-empty">' + escHtml( i18n.emptyActive ) + '</div>';
+		}
+
 		h += '<table class="widefat striped wpcc-tokens-table"><thead><tr>' +
 			'<th>' + escHtml( i18n.colLabel ) + '</th>' +
 			'<th>' + escHtml( i18n.colToken ) + '</th>' +
@@ -294,7 +323,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			'<th>' + escHtml( i18n.colAccess ) + '</th>' +
 			'<th>' + escHtml( i18n.colLastUsed ) + '</th>' +
 			'<th>' + escHtml( i18n.colActions ) + '</th></tr></thead><tbody>';
-		tokens.forEach( function( t ) {
+		shown.forEach( function( t ) {
 			var access = t.is_admin
 				? escHtml( i18n.unrestricted )
 				: escHtml( sprintf2( i18n.accessFmt, t.allowed_operations, t.total_operations ) );
@@ -606,6 +635,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			tokPg.returned = r.body.returned || ( r.body.items ? r.body.items.length : 0 );
 			tokPg.hasMore  = !! r.body.has_more;
 			setHtml( 'wpcc-tokens-panel', renderTokens( r.body.items || [] ) + renderTokensPager() );
+			bindRevokedToggle();
 			wireTokens();
 			wireTokensPager();
 			if ( secret ) { showNewToken( secret ); }
@@ -613,6 +643,20 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	}
 	// Create flow re-renders the current page in place (keeps the one-time secret).
 	function reloadTokensPanel( secret ) { loadTokensPage( secret ); }
+
+	function bindRevokedToggle() {
+		var cb = document.getElementById( 'wpcc-show-revoked' );
+		if ( ! cb ) { return; }
+		cb.addEventListener( 'change', function () {
+			showRevoked = cb.checked;
+			setHtml( 'wpcc-tokens-panel', renderTokens( lastTokens ) + renderTokensPager() );
+			// Re-bind the row actions and pager: setHtml replaces the panel, so the
+			// listeners attached to the previous DOM are gone with it.
+			wireTokens();
+			wireTokensPager();
+			bindRevokedToggle();
+		} );
+	}
 
 	function renderTokensPager() {
 		if ( tokPg.total <= tokPg.limit && tokPg.offset === 0 ) { return ''; }

@@ -128,7 +128,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		statMode:   <?php echo wp_json_encode( __( 'Security mode', 'wp-command-center' ) ); ?>,
 		view:       <?php echo wp_json_encode( __( 'Details', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d shown operations, %2$d total operations */
-		countFmt:   <?php echo wp_json_encode( __( 'Showing %1$d of %2$d operations', 'wp-command-center' ) ); ?>,
+		countFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( 'Showing %1$d of %2$d operations', 'wp-command-center' ) ); ?>,
 		prev:       <?php echo wp_json_encode( __( '← Previous', 'wp-command-center' ) ); ?>,
 		next:       <?php echo wp_json_encode( __( 'Next →', 'wp-command-center' ) ); ?>,
 		// Detail panel.
@@ -148,9 +148,9 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		readOnlyYes:   <?php echo wp_json_encode( __( 'A read-only-scope token may call this operation.', 'wp-command-center' ) ); ?>,
 		readOnlyNo:    <?php echo wp_json_encode( __( 'Requires a full-scope token (read-only tokens cannot call it).', 'wp-command-center' ) ); ?>,
 		/* translators: %s: security mode label */
-		approvalGated: <?php echo wp_json_encode( __( 'In %s, this operation requires administrator approval before it runs.', 'wp-command-center' ) ); ?>,
+		approvalGated: <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation requires administrator approval before it runs.', 'wp-command-center' ) ); ?>,
 		/* translators: %s: security mode label */
-		approvalFree:  <?php echo wp_json_encode( __( 'In %s, this operation runs immediately (no approval required).', 'wp-command-center' ) ); ?>,
+		approvalFree:  <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation runs immediately (no approval required).', 'wp-command-center' ) ); ?>,
 		approvalDeclared: <?php echo wp_json_encode( __( 'The operation declares that it can require approval; the actual gate depends on the security mode and the specific action.', 'wp-command-center' ) ); ?>,
 		availYes:      <?php echo wp_json_encode( __( 'Available on this site right now.', 'wp-command-center' ) ); ?>,
 		availNo:       <?php echo wp_json_encode( __( 'Not available on this site. Availability reflects the live environment — a required plugin, integration, or WP-CLI may be inactive or missing.', 'wp-command-center' ) ); ?>,

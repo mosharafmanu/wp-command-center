@@ -240,6 +240,57 @@
 				+ ( detail ? '<span class="wpcc-cds-error__detail">' + WPCC.escHtml( detail ) + '</span>' : '' )
 				+ '</div>';
 		},
+
+		/**
+		 * In-page confirmation. Returns a Promise<boolean>.
+		 *
+		 * Replaces window.confirm(). A native dialog is the one piece of UI in this
+		 * product that the product does not control: it renders as "localhost says:",
+		 * ignores the design system, cannot show what is about to happen, and blocks
+		 * the whole renderer while it is open. On a bulk action that is about to
+		 * approve or reject several real changes, that is the wrong moment to hand
+		 * the customer a browser default.
+		 *
+		 * opts: { title, body, confirmLabel, cancelLabel, danger }
+		 */
+		confirm: function ( opts ) {
+			opts = opts || {};
+			return new Promise( function ( resolve ) {
+				var prev = document.activeElement;
+				var host = document.createElement( 'div' );
+				host.className = 'wpcc-cds-confirm';
+				host.setAttribute( 'role', 'dialog' );
+				host.setAttribute( 'aria-modal', 'true' );
+				host.setAttribute( 'aria-label', opts.title || '' );
+				host.innerHTML =
+					'<div class="wpcc-cds-confirm__box">'
+					+ '<h2 class="wpcc-cds-confirm__title">' + WPCC.escHtml( opts.title || '' ) + '</h2>'
+					+ ( opts.body ? '<p class="wpcc-cds-confirm__body">' + WPCC.escHtml( opts.body ) + '</p>' : '' )
+					+ '<div class="wpcc-cds-confirm__actions">'
+					+ '<button type="button" class="button button-primary' + ( opts.danger ? ' wpcc-cds-confirm__danger' : '' ) + '" data-wpcc-go>'
+					+ WPCC.escHtml( opts.confirmLabel || 'Continue' ) + '</button>'
+					+ '<button type="button" class="button" data-wpcc-cancel>'
+					+ WPCC.escHtml( opts.cancelLabel || 'Cancel' ) + '</button>'
+					+ '</div></div>';
+				document.body.appendChild( host );
+
+				function done( value ) {
+					document.removeEventListener( 'keydown', onKey, true );
+					if ( host.parentNode ) { host.parentNode.removeChild( host ); }
+					if ( prev && prev.focus ) { try { prev.focus(); } catch ( e ) {} }
+					resolve( value );
+				}
+				function onKey( e ) {
+					if ( 'Escape' === e.key ) { e.preventDefault(); done( false ); }
+				}
+				host.querySelector( '[data-wpcc-go]' ).addEventListener( 'click', function () { done( true ); } );
+				host.querySelector( '[data-wpcc-cancel]' ).addEventListener( 'click', function () { done( false ); } );
+				// Clicking the backdrop cancels; clicking inside the box does not.
+				host.addEventListener( 'click', function ( e ) { if ( e.target === host ) { done( false ); } } );
+				document.addEventListener( 'keydown', onKey, true );
+				host.querySelector( '[data-wpcc-go]' ).focus();
+			} );
+		},
 	};
 
 	/* ── Boot ───────────────────────────────────────────────────────────────── */

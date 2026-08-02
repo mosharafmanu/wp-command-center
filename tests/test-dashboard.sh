@@ -137,7 +137,7 @@ else
 	INV_MCP="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["mcp_tools"];')"
 	assert_eq "invariants.mcp_tools = 42 (one per operation)" "42" "$INV_MCP"
 	INV_DB="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (string) $r["invariants"]["db_version"];')"
-	assert_eq "invariants.db_version = 2.5.0" "2.5.0" "$INV_DB"
+	assert_eq "invariants.db_version = 2.6.0" "2.6.0" "$INV_DB"
 
 	# catalogue invariant mirrors OperationRegistry exactly (no drift).
 	CATMATCH="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); $base = count( $reg->get_operations() ); $q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo ( (int) $r["invariants"]["catalogue"] === $base ) ? "match" : "drift";')"
@@ -180,7 +180,7 @@ else
 
 	# Read does not mutate state: a second call yields the same catalogue count.
 	STABLE="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $q->overview(); $r = $q->overview(); echo (int) $r["invariants"]["catalogue"];')"
-	assert_eq "repeat read is stable (no mutation)" "40" "$STABLE"
+	assert_eq "repeat read is stable (no mutation)" "42" "$STABLE"
 
 	echo
 	echo "== 6b. FeatureGate seam (ungated today; per-key) =="
@@ -243,7 +243,7 @@ else
 	MCP="$(wpe '$r = ( new \WPCommandCenter\Mcp\McpServerRuntime() )->handle( [ "jsonrpc" => "2.0", "id" => 1, "method" => "tools/list" ], [] ); echo isset( $r["result"]["tools"] ) ? count( $r["result"]["tools"] ) : -1;')"
 	assert_eq "MCP tools stay 42" "42" "$MCP"
 	DBV="$(wpe 'echo get_option("wpcc_db_version");')"
-	assert_eq "DB_VERSION stays 2.5.0" "2.5.0" "$DBV"
+	assert_eq "DB_VERSION stays 2.6.0" "2.6.0" "$DBV"
 fi
 
 echo

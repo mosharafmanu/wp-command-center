@@ -37,6 +37,8 @@ final class ACFRegistry {
 	// STEP 92 — flexible-content layout management.
 	const ACTION_LAYOUT_CREATE    = 'acf_layout_create';
 	const ACTION_LAYOUT_UPDATE    = 'acf_layout_update';
+	// ISSUE 15 — which posts use a given flexible-content layout.
+	const ACTION_LAYOUT_USAGE     = 'acf_layout_usage';
 
 	/**
 	 * Field types the runtime can create/update. Includes the STEP-92 required
@@ -61,7 +63,7 @@ final class ACFRegistry {
 		self::ACTION_JSON_STATUS, self::ACTION_JSON_EXPORT, self::ACTION_JSON_IMPORT, self::ACTION_JSON_SYNC, self::ACTION_JSON_DIFF,
 		self::ACTION_VALUE_GET, self::ACTION_VALUE_UPDATE, self::ACTION_VALUE_SET, self::ACTION_BULK_VALUE_UPDATE,
 		self::ACTION_INVENTORY,
-		self::ACTION_LAYOUT_CREATE, self::ACTION_LAYOUT_UPDATE,
+		self::ACTION_LAYOUT_CREATE, self::ACTION_LAYOUT_UPDATE, self::ACTION_LAYOUT_USAGE,
 	];
 
 	private static ?array $risk = null;
@@ -74,7 +76,7 @@ final class ACFRegistry {
 		self::$risk = [
 			self::ACTION_GROUP_LIST => $L, self::ACTION_GROUP_GET => $L, self::ACTION_FIELD_LIST => $L,
 			self::ACTION_FIELD_GET => $L, self::ACTION_INVENTORY => $L, self::ACTION_JSON_STATUS => $L,
-			self::ACTION_VALUE_GET => $L, self::ACTION_LOCATION_LIST => $L,
+			self::ACTION_VALUE_GET => $L, self::ACTION_LOCATION_LIST => $L, self::ACTION_LAYOUT_USAGE => $L,
 			self::ACTION_VALUE_UPDATE => $M, self::ACTION_VALUE_SET => $M, self::ACTION_BULK_VALUE_UPDATE => $M,
 			self::ACTION_LOCATION_ASSIGN => $M, self::ACTION_LOCATION_REMOVE => $M,
 			self::ACTION_JSON_SYNC => $M, self::ACTION_JSON_DIFF => $M, self::ACTION_JSON_EXPORT => $M,

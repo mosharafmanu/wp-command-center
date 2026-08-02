@@ -40,23 +40,30 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-history">
-	<h1><?php esc_html_e( 'History', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Changes', 'wp-command-center' ); ?></h1>
 
+	<?php
+	// This hero carried two paragraphs and four chips for one idea. Two of the
+	// chips — "Recorded" and "Audited" — were the same claim twice, and "Reversible
+	// when possible" and "Safe to undo" overlapped. A log page proves it is a log
+	// by being one; it does not need a badge saying so. One sentence, then the
+	// record itself.
+	?>
 	<section class="wpcc-hist-hero">
-		<p class="wpcc-hist-lead"><?php esc_html_e( 'Every change to this site is recorded here — what changed, when, and who made it. Changes that can be undone show an Undo button.', 'wp-command-center' ); ?></p>
-		<p class="wpcc-hist-sub"><?php esc_html_e( 'Newest first. Undoing a change runs through the same approval, safety check, and record as the original — so it’s safe, and nothing happens silently.', 'wp-command-center' ); ?></p>
-		<div class="wpcc-hist-chips" role="note" aria-label="<?php esc_attr_e( 'How changes stay safe and trustworthy', 'wp-command-center' ); ?>">
-			<span class="lbl"><?php esc_html_e( 'Every change is:', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Recorded', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible when possible', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--approval"><?php esc_html_e( 'Safe to undo', 'wp-command-center' ); ?></span>
-		</div>
+		<?php
+	/*
+	 * The lead sentence used to open with the same words as the section subtitle
+	 * directly above it ("Everything that has changed on this site…"), so the
+	 * screen said the same thing twice before showing anything. What the subtitle
+	 * does NOT cover is the rule about undo, so only that survives — and only
+	 * where it is useful, which is next to the Undo buttons themselves.
+	 */
+	?>
 	</section>
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo $tab_url( 'timeline' ); ?>">&larr; <?php esc_html_e( 'Back to History', 'wp-command-center' ); ?></a>
+			<a href="<?php echo $tab_url( 'timeline' ); ?>">&larr; <?php esc_html_e( 'Back to Changes', 'wp-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-history-detail" data-change-id="<?php echo esc_attr( $view_id ); ?>">
 			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'wp-command-center' ); ?></p>
@@ -67,7 +74,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		<h2 class="nav-tab-wrapper">
 			<a href="<?php echo $tab_url( 'timeline' ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'wp-command-center' ); ?></a>
 			<a href="<?php echo $tab_url( 'sessions' ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'reversible' ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Reversible only', 'wp-command-center' ); ?></a>
+			<a href="<?php echo $tab_url( 'reversible' ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Can be undone', 'wp-command-center' ); ?></a>
 		</h2>
 
 		<?php if ( '' !== $session_id ) : ?>
@@ -76,7 +83,23 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			</div>
 		<?php endif; ?>
 
+		<?php
+		/*
+		 * Filters wait until they are wanted.
+		 *
+		 * Four inputs and two buttons sat permanently above the list, costing about
+		 * ninety vertical pixels whether the site had five changes or five thousand.
+		 * On a young site that is a search box for a list you can read at a glance —
+		 * the interface talking about itself before the customer has anything to
+		 * filter. Behind a quiet toggle it costs one line, and it opens
+		 * automatically whenever a filter is actually in play, so a filtered view
+		 * never hides the reason it looks empty.
+		 */
+		$wpcc_filters_active = ( '' !== $f_runtime || '' !== $f_status || '' !== $f_from || '' !== $f_to );
+		?>
 		<?php if ( 'sessions' !== $tab ) : ?>
+			<details class="wpcc-history-filtertoggle"<?php echo $wpcc_filters_active ? ' open' : ''; ?>>
+				<summary><?php esc_html_e( 'Filter', 'wp-command-center' ); ?></summary>
 			<form method="get" class="wpcc-history-filters">
 				<input type="hidden" name="page" value="<?php echo esc_attr( $page ); ?>" />
 				<input type="hidden" name="tab" value="<?php echo esc_attr( $tab ); ?>" />
@@ -98,6 +121,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 				<?php submit_button( __( 'Apply', 'wp-command-center' ), 'secondary', '', false ); ?>
 				<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => $page, 'tab' => $tab ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Reset', 'wp-command-center' ); ?></a>
 			</form>
+			</details>
 		<?php endif; ?>
 
 		<div id="wpcc-history-list">
@@ -129,21 +153,26 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 </div>
 
 <style>
+.wpcc-hist-target { color: var(--wpcc-text-secondary); font-weight: 500; }
 /* History / Review & Undo — scoped polish. Premium, light, wp-admin compatible.
    Reuses CDS chips (wpcc-cds-chip--*, loaded site-wide); all JS/HTML class names
    below are preserved — only their styling is improved. */
 
 /* Hero */
-.wpcc-hist-hero { background:#fff;border:1px solid #e3e5ec;border-radius:14px;padding:22px 24px;margin:12px 0 22px;max-width:920px;box-shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.05); }
-.wpcc-hist-lead { font-size:16px;line-height:1.55;color:#1d2327;font-weight:600;margin:0 0 8px;max-width:72ch; }
-.wpcc-hist-sub { font-size:13.5px;line-height:1.6;color:#4b5161;margin:0;max-width:74ch; }
-.wpcc-hist-chips { display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px; }
-.wpcc-hist-chips .lbl { font-size:12.5px;font-weight:600;color:#646970;margin-right:2px; }
+/* The hero was a raised card wrapping a single sentence — an empty box drawn
+ * around a caption. Now it is just the caption, in the page's own rhythm. */
+.wpcc-hist-hero { margin:0 0 20px;max-width:78ch; }
+.wpcc-hist-lead { font-size:14px;line-height:1.6;color:#50575e;font-weight:400;margin:0; }
 
 /* Tabs (WP nav-tab refinements) */
 .wpcc-history .nav-tab-wrapper { border-bottom:1px solid #e3e5ec;margin:8px 0 4px; }
 
 /* Filters */
+.wpcc-history-filtertoggle > summary { cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#50575e;padding:6px 0;margin:10px 0 0;list-style:none; }
+.wpcc-history-filtertoggle > summary::-webkit-details-marker { display:none; }
+.wpcc-history-filtertoggle > summary::before { content:"\25B8";font-size:11px;transition:transform .12s ease;display:inline-block; }
+.wpcc-history-filtertoggle[open] > summary::before { transform:rotate(90deg); }
+.wpcc-history-filtertoggle > summary:hover { color:#1d2327; }
 .wpcc-history-filters { display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin:16px 0;background:#fff;border:1px solid #e3e5ec;border-radius:12px;padding:16px 18px;box-shadow:0 1px 2px rgba(16,24,40,.04);max-width:920px; }
 .wpcc-history-filters label { display:flex;flex-direction:column;font-size:11px;font-weight:700;color:#646970;gap:5px;text-transform:uppercase;letter-spacing:.4px; }
 .wpcc-history-filters input { font-weight:400;border-radius:7px; }
@@ -226,6 +255,32 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 (function() {
 	var nonce   = <?php echo wp_json_encode( $nonce ); ?>;
 	var apiBase = <?php echo wp_json_encode( $api_base ); ?>;
+
+	// Server-built label dictionary (see ActionLabels::dictionary). The change-log
+	// response is produced by the change_history runtime and is not ours to
+	// reshape, so the identifiers are translated here, in the presentation layer,
+	// using exactly the same strings the server puts on approval cards.
+	var WPCC_LABELS = <?php echo wp_json_encode( \WPCommandCenter\Admin\ActionLabels::dictionary() ); ?>;
+
+	// Resolve an operation/action pair to human words. Unknown identifiers (a
+	// custom operation, or an action a third party registered) degrade to a tidy
+	// sentence rather than to a raw ID — never to something invented.
+	function fmtOne( tpl, a ) { return String( tpl ).replace( '%s', a ); }
+
+	function labelFor( operationId, action ) {
+		if ( action && WPCC_LABELS.actions[ action ] ) { return WPCC_LABELS.actions[ action ]; }
+		if ( action ) {
+			var words = String( action ).replace( /_/g, ' ' ).trim();
+			return words.charAt( 0 ).toUpperCase() + words.slice( 1 );
+		}
+		// No action recorded (single-purpose operations such as Safe Search &
+		// Replace): name the operation, not the area it belongs to. "Database" is
+		// where it happened, which is not what happened.
+		return WPCC_LABELS.actions[ operationId ]
+			|| WPCC_LABELS.titles[ operationId ]
+			|| WPCC_LABELS.areas[ operationId ]
+			|| String( operationId || '' );
+	}
 	var state   = {
 		tab:        <?php echo wp_json_encode( $tab ); ?>,
 		sessionId:  <?php echo wp_json_encode( $session_id ); ?>,
@@ -253,16 +308,21 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		actor:       <?php echo wp_json_encode( __( 'Actor', 'wp-command-center' ) ); ?>,
 		restore:     <?php echo wp_json_encode( __( 'Undo', 'wp-command-center' ) ); ?>,
 		restoreQ:    <?php echo wp_json_encode( __( 'Undo this change? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'wp-command-center' ) ); ?>,
+		/* translators: %s: plain-language name of the change being undone */
+		restoreQNamed: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Undo “%s”? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'wp-command-center' ) ); ?>,
 		restoreOk:   <?php echo wp_json_encode( __( 'Change undone. Reloading…', 'wp-command-center' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This restore needs administrator approval and has been sent to the Approval Center.', 'wp-command-center' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This undo needs your approval. It has been sent to Approvals.', 'wp-command-center' ) ); ?>,
 		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'wp-command-center' ) ); ?>,
 		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'wp-command-center' ) ); ?>,
 		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'wp-command-center' ) ); ?>,
 		genericFail: <?php echo wp_json_encode( __( 'Restore failed.', 'wp-command-center' ) ); ?>,
-		openApprove: <?php echo wp_json_encode( __( 'Open Approval Center', 'wp-command-center' ) ); ?>,
+		openApprove: <?php echo wp_json_encode( __( 'Open Approvals', 'wp-command-center' ) ); ?>,
 		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'wp-command-center' ) ); ?>,
 		close:       <?php echo wp_json_encode( __( 'Close', 'wp-command-center' ) ); ?>,
 		emptyRev:    <?php echo wp_json_encode( __( 'Nothing to undo yet. Changes that can be reversed will appear here.', 'wp-command-center' ) ); ?>,
+		emptyFiltered: <?php echo wp_json_encode( __( 'No changes match these filters. Your history is intact — only this view is narrowed.', 'wp-command-center' ) ); ?>,
+		emptyTitle:  <?php echo wp_json_encode( __( 'Nothing has changed yet', 'wp-command-center' ) ); ?>,
+		clearFilters:  <?php echo wp_json_encode( __( 'Clear filters', 'wp-command-center' ) ); ?>,
 		restoreOne:  <?php echo wp_json_encode( __( 'Undo this change', 'wp-command-center' ) ); ?>,
 		colRuntimes: <?php echo wp_json_encode( __( 'Runtimes', 'wp-command-center' ) ); ?>,
 		colLastAct:  <?php echo wp_json_encode( __( 'Last activity', 'wp-command-center' ) ); ?>,
@@ -280,11 +340,11 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		lWhen:       <?php echo wp_json_encode( __( 'When', 'wp-command-center' ) ); ?>,
 		lCounts:     <?php echo wp_json_encode( __( 'Counts', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d updated, %3$d skipped, %4$d errors */
-		countsFmt:   <?php echo wp_json_encode( __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'wp-command-center' ) ); ?>,
+		countsFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number, %4$d: number */ __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'wp-command-center' ) ); ?>,
 		restoreBusy: <?php echo wp_json_encode( __( 'Undoing…', 'wp-command-center' ) ); ?>
 	};
 	var REQUIRED_PHRASE = 'ROLLBACK_CHANGE';
-	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-approval-center' ) ); ?>;
+	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>;
 
 	function escHtml( s ) {
 		var d = document.createElement('div');
@@ -359,7 +419,23 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		else if ( rev.reversible ) { revBadge = '<span class="wpcc-badge-rev">&#8635; ' + escHtml(i18n.reversible) + '</span>'; }
 		else { revBadge = '<span class="wpcc-badge-norev">&mdash;</span>'; }
 
-		var title = ( c.operation_id || '' ) + ( c.action ? ' &middot; ' + escHtml(c.action) : '' );
+		// Plain language, resolved from the server-built dictionary so the wording
+		// matches the approval card exactly. History used to read
+		// "user_manage · user_delete"; it now reads "Delete a user account", with
+		// the identifiers kept in the Detailed disclosure for anyone who wants them.
+		/*
+		 * Name the thing that changed, the way Approvals does.
+		 *
+		 * Without the target every settings edit rendered as "Change a WordPress
+		 * setting", so a customer scanning for the one to undo saw a column of
+		 * identical sentences. The label is now recorded with the change itself
+		 * (ChangeRecorder), so old rows simply fall back to the plain verb.
+		 */
+		var targetLabel = ( c.target_summary && c.target_summary.label ) ? String( c.target_summary.label ) : '';
+		var title = escHtml( labelFor( c.operation_id, c.action ) )
+			+ ( targetLabel ? ' <span class="wpcc-hist-target">&mdash; ' + escHtml( targetLabel ) + '</span>' : '' );
+		var techId = ( c.operation_id || '' ) + ( c.action ? ' · ' + c.action : '' );
+		var area   = WPCC_LABELS.areas[ c.operation_id ] || '';
 		var target = c.target_key ? escHtml(c.target_key) : '';
 		var actor  = ( c.actor && ( c.actor.label || c.actor.user_login || c.actor.type ) ) || '';
 
@@ -375,7 +451,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 
 		// Restore is secondary and only offered when actually reversible.
 		var restore = ( rev.reversible && ! rev.rolled_back )
-			? '<button type="button" class="button-link wpcc-restore-link" data-change-id="' + escHtml(c.change_id) + '" aria-label="' + escHtml(i18n.restoreOne) + '">' + escHtml(i18n.restore) + '</button>'
+			? '<button type="button" class="button-link wpcc-restore-link" data-change-id="' + escHtml(c.change_id) + '" data-change-label="' + escHtml( labelFor( c.operation_id, c.action ) ) + '" aria-label="' + escHtml(i18n.restoreOne) + '">' + escHtml(i18n.restore) + '</button>'
 			: '';
 
 		return '<div class="wpcc-change-row st-' + escHtml(status) + '">' +
@@ -384,8 +460,10 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 				'<span class="wpcc-change-time">' + escHtml( fmtTime( c.created_at ) ) + '</span>' +
 			'</div>' +
 			'<div class="wpcc-change-meta">' +
+				( area ? '<span>' + escHtml(area) + '</span>' : '' ) +
 				( target ? '<span>' + target + '</span>' : '' ) +
 				( actor ? '<span>' + escHtml(i18n.actor) + ': ' + escHtml(actor) + '</span>' : '' ) +
+				'<span class="wpcc-engineer-only"><code>' + escHtml(techId) + '</code></span>' +
 				revBadge + chips + restore +
 			'</div>' +
 		'</div>';
@@ -396,8 +474,33 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		if ( ! list ) return;
 		if ( ! append ) { list.innerHTML = ''; lastDay = null; }
 		if ( ( ! rows || ! rows.length ) && ! append ) {
+			// "No changes recorded yet" is only true when nothing is FILTERED OUT.
+			// With a filter applied it was a lie: a customer narrowing by date saw
+			// their entire audit trail apparently vanish, which reads as data loss
+			// in the one screen whose whole job is to prove nothing was lost.
+			var filtered = !! ( state.runtime || state.status || state.dateFrom || state.dateTo );
+			if ( filtered ) {
+				list.innerHTML = '<div class="wpcc-empty">' + escHtml( i18n.emptyFiltered ) +
+					' <button type="button" class="button-link" id="wpcc-clear-filters">' + escHtml( i18n.clearFilters ) + '</button></div>';
+				var clear = document.getElementById( 'wpcc-clear-filters' );
+				if ( clear ) {
+					clear.addEventListener( 'click', function () {
+						window.location = state.pageUrl + '?page=' + encodeURIComponent( state.page ) + '&tab=' + encodeURIComponent( state.tab );
+					} );
+				}
+				return;
+			}
 			var emptyMsg = ( state.tab === 'reversible' ) ? i18n.emptyRev : i18n.empty;
-			list.innerHTML = '<div class="wpcc-empty">' + escHtml( emptyMsg ) + '</div>';
+			list.innerHTML =
+				'<div class="wpcc-empty-state" role="status">' +
+					'<span class="wpcc-empty-state__mark" aria-hidden="true">&#8635;</span>' +
+					'<p class="wpcc-empty-state__title">' + escHtml( i18n.emptyTitle ) + '</p>' +
+					'<p class="wpcc-empty-state__detail">' + escHtml( emptyMsg ) + '</p>' +
+				'</div>';
+			// Filters and view tabs are controls for data that does not exist yet.
+			// Hide them until there is something to filter.
+			document.querySelectorAll( '.wpcc-history-filters, .wpcc-history .nav-tab-wrapper' )
+				.forEach( function ( el ) { el.style.display = 'none'; } );
 			return;
 		}
 		var html = '';
@@ -515,7 +618,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 
 		// Secondary Restore action — same endpoint/path as the Timeline control.
 		if ( rev.reversible && ! rev.rolled_back ) {
-			html += '<p class="wpcc-detail-restore"><button type="button" class="button wpcc-restore-link" data-change-id="' + escHtml(change.change_id) + '" aria-label="' + escHtml(i18n.restoreOne) + '">' + escHtml(i18n.restore) + '</button></p>';
+			html += '<p class="wpcc-detail-restore"><button type="button" class="button wpcc-restore-link" data-change-id="' + escHtml(change.change_id) + '" data-change-label="' + escHtml( labelFor( change.operation_id, change.action ) ) + '" aria-label="' + escHtml(i18n.restoreOne) + '">' + escHtml(i18n.restore) + '</button></p>';
 		}
 		box.innerHTML = html;
 	}
@@ -560,10 +663,15 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		) ).filter( function( n ) { return n.offsetParent !== null; } );
 	}
 
-	function openRestoreModal( changeId ) {
+	function openRestoreModal( changeId, changeLabel ) {
 		restoreState = { changeId: changeId, highRisk: false };
 		restoreTrigger = document.activeElement;
-		el('wpcc-restore-msg').textContent = i18n.restoreQ;
+		// Name what is being undone. "Undo this change?" is ambiguous in a list of
+		// twelve near-identical rows, and ambiguity at the moment of an irreversible-
+		// feeling action is exactly where confidence is lost.
+		el('wpcc-restore-msg').textContent = changeLabel
+			? fmtOne( i18n.restoreQNamed, changeLabel )
+			: i18n.restoreQ;
 		el('wpcc-restore-highrisk').style.display = 'none';
 		el('wpcc-restore-warning').textContent = '';
 		el('wpcc-restore-phrase').value = '';
@@ -680,7 +788,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		// Delegated Restore triggers (Timeline rows + Detail view).
 		document.addEventListener( 'click', function( e ) {
 			var btn = e.target.closest ? e.target.closest( '.wpcc-restore-link' ) : null;
-			if ( btn && btn.dataset.changeId ) { e.preventDefault(); openRestoreModal( btn.dataset.changeId ); }
+			if ( btn && btn.dataset.changeId ) { e.preventDefault(); openRestoreModal( btn.dataset.changeId, btn.dataset.changeLabel || '' ); }
 		} );
 		el('wpcc-restore-confirm').addEventListener( 'click', submitRestore );
 		el('wpcc-restore-cancel').addEventListener( 'click', closeRestoreModal );

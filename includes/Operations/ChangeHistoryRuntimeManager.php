@@ -383,8 +383,23 @@ final class ChangeHistoryRuntimeManager {
 		}
 
 		if ( ! empty( $p['reversible_only'] ) && $this->truthy( $p['reversible_only'] ) ) {
-			$where[]              = 'reversible = %d';
-			$params[]             = 1;
+			$where[]  = 'reversible = %d';
+			$params[] = 1;
+			/*
+			 * A change that has ALREADY been undone is not something you can undo.
+			 * The `reversible` column records whether a change was ever capable of
+			 * being reversed, not whether it still is — so filtering on it alone
+			 * put already-undone changes in the "Can be undone" list, with no Undo
+			 * button and a "Rolled back" chip beside them. The engine itself
+			 * refuses a second rollback (wpcc_already_rolled_back); the list now
+			 * agrees with the engine instead of contradicting it.
+			 *
+			 * This also fixes the same promise for assistants: `reversible_only`
+			 * over MCP is how an assistant answers "what can I undo?", and it was
+			 * offering back work that would be rejected.
+			 */
+			$where[]  = 'status <> %s';
+			$params[] = 'rolled_back';
 			$filters['reversible_only'] = true;
 		}
 

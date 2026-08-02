@@ -64,18 +64,19 @@ $wpcc_dur = static function ( $ms ): string {
 </style>
 
 <div class="wrap wpcc-oc">
-	<div class="wpcc-oc-hero">
-		<div>
-			<h1><?php esc_html_e( 'Live activity', 'wp-command-center' ); ?></h1>
-			<p><?php esc_html_e( 'A live view of what needs you, what happened, and what you can review or undo — built from real activity. Figures shown as “unknown” or “not tracked yet” are not measured; they are never guessed.', 'wp-command-center' ); ?></p>
-		</div>
-		<div class="wpcc-oc-pills">
-			<div class="wpcc-oc-pill"><div class="v" style="color:<?php echo (int) $wpcc_attn['pending_approvals'] ? '#ffd23f' : '#fff'; ?>;"><?php echo (int) $wpcc_attn['pending_approvals']; ?></div><div class="l"><?php esc_html_e( 'Pending', 'wp-command-center' ); ?></div></div>
-			<div class="wpcc-oc-pill"><div class="v"><?php echo (int) $wpcc_status['completed']; ?></div><div class="l"><?php esc_html_e( 'Completed', 'wp-command-center' ); ?></div></div>
-			<div class="wpcc-oc-pill"><div class="v" style="color:<?php echo (int) $wpcc_status['failed'] ? '#ff8a8a' : '#fff'; ?>;"><?php echo (int) $wpcc_status['failed']; ?></div><div class="l"><?php esc_html_e( 'Failed', 'wp-command-center' ); ?></div></div>
-			<div class="wpcc-oc-pill"><div class="v"><?php echo (int) $wpcc_status['running']; ?></div><div class="l"><?php esc_html_e( 'Running', 'wp-command-center' ); ?></div></div>
-		</div>
-	</div>
+	<?php
+	/*
+	 * The dark gradient hero and its four pills are gone.
+	 *
+	 * Every number they showed is repeated further down this same screen —
+	 * pending in "Needs attention", and completed / failed / running in the
+	 * "System activity" panel. Printing the same four figures twice, in two
+	 * visual languages, on one page is not a summary; it doubles the reading
+	 * with no new information, and the dark slab was the only surface in the
+	 * product using that treatment. The screen now opens on the one thing that
+	 * can require an action.
+	 */
+	?>
 
 	<!-- 1. NEEDS ATTENTION -->
 	<h2><?php esc_html_e( 'Needs attention', 'wp-command-center' ); ?></h2>
@@ -84,12 +85,12 @@ $wpcc_dur = static function ( $ms ): string {
 	<?php else : ?>
 		<div class="wpcc-oc-attn" role="status">
 			<?php if ( (int) $wpcc_attn['pending_approvals'] > 0 ) : ?>
-				<p style="margin:0 0 8px;font-size:13px;"><strong><?php printf( esc_html( _n( '%d change is waiting for your approval.', '%d changes are waiting for your approval.', (int) $wpcc_attn['pending_approvals'], 'wp-command-center' ) ), (int) $wpcc_attn['pending_approvals'] ); ?></strong> <?php esc_html_e( 'Nothing applies until you review it.', 'wp-command-center' ); ?> <a href="<?php echo esc_url( $wpcc_links['approvals'] ); ?>"><?php esc_html_e( 'Review now →', 'wp-command-center' ); ?></a></p>
+				<p style="margin:0 0 8px;font-size:13px;"><strong><?php printf( esc_html( /* translators: %d: number */ _n( '%d change is waiting for your approval.', '%d changes are waiting for your approval.', (int) $wpcc_attn['pending_approvals'], 'wp-command-center' ) ), (int) $wpcc_attn['pending_approvals'] ); ?></strong> <?php esc_html_e( 'Nothing applies until you review it.', 'wp-command-center' ); ?> <a href="<?php echo esc_url( $wpcc_links['approvals'] ); ?>"><?php esc_html_e( 'Review now →', 'wp-command-center' ); ?></a></p>
 			<?php endif; ?>
 			<?php if ( ! empty( $wpcc_attn['failures'] ) ) : ?>
 				<p style="margin:0 0 4px;font-size:13px;font-weight:600;"><?php esc_html_e( 'Recent failures:', 'wp-command-center' ); ?></p>
 				<?php foreach ( $wpcc_attn['failures'] as $frow ) : ?>
-					<div style="font-size:12px;color:#50575e;">&#10007; <code><?php echo esc_html( $frow['operation'] ?: $frow['kind'] ); ?></code><?php if ( '' !== $frow['error_code'] ) : ?> — <?php echo esc_html( $frow['error_code'] ); ?><?php endif; ?> <span class="muted"><?php echo $frow['time'] ? esc_html( sprintf( __( '%s ago', 'wp-command-center' ), human_time_diff( $frow['time'], time() ) ) ) : ''; ?></span></div>
+					<div style="font-size:12px;color:#50575e;">&#10007; <code><?php echo esc_html( $frow['operation'] ?: $frow['kind'] ); ?></code><?php if ( '' !== $frow['error_code'] ) : ?> — <?php echo esc_html( $frow['error_code'] ); ?><?php endif; ?> <span class="muted"><?php echo $frow['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'wp-command-center' ), human_time_diff( $frow['time'], time() ) ) ) : ''; ?></span></div>
 				<?php endforeach; ?>
 			<?php endif; ?>
 		</div>
@@ -110,8 +111,17 @@ $wpcc_dur = static function ( $ms ): string {
 						<div class="wpcc-oc-row">
 							<span class="wpcc-oc-badge" style="background:<?php echo esc_attr( $scolor ); ?>22;color:<?php echo esc_attr( $scolor ); ?>;"><?php echo esc_html( $slabel ); ?></span>
 							<span style="flex:1;"><strong style="font-weight:600;"><?php echo esc_html( $row['operation'] ?: $row['kind'] ); ?></strong><?php if ( '' !== $row['provider'] ) : ?> <span class="muted">· <?php echo esc_html( $row['provider'] ); ?><?php echo '' !== $row['model'] ? '/' . esc_html( $row['model'] ) : ''; ?></span><?php endif; ?></span>
+							<?php
+						// Print the duration only when it was actually measured. This
+						// column rendered the literal word "unknown" on every row, so a
+						// healthy timeline read as a column of failures. Honesty about
+						// unmeasured data is right; repeating it once per row is noise.
+						// The "what is and isn't measured" note below still explains it.
+						?>
+						<?php if ( null !== $row['duration_ms'] ) : ?>
 							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo esc_html( $wpcc_dur( $row['duration_ms'] ) ); ?></span>
-							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo $row['time'] ? esc_html( sprintf( __( '%s ago', 'wp-command-center' ), human_time_diff( $row['time'], time() ) ) ) : ''; ?></span>
+						<?php endif; ?>
+							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo $row['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'wp-command-center' ), human_time_diff( $row['time'], time() ) ) ) : ''; ?></span>
 						</div>
 					<?php endforeach; ?>
 				</div>
@@ -151,8 +161,8 @@ $wpcc_dur = static function ( $ms ): string {
 	<?php if ( empty( $wpcc_rev ) ) : ?>
 		<div class="wpcc-oc-empty">
 			<strong><?php esc_html_e( 'No reversible changes recorded yet.', 'wp-command-center' ); ?></strong><br>
-			<span class="muted"><?php esc_html_e( 'Reversible changes (content, SEO, media metadata, settings, comments, users…) appear here with a one-click Restore.', 'wp-command-center' ); ?></span>
-			<p style="margin:12px 0 0;"><a class="button button-small" href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'Open Change History', 'wp-command-center' ); ?></a></p>
+			<span class="muted"><?php esc_html_e( 'Reversible changes (content, SEO, media metadata, settings, comments, users…) appear here with a Restore.', 'wp-command-center' ); ?></span>
+			<p style="margin:12px 0 0;"><a class="button button-small" href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'Open Changes', 'wp-command-center' ); ?></a></p>
 		</div>
 	<?php else : ?>
 		<div class="wpcc-oc-card">
@@ -160,10 +170,10 @@ $wpcc_dur = static function ( $ms ): string {
 				<div class="wpcc-oc-row">
 					<span style="flex:1;">
 						<strong style="font-weight:600;"><?php echo esc_html( implode( ', ', array_slice( (array) $s['runtimes'], 0, 3 ) ) ?: __( 'change session', 'wp-command-center' ) ); ?></strong>
-						<span class="muted">· <?php printf( esc_html( _n( '%d reversible change', '%d reversible changes', (int) $s['reversible_count'], 'wp-command-center' ) ), (int) $s['reversible_count'] ); ?></span>
+						<span class="muted">· <?php printf( esc_html( /* translators: %d: number */ _n( '%d reversible change', '%d reversible changes', (int) $s['reversible_count'], 'wp-command-center' ) ), (int) $s['reversible_count'] ); ?></span>
 						<span class="muted">· <?php echo esc_html( $s['actor_summary'] ); ?></span>
 					</span>
-					<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo (int) $s['last_at'] ? esc_html( sprintf( __( '%s ago', 'wp-command-center' ), human_time_diff( (int) $s['last_at'], time() ) ) ) : ''; ?></span>
+					<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo (int) $s['last_at'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'wp-command-center' ), human_time_diff( (int) $s['last_at'], time() ) ) ) : ''; ?></span>
 					<a class="button button-small" href="<?php echo esc_url( add_query_arg( 'session_id', rawurlencode( (string) $s['session_id'] ), $wpcc_links['sessions'] ) ); ?>"><?php esc_html_e( 'Review & undo', 'wp-command-center' ); ?></a>
 				</div>
 			<?php endforeach; ?>

@@ -104,6 +104,12 @@ final class BulkRuntimeManager {
 	private function bulk_content(array $p,array $cx):array{
 		$ids=(array)($p['ids']??[]);$fields=$p['fields']??[];$results=[];
 		if(count($ids)>self::MAX_ITEMS)return$this->err('too_many_items',$this->cap_msg());
+		// A bulk edit with no targets used to report success ("updated: 0") and still
+		// record an `applied` change, so the Changes screen filled up with entries
+		// that changed nothing. Every other operation rejects a call missing its
+		// essential input; this one now does too.
+		if(!$ids)return$this->err('wpcc_missing_bulk_ids',__('ids is required — provide the IDs to update.','wp-command-center'));
+		if(!$fields)return$this->err('wpcc_missing_bulk_fields',__('fields is required — provide what to change (post_title and/or post_content).','wp-command-center'));
 		$acc=new ContentFieldAccessor();$batch=wp_generate_uuid4();$items=0;
 		foreach($ids as $id){
 			$id=(int)$id;$post=get_post($id);if(!$post)continue;
@@ -123,6 +129,9 @@ final class BulkRuntimeManager {
 	private function bulk_status(array $p,string $status,array $cx):array{
 		$ids=(array)($p['ids']??[]);$results=[];
 		if(count($ids)>self::MAX_ITEMS)return$this->err('too_many_items',$this->cap_msg());
+		// Same reasoning as bulk_content: no targets is a malformed request, not a
+		// successful publish/unpublish of nothing.
+		if(!$ids)return$this->err('wpcc_missing_bulk_ids',__('ids is required — provide the IDs to update.','wp-command-center'));
 		$acc=new ContentFieldAccessor();$batch=wp_generate_uuid4();$items=0;$action="bulk_$status"; // bulk_publish | bulk_draft
 		foreach($ids as $id){
 			$id=(int)$id;$post=get_post($id);if(!$post)continue;
@@ -194,7 +203,7 @@ final class BulkRuntimeManager {
 
 	private function batch_execute(array $p,array $cx):array{
 		$ops=(array)($p['operations']??[]);$results=[];$executor=new \WPCommandCenter\Operations\OperationExecutor();
-		if(count($ops)>self::MAX_ITEMS)return$this->err('too_many_items',sprintf(__('Cannot process more than %d operations in a single batch.','wp-command-center'),self::MAX_ITEMS));
+		if(count($ops)>self::MAX_ITEMS)return$this->err('too_many_items',sprintf(/* translators: %d: number */ __('Cannot process more than %d operations in a single batch.','wp-command-center'),self::MAX_ITEMS));
 		foreach($ops as $op){$r=$executor->run((string)($op['operation_id']??''),(array)($op['payload']??[]),$cx);$results[]=['operation_id'=>$op['operation_id']??'','success'=>$r['success']??false];}
 		return['executed'=>count($results),'results'=>$results];
 	}
@@ -324,7 +333,7 @@ final class BulkRuntimeManager {
 		return['post_title'=>$snap];
 	}
 
-	private function cap_msg():string{ return sprintf(__('Cannot process more than %d items in a single bulk operation.','wp-command-center'),self::MAX_ITEMS); }
+	private function cap_msg():string{ return sprintf(/* translators: %d: number */ __('Cannot process more than %d items in a single bulk operation.','wp-command-center'),self::MAX_ITEMS); }
 	private function unsupported(string $m):array{return['error'=>true,'code'=>'wpcc_bulk_rollback_unsupported','message'=>$m,'reversible'=>false];}
 	private function err(string $c,string $m):array{return['error'=>true,'code'=>$c,'message'=>$m];}
 }

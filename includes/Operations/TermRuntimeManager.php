@@ -65,7 +65,7 @@ final class TermRuntimeManager {
 	private function term_list( array $p ): array {
 		$taxonomy = sanitize_key( (string) ( $p['taxonomy'] ?? '' ) );
 		if ( '' !== $taxonomy && ! taxonomy_exists( $taxonomy ) ) {
-			return $this->error( 'wpcc_invalid_taxonomy', sprintf( __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ), [ 'valid_taxonomies' => get_taxonomies( [], 'names' ) ] );
+			return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ), [ 'valid_taxonomies' => get_taxonomies( [], 'names' ) ] );
 		}
 
 		$args = [
@@ -103,7 +103,7 @@ final class TermRuntimeManager {
 				return $this->error( 'wpcc_missing_term_selector', __( 'Provide term_id, or (taxonomy + slug), or (taxonomy + name).', 'wp-command-center' ) );
 			}
 			if ( ! taxonomy_exists( $taxonomy ) ) {
-				return $this->error( 'wpcc_invalid_taxonomy', sprintf( __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ) );
+				return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ) );
 			}
 			$term = '' !== $slug ? get_term_by( 'slug', $slug, $taxonomy ) : get_term_by( 'name', $name, $taxonomy );
 		}
@@ -124,7 +124,7 @@ final class TermRuntimeManager {
 		}
 		$taxonomy = sanitize_key( (string) ( $p['taxonomy'] ?? '' ) );
 		if ( '' !== $taxonomy && ! taxonomy_exists( $taxonomy ) ) {
-			return $this->error( 'wpcc_invalid_taxonomy', sprintf( __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ) );
+			return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ) );
 		}
 
 		$terms = get_terms( [

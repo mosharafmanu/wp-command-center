@@ -95,7 +95,7 @@ final class ActionPanelAssets {
 			'openSuggest'      => __( 'Open in Suggestions', 'wp-command-center' ),
 			'close'            => __( 'Close', 'wp-command-center' ),
 			'draftNote'        => __( 'Saved as a draft for review — nothing has been applied to your site.', 'wp-command-center' ),
-			'provBy'           => __( 'Suggested by %1$s · %2$s', 'wp-command-center' ),
+			'provBy'           => /* translators: %1$s: value, %2$s: value */ __( 'Suggested by %1$s · %2$s', 'wp-command-center' ),
 			'exists'           => __( 'A suggestion already exists for this item. Open it in Suggestions to review.', 'wp-command-center' ),
 			'noProvider'       => __( 'No AI provider is configured. Add an API key under AI Integrations to generate suggestions.', 'wp-command-center' ),
 			'noPlugin'         => __( 'No supported SEO plugin (Rank Math or Yoast) is active.', 'wp-command-center' ),

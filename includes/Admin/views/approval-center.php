@@ -12,7 +12,6 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$security_mode = \WPCommandCenter\Operations\SecurityModeManager::label();
 $human_only    = \WPCommandCenter\Operations\SecurityModeManager::requires_human_approver();
 $nonce         = wp_create_nonce( 'wp_rest' );
 $api_base      = rest_url( 'wp-command-center/v1/admin' );
@@ -23,7 +22,7 @@ $tabs       = [ 'pending', 'history', 'queue' ];
 if ( ! in_array( $active_tab, $tabs, true ) ) {
 	$active_tab = 'pending';
 }
-$base_url = admin_url( 'admin.php?page=wpcc-approval-center' );
+$base_url = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
 
 // STEP 106.2 — single-request detail view (?view=<request_id>). UUID-shaped only.
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only detail nav, no state change.
@@ -37,19 +36,28 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		<span id="wpcc-pending-badge" style="display:none;margin-left:8px;background:var(--wpcc-red-600);color:var(--wpcc-white);font-size:12px;border-radius:10px;padding:2px 8px;vertical-align:middle;"></span>
 	</h1>
 
-	<p class="description">
-		<?php printf(
-			/* translators: %s: security mode label */
-			esc_html__( 'Security mode: %s. Review AI-requested operations, inspect the full approval history, and watch the execution queue.', 'wp-command-center' ),
-			'<strong>' . esc_html( $security_mode ) . '</strong>'
-		); ?>
-		<?php if ( $human_only ) : ?>
-			<br><span class="dashicons dashicons-lock" style="color:var(--wpcc-gray-600);" aria-hidden="true"></span>
-			<?php esc_html_e( 'A WordPress administrator must approve gated operations — API tokens cannot self-approve in this mode.', 'wp-command-center' ); ?>
-		<?php endif; ?>
-	</p>
+	<?php
+	// Removed: a restatement of the security mode (the header pill already shows
+	// it, live) and a sentence that just listed this page's own tabs. What is left
+	// is the one fact a customer cannot see from the UI itself — that a token
+	// cannot wave its own request through.
+	?>
+	<?php if ( $human_only ) : ?>
+		<p class="description">
+			<span class="dashicons dashicons-lock" style="color:var(--wpcc-gray-600);" aria-hidden="true"></span>
+			<?php esc_html_e( 'Only you can approve these. An AI assistant cannot approve its own request.', 'wp-command-center' ); ?>
+		</p>
+	<?php endif; ?>
 
+	<?php
+	// Queue-level context belongs to the queue. On a single-request detail screen
+	// the pending/critical/failed counts and the Recommendations pointer are about
+	// OTHER work — they pushed the change being reviewed below the fold and invited
+	// the reader away mid-decision. Shown on the list only.
+	?>
+	<?php if ( '' === $detail_id ) : ?>
 	<div id="wpcc-approval-summary" class="wpcc-summary-bar" aria-live="polite"></div>
+	<?php endif; ?>
 
 	<?php
 	// Phase 2A — pointer to Recommendations when suggested-fix plans await approval.
@@ -57,7 +65,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	// context. Shown only when there is at least one pending plan.
 	global $wpdb;
 	$wpcc_pending_plan_cnt = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}wpcc_agent_plans WHERE status = %s", 'pending_review' ) );
-	if ( $wpcc_pending_plan_cnt > 0 ) :
+	if ( '' === $detail_id && $wpcc_pending_plan_cnt > 0 ) :
 		?>
 		<p class="wpcc-approvals-recsignal" style="margin:0 0 14px;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:760px;font-size:13px;">
 			<span class="dashicons dashicons-lightbulb" aria-hidden="true" style="color:#2271b1;"></span>
@@ -68,14 +76,15 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 				(int) $wpcc_pending_plan_cnt
 			);
 			?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=recommendations' ) ); ?>"><?php esc_html_e( 'Review in Recommendations →', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=diagnostics&dpane=recommendations' ) ); ?>"><?php esc_html_e( 'Review in Recommendations →', 'wp-command-center' ); ?></a>
 		</p>
 		<?php
 	endif;
 	?>
 
 	<?php if ( '' !== $detail_id ) : ?>
-	<p><a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="button">&larr; <?php esc_html_e( 'Back to Approvals', 'wp-command-center' ); ?></a></p>
+	<?php // Back to the pending queue — where the reader came from, not the Decided tab. ?>
+	<p><a href="<?php echo esc_url( $base_url . '&tab=pending' ); ?>" class="wpcc-detail-back">&larr; <?php esc_html_e( 'Back to Approvals', 'wp-command-center' ); ?></a></p>
 	<div id="wpcc-detail" data-id="<?php echo esc_attr( $detail_id ); ?>">
 		<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></p>
 	</div>
@@ -83,8 +92,8 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 
 	<h2 class="nav-tab-wrapper">
 		<a href="<?php echo esc_url( $base_url . '&tab=pending' ); ?>" class="nav-tab <?php echo 'pending' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'pending' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Pending', 'wp-command-center' ); ?></a>
-		<a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'history' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'History', 'wp-command-center' ); ?></a>
-		<a href="<?php echo esc_url( $base_url . '&tab=queue' ); ?>" class="nav-tab <?php echo 'queue' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'queue' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Queue', 'wp-command-center' ); ?></a>
+		<a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'history' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Decided', 'wp-command-center' ); ?></a>
+		<a href="<?php echo esc_url( $base_url . '&tab=queue' ); ?>" class="nav-tab <?php echo 'queue' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'queue' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Execution', 'wp-command-center' ); ?></a>
 	</h2>
 
 	<div id="wpcc-tab-pending" class="wpcc-tab" style="<?php echo 'pending' === $active_tab ? '' : 'display:none;'; ?>">
@@ -137,24 +146,113 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 .wpcc-summary-chip { background:var(--wpcc-white); border:1px solid var(--wpcc-gray-100); border-radius:4px; padding:8px 14px; font-size:13px; min-width:90px; }
 .wpcc-summary-chip strong { display:block; font-size:20px; line-height:1.2; }
 .wpcc-summary-chip.alert strong { color:var(--wpcc-state-danger-fg); }
+/* ── Review list (PROGRAM-7D) ───────────────────────────────────────────────
+ * One row per decision. Risk is carried by a 3px left edge so the eye can sort
+ * the queue by severity before reading a word; actions stay quiet until the row
+ * is hovered or focused so that a page of pending items has ONE visual weight
+ * instead of a hundred competing primary buttons. Keyboard users get the same
+ * reveal via :focus-within, and the actions remain in the DOM (never
+ * display:none) so they stay reachable by tab and by screen readers.
+ * ─────────────────────────────────────────────────────────────────────────── */
+.wpcc-apr-bar { display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:0 0 10px; border-bottom:1px solid var(--wpcc-border-subtle); margin-bottom:2px; }
+.wpcc-apr-all { font-size:13px; color:var(--wpcc-text-secondary); display:inline-flex; align-items:center; gap:6px; }
+.wpcc-apr-count { font-size:12px; color:var(--wpcc-text-secondary); }
+.wpcc-apr-more { color:var(--wpcc-text-secondary); opacity:.85; }
+.wpcc-apr-bulk { margin-left:auto; display:inline-flex; align-items:center; gap:8px; }
+/* An explicit `display` outranks the user-agent rule for [hidden], so the bulk
+ * bar stayed visible reading "0 selected". Restore the intent. */
+.wpcc-apr-bulk[hidden] { display:none; }
+.wpcc-apr-selcount { font-size:12px; font-weight:600; color:var(--wpcc-text-primary); }
+
+.wpcc-apr-list { list-style:none; margin:0; padding:0; border:1px solid var(--wpcc-border-subtle); border-radius:8px; overflow:hidden; background:var(--wpcc-surface-card); }
+.wpcc-apr-row { position:relative; display:flex; align-items:center; gap:12px; padding:10px 14px 10px 11px; border-bottom:1px solid var(--wpcc-border-subtle); border-left:3px solid transparent; transition:background-color .12s ease; }
+.wpcc-apr-row:last-child { border-bottom:0; }
+.wpcc-apr-row:hover { background:var(--wpcc-surface-sunken); }
+.wpcc-apr-row.risk-critical { border-left-color:var(--wpcc-risk-critical-fg); }
+.wpcc-apr-row.risk-high     { border-left-color:var(--wpcc-risk-high-fg); }
+.wpcc-apr-row.risk-medium   { border-left-color:var(--wpcc-risk-medium-fg); }
+.wpcc-apr-row.risk-low      { border-left-color:var(--wpcc-risk-low-fg); }
+.wpcc-apr-row.risk-diagnostic { border-left-color:var(--wpcc-risk-diagnostic-fg); }
+
+.wpcc-apr-pick { display:flex; align-items:center; }
+.wpcc-apr-main { flex:1; min-width:0; }
+.wpcc-apr-title { display:inline-block; font-size:13.5px; font-weight:600; color:var(--wpcc-text-primary); text-decoration:none; line-height:1.4; }
+.wpcc-apr-title:hover { color:var(--wpcc-text-accent); text-decoration:underline; }
+.wpcc-apr-preview { display:inline-block; margin-left:8px; font-size:13px; color:var(--wpcc-text-secondary); }
+.wpcc-apr-warn { display:inline-block; margin-left:8px; font-size:11px; font-weight:600; color:var(--wpcc-risk-critical-fg); }
+.wpcc-apr-sub { display:block; margin-top:2px; font-size:12px; color:var(--wpcc-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wpcc-apr-sub code { font-size:11px; }
+.wpcc-apr-dot { margin:0 6px; opacity:.5; }
+
+/*
+ * Approve and Reject are always visible.
+ *
+ * Hiding them until hover is a density trick borrowed from mail clients, where
+ * rows are disposable. Here the row IS the decision — the entire reason the
+ * screen exists — and a customer arriving on it saw a list with no way to act.
+ * They stay quiet until you approach (muted, then full strength on hover) so a
+ * long queue does not turn into a wall of buttons, but they are never absent.
+ */
+.wpcc-apr-actions { display:flex; gap:6px; opacity:.72; transition:opacity .12s ease; }
+.wpcc-apr-row:hover .wpcc-apr-actions,
+.wpcc-apr-row:focus-within .wpcc-apr-actions { opacity:1; }
+@media (hover:none) { .wpcc-apr-actions { opacity:1; } }
+
+/* Decision bar on the detail screen: the action sits with the evidence. */
+.wpcc-detail-decide { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 18px; padding:14px 16px; border:1px solid var(--wpcc-border-subtle); border-radius:8px; background:var(--wpcc-surface-sunken); }
+.wpcc-detail-decide__note { font-size:12px; color:var(--wpcc-text-secondary); }
+.wpcc-detail-decide .wpcc-card-result { flex-basis:100%; }
+.wpcc-detail-raw { margin:0 0 18px; }
+.wpcc-detail-back { display:inline-block; margin:0 0 12px; font-size:13px; text-decoration:none; }
+.wpcc-detail-back:hover { text-decoration:underline; }
+.wpcc-detail-raw > summary { cursor:pointer; font-size:13px; font-weight:600; color:var(--wpcc-text-secondary); padding:6px 0; }
+.wpcc-detail-raw[open] > summary { color:var(--wpcc-text-primary); margin-bottom:8px; }
+
+.wpcc-apr-pager { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:14px; font-size:12px; color:var(--wpcc-text-secondary); }
+
+.wpcc-apr-clear { text-align:center; padding:48px 24px; border:1px solid var(--wpcc-border-subtle); border-radius:8px; background:var(--wpcc-surface-card); }
+.wpcc-apr-clear__mark { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:999px; background:var(--wpcc-state-success-bg); color:var(--wpcc-state-success-fg); font-size:20px; margin-bottom:12px; }
+.wpcc-apr-clear__title { margin:0 0 4px; font-size:15px; font-weight:600; color:var(--wpcc-text-primary); }
+.wpcc-apr-clear__detail { margin:0 auto; max-width:46ch; font-size:13px; color:var(--wpcc-text-secondary); }
+
 .wpcc-approval-card { background:var(--wpcc-white); border:1px solid var(--wpcc-gray-100); border-left:4px solid var(--wpcc-gray-500); border-radius:4px; padding:16px 20px; margin:12px 0; max-width:820px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
 .wpcc-approval-card.risk-critical { border-left-color:var(--wpcc-risk-critical-fg); }
 .wpcc-approval-card.risk-high { border-left-color:var(--wpcc-risk-high-fg); }
 .wpcc-approval-card.risk-medium { border-left-color:var(--wpcc-risk-medium-fg); }
 .wpcc-approval-card.risk-low { border-left-color:var(--wpcc-risk-low-fg); }
 .wpcc-approval-card.risk-diagnostic { border-left-color:var(--wpcc-risk-diagnostic-fg); }
-.wpcc-risk-badge { display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:3px;color:var(--wpcc-white);text-transform:uppercase; }
-.wpcc-risk-badge.risk-critical { background:var(--wpcc-risk-critical-fg); }
-.wpcc-risk-badge.risk-high { background:var(--wpcc-risk-high-fg); }
-.wpcc-risk-badge.risk-medium { background:var(--wpcc-risk-medium-fg); }
-.wpcc-risk-badge.risk-low { background:var(--wpcc-risk-low-fg); }
-.wpcc-risk-badge.risk-diagnostic { background:var(--wpcc-risk-diagnostic-fg); }
+/*
+ * Risk badges are a reading aid, not a siren.
+ *
+ * These filled the badge with the tier's FOREGROUND colour, producing a solid
+ * dark-red block reading "HIGH RISK" next to sentences like "Change a WordPress
+ * setting — Tagline". Changing a tagline is high risk in the engine's sense (a
+ * settings write can break a site) and that is worth knowing — but rendered as an
+ * alarm it teaches the customer either to fear routine edits or to stop reading
+ * the badge. Neither is what a governance product wants.
+ *
+ * Tinted background, tier-coloured text, a small dot for scanning. Critical alone
+ * keeps the solid fill, because that is the one where alarm is the correct answer.
+ */
+.wpcc-risk-badge {
+	display:inline-flex; align-items:center; gap:6px;
+	font-size:11px; font-weight:650; padding:3px 9px; border-radius:999px;
+	text-transform:uppercase; letter-spacing:.02em; white-space:nowrap;
+}
+.wpcc-risk-badge::before { content:""; width:6px; height:6px; border-radius:50%; background:currentColor; flex:0 0 auto; }
+.wpcc-risk-badge.risk-critical { background:var(--wpcc-risk-critical-fg); color:var(--wpcc-white); }
+.wpcc-risk-badge.risk-critical::before { background:var(--wpcc-white); }
+.wpcc-risk-badge.risk-high { background:var(--wpcc-risk-high-bg); color:var(--wpcc-risk-high-fg); }
+.wpcc-risk-badge.risk-medium { background:var(--wpcc-risk-medium-bg); color:var(--wpcc-risk-medium-fg); }
+.wpcc-risk-badge.risk-low { background:var(--wpcc-risk-low-bg); color:var(--wpcc-risk-low-fg); }
+.wpcc-risk-badge.risk-diagnostic { background:var(--wpcc-risk-diagnostic-bg); color:var(--wpcc-risk-diagnostic-fg); }
 .wpcc-card-header { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px; }
 .wpcc-card-title { font-size:15px;font-weight:600;margin:0; }
 .wpcc-card-meta { font-size:13px;color:var(--wpcc-gray-700);margin:6px 0; }
 .wpcc-card-meta td { padding:3px 12px 3px 0;vertical-align:top; }
 .wpcc-card-meta td:first-child { font-weight:500;white-space:nowrap; }
 .wpcc-card-reason { background:var(--wpcc-gray-0);border-left:3px solid var(--wpcc-gray-100);padding:8px 12px;margin:10px 0;font-size:13px;color:var(--wpcc-gray-700);font-style:italic; }
+.wpcc-card-area { display:inline-block;margin:2px 0 6px;padding:1px 8px;border-radius:10px;background:var(--wpcc-gray-100,#f0f0f1);color:var(--wpcc-text-secondary,#50575e);font-size:11px;font-weight:600; }
 .wpcc-card-actions { margin-top:14px; }
 .wpcc-approve-btn { background:var(--wpcc-green-600);color:var(--wpcc-white);border-color:var(--wpcc-green-600); }
 .wpcc-approve-btn:hover { background:var(--wpcc-green-700);border-color:var(--wpcc-green-700);color:var(--wpcc-white); }
@@ -178,6 +276,14 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 .wpcc-detail-head .wpcc-detail-title { font-size:18px;font-weight:600; }
 .wpcc-changeset { background:var(--wpcc-gray-0);border:1px solid var(--wpcc-gray-100);border-radius:4px;padding:10px 14px;font-size:13px; }
 .wpcc-changeset .hi { color:var(--wpcc-red-700);font-weight:600; }
+.wpcc-apr-progress { font-size:12px; color:var(--wpcc-text-secondary,#50575e); }
+.wpcc-apr-progress[hidden] { display:none; }
+.wpcc-result-link { margin-left:8px; white-space:nowrap; font-weight:600; }
+.wpcc-retry-error { display:block; margin-top:6px; font-size:12px; color:var(--wpcc-state-danger-fg); }
+.wpcc-whatchanges { width:100%; border-collapse:collapse; }
+.wpcc-whatchanges th { text-align:left; width:190px; padding:8px 12px 8px 0; vertical-align:top; font-weight:600; color:var(--wpcc-text-secondary,#50575e); border-bottom:1px solid var(--wpcc-border-subtle,#dcdcde); }
+.wpcc-whatchanges td { padding:8px 0; vertical-align:top; color:var(--wpcc-text-primary,#1d2327); border-bottom:1px solid var(--wpcc-border-subtle,#dcdcde); word-break:break-word; }
+.wpcc-whatchanges tr:last-child th, .wpcc-whatchanges tr:last-child td { border-bottom:0; }
 .wpcc-payload pre { background:#1e1e1e;color:#e6e6e6;padding:12px 14px;border-radius:4px;overflow:auto;max-height:340px;font-size:12px;line-height:1.5; }
 .wpcc-audit-trail { list-style:none;margin:0;padding:0; }
 .wpcc-audit-trail li { padding:6px 0;border-top:1px solid var(--wpcc-gray-50);font-size:13px;display:flex;gap:10px;flex-wrap:wrap; }
@@ -216,15 +322,38 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		readOnly:    <?php echo wp_json_encode( __( 'Read Only', 'wp-command-center' ) ); ?>,
 		approve:     <?php echo wp_json_encode( __( 'Approve', 'wp-command-center' ) ); ?>,
 		reject:      <?php echo wp_json_encode( __( 'Reject', 'wp-command-center' ) ); ?>,
-		approved:    <?php echo wp_json_encode( __( 'Approved and executed.', 'wp-command-center' ) ); ?>,
+		approved:    <?php echo wp_json_encode( __( 'Done — your site has been updated.', 'wp-command-center' ) ); ?>,
+		approvedLink:<?php echo wp_json_encode( __( 'See it in Changes', 'wp-command-center' ) ); ?>,
+		changesUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-history' ) ); ?>,
 		rejected:    <?php echo wp_json_encode( __( 'Rejected.', 'wp-command-center' ) ); ?>,
 		approvedErr: <?php echo wp_json_encode( __( 'Approved but execution failed: ', 'wp-command-center' ) ); ?>,
 		unknownErr:  <?php echo wp_json_encode( __( 'Unknown error.', 'wp-command-center' ) ); ?>,
 		reqFailed:   <?php echo wp_json_encode( __( 'Request failed. Please try again.', 'wp-command-center' ) ); ?>,
 		destructive: <?php echo wp_json_encode( __( 'DESTRUCTIVE — this permanently deletes data and cannot be undone.', 'wp-command-center' ) ); ?>,
 		auditNote:   <?php echo wp_json_encode( __( 'This action will be logged in the audit trail.', 'wp-command-center' ) ); ?>,
-		noPending:   <?php echo wp_json_encode( __( 'No pending approvals. When an AI agent requests a write operation, the approval cards will appear here.', 'wp-command-center' ) ); ?>,
-		noHistory:   <?php echo wp_json_encode( __( 'No resolved requests yet.', 'wp-command-center' ) ); ?>,
+		noPending:   <?php echo wp_json_encode( __( 'Nothing is waiting for you. When your assistant asks to change something, it appears here for your decision.', 'wp-command-center' ) ); ?>,
+		clearTitle:  <?php echo wp_json_encode( __( 'Nothing is waiting for you', 'wp-command-center' ) ); ?>,
+		clearDetail: <?php echo wp_json_encode( __( 'When your assistant asks to change something, it appears here for your decision. Nothing runs until you approve it.', 'wp-command-center' ) ); ?>,
+		selectAll:   <?php echo wp_json_encode( __( 'Select all on this page', 'wp-command-center' ) ); ?>,
+		selectOne:   <?php echo wp_json_encode( __( 'Select this request', 'wp-command-center' ) ); ?>,
+		/* translators: 1: range such as "1–25", 2: total count */
+		showingRange: <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Showing %1$s of %2$s', 'wp-command-center' ) ); ?>,
+		/* translators: 1: current page, 2: total pages */
+		pageOf:      <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Page %1$s of %2$s', 'wp-command-center' ) ); ?>,
+		prev:        <?php echo wp_json_encode( __( 'Previous', 'wp-command-center' ) ); ?>,
+		next:        <?php echo wp_json_encode( __( 'Next', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of selected requests */
+		nSelected:   <?php echo wp_json_encode( /* translators: %d: number */ __( '%d selected', 'wp-command-center' ) ); ?>,
+		approveSelected: <?php echo wp_json_encode( __( 'Approve selected', 'wp-command-center' ) ); ?>,
+		rejectSelected:  <?php echo wp_json_encode( __( 'Reject selected', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of requests */
+		confirmBulkApprove: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Approve %d requests? Each one runs through the same checks as approving it individually. Requests that permanently delete something are skipped and must be approved one at a time.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: number of requests */
+		confirmBulkReject:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Reject %d requests?', 'wp-command-center' ) ); ?>,
+		bulkReason:  <?php echo wp_json_encode( __( 'Rejected in bulk by administrator.', 'wp-command-center' ) ); ?>,
+		/* translators: %d: total number of pending requests */
+		moreQueued:  <?php echo wp_json_encode( /* translators: %d: number */ __( '(%d pending in total)', 'wp-command-center' ) ); ?>,
+		noHistory:   <?php echo wp_json_encode( __( 'Nothing decided yet. Once you approve or reject something, it is kept here as a record.', 'wp-command-center' ) ); ?>,
 		noQueue:     <?php echo wp_json_encode( __( 'The execution queue is empty.', 'wp-command-center' ) ); ?>,
 		loadFailed:  <?php echo wp_json_encode( __( 'Failed to load.', 'wp-command-center' ) ); ?>,
 		loadMore:    <?php echo wp_json_encode( __( 'Load more', 'wp-command-center' ) ); ?>,
@@ -247,11 +376,48 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		secRequest:  <?php echo wp_json_encode( __( 'Request', 'wp-command-center' ) ); ?>,
 		secChangeset:<?php echo wp_json_encode( __( 'Change set', 'wp-command-center' ) ); ?>,
 		secDiff:     <?php echo wp_json_encode( __( 'Diff', 'wp-command-center' ) ); ?>,
-		secPayload:  <?php echo wp_json_encode( __( 'Request payload', 'wp-command-center' ) ); ?>,
+		secWhatChanges: <?php echo wp_json_encode( __( 'What will change', 'wp-command-center' ) ); ?>,
+		secPayload:  <?php echo wp_json_encode( __( 'Technical details', 'wp-command-center' ) ); ?>,
+		yes:         <?php echo wp_json_encode( __( 'Yes', 'wp-command-center' ) ); ?>,
+		no:          <?php echo wp_json_encode( __( 'No', 'wp-command-center' ) ); ?>,
+		emptyValue:  <?php echo wp_json_encode( __( '(empty)', 'wp-command-center' ) ); ?>,
+		/* Field names a site owner recognises, for the "What will change" table. */
+		fieldNames:  <?php echo wp_json_encode( [
+			'blogname'        => __( 'Site title', 'wp-command-center' ),
+			'blogdescription' => __( 'Tagline', 'wp-command-center' ),
+			'post_title'      => __( 'Title', 'wp-command-center' ),
+			'post_content'    => __( 'Content', 'wp-command-center' ),
+			'post_status'     => __( 'Status', 'wp-command-center' ),
+			'post_excerpt'    => __( 'Excerpt', 'wp-command-center' ),
+			'post_id'         => __( 'Item', 'wp-command-center' ),
+			'option_id'       => __( 'Setting', 'wp-command-center' ),
+			'user_id'         => __( 'User', 'wp-command-center' ),
+			'comment_id'      => __( 'Comment', 'wp-command-center' ),
+			'display_name'    => __( 'Display name', 'wp-command-center' ),
+			'user_email'      => __( 'Email address', 'wp-command-center' ),
+			'role'            => __( 'Role', 'wp-command-center' ),
+			'slug'            => __( 'Slug', 'wp-command-center' ),
+			'value'           => __( 'New value', 'wp-command-center' ),
+			'ids'             => __( 'Items', 'wp-command-center' ),
+			'alt_text'        => __( 'Alt text', 'wp-command-center' ),
+			'caption'         => __( 'Caption', 'wp-command-center' ),
+			'start_url'       => __( 'Site address', 'wp-command-center' ),
+		] ); ?>,
+		/* Audit events, in words. Unknown ids fall back to their tidied last segment. */
+		auditNames:  <?php echo wp_json_encode( [
+			'operation.approval.auto_requested' => __( 'Sent for your approval', 'wp-command-center' ),
+			'operation.approval.approved'       => __( 'Approved', 'wp-command-center' ),
+			'operation.approval.rejected'       => __( 'Rejected', 'wp-command-center' ),
+			'operation.approval.cancelled'      => __( 'Cancelled', 'wp-command-center' ),
+			'operation.queued'                  => __( 'Added to the queue', 'wp-command-center' ),
+			'operation.executed'                => __( 'Carried out', 'wp-command-center' ),
+			'operation.failed'                  => __( 'Failed to run', 'wp-command-center' ),
+		] ); ?>,
 		secQueue:    <?php echo wp_json_encode( __( 'Queue', 'wp-command-center' ) ); ?>,
 		secResults:  <?php echo wp_json_encode( __( 'Execution result', 'wp-command-center' ) ); ?>,
 		secAudit:    <?php echo wp_json_encode( __( 'Audit trail', 'wp-command-center' ) ); ?>,
 		lblResolved: <?php echo wp_json_encode( __( 'Resolved by', 'wp-command-center' ) ); ?>,
+		lblArea:     <?php echo wp_json_encode( __( 'Area', 'wp-command-center' ) ); ?>,
 		lblRequested:<?php echo wp_json_encode( __( 'Requested', 'wp-command-center' ) ); ?>,
 		lblApproved: <?php echo wp_json_encode( __( 'Approved', 'wp-command-center' ) ); ?>,
 		lblRejected: <?php echo wp_json_encode( __( 'Rejected', 'wp-command-center' ) ); ?>,
@@ -261,13 +427,19 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		lblFiles:    <?php echo wp_json_encode( __( 'files', 'wp-command-center' ) ); ?>,
 		lblHighRisk: <?php echo wp_json_encode( __( 'HIGH-RISK paths included', 'wp-command-center' ) ); ?>,
 		diffUnavail: <?php echo wp_json_encode( __( 'No diff stored for this request.', 'wp-command-center' ) ); ?>,
-		noResult:    <?php echo wp_json_encode( __( 'No execution result recorded yet.', 'wp-command-center' ) ); ?>,
+		noResult:    <?php echo wp_json_encode( __( 'This has not run yet.', 'wp-command-center' ) ); ?>,
 		noAudit:     <?php echo wp_json_encode( __( 'No audit events recorded for this request.', 'wp-command-center' ) ); ?>,
 		notFound:    <?php echo wp_json_encode( __( 'Request not found.', 'wp-command-center' ) ); ?>,
-		counts:      <?php echo wp_json_encode( __( 'Created %1$s · Updated %2$s · Skipped %3$s · Errors %4$s', 'wp-command-center' ) ); ?>,
+		counts:      <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value, %3$s: value, %4$s: value */ __( 'Created %1$s · Updated %2$s · Skipped %3$s · Errors %4$s', 'wp-command-center' ) ); ?>,
 		retry:       <?php echo wp_json_encode( __( 'Retry', 'wp-command-center' ) ); ?>,
 		retrying:    <?php echo wp_json_encode( __( 'Retrying…', 'wp-command-center' ) ); ?>,
 		retryConfirm:<?php echo wp_json_encode( __( 'Re-queue this failed item for another attempt?', 'wp-command-center' ) ); ?>,
+		retryYes:    <?php echo wp_json_encode( __( 'Try again', 'wp-command-center' ) ); ?>,
+		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'wp-command-center' ) ); ?>,
+		/* translators: 1: current item number, 2: total items */
+		bulkProgress: <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Working — %1$s of %2$s', 'wp-command-center' ) ); ?>,
+		bulkApproveBody: <?php echo wp_json_encode( __( 'Each one runs through the engine exactly as if you had approved it on its own. Anything needing its own destructive confirmation is skipped.', 'wp-command-center' ) ); ?>,
+		bulkRejectBody:  <?php echo wp_json_encode( __( 'Nothing will run. The requests are recorded as rejected and your site is left unchanged.', 'wp-command-center' ) ); ?>,
 		retryFailed: <?php echo wp_json_encode( __( 'Retry failed: ', 'wp-command-center' ) ); ?>,
 		nonceExpired:<?php echo wp_json_encode( __( 'Your session expired. Please reload the page and try again.', 'wp-command-center' ) ); ?>,
 		detailsFor:  <?php echo wp_json_encode( __( 'View details for this request', 'wp-command-center' ) ); ?>
@@ -311,10 +483,22 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		return ( data && data.error ) || i18n.unknownErr;
 	}
 
+	// Server-built plain-language dictionary (ActionLabels::dictionary), shared with
+	// History so the same operation reads the same way everywhere in the product.
+	var WPCC_LABELS = <?php echo wp_json_encode( \WPCommandCenter\Admin\ActionLabels::dictionary() ); ?>;
+
 	function escHtml( s ) {
 		var d = document.createElement('div');
 		d.appendChild( document.createTextNode( String( s == null ? '' : s ) ) );
 		return d.innerHTML;
+	}
+
+	// Minimal printf for the localized strings above (%d / %s and positional).
+	function fmt1( tpl, a ) { return String( tpl ).replace( '%d', a ).replace( '%s', a ); }
+	function fmt2( tpl, a, b ) {
+		return String( tpl )
+			.replace( '%1$s', a ).replace( '%2$s', b )
+			.replace( '%1$d', a ).replace( '%2$d', b );
 	}
 
 	function whenAgo( ts ) {
@@ -332,11 +516,34 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			var el = document.getElementById('wpcc-approval-summary');
 			if ( ! el || ! data.summary ) { return; }
 			var s = data.summary;
-			el.innerHTML =
-				chip( i18n.chipPending, s.pending, false ) +
-				chip( i18n.chipCrit, s.pending_critical, s.pending_critical > 0 ) +
-				chip( i18n.chipResolved, s.resolved, false ) +
-				chip( i18n.chipFailed, s.queue_failed, s.queue_failed > 0 );
+			// Only counts that change what the user does next. "Resolved (all-time)"
+			// was a vanity number: it never requires an action and it gave a
+			// lifetime total equal visual weight to the four critical items that
+			// actually need a decision. Critical and Failed appear only when
+			// non-zero, so a healthy queue shows one calm number instead of four.
+			summaryPending = parseInt( s.pending, 10 ) || 0;
+			if ( pendingAll.length && summaryPending > pendingAll.length && pendingTotal !== summaryPending ) {
+				pendingTotal = summaryPending;
+				renderPendingPage();
+			}
+			/*
+			 * The summary earns its place only when it says something the list does
+			 * not.
+			 *
+			 * A "1 Pending" tile sitting above "Showing 1–1 of 1" is the same fact
+			 * twice, in two type sizes — and it made a quiet queue look instrumented.
+			 * A count helps when there is a queue worth measuring, or when something
+			 * needs prioritising (a critical item, a failed run). Below that, the
+			 * list is already the answer and the tiles are just furniture.
+			 */
+			var summaryEarnsSpace = ( s.pending >= 4 || s.pending_critical > 0 || s.queue_failed > 0 );
+			el.innerHTML = summaryEarnsSpace
+				? (
+					chip( i18n.chipPending, s.pending, false ) +
+					( s.pending_critical > 0 ? chip( i18n.chipCrit, s.pending_critical, true ) : '' ) +
+					( s.queue_failed > 0 ? chip( i18n.chipFailed, s.queue_failed, true ) : '' )
+				)
+				: '';
 			updateBadge( s.pending );
 		} ).catch( function() {} );
 	}
@@ -350,49 +557,214 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		else { badge.style.display = 'none'; }
 	}
 
-	// ── Pending tab (approve/reject retained) ──
-	function renderCard( req ) {
+	// ── Pending tab ────────────────────────────────────────────────────────────
+	// Rebuilt from stacked cards to a dense review list. The card layout spent
+	// ~172px per item on three lines of content, so a real queue (282 items on the
+	// test site) became 18 screens of scrolling with 100 identical blue "Approve"
+	// buttons and no way to act in bulk. Nothing here changes what approving does —
+	// it is the same request, the same endpoint, the same confirmation path.
+	//
+	// One row = one decision: what will change · where · how risky · how old.
+	// Actions stay quiet until the row is hovered or focused, so the eye lands on
+	// the change description rather than on 100 competing buttons.
+	function renderRow( req ) {
 		var risk  = req.risk_level || 'medium';
 		var label = riskLabels[ risk ] || risk;
-		var reasonHtml = req.reason ? '<div class="wpcc-card-reason">' + escHtml( req.reason ) + '</div>' : '';
-		var destructiveHtml = req.destructive
-			? '<div class="wpcc-card-destructive">&#9888; ' + escHtml( i18n.destructive ) + ( req.destructive_warning ? ' ' + escHtml( req.destructive_warning ) : '' ) + '</div>'
-			: '';
-		return '<div class="wpcc-approval-card risk-' + escHtml(risk) + '" id="wpcc-card-' + escHtml(req.request_id) + '">' +
-			'<div class="wpcc-card-header"><span class="wpcc-card-title">' + escHtml(req.operation) + '</span>' +
-			'<span class="wpcc-risk-badge risk-' + escHtml(risk) + '">' + escHtml(label) + '</span></div>' +
-			destructiveHtml +
-			'<table class="wpcc-card-meta"><tbody>' +
-			'<tr><td>' + escHtml(i18n.colAction) + '</td><td>' + escHtml(req.action || '—') + '</td></tr>' +
-			'<tr><td>' + escHtml(i18n.colWhen) + '</td><td>' + escHtml(req.created_ago) + '</td></tr>' +
-			'</tbody></table>' + reasonHtml +
-			'<p style="font-size:12px;color:#8c8f94;margin:6px 0;">&#10003; ' + escHtml(i18n.auditNote) + '</p>' +
-			'<div class="wpcc-card-actions">' +
-			'<button class="button button-primary wpcc-approve-btn" data-id="' + escHtml(req.request_id) + '" data-action="approve">&#10003; ' + escHtml(i18n.approve) + '</button> ' +
-			'<button class="button wpcc-reject-btn" data-id="' + escHtml(req.request_id) + '" data-action="reject">&#10007; ' + escHtml(i18n.reject) + '</button> ' +
-			'<a class="wpcc-detail-link" href="' + escHtml(baseUrl) + '&view=' + escHtml(req.request_id) + '">' + escHtml(i18n.details) + ' &rarr;</a>' +
+		var headline = req.headline || req.operation;
+		var tech = ( req.operation_id || '' ) + ( req.action ? ' · ' + req.action : '' );
+
+		return '<li class="wpcc-apr-row risk-' + escHtml(risk) + '" id="wpcc-card-' + escHtml(req.request_id) + '">' +
+			'<label class="wpcc-apr-pick"><input type="checkbox" class="wpcc-apr-cb" value="' + escHtml(req.request_id) + '" aria-label="' + escHtml(i18n.selectOne) + '"></label>' +
+			'<div class="wpcc-apr-main">' +
+				'<a class="wpcc-apr-title" href="' + escHtml(baseUrl) + '&view=' + escHtml(req.request_id) + '">' + escHtml(headline) + '</a>' +
+				/* What it will be set to — so the decision can be made from the row. */
+				( req.preview ? '<span class="wpcc-apr-preview">&rarr; ' + escHtml(req.preview) + '</span>' : '' ) +
+				( req.destructive ? '<span class="wpcc-apr-warn" title="' + escHtml(req.destructive_warning || '') + '">&#9888; ' + escHtml(i18n.destructive) + '</span>' : '' ) +
+				'<span class="wpcc-apr-sub">' +
+					( req.area ? escHtml(req.area) : '' ) +
+					'<span class="wpcc-apr-dot">·</span>' + escHtml(req.created_ago) +
+					( req.reason ? '<span class="wpcc-apr-dot">·</span>' + escHtml(req.reason) : '' ) +
+					'<span class="wpcc-engineer-only"><span class="wpcc-apr-dot">·</span><code>' + escHtml(tech) + '</code></span>' +
+				'</span>' +
+			'</div>' +
+			'<span class="wpcc-risk-badge risk-' + escHtml(risk) + '">' + escHtml(label) + '</span>' +
+			'<div class="wpcc-apr-actions">' +
+				'<button class="button button-small wpcc-approve-btn" data-id="' + escHtml(req.request_id) + '" data-action="approve">' + escHtml(i18n.approve) + '</button> ' +
+				'<button class="button button-small button-link-delete wpcc-reject-btn" data-id="' + escHtml(req.request_id) + '" data-action="reject">' + escHtml(i18n.reject) + '</button>' +
 			'</div>' +
 			'<div class="wpcc-card-result" id="wpcc-result-' + escHtml(req.request_id) + '" role="status" aria-live="polite" style="display:none;"></div>' +
-		'</div>';
+		'</li>';
 	}
+	// Client-side paging over the already-fetched queue. The endpoint and its
+	// response are untouched; this only stops the browser from painting hundreds
+	// of rows the customer will never scroll to, and — more importantly — tells
+	// them how many there actually are, which the old list never did.
+	var pendingAll = [], pendingPage = 0, pendingTotal = 0, summaryPending = 0;
+	var PENDING_PER_PAGE = 25;
+
+	function renderPendingPage() {
+		var list = document.getElementById('wpcc-approvals-list');
+		if ( ! list ) { return; }
+		var total = pendingAll.length;
+		var pages = Math.max( 1, Math.ceil( total / PENDING_PER_PAGE ) );
+		if ( pendingPage >= pages ) { pendingPage = pages - 1; }
+		var start = pendingPage * PENDING_PER_PAGE;
+		var slice = pendingAll.slice( start, start + PENDING_PER_PAGE );
+
+		var head =
+			'<div class="wpcc-apr-bar">' +
+				'<label class="wpcc-apr-all"><input type="checkbox" id="wpcc-apr-selectall"> ' + escHtml(i18n.selectAll) + '</label>' +
+				// Two separate truths, both stated: how many rows are loaded here, and
+				// how many are actually pending. The old list silently rendered the
+				// first 100 of 282 and said nothing at all.
+				'<span class="wpcc-apr-count">' +
+					escHtml( fmt2( i18n.showingRange, ( total ? start + 1 : 0 ) + '–' + Math.min( start + PENDING_PER_PAGE, total ), total ) ) +
+					( pendingTotal > total ? ' <span class="wpcc-apr-more">' + escHtml( fmt1( i18n.moreQueued, pendingTotal ) ) + '</span>' : '' ) +
+				'</span>' +
+				'<span class="wpcc-apr-bulk" id="wpcc-apr-bulk" hidden>' +
+					'<span class="wpcc-apr-selcount" id="wpcc-apr-selcount"></span>' +
+					'<button type="button" class="button button-primary button-small" id="wpcc-apr-bulk-approve">' + escHtml(i18n.approveSelected) + '</button> ' +
+					'<button type="button" class="button button-small button-link-delete" id="wpcc-apr-bulk-reject">' + escHtml(i18n.rejectSelected) + '</button>' +
+					'<span class="wpcc-apr-progress" id="wpcc-apr-bulk-progress" role="status" aria-live="polite" hidden></span>' +
+				'</span>' +
+			'</div>';
+
+		var pager = pages > 1
+			? '<div class="wpcc-apr-pager">' +
+				'<button type="button" class="button button-small" id="wpcc-apr-prev"' + ( pendingPage === 0 ? ' disabled' : '' ) + '>&larr; ' + escHtml(i18n.prev) + '</button>' +
+				'<span>' + escHtml( fmt2( i18n.pageOf, pendingPage + 1, pages ) ) + '</span>' +
+				'<button type="button" class="button button-small" id="wpcc-apr-next"' + ( pendingPage >= pages - 1 ? ' disabled' : '' ) + '>' + escHtml(i18n.next) + ' &rarr;</button>' +
+			  '</div>'
+			: '';
+
+		list.innerHTML = head + '<ul class="wpcc-apr-list">' + slice.map( renderRow ).join('') + '</ul>' + pager;
+		attachPendingHandlers();
+		attachPendingListChrome();
+	}
+
 	function loadPending() {
 		apiFetch( '/approvals' ).then( function( data ) {
 			var list = document.getElementById('wpcc-approvals-list');
 			if ( ! list ) { return; }
-			if ( ! data.requests || data.requests.length === 0 ) {
-				list.innerHTML = '<div class="notice notice-info inline" style="max-width:820px;"><p>' + escHtml(i18n.noPending) + '</p></div>';
+			pendingAll = ( data && data.requests ) ? data.requests : [];
+			// `data.total` counts what this response returned, not how deep the queue
+			// is. The summary read knows the real number, so prefer it when we have it.
+			pendingTotal = ( summaryPending > 0 ) ? summaryPending : pendingAll.length;
+			if ( pendingAll.length === 0 ) {
+				// A cleared queue is good news and should look like it, not like an
+				// error notice.
+				list.innerHTML =
+					'<div class="wpcc-apr-clear" role="status">' +
+						'<span class="wpcc-apr-clear__mark" aria-hidden="true">&#10003;</span>' +
+						'<p class="wpcc-apr-clear__title">' + escHtml(i18n.clearTitle) + '</p>' +
+						'<p class="wpcc-apr-clear__detail">' + escHtml(i18n.clearDetail) + '</p>' +
+					'</div>';
 				return;
 			}
-			list.innerHTML = data.requests.map( renderCard ).join('');
-			attachPendingHandlers();
+			pendingPage = 0;
+			renderPendingPage();
 		} ).catch( function() {
 			var list = document.getElementById('wpcc-approvals-list');
 			if ( list ) { list.innerHTML = '<div class="notice notice-error inline"><p>' + escHtml(i18n.loadFailed) + '</p></div>'; }
 		} );
 	}
+
+	// Selection + paging chrome. Bulk actions reuse the SAME single-request path
+	// as the row buttons, one after another, so every governance check, audit
+	// entry and destructive-confirmation still applies to each request
+	// individually. Nothing is batched server-side.
+	function selectedIds() {
+		return [].slice.call( document.querySelectorAll('.wpcc-apr-cb:checked') ).map( function(c){ return c.value; } );
+	}
+	function syncBulkBar() {
+		var n = selectedIds().length;
+		var bar = document.getElementById('wpcc-apr-bulk');
+		var cnt = document.getElementById('wpcc-apr-selcount');
+		if ( ! bar ) { return; }
+		bar.hidden = n === 0;
+		if ( cnt ) { cnt.textContent = fmt1( i18n.nSelected, n ); }
+	}
+	function attachPendingListChrome() {
+		var all = document.getElementById('wpcc-apr-selectall');
+		if ( all ) {
+			all.addEventListener( 'change', function () {
+				[].slice.call( document.querySelectorAll('.wpcc-apr-cb') ).forEach( function(c){ c.checked = all.checked; } );
+				syncBulkBar();
+			} );
+		}
+		[].slice.call( document.querySelectorAll('.wpcc-apr-cb') ).forEach( function(c){
+			c.addEventListener( 'change', syncBulkBar );
+		} );
+		var prev = document.getElementById('wpcc-apr-prev');
+		var next = document.getElementById('wpcc-apr-next');
+		if ( prev ) { prev.addEventListener( 'click', function(){ pendingPage--; renderPendingPage(); window.scrollTo({top:0,behavior:'smooth'}); } ); }
+		if ( next ) { next.addEventListener( 'click', function(){ pendingPage++; renderPendingPage(); window.scrollTo({top:0,behavior:'smooth'}); } ); }
+
+		var ba = document.getElementById('wpcc-apr-bulk-approve');
+		var br = document.getElementById('wpcc-apr-bulk-reject');
+		if ( ba ) { ba.addEventListener( 'click', function(){ runBulk( 'approve' ); } ); }
+		if ( br ) { br.addEventListener( 'click', function(){ runBulk( 'reject' ); } ); }
+		syncBulkBar();
+	}
+
+	function runBulk( action ) {
+		var ids = selectedIds();
+		if ( ! ids.length ) { return; }
+		// In-page confirmation (WPCC.cds.confirm) rather than window.confirm: this
+		// decision covers several real changes at once, so it belongs in the
+		// product's own dialog, which can name the count and the consequence.
+		WPCC.cds.confirm( {
+			title: fmt1( action === 'approve' ? i18n.confirmBulkApprove : i18n.confirmBulkReject, ids.length ),
+			body: action === 'approve' ? i18n.bulkApproveBody : i18n.bulkRejectBody,
+			confirmLabel: action === 'approve' ? i18n.approveSelected : i18n.rejectSelected,
+			cancelLabel: i18n.cancel,
+			danger: action !== 'approve'
+		} ).then( function ( ok ) {
+			if ( ! ok ) { return; }
+			runBulkConfirmed( action, ids );
+		} );
+	}
+
+	function runBulkConfirmed( action, ids ) {
+		var bar = document.getElementById('wpcc-apr-bulk');
+		if ( bar ) { bar.hidden = true; }
+		// Sequential, not parallel: each request goes through the engine exactly as
+		// a single click would, and a destructive one that needs its own
+		// confirmation is skipped here rather than waved through.
+		/*
+		 * Sequential work with no progress shown looked like the page had hung:
+		 * the bulk bar hid itself and nothing else moved until every request had
+		 * finished. Report position while it runs.
+		 */
+		var progress = document.getElementById( 'wpcc-apr-bulk-progress' );
+		function report( n ) {
+			if ( progress ) {
+				progress.hidden = false;
+				progress.textContent = fmt( i18n.bulkProgress, [ Math.min( n + 1, ids.length ), ids.length ] );
+			}
+		}
+		var i = 0, done = 0, skipped = 0;
+		report( 0 );
+		(function step() {
+			if ( i >= ids.length ) {
+				if ( progress ) { progress.hidden = true; }
+				loadPending();
+				loadSummary();
+				return;
+			}
+			report( i );
+			var id = ids[ i++ ];
+			var req = pendingAll.filter( function(r){ return r.request_id === id; } )[0];
+			if ( action === 'approve' && req && req.destructive ) { skipped++; return step(); }
+			postAction( id, action, action === 'reject' ? { reason: i18n.bulkReason } : null )
+				.then( function(){ done++; step(); } )
+				.catch( function(){ step(); } );
+		})();
+	}
 	function showResult( result, msg, cls ) {
 		if ( ! result ) { return; }
-		result.textContent = msg;
+		result.textContent = msg; // text first — the optional link is appended as HTML by the caller
+
 		result.className = 'wpcc-card-result ' + cls;
 		result.style.display = 'block';
 	}
@@ -412,10 +784,54 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			}
 			if ( data && data.success ) {
 				closeConfirmModal();
-				var msg = data.error ? ( i18n.approvedErr + data.error ) : i18n.approved;
-				showResult( ctx.result, msg, 'success' );
+				/*
+				 * `success` here means the DECISION was recorded, not that the change
+				 * ran. When execution then fails, the customer was shown "Approved but
+				 * execution failed: …" in success green — a failure wearing the colour
+				 * of a success, on the screen where they had just granted permission.
+				 * The decision still stands either way, so the row still settles; only
+				 * the message tells the truth about what happened to the change.
+				 */
+				var failed = !! data.error;
+				var msg    = failed ? ( i18n.approvedErr + data.error ) : i18n.approved;
+				showResult( ctx.result, msg, failed ? 'error' : 'success' );
 				if ( ctx.card ) { ctx.card.style.opacity = '0.6'; }
 				loadSummary();
+				/*
+				 * Close the loop.
+				 *
+				 * This is the moment the whole product exists for: an assistant asked
+				 * to change the customer's live website, they read it, and they said
+				 * yes. What they got was a row dimmed to 60% and the words "Approved
+				 * and executed" — a log entry, not an outcome — and then the decided
+				 * item sat in the Pending list until the page was reloaded, so the
+				 * queue never actually looked finished.
+				 *
+				 * Now the sentence confirms the SITE changed, offers the one thing
+				 * someone might want next (seeing or undoing it), and the queue
+				 * settles on its own so the customer is left with a genuinely empty
+				 * "nothing is waiting for you" — the calm, complete end of the task.
+				 */
+				if ( ! failed && ctx.result ) {
+					ctx.result.innerHTML += ' <a class="wpcc-result-link" href="' +
+						escHtml( i18n.changesUrl ) + '">' + escHtml( i18n.approvedLink ) + ' &rarr;</a>';
+				}
+				if ( ! failed && ! detailId ) {
+					window.setTimeout( function () {
+						if ( ctx.card ) { ctx.card.style.transition = 'opacity .25s ease'; ctx.card.style.opacity = '0'; }
+						window.setTimeout( function () { loadPending(); loadSummary(); }, 260 );
+					}, 2600 );
+				}
+				/*
+				 * On the detail screen the status chip still read PENDING after the
+				 * decision had been recorded, so the page contradicted itself. Re-read
+				 * the request so the chip, the audit trail and the buttons all reflect
+				 * what actually happened. Deferred so the result message is readable
+				 * before the section repaints.
+				 */
+				if ( detailId ) {
+					window.setTimeout( function () { loadDetail( detailId ); }, 1200 );
+				}
 			} else {
 				showResult( ctx.result, actionError( data ), 'error' );
 				ctx.btn.disabled = false; if ( ctx.sibling ) { ctx.sibling.disabled = false; }
@@ -520,23 +936,46 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			var btn = ev.target && ev.target.closest ? ev.target.closest('.wpcc-retry-btn') : null;
 			if ( ! btn ) { return; }
 			ev.preventDefault();
-			if ( ! window.confirm( i18n.retryConfirm ) ) { return; }
-			var qid = btn.dataset.queueId;
-			btn.disabled = true; btn.textContent = i18n.retrying;
-			apiFetch( '/approvals/queue/' + qid + '/retry', { method: 'POST' } ).then( function(d) {
-				if ( d && d.success ) {
-					loadSummary();
-					if ( detailId ) { loadDetail( detailId ); }
-					else { loadQueue(); }
-				} else {
-					window.alert( i18n.retryFailed + actionError( d ) );
-					btn.disabled = false; btn.textContent = i18n.retry;
-				}
-			} ).catch( function() {
-				window.alert( i18n.retryFailed + i18n.reqFailed );
-				btn.disabled = false; btn.textContent = i18n.retry;
-			} );
+			// Same reasoning as the bulk confirmation above: the product's own dialog.
+			WPCC.cds.confirm( {
+				title: i18n.retryConfirm,
+				confirmLabel: i18n.retryYes,
+				cancelLabel: i18n.cancel
+			} ).then( function ( ok ) { if ( ok ) { doRetry( btn ); } } );
 		} );
+	}
+
+	function doRetry( btn ) {
+		var qid = btn.dataset.queueId;
+		btn.disabled = true; btn.textContent = i18n.retrying;
+		/*
+		 * Failures used to surface through window.alert(), which blocks the whole
+		 * renderer and looks like a browser error rather than something this
+		 * product is telling you. The message now appears next to the button that
+		 * caused it, where the customer is already looking.
+		 */
+		function fail( detail ) {
+			var cell = btn.parentNode;
+			if ( cell ) {
+				var note = cell.querySelector( '.wpcc-retry-error' );
+				if ( ! note ) {
+					note = document.createElement( 'span' );
+					note.className = 'wpcc-retry-error';
+					cell.appendChild( note );
+				}
+				note.textContent = i18n.retryFailed + detail;
+			}
+			btn.disabled = false; btn.textContent = i18n.retry;
+		}
+		apiFetch( '/approvals/queue/' + qid + '/retry', { method: 'POST' } ).then( function(d) {
+			if ( d && d.success ) {
+				loadSummary();
+				if ( detailId ) { loadDetail( detailId ); }
+				else { loadQueue(); }
+			} else {
+				fail( actionError( d ) );
+			}
+		} ).catch( function() { fail( i18n.reqFailed ); } );
 	}
 
 	// ── History tab ──
@@ -548,9 +987,10 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		return '<span class="wpcc-risk-badge risk-' + escHtml(risk) + '">' + escHtml( riskLabels[risk] || risk ) + '</span>';
 	}
 	function historyRow( r ) {
+		var rowTitle = r.headline || r.operation;
 		return '<tr>' +
-			'<td><a href="' + escHtml(baseUrl) + '&view=' + escHtml(r.request_id) + '" aria-label="' + escHtml(i18n.detailsFor) + ': ' + escHtml(r.operation) + '">' + escHtml(r.operation) + '</a></td>' +
-			'<td>' + escHtml(r.action || '—') + '</td>' +
+			'<td><a href="' + escHtml(baseUrl) + '&view=' + escHtml(r.request_id) + '" aria-label="' + escHtml(i18n.detailsFor) + ': ' + escHtml(rowTitle) + '">' + escHtml(rowTitle) + '</a></td>' +
+			'<td>' + escHtml(r.area || '—') + '<span class="wpcc-engineer-only"><br><code style="font-size:11px;">' + escHtml(r.action || '') + '</code></span></td>' +
 			'<td>' + riskBadge(r.risk_level || 'medium') + '</td>' +
 			'<td>' + statusPill(r.status) + '</td>' +
 			'<td>' + ( r.resolved_by ? escHtml(r.resolved_by) : '<em style="color:#646970;">' + escHtml(i18n.unavailable) + '</em>' ) + '</td>' +
@@ -596,7 +1036,9 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	function queueRow( q ) {
 		return '<tr>' +
 			'<td><code>' + escHtml( String(q.queue_id).substring(0,8) ) + '</code></td>' +
-			'<td>' + escHtml(q.operation_id) + '</td>' +
+			// Was the raw operation ID. Same dictionary the rest of the product uses.
+			'<td>' + escHtml( WPCC_LABELS.titles[ q.operation_id ] || WPCC_LABELS.areas[ q.operation_id ] || q.operation_id ) +
+				'<span class="wpcc-engineer-only"><br><code style="font-size:11px;">' + escHtml( q.operation_id ) + '</code></span></td>' +
 			'<td>' + statusPill(q.status) + '</td>' +
 			'<td>' + escHtml(q.attempts) + ' / ' + escHtml(q.max_attempts) + '</td>' +
 			'<td>' + ( q.error_message ? escHtml(q.error_message) : '—' ) + '</td>' +
@@ -630,6 +1072,56 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	function section( title, body ) {
 		return '<div class="wpcc-detail-section"><h2>' + escHtml(title) + '</h2>' + body + '</div>';
 	}
+
+	/*
+	 * Turn a request payload into plain "field -> value" rows.
+	 *
+	 * Deliberately dumb and additive: it renames the keys it recognises, walks one
+	 * level into a nested object (settings/fields carry the real values), and skips
+	 * the plumbing keys that mean nothing to a site owner. Anything it does not
+	 * recognise is still shown, with its key tidied up, because silently dropping a
+	 * field from an approval screen would be worse than showing a plain key name.
+	 */
+	var PAYLOAD_SKIP = { action:1, reason:1, confirm:1, confirmation_phrase:1, idempotency_key:1, request_id:1, dry_run:1 };
+
+	function fieldLabel( key ) {
+		if ( i18n.fieldNames && i18n.fieldNames[ key ] ) { return i18n.fieldNames[ key ]; }
+		var w = String( key ).replace( /_/g, ' ' ).trim();
+		return w.charAt( 0 ).toUpperCase() + w.slice( 1 );
+	}
+
+	function displayValue( v ) {
+		if ( v === null || v === undefined ) { return '—'; }
+		if ( typeof v === 'boolean' ) { return v ? i18n.yes : i18n.no; }
+		if ( Array.isArray( v ) ) { return v.length ? v.join( ', ' ) : '—'; }
+		if ( typeof v === 'object' ) { return JSON.stringify( v ); }
+		var s = String( v );
+		return '' === s.trim() ? i18n.emptyValue : s;
+	}
+
+	function summarisePayload( payload ) {
+		var rows = [];
+		Object.keys( payload || {} ).forEach( function ( key ) {
+			if ( PAYLOAD_SKIP[ key ] ) { return; }
+			var val = payload[ key ];
+			// One level down: settings/fields/meta hold the values that actually change.
+			if ( val && typeof val === 'object' && ! Array.isArray( val ) ) {
+				Object.keys( val ).forEach( function ( sub ) {
+					rows.push( { label: fieldLabel( sub ), value: displayValue( val[ sub ] ) } );
+				} );
+				return;
+			}
+			rows.push( { label: fieldLabel( key ), value: displayValue( val ) } );
+		} );
+		return rows;
+	}
+
+	/* Audit events are recorded as machine ids (operation.approval.auto_requested). */
+	function auditLabel( action ) {
+		if ( i18n.auditNames && i18n.auditNames[ action ] ) { return i18n.auditNames[ action ]; }
+		var tail = String( action || '' ).split( '.' ).pop().replace( /_/g, ' ' ).trim();
+		return tail.charAt( 0 ).toUpperCase() + tail.slice( 1 );
+	}
 	function metaRow( label, value, raw ) {
 		if ( value === null || value === undefined || value === '' ) { return ''; }
 		return '<tr><td>' + escHtml(label) + '</td><td>' + ( raw ? value : escHtml(value) ) + '</td></tr>';
@@ -649,14 +1141,40 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			var risk = r.risk_level || 'medium';
 			var resolvedBy = r.resolved_by ? escHtml(r.resolved_by) : '<em style="color:#646970;">' + escHtml(i18n.unavailable) + '</em>';
 
-			var head = '<div class="wpcc-detail-head">' +
-				'<span class="wpcc-detail-title">' + escHtml(r.operation) + '</span>' +
-				statusPill(r.status) + riskBadge(risk) + '</div>';
+			// The decision belongs ON the decision screen.
+			//
+			// This page existed to let someone inspect a diff before approving — and
+			// then offered no way to approve. The only control was "Back to
+			// Approvals", so a customer who did the careful thing (open it, read the
+			// change) had to navigate back and re-find the row to act. A review screen
+			// you cannot act from is a dead end.
+			//
+			// Same buttons, same classes, same handlers, same destructive-confirmation
+			// path as the list — attachPendingHandlers() binds these exactly as it
+			// binds a row. Only pending requests get them; a decided one shows its
+			// outcome instead.
+			var isPending = ( r.status === 'pending_review' || r.status === 'pending' );
+			var decision = isPending
+				? '<div class="wpcc-detail-decide" id="wpcc-card-' + escHtml(r.request_id) + '">' +
+						'<button class="button button-primary wpcc-approve-btn" data-id="' + escHtml(r.request_id) + '" data-action="approve">' + escHtml(i18n.approve) + '</button> ' +
+						'<button class="button button-link-delete wpcc-reject-btn" data-id="' + escHtml(r.request_id) + '" data-action="reject">' + escHtml(i18n.reject) + '</button>' +
+						'<span class="wpcc-detail-decide__note">' + escHtml(i18n.auditNote) + '</span>' +
+						'<div class="wpcc-card-result" id="wpcc-result-' + escHtml(r.request_id) + '" role="status" aria-live="polite" style="display:none;"></div>' +
+					'</div>'
+				: '';
 
+			var head = '<div class="wpcc-detail-head">' +
+				'<span class="wpcc-detail-title">' + escHtml(r.headline || r.operation) + '</span>' +
+				statusPill(r.status) + riskBadge(risk) + '</div>' + decision;
+
+			// "Action" previously showed the AREA ("Site files"), and "Resolved by"
+			// printed "unavailable" on every pending request — a row that is empty by
+			// definition until someone decides. Label what is shown, and show a field
+			// only when it has an answer.
 			var meta = '<table class="wpcc-detail-meta"><tbody>' +
-				metaRow(i18n.colAction, r.action || '—') +
+				metaRow(i18n.lblArea, escHtml( r.area || '—' ) + ' <code class="wpcc-engineer-only" style="font-size:11px;">' + escHtml( ( r.operation_id || '' ) + ( r.action ? ' · ' + r.action : '' ) ) + '</code>', true) +
 				metaRow(i18n.colStatus, statusPill(r.status), true) +
-				metaRow(i18n.lblResolved, resolvedBy, true) +
+				( r.resolved_by ? metaRow(i18n.lblResolved, resolvedBy, true) : '' ) +
 				metaRow(i18n.lblRequested, whenAgo(r.created_at)) +
 				tsRow(i18n.lblApproved, r.approved_at) +
 				tsRow(i18n.lblRejected, r.rejected_at) +
@@ -667,8 +1185,12 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			var reason = ( d.payload && d.payload.reason ) ? '<div class="wpcc-card-reason">' + escHtml(d.payload.reason) + '</div>' : '';
 			var html = head + section( i18n.secRequest, meta + reason );
 
-			// Change set
-			if ( d.change_set ) {
+			// Change set — only when there is no diff to render. With a diff present
+			// the two cards stated the same three facts (file count, +/- lines, path)
+			// one above the other; the diff header already carries them, and carries
+			// the actual change as well.
+			var hasDiff = !! ( d.diff && ( d.diff.available || d.diff.diff_kind === 'patch_unavailable' ) );
+			if ( d.change_set && ! hasDiff ) {
 				var cs = d.change_set;
 				var csBody = '<div class="wpcc-changeset">' +
 					escHtml(cs.file_count) + ' ' + escHtml(i18n.lblFiles) +
@@ -681,12 +1203,35 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			}
 
 			// Diff (server-rendered, escaped HTML injected as-is)
-			if ( d.diff && ( d.diff.available || d.diff.diff_kind === 'patch_unavailable' ) ) {
+			if ( hasDiff ) {
 				html += section( i18n.secDiff, '<div class="wpcc-diff-host"></div>' );
 			}
 
-			// Payload
-			html += section( i18n.secPayload, '<div class="wpcc-payload"><pre>' + escHtml( JSON.stringify( d.payload || {}, null, 2 ) ) + '</pre></div>' );
+			/*
+			 * What will change — the whole point of this screen.
+			 *
+			 * The request details used to appear ONLY as raw JSON inside a collapsed
+			 * <details> labelled "Request payload". Approving is an act of informed
+			 * consent, and the information the consent rests on was hidden behind a
+			 * developer word and then written in a developer format. A site owner
+			 * should not have to read {"settings":{"blogname":"..."}} to find out
+			 * that their site title is about to change.
+			 *
+			 * This renders the same payload as field -> value rows, in plain words,
+			 * open by default. The raw JSON stays exactly one click away for anyone
+			 * who wants it.
+			 */
+			var changeRows = summarisePayload( d.payload || {} );
+			if ( changeRows.length ) {
+				html += section( i18n.secWhatChanges,
+					'<table class="wpcc-whatchanges"><tbody>' + changeRows.map( function ( r ) {
+						return '<tr><th scope="row">' + escHtml( r.label ) + '</th><td>' + escHtml( r.value ) + '</td></tr>';
+					} ).join('') + '</tbody></table>' );
+			}
+
+			// The raw request, collapsed, for anyone who wants the exact call.
+			html += '<details class="wpcc-detail-raw"><summary>' + escHtml( i18n.secPayload ) + '</summary>' +
+				'<div class="wpcc-payload"><pre>' + escHtml( JSON.stringify( d.payload || {}, null, 2 ) ) + '</pre></div></details>';
 
 			// Queue
 			if ( d.queue_items && d.queue_items.length ) {
@@ -700,36 +1245,32 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 				html += section( i18n.secQueue, qb );
 			}
 
-			// Results
-			var rb;
+			// Results — rendered only once there ARE results. A request that has not
+			// run yet cannot have an execution result, so a card announcing "no
+			// execution result recorded yet" appeared on every single pending item.
 			if ( d.results && d.results.length ) {
-				rb = d.results.map( function(res) {
+				html += section( i18n.secResults, d.results.map( function(res) {
 					var line = '<p>' + statusPill(res.status) + ' ' +
 						escHtml( fmt( i18n.counts, [ res.created_count, res.updated_count, res.skipped_count, res.error_count ] ) ) + '</p>';
 					if ( res.error_json && res.error_json.length ) {
 						line += '<pre class="wpcc-diff">' + escHtml( JSON.stringify( res.error_json, null, 2 ) ) + '</pre>';
 					}
 					return line;
-				} ).join('');
-			} else {
-				rb = '<p class="description">' + escHtml(i18n.noResult) + '</p>';
+				} ).join('') );
 			}
-			html += section( i18n.secResults, rb );
 
-			// Audit trail
-			var ab;
+			// Audit trail — same rule: shown when there is one.
 			if ( d.audit && d.audit.length ) {
-				ab = '<ul class="wpcc-audit-trail">' + d.audit.map( function(a) {
+				html += section( i18n.secAudit, '<ul class="wpcc-audit-trail">' + d.audit.map( function(a) {
 					return '<li><span class="wpcc-audit-when">' + escHtml( whenAgo(a.timestamp) ) + '</span>' +
-						'<span class="wpcc-audit-action">' + escHtml(a.action) + '</span>' +
+						'<span class="wpcc-audit-action">' + escHtml( auditLabel( a.action ) ) + '</span>' +
 						( a.actor ? '<span class="wpcc-audit-actor">' + escHtml(a.actor) + '</span>' : '' ) + '</li>';
-				} ).join('') + '</ul>';
-			} else {
-				ab = '<p class="description">' + escHtml(i18n.noAudit) + '</p>';
+				} ).join('') + '</ul>' );
 			}
-			html += section( i18n.secAudit, ab );
 
 			box.innerHTML = html;
+			// Bind Approve/Reject on the detail exactly as on a list row.
+			attachPendingHandlers();
 
 			// Inject the trusted, server-escaped diff HTML (never parsed client-side).
 			if ( d.diff && ( d.diff.available || d.diff.diff_kind === 'patch_unavailable' ) ) {

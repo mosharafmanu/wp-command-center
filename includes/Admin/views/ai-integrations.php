@@ -75,6 +75,21 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 			}
 			$wpcc_all_tokens = $wpcc_tokens->list();
 		}
+	} elseif ( 'revoke' === $wpcc_token_action ) {
+		// Disconnecting belongs in the same place as connecting. The screen already
+		// promised "you can revoke it anytime" while sending the user elsewhere to
+		// do it — the control now lives next to the promise. AuthTokens::revoke()
+		// also deprovisions the token's capabilities, so this is a real disconnect.
+		$wpcc_revoke_id = sanitize_text_field( wp_unslash( (string) ( $_POST['wpcc_token_id'] ?? '' ) ) );
+		$wpcc_revoked   = '' !== $wpcc_revoke_id ? $wpcc_tokens->revoke( $wpcc_revoke_id ) : false;
+		if ( is_wp_error( $wpcc_revoked ) ) {
+			$wpcc_token_error = $wpcc_revoked->get_error_message();
+		} elseif ( true === $wpcc_revoked ) {
+			$wpcc_token_message = __( 'Token revoked. Any assistant using it is disconnected immediately.', 'wp-command-center' );
+		} else {
+			$wpcc_token_error = __( 'That token could not be found.', 'wp-command-center' );
+		}
+		$wpcc_all_tokens = $wpcc_tokens->list();
 	}
 }
 
@@ -99,14 +114,30 @@ if ( $wpcc_selected_token && $wpcc_config ) {
 
 // Active tab
 $wpcc_tab = sanitize_key( (string) ( $_GET['tab'] ?? 'clients' ) );
+// Labels only — the query keys are unchanged, so every existing deep link
+// still resolves. "Clients", "Activity" and "Security" each duplicated a name
+// used elsewhere in the product at a different level, which made the tab bar
+// impossible to place. These read as the steps they actually are.
 $wpcc_tabs = [
-	'clients'       => __( 'Clients', 'wp-command-center' ),
-	'configuration' => __( 'Configuration', 'wp-command-center' ),
-	'activity'      => __( 'Activity', 'wp-command-center' ),
-	'security'      => __( 'Security', 'wp-command-center' ),
+	'configuration' => __( 'Set up', 'wp-command-center' ),
+	'activity'      => __( 'Recent requests', 'wp-command-center' ),
+	'security'      => __( 'How access works', 'wp-command-center' ),
 ];
+// Arriving here from the Home wizard's single "Connect" button already costs the
+// customer three stacked tab rows. Before a token exists there is nothing to see
+// in "Recent requests" (no assistant has called) and "How access works" describes
+// a connection they do not have yet — so both are noise on the one screen that
+// has to succeed. They come back the moment setup is real. Same gating precedent
+// as AppShell's $has_started power chrome; no route or capability changes, and a
+// deep link to either tab still resolves because the fallback below is unchanged.
+if ( ! \WPCommandCenter\Admin\ConnectionStatus::ever_connected()
+	&& [] === ( new \WPCommandCenter\Security\AuthTokens() )->list() ) {
+	unset( $wpcc_tabs['activity'], $wpcc_tabs['security'] );
+}
+// The retired "Choose" tab now resolves to the flow it used to describe, so old
+// links and the ?tab=clients default both land on the real thing.
 if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
-	$wpcc_tab = 'clients';
+	$wpcc_tab = 'configuration';
 }
 ?>
 <style>
@@ -119,6 +150,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-ai-tab:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; border-radius: 7px; }
 
 	/* Hero / explainer */
+	/* Assistant picker: a selected chip reads as chosen, not as the page's CTA. */
+	.wpcc-ai-pick { border-color: #dcdfe6 !important; color: #3c434a !important; background: #fff; font-weight: 500; transition: border-color .12s ease, background-color .12s ease; }
+	.wpcc-ai-pick:hover { border-color: #b9bec7 !important; background: #fbfbfc; }
+	.wpcc-ai-pick.is-selected { border-color: #2271b1 !important; box-shadow: inset 0 0 0 1px #2271b1; color: #1d2327 !important; font-weight: 650; background: #f0f6fc; }
+	.wpcc-ai-pick.is-selected::before { content: "\2713"; margin-right: 7px; color: #2271b1; font-weight: 700; }
 	.wpcc-ai-hero { background: #fff; border: 1px solid #e3e5ec; border-radius: 14px; padding: 24px 26px; margin: 14px 0 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.05); }
 	.wpcc-ai-hero .wpcc-ai-lead { font-size: 16px; line-height: 1.55; color: #1d2327; max-width: 70ch; margin: 0 0 10px; font-weight: 600; }
 	.wpcc-ai-hero p { font-size: 14.5px; line-height: 1.6; color: #4b5161; max-width: 72ch; margin: 0; }
@@ -228,27 +264,51 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-ai-safe-note__icon { font-size:20px;line-height:1.3;flex:0 0 auto; }
 	.wpcc-ai-safe-note strong { display:block;margin-bottom:6px;color:#1d2327; }
 	.wpcc-ai-safe-note ul { margin:0;padding-left:18px;color:#3c434a;font-size:13px;line-height:1.65; }
+	.wpcc-token-reveal { background: #fff; border: 1px solid #cfe4d2; border-left: 3px solid #00a32a; border-radius: 12px; padding: 20px 22px; margin: 0 0 22px; box-shadow: 0 1px 2px rgba(16,24,40,.04); }
+	.wpcc-token-reveal__title { margin: 0 0 12px; font-size: 15px; font-weight: 650; color: #1d2327; letter-spacing: -.01em; }
+	.wpcc-token-reveal__title::before { content: "\2713"; color: #00a32a; font-weight: 700; margin-right: 8px; }
+	.wpcc-token-reveal__code { margin: 0; }
+	.wpcc-token-reveal__note { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: #50575e; max-width: 72ch; }
 	.wpcc-ai-config { border-radius:0 0 12px 12px; }
 </style>
 
 <div class="wrap wpcc-ai-wrap">
 	<h1><?php esc_html_e( 'AI Clients', 'wp-command-center' ); ?></h1>
 
+	<?php
+	// Two paragraphs said the same thing in sequence: name the assistants, then
+	// name them again. One lead sentence, then the chips carry the safety promise
+	// visually — the customer came here to connect something, not to read.
+	//
+	// Shown on the entry tab ONLY. It used to re-render on all four inner tabs, so
+	// a customer who had already chosen an assistant and clicked "Set up" was made
+	// to scroll past the same pitch again before reaching the configuration they
+	// came for. A hero introduces a screen once; after that it is an obstacle.
+	// The hero is gone with the "Choose" tab: it pitched the product to someone
+	// who had already clicked Connect. The beginner explainer below stays — it
+	// answers a real question a first-timer has — but collapsed, on the setup
+	// screen, where it is one click away instead of in the way.
+	if ( false ) :
+	?>
 	<section class="wpcc-ai-hero">
-		<p class="wpcc-ai-lead"><?php esc_html_e( 'Connect AI assistants — Claude Desktop, Cursor, Codex, ChatGPT, Gemini CLI, and more — to this site, safely. Every action they take waits for your approval, is recorded, and can be undone.', 'wp-command-center' ); ?></p>
-		<p><?php esc_html_e( 'An AI client is an assistant like Claude Desktop, Cursor, Codex, Continue, or Gemini CLI, running on your computer. Connect one here so it can help with WordPress tasks on this site — safely, with your approval, a full record, and one-click undo. New to this? Start with the short guide below.', 'wp-command-center' ); ?></p>
+		<p class="wpcc-ai-lead"><?php esc_html_e( 'Connect Claude, Cursor, Codex, ChatGPT, Gemini or any other AI assistant to this site. Anything it changes waits for your approval, is recorded, and can be undone.', 'wp-command-center' ); ?></p>
 		<div class="wpcc-ai-chips" role="note" aria-label="<?php esc_attr_e( 'How every assistant stays safe', 'wp-command-center' ); ?>">
-			<span class="lbl"><?php esc_html_e( 'Every assistant is:', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--approval"><?php esc_html_e( 'Requires approval', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--approval"><?php esc_html_e( 'Needs your approval', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Recorded', 'wp-command-center' ); ?></span>
 			<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--scoped"><?php esc_html_e( 'Scoped access', 'wp-command-center' ); ?></span>
-			<span class="wpcc-cds-chip"><?php esc_html_e( 'Your site, your token', 'wp-command-center' ); ?></span>
+			<span class="wpcc-cds-chip wpcc-cds-chip--scoped"><?php esc_html_e( 'Limited access', 'wp-command-center' ); ?></span>
 		</div>
 	</section>
 
-	<details class="wpcc-agent-explainer" style="max-width:760px;margin:10px 0 20px;border:1px solid #c3c4c7;border-radius:6px;background:#f0f6fc;padding:14px 18px;" open>
-		<summary style="cursor:pointer;font-weight:700;font-size:14px;"><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'wp-command-center' ); ?></summary>
+	<?php
+	// Closed by default. This opened expanded, so the first thing on the page a
+	// customer met was a FAQ — documentation ahead of the action they came for.
+	// It stays one click away for anyone who wants it.
+	?>
+	<?php endif; // hero retired with the Choose tab ?>
+
+	<details class="wpcc-agent-explainer">
+		<summary><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'wp-command-center' ); ?></summary>
 		<div style="margin-top:12px;display:grid;gap:12px;">
 			<?php foreach ( \WPCommandCenter\Admin\AgentExplainer::faq() as $wpcc_qa ) : ?>
 				<div>
@@ -259,12 +319,14 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			<p style="margin:4px 0 0;padding:10px 12px;background:#fff;border-radius:4px;font-size:12px;color:#2271b1;font-weight:600;text-align:center;"><?php echo esc_html( \WPCommandCenter\Admin\AgentExplainer::flow_line() ); ?></p>
 			<p style="margin:0;color:#646970;font-size:12px;">
 				<?php
+				// This previously told users to add an AI provider key FIRST. That was
+				// wrong and it was the single most confusing sentence in the product:
+				// connecting an assistant over MCP uses the assistant's own AI and
+				// needs no key here. Two steps, not three.
 				printf(
-					/* translators: 1: Providers link open, 2: link close, 3: Tokens link open, 4: link close */
-					esc_html__( 'Setup order: 1) add your AI key in %1$sBuilt-in AI → Providers%2$s, 2) create an %3$saccess token%4$s, 3) paste the token into your AI assistant using the configuration below.', 'wp-command-center' ),
-					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' ) ) . '">',
-					'</a>',
-					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=access' ) ) . '">',
+					/* translators: 1: Tokens link open, 2: link close */
+					esc_html__( 'Setup: 1) create an %1$saccess token%2$s, 2) paste the configuration below into your assistant. You do not need an AI provider key — your assistant brings its own AI.', 'wp-command-center' ),
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=tokens' ) ) . '">',
 					'</a>'
 				);
 				?>
@@ -273,179 +335,62 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	</details>
 
 	<?php if ( $wpcc_token_error ) : ?>
-		<div class="notice notice-error wpcc-ai-notice"><p><?php echo esc_html( $wpcc_token_error ); ?></p></div>
+		<div class="notice inline notice-error wpcc-ai-notice"><p><?php echo esc_html( $wpcc_token_error ); ?></p></div>
 	<?php endif; ?>
-	<?php if ( $wpcc_token_message ) : ?>
-		<div class="notice notice-success wpcc-ai-notice"><p><?php echo esc_html( $wpcc_token_message ); ?></p></div>
-	<?php endif; ?>
+	<?php
+	/*
+	 * The token reveal is the emotional peak of setup — the moment the customer
+	 * gets the key to their own site. It used to be two stacked banners saying the
+	 * same thing three times ("Copy it now", "will not be shown again", "save it
+	 * now"), the second of them in warning amber. Repetition reads as nagging, and
+	 * amber reads as "something went wrong" at the exact moment something went
+	 * right.
+	 *
+	 * One card. Success, not warning. Said once. And it ends by pointing at the
+	 * next step instead of leaving the customer holding a string.
+	 */
+	?>
 	<?php if ( $wpcc_new_token ) : ?>
-		<div class="notice notice-warning wpcc-ai-notice">
-			<p><strong><?php esc_html_e( 'Your new token (save it now):', 'wp-command-center' ); ?></strong></p>
-			<div class="wpcc-ai-code">
+		<div class="wpcc-token-reveal" role="status">
+			<p class="wpcc-token-reveal__title"><?php esc_html_e( 'Your access token is ready', 'wp-command-center' ); ?></p>
+			<div class="wpcc-ai-code wpcc-token-reveal__code">
 				<code class="wpcc-ai-code__text" id="wpcc-new-token"><?php echo esc_html( $wpcc_new_token ); ?></code>
-				<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_new_token ); ?>"><?php esc_html_e( 'Copy', 'wp-command-center' ); ?></button>
+				<button type="button" class="button button-primary wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_new_token ); ?>"><?php esc_html_e( 'Copy', 'wp-command-center' ); ?></button>
 			</div>
+			<p class="wpcc-token-reveal__note">
+				<?php esc_html_e( 'This is the only time it will be shown, so save it somewhere safe. Your configuration below already includes it — copy that and paste it into your assistant.', 'wp-command-center' ); ?>
+			</p>
 		</div>
+	<?php elseif ( $wpcc_token_message ) : ?>
+		<div class="notice inline notice-success wpcc-ai-notice"><p><?php echo esc_html( $wpcc_token_message ); ?></p></div>
 	<?php endif; ?>
 
-	<!-- Tab navigation -->
+	<!-- Tab navigation. A one-item tab bar is decoration, not navigation. -->
+	<?php if ( count( $wpcc_tabs ) > 1 ) : ?>
 	<div class="wpcc-ai-tabs">
 		<?php foreach ( $wpcc_tabs as $tab_id => $tab_label ) : ?>
-			<a href="<?php echo esc_url( add_query_arg( 'tab', $tab_id, admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>"
+			<a href="<?php echo esc_url( add_query_arg( 'tab', $tab_id, admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) ); ?>"
 			   class="wpcc-ai-tab<?php echo $tab_id === $wpcc_tab ? ' wpcc-ai-tab--active' : ''; ?>"<?php echo $tab_id === $wpcc_tab ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $tab_label ); ?></a>
 		<?php endforeach; ?>
 	</div>
+	<?php endif; ?>
 
-	<?php if ( 'clients' === $wpcc_tab ) : ?>
-		<!-- ===== CLIENTS TAB ===== -->
-
-		<?php
-		$wpcc_mcp_url     = rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE . '/mcp' );
-		$wpcc_token_count = is_array( $wpcc_all_tokens ) ? count( $wpcc_all_tokens ) : 0;
-		$wpcc_cfg_url     = esc_url( add_query_arg( [ 'tab' => 'configuration' ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) );
-		?>
-
-		<!-- ===== Primary setup panel ===== -->
-		<div class="wpcc-ai-panel wpcc-ai-setup">
-			<div class="wpcc-ai-panel__header">
-				<?php esc_html_e( 'Connect your assistant', 'wp-command-center' ); ?>
-				<span class="wpcc-setup-status"><span class="wpcc-setup-dot"></span> <?php esc_html_e( 'Connection ready', 'wp-command-center' ); ?></span>
-			</div>
-			<div class="wpcc-ai-panel__body">
-				<div class="wpcc-ai-field">
-					<label class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'wp-command-center' ); ?></label>
-					<div class="wpcc-ai-url">
-						<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_mcp_url ); ?></code>
-						<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'wp-command-center' ); ?></button>
-						<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'wp-command-center' ); ?></span>
-					</div>
-					<p class="wpcc-ai-field__hint"><?php esc_html_e( 'Your assistant connects to this site at this address — on your own server, with your own token.', 'wp-command-center' ); ?></p>
-				</div>
-
-				<div class="wpcc-ai-field">
-					<label class="wpcc-ai-field__label"><?php esc_html_e( 'Access token', 'wp-command-center' ); ?></label>
-					<?php if ( $wpcc_token_count > 0 ) : ?>
-						<p class="wpcc-ai-field__status wpcc-ai-field__status--ok">&#10003; <?php
-							/* translators: %d: number of access tokens */
-							printf( esc_html( _n( '%d access token ready.', '%d access tokens ready.', $wpcc_token_count, 'wp-command-center' ) ), (int) $wpcc_token_count );
-						?> <a href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Manage tokens', 'wp-command-center' ); ?></a></p>
-					<?php else : ?>
-						<p class="wpcc-ai-field__status"><?php esc_html_e( 'No access token yet — your assistant needs one to connect.', 'wp-command-center' ); ?> <a href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Create an access token', 'wp-command-center' ); ?></a></p>
-					<?php endif; ?>
-					<p class="wpcc-ai-field__hint"><?php esc_html_e( 'A token is like a password for your assistant. It’s shown once, stays on your site, and you can revoke it anytime.', 'wp-command-center' ); ?></p>
-				</div>
-
-				<div class="wpcc-ai-setup__actions">
-					<a class="button button-primary" href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Get my configuration', 'wp-command-center' ); ?></a>
-					<a class="button" href="<?php echo $wpcc_cfg_url; // phpcs:ignore ?>"><?php esc_html_e( 'Test connection', 'wp-command-center' ); ?></a>
-				</div>
-			</div>
-		</div>
-
-		<!-- ===== Setup steps ===== -->
-		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'How to connect — 5 steps', 'wp-command-center' ); ?></div>
-			<div class="wpcc-ai-panel__body">
-				<ol class="wpcc-ai-steps">
-					<li><?php esc_html_e( 'Create or choose an access token.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'Copy the configuration for your assistant.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'Paste it into your AI assistant’s settings.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'Run a safe, read-only test to confirm it connected.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'From then on, any change your assistant makes waits for your approval — and you can undo it.', 'wp-command-center' ); ?></li>
-				</ol>
-			</div>
-		</div>
-
-		<!-- ===== Common assistants (compact presets) ===== -->
-		<?php $wpcc_presets = array_slice( $wpcc_active_clients, 0, 6, true ); ?>
-		<?php if ( ! empty( $wpcc_presets ) ) : ?>
-		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Popular assistants', 'wp-command-center' ); ?></div>
-			<div class="wpcc-ai-panel__body">
-				<div class="wpcc-ai-presets">
-					<?php foreach ( $wpcc_presets as $wpcc_pid => $wpcc_pc ) : ?>
-						<a class="wpcc-ai-preset" href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $wpcc_pid ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>">
-							<span class="wpcc-ai-preset__name"><?php echo esc_html( $wpcc_pc['name'] ); ?></span>
-							<span class="wpcc-ai-preset__go"><?php esc_html_e( 'Set up →', 'wp-command-center' ); ?></span>
-						</a>
-					<?php endforeach; ?>
-				</div>
-				<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'Any assistant that speaks the same connection protocol can connect — see the full list under Advanced below.', 'wp-command-center' ); ?></p>
-			</div>
-		</div>
-		<?php endif; ?>
-
-		<!-- ===== Advanced: stats + full supported clients ===== -->
-		<details class="wpcc-ai-advanced">
-			<summary><?php esc_html_e( 'Advanced — all supported assistants & details', 'wp-command-center' ); ?></summary>
-			<div class="wpcc-ai-advanced__body">
-
-				<div class="wpcc-ai-grid">
-					<div class="wpcc-ai-stat wpcc-ai-stat--good">
-						<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_counts['active'] ); ?></div>
-						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Assistants connected', 'wp-command-center' ); ?></div>
-					</div>
-					<div class="wpcc-ai-stat">
-						<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_counts['total'] ); ?></div>
-						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Clients supported', 'wp-command-center' ); ?></div>
-					</div>
-					<div class="wpcc-ai-stat">
-						<div class="wpcc-ai-stat__value"><?php echo esc_html( $wpcc_tool_count ); ?></div>
-						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Actions available', 'wp-command-center' ); ?></div>
-					</div>
-					<div class="wpcc-ai-stat wpcc-ai-stat--good">
-						<div class="wpcc-ai-stat__value"><?php esc_html_e( 'Ready', 'wp-command-center' ); ?></div>
-						<div class="wpcc-ai-stat__label"><?php esc_html_e( 'Safe connection', 'wp-command-center' ); ?></div>
-					</div>
-				</div>
-
-				<!-- Compatibility Matrix -->
-		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Supported Clients', 'wp-command-center' ); ?></div>
-			<div class="wpcc-ai-panel__body">
-				<table class="wpcc-ai-token-table">
-					<thead><tr>
-						<th><?php esc_html_e( 'Client', 'wp-command-center' ); ?></th>
-						<th><?php esc_html_e( 'Vendor', 'wp-command-center' ); ?></th>
-						<th><?php esc_html_e( 'Type', 'wp-command-center' ); ?></th>
-						<th><?php esc_html_e( 'Certification', 'wp-command-center' ); ?></th>
-						<th><?php esc_html_e( 'Connects', 'wp-command-center' ); ?></th>
-					</tr></thead>
-					<tbody>
-					<?php foreach ( $wpcc_matrix as $row ) : ?>
-						<tr>
-							<td><strong><?php echo esc_html( $row['name'] ); ?></strong></td>
-							<td><?php echo esc_html( $row['vendor'] ); ?></td>
-							<td><span class="wpcc-badge wpcc-badge--neutral"><?php echo esc_html( $row['type'] ); ?></span></td>
-							<td>
-								<?php $cert = $row['certification_level']; $labels = AIClientRegistry::CERT_LABELS; ?>
-								<?php if ( 'gold' === $cert ) : ?>
-									<span class="wpcc-badge wpcc-badge--good" title="<?php echo esc_attr( $row['last_validated_at'] ?? '' ); ?>"><?php echo esc_html( $labels[ $cert ] ?? $cert ); ?></span>
-								<?php elseif ( in_array( $cert, [ 'silver', 'bronze', 'active', 'compatible' ], true ) ) : ?>
-									<span class="wpcc-badge wpcc-badge--info"><?php echo esc_html( $labels[ $cert ] ?? $cert ); ?></span>
-								<?php else : ?>
-									<span class="wpcc-badge wpcc-badge--neutral"><?php esc_html_e( 'Planned', 'wp-command-center' ); ?></span>
-								<?php endif; ?>
-							</td>
-							<td>
-								<?php if ( $row['mcp_support'] ) : ?>
-									<span class="wpcc-badge wpcc-badge--good">&#10003;</span>
-								<?php else : ?>
-									<span class="wpcc-badge wpcc-badge--critical">&#10007;</span>
-								<?php endif; ?>
-							</td>
-						</tr>
-					<?php endforeach; ?>
-					</tbody>
-				</table>
-				<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'Certification shows how thoroughly each assistant has been tested: Planned → Compatible → Active → Bronze → Silver → Gold. Every assistant connects the same safe way — none gets special access or skips your approval.', 'wp-command-center' ); ?></p>
-			</div>
-		</div>
-
-			</div>
-		</details>
-
-	<?php elseif ( 'configuration' === $wpcc_tab ) : ?>
+	<?php
+	/*
+	 * The "Choose" tab is gone.
+	 *
+	 * It re-pitched the product to someone who had already clicked Connect, then
+	 * printed a numbered "How to connect — 5 steps" list telling them to go and do
+	 * the work on a different tab. Every one of those steps already exists as a
+	 * panel on this screen, in order — the assistant picker was literally the first
+	 * one. A product that has to write instructions for its own interface has a
+	 * flow problem, not a documentation problem.
+	 *
+	 * Setting up is now ONE screen: pick an assistant → create a token → copy the
+	 * configuration → test it. Three screens became one.
+	 */
+	?>
+	<?php if ( 'configuration' === $wpcc_tab ) : ?>
 		<!-- ===== CONFIGURATION TAB ===== -->
 
 		<!-- Assistant selector -->
@@ -455,8 +400,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'Pick the assistant you’re connecting — the configuration below updates to match.', 'wp-command-center' ); ?></p>
 				<div style="display: flex; gap: 10px; flex-wrap: wrap;">
 					<?php foreach ( $wpcc_active_clients as $id => $client ) : ?>
-						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ) ); ?>"
-						   class="button<?php echo $id === $wpcc_selected_client ? ' button-primary' : ''; ?>">
+						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) ); ?>"
+						   class="button wpcc-ai-pick<?php echo $id === $wpcc_selected_client ? ' is-selected' : ''; ?>"
+					   <?php echo $id === $wpcc_selected_client ? 'aria-current="true"' : ''; ?>>
 							<?php echo esc_html( $client['name'] ); ?>
 						</a>
 					<?php endforeach; ?>
@@ -469,20 +415,140 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		$wpcc_cfg_tok_count = is_array( $wpcc_all_tokens ) ? count( $wpcc_all_tokens ) : 0;
 		?>
 
-		<!-- Setup card: your configuration -->
+		<?php
+		// Token panel FIRST, configuration second.
+		//
+		// The configuration panel asks the customer to paste an access token into it.
+		// It used to sit ABOVE the panel that creates one, so a first-time user met
+		// "paste your access token" before anything had told them how to get a token —
+		// a dead end on the single most important onboarding screen. The order now
+		// matches the actual task: choose an assistant, create a token, paste it into
+		// the config, test it.
+		?>
+		<!-- Access tokens -->
+		<div class="wpcc-ai-panel">
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Access tokens', 'wp-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__body">
+				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'A token is your assistant’s key to this site. A standard token lets your assistant answer questions about the site and propose changes — it can never change anything on its own, because every change waits for your approval first.', 'wp-command-center' ); ?></p>
+				<form method="post">
+					<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
+					<?php
+					// Read-only used to be the recommended starting point. It is not a
+					// good one: the read-only SCOPE allowlist (CapabilityRegistry::
+					// READ_ONLY_SCOPE_OPERATIONS) covers six operations, so the ordinary
+					// first question — "what plugins are installed?", "what pages do I
+					// have?" — is refused. A customer who follows that advice connects
+					// successfully and then cannot do anything, which reads as a broken
+					// product rather than as a safety boundary.
+					//
+					// The allowlist is deliberately fail-closed and is NOT changed here.
+					// What changes is which token we recommend: on the default Standard
+					// protection a full-scope token still cannot alter the site without
+					// an explicit human approval, so it is the safe default AND the one
+					// that works. Restricted stays available for anyone who wants it.
+					?>
+					<div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
+						<button type="submit" name="wpcc_token_action" value="generate_full" class="button button-primary">
+							<?php esc_html_e( 'Create access token', 'wp-command-center' ); ?>
+						</button>
+					</div>
+				</form>
+				<?php
+				// This table exists so the customer can pick a token to paste into the
+				// configuration above. A revoked or expired token can never do that, so
+				// listing them here was 200+ rows of things that cannot be chosen —
+				// it turned a two-minute setup screen into twelve screens of scrolling.
+				// Revoked tokens remain fully visible in Settings › Connections › Access tokens,
+				// screen that exists to audit them.
+				// "Usable" must mean the same thing the status badge means. The stored
+				// `status` stays 'active' on an expired token — expiry is computed from
+				// `expires_at` (see AuthTokens::status_badge) — so filtering on status
+				// alone offered expired tokens as "Use in config", where they would
+				// silently fail against the assistant. Mirror the canonical rule.
+				$wpcc_usable_tokens = array_values( array_filter(
+					is_array( $wpcc_all_tokens ) ? $wpcc_all_tokens : [],
+					static function ( $t ) {
+						if ( ( $t['status'] ?? '' ) !== 'active' ) {
+							return false;
+						}
+						$expires = $t['expires_at'] ?? null;
+						return null === $expires || (int) $expires >= time();
+					}
+				) );
+				?>
+				<?php if ( ! empty( $wpcc_usable_tokens ) ) : ?>
+					<h4 style="margin: 18px 0 10px;"><?php esc_html_e( 'Your tokens', 'wp-command-center' ); ?></h4>
+					<table class="wpcc-ai-token-table">
+						<thead><tr><th><?php esc_html_e( 'Label', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Scope', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th><th></th></tr></thead>
+						<tbody>
+						<?php foreach ( $wpcc_usable_tokens as $t ) : ?>
+							<tr>
+								<td><?php echo esc_html( $t['label'] ); ?><br><small style="color:#646970"><?php echo esc_html( $t['token_preview'] ); ?>...</small></td>
+								<td><?php echo esc_html( AuthTokens::scope_label( $t['scope'] ) ); ?></td>
+								<td><?php echo AuthTokens::status_badge( $t ); // phpcs:ignore ?></td>
+								<td style="white-space:nowrap;">
+								<button type="button" class="button button-small wpcc-select-token-btn" data-token-id="<?php echo esc_attr( $t['id'] ); ?>"><?php esc_html_e( 'Use in config', 'wp-command-center' ); ?></button>
+								<?php if ( 'active' === ( $t['status'] ?? '' ) ) : ?>
+									<form method="post" style="display:inline;" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Revoke this token? Any assistant using it loses access immediately.', 'wp-command-center' ) ) ); ?>);">
+										<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
+										<input type="hidden" name="wpcc_token_id" value="<?php echo esc_attr( $t['id'] ); ?>" />
+										<button type="submit" name="wpcc_token_action" value="revoke" class="button button-small button-link-delete"><?php esc_html_e( 'Revoke', 'wp-command-center' ); ?></button>
+									</form>
+								<?php endif; ?>
+							</td>
+							</tr>
+						<?php endforeach; ?>
+						</tbody>
+					</table>
+					<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'A token is shown in full only once, when you create it. Manage or revoke tokens anytime in Settings → Connections.', 'wp-command-center' ); ?></p>
+				<?php else : ?>
+					<p style="color:#646970;margin-top:12px;"><?php esc_html_e( 'No active tokens yet. Create one above to finish your configuration.', 'wp-command-center' ); ?></p>
+				<?php endif; ?>
+			</div>
+		</div>
+
+		<?php
+		/*
+		 * DELETE: the configuration card does not exist until there is something to
+		 * configure with.
+		 *
+		 * On a brand-new site this card rendered in full — heading, Copy button, a
+		 * paste field, and a screen-height block of JSON — and then told the customer
+		 * "No access token yet — create one in 'Access tokens' above". The single most
+		 * important onboarding screen showed its end state before its first step, and
+		 * offered a Copy button that copied a placeholder. Nothing on it could be
+		 * acted on, so all of it was load.
+		 *
+		 * With a token present it is exactly as before. Without one, the screen is now
+		 * two things: choose your assistant, create a token.
+		 */
+		?>
+		<!-- Setup card: your configuration. Whole section waits for a token. -->
+		<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 		<?php if ( $wpcc_config ) : ?>
 			<div class="wpcc-ai-panel">
 				<div class="wpcc-ai-panel__header">
-					<?php printf( esc_html__( 'Your %s configuration', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?>
-					<button type="button" class="button button-primary wpcc-copy-btn" data-copy-target="wpcc-config-block">
+					<?php printf( /* translators: %s: value */ esc_html__( 'Your %s configuration', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?>
+					<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-config-block">
 						<?php esc_html_e( 'Copy configuration', 'wp-command-center' ); ?>
 					</button>
 					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'wp-command-center' ); ?></span>
 				</div>
 				<div class="wpcc-ai-panel__body">
-					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php printf( esc_html__( 'Copy this and paste it into %s to connect it to this site. It includes your connection address — add your access token where it says wpcc_YOUR_TOKEN_HERE.', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?></p>
+					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php
+						/*
+						 * Two sentences on the same card were contradicting each other:
+						 * this one said "add your access token where it says
+						 * wpcc_YOUR_TOKEN_HERE" while the line below it said the token
+						 * was already filled in. Right after creating a token the second
+						 * one is true. Say whichever is actually the case.
+						 */
+						echo $wpcc_new_token
+							? sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s. It is complete — your connection address and your access token are both in it.', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) )
+							: sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s to connect it to this site. It includes your connection address — add your access token where it says wpcc_YOUR_TOKEN_HERE.', 'wp-command-center' ), esc_html( $wpcc_current_client['name'] ) );
+					?></p>
 					<?php if ( ! empty( $wpcc_selected_token ) ) : ?>
-						<div class="notice notice-info inline" style="margin:0 0 12px;padding:10px 12px;">
+						<div class="notice inline notice-info" style="margin:0 0 12px;padding:10px 12px;">
 							<p style="margin:0;">
 								<?php
 								printf(
@@ -501,16 +567,35 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							printf( esc_html( _n( '%d access token ready.', '%d access tokens ready.', $wpcc_cfg_tok_count, 'wp-command-center' ) ), (int) $wpcc_cfg_tok_count );
 						?></p>
 					<?php else : ?>
-						<p class="wpcc-ai-field__status" style="margin:0 0 12px;"><?php esc_html_e( 'No access token yet — create one in “Access tokens” below, then it appears in this configuration.', 'wp-command-center' ); ?></p>
+						<p class="wpcc-ai-field__status" style="margin:0 0 12px;"><?php esc_html_e( 'No access token yet — create one in “Access tokens” above, then it appears in this configuration.', 'wp-command-center' ); ?></p>
 					<?php endif; ?>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding:0;">
 					<div class="wpcc-ai-field" style="padding:14px 22px 0;margin:0;">
-							<label class="wpcc-ai-field__label" for="wpcc-token-fill"><?php esc_html_e( 'Paste your access token to complete the configuration', 'wp-command-center' ); ?></label>
+							<label class="wpcc-ai-field__label" for="wpcc-token-fill"><?php
+								echo $wpcc_new_token
+									? esc_html__( 'Access token (already filled in below)', 'wp-command-center' )
+									: esc_html__( 'Paste your access token to complete the configuration', 'wp-command-center' );
+							?></label>
 							<input type="text" id="wpcc-token-fill" class="regular-text" placeholder="wpcc_..." autocomplete="off" spellcheck="false" style="width:100%;max-width:520px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;" value="<?php echo esc_attr( $wpcc_new_token ); ?>">
-							<p class="wpcc-ai-field__hint" style="margin:6px 0 0;"><?php esc_html_e( 'Your token is inserted into the configuration below right here in your browser — it is never sent back to the server or stored. Then click “Copy configuration” to copy the complete, ready-to-use config.', 'wp-command-center' ); ?></p>
+							<p class="wpcc-ai-field__hint" style="margin:6px 0 0;"><?php
+								echo $wpcc_new_token
+									? esc_html__( 'Nothing more to fill in — the configuration below is ready to copy. Your token stays in this browser; it is never sent back to the server.', 'wp-command-center' )
+									: esc_html__( 'Your token is inserted into the configuration below right here in your browser — it is never sent back to the server or stored. Then click “Copy configuration” to copy the complete, ready-to-use config.', 'wp-command-center' );
+							?></p>
 						</div>
 						<pre class="wpcc-ai-config" id="wpcc-config-block"><?php echo esc_html( $wpcc_config_json ); ?></pre>
+						<?php
+						// This config asks the user's machine to fetch a small relay
+						// script from THIS site and run it under Node. That is a
+						// reasonable design, but pasting a command that downloads and
+						// executes code deserves a plain explanation rather than
+						// silence — a user who does not understand what they are
+						// pasting cannot meaningfully consent to it.
+						?>
+						<p class="wpcc-ai-field__hint" style="padding:0 22px 14px;margin:8px 0 0;">
+							<?php esc_html_e( 'What this does: your assistant runs a small connector script on your computer, downloaded from this site, which passes requests to WordPress. It runs locally under your own account, sends nothing anywhere except to this site, and can be removed by deleting the configuration. The connector is part of this plugin and is served from your own domain.', 'wp-command-center' ); ?>
+						</p>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding-top:14px;">
 					<details class="wpcc-ai-advanced" style="margin:0;">
@@ -553,45 +638,18 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				</div>
 			</div>
 		<?php endif; ?>
+		<?php endif; // no token yet: the configuration section has nothing to show. ?>
 
-		<!-- Access tokens -->
-		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Access tokens', 'wp-command-center' ); ?></div>
-			<div class="wpcc-ai-panel__body">
-				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'A token is your assistant’s key to this site. Start with read-only so it can look around safely; with full access, every change still waits for your approval.', 'wp-command-center' ); ?></p>
-				<form method="post">
-					<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
-					<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-						<button type="submit" name="wpcc_token_action" value="generate_read_only" class="button button-primary">
-							<?php esc_html_e( 'Create read-only token', 'wp-command-center' ); ?>
-						</button>
-						<button type="submit" name="wpcc_token_action" value="generate_full" class="button">
-							<?php esc_html_e( 'Create full-access token', 'wp-command-center' ); ?>
-						</button>
-					</div>
-				</form>
-				<?php if ( ! empty( $wpcc_all_tokens ) ) : ?>
-					<h4 style="margin: 18px 0 10px;"><?php esc_html_e( 'Your tokens', 'wp-command-center' ); ?></h4>
-					<table class="wpcc-ai-token-table">
-						<thead><tr><th><?php esc_html_e( 'Label', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Scope', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th><th></th></tr></thead>
-						<tbody>
-						<?php foreach ( $wpcc_all_tokens as $t ) : ?>
-							<tr>
-								<td><?php echo esc_html( $t['label'] ); ?><br><small style="color:#646970"><?php echo esc_html( $t['token_preview'] ); ?>...</small></td>
-								<td><?php echo esc_html( AuthTokens::scope_label( $t['scope'] ) ); ?></td>
-								<td><?php echo AuthTokens::status_badge( $t ); // phpcs:ignore ?></td>
-								<td><button type="button" class="button button-small wpcc-select-token-btn" data-token-id="<?php echo esc_attr( $t['id'] ); ?>"><?php esc_html_e( 'Use in config', 'wp-command-center' ); ?></button></td>
-							</tr>
-						<?php endforeach; ?>
-						</tbody>
-					</table>
-					<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'A token is shown in full only once, when you create it. Manage or revoke tokens anytime in Settings → Access.', 'wp-command-center' ); ?></p>
-				<?php else : ?>
-					<p style="color:#646970;margin-top:12px;"><?php esc_html_e( 'No access tokens yet. Create one above to finish your configuration.', 'wp-command-center' ); ?></p>
-				<?php endif; ?>
-			</div>
-		</div>
-
+		<?php
+		/*
+		 * DELETE (until usable): the connection test needs a token, and on a fresh
+		 * site there isn't one. Its own field said so — "Paste an access token, or
+		 * create one in 'Access tokens' above" — which is the card admitting it
+		 * cannot be used yet. Before a token exists the screen is now exactly one
+		 * decision (which assistant) and one action (create a token).
+		 */
+		?>
+		<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 		<!-- Test the connection safely -->
 		<div class="wpcc-ai-panel">
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Test the connection safely', 'wp-command-center' ); ?></div>
@@ -603,10 +661,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						value="<?php echo esc_attr( $wpcc_new_token ); ?>">
 					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php esc_html_e( 'Paste an access token, or create one in “Access tokens” above.', 'wp-command-center' ); ?></p>
 				</div>
-				<button type="button" class="button button-primary" id="wpcc-test-connection"><?php esc_html_e( 'Run read-only test', 'wp-command-center' ); ?></button>
+				<button type="button" class="button" id="wpcc-test-connection"><?php esc_html_e( 'Run read-only test', 'wp-command-center' ); ?></button>
 				<div class="wpcc-ai-verify-result" id="wpcc-verify-result"></div>
 			</div>
 		</div>
+
+		<?php endif; ?>
 
 		<!-- Safety note -->
 		<div class="wpcc-ai-safe-note" role="note">
@@ -615,8 +675,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<strong><?php esc_html_e( 'Connecting an assistant is safe by design.', 'wp-command-center' ); ?></strong>
 				<ul>
 					<li><?php esc_html_e( 'Any change your assistant makes waits for your approval first.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'Every action is recorded in History.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'Reversible changes can be undone with one click.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Every action is recorded under Changes.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Reversible changes can be undone from the Changes screen.', 'wp-command-center' ); ?></li>
 				</ul>
 			</div>
 		</div>

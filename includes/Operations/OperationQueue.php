@@ -102,7 +102,7 @@ final class OperationQueue {
 		}
 
 		if ( self::STATUS_QUEUED !== $item['status'] && self::STATUS_FAILED !== $item['status'] ) {
-			return new \WP_Error( 'wpcc_invalid_queue_status', sprintf( __( 'Cannot run queue item in status %s.', 'wp-command-center' ), $item['status'] ) );
+			return new \WP_Error( 'wpcc_invalid_queue_status', sprintf( /* translators: %s: value */ __( 'Cannot run queue item in status %s.', 'wp-command-center' ), $item['status'] ) );
 		}
 
 		// B2-2 execute-once (queue path). Do not run a queue item whose request was
@@ -127,7 +127,7 @@ final class OperationQueue {
 				'path'         => 'queue',
 				'reason'       => 'request_' . $request['status'],
 			] );
-			return new \WP_Error( 'wpcc_request_already_terminal', sprintf( __( 'Skipped queue item: request is already %s.', 'wp-command-center' ), $request['status'] ) );
+			return new \WP_Error( 'wpcc_request_already_terminal', sprintf( /* translators: %s: value */ __( 'Skipped queue item: request is already %s.', 'wp-command-center' ), $request['status'] ) );
 		}
 
 		// Mark as running
@@ -207,7 +207,7 @@ final class OperationQueue {
 		}
 
 		if ( ! in_array( $item['status'], [ self::STATUS_QUEUED, self::STATUS_FAILED ], true ) ) {
-			return new \WP_Error( 'wpcc_cannot_cancel', sprintf( __( 'Cannot cancel queue item in status %s.', 'wp-command-center' ), $item['status'] ) );
+			return new \WP_Error( 'wpcc_cannot_cancel', sprintf( /* translators: %s: value */ __( 'Cannot cancel queue item in status %s.', 'wp-command-center' ), $item['status'] ) );
 		}
 
 		$updated = $wpdb->update(
@@ -233,7 +233,7 @@ final class OperationQueue {
 		}
 
 		if ( self::STATUS_FAILED !== $item['status'] ) {
-			return new \WP_Error( 'wpcc_cannot_retry', sprintf( __( 'Cannot retry queue item in status %s.', 'wp-command-center' ), $item['status'] ) );
+			return new \WP_Error( 'wpcc_cannot_retry', sprintf( /* translators: %s: value */ __( 'Cannot retry queue item in status %s.', 'wp-command-center' ), $item['status'] ) );
 		}
 
 		if ( (int) $item['attempts'] >= (int) $item['max_attempts'] ) {

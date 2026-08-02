@@ -29,7 +29,7 @@ $nonce     = wp_create_nonce( 'wp_rest' );
 $api_base  = rest_url( 'wp-command-center/v1/admin' );
 $core_base = rest_url( 'wp/v2' );
 $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any post type)
-$ai_url    = admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ); // U1.4 — connect an AI key
+$ai_url    = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ); // U1.4 — connect an AI key
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
@@ -246,12 +246,12 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		dashSugReady:  <?php echo wp_json_encode( esc_html__( 'suggestions ready', 'wp-command-center' ) ); ?>,
 		dashApplied:   <?php echo wp_json_encode( esc_html__( 'applied (reversible)', 'wp-command-center' ) ); ?>,
 		/* translators: %d: optimized percentage (literal percent sign follows) */
-		dashPct:       <?php echo wp_json_encode( __( '%d% optimized', 'wp-command-center' ) ); ?>,
+		dashPct:       <?php echo wp_json_encode( /* translators: %d: number */ __( '%d% optimized', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of published items */
-		dashPublished: <?php echo wp_json_encode( __( '%d published', 'wp-command-center' ) ); ?>,
+		dashPublished: <?php echo wp_json_encode( /* translators: %d: number */ __( '%d published', 'wp-command-center' ) ); ?>,
 		// U1.2 — Generate → Suggestions handoff.
 		/* translators: %d: suggestions created */
-		viewSug:       <?php echo wp_json_encode( __( 'Review %d suggestions →', 'wp-command-center' ) ); ?>,
+		viewSug:       <?php echo wp_json_encode( /* translators: %d: number */ __( 'Review %d suggestions →', 'wp-command-center' ) ); ?>,
 		// U1.4 — no AI provider connected.
 		noKey:         <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so no suggestions were generated. Add an Anthropic API key, then try again.', 'wp-command-center' ) ); ?>,
 		aiIntegrations:<?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'wp-command-center' ) ); ?>,
@@ -264,19 +264,19 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'wp-command-center' ) ); ?>,
 		// Bulk-action result summary (wpcc_seo_bulk redirect).
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		bulkSummary:   <?php echo wp_json_encode( __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'wp-command-center' ) ); ?>,
+		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'wp-command-center' ) ); ?>,
 		bulkAllExist:  <?php echo wp_json_encode( esc_html__( 'All selected items already have open suggestions — review them below.', 'wp-command-center' ) ); ?>,
 		bulkNone:      <?php echo wp_json_encode( esc_html__( 'No suggestions were created for the selected items.', 'wp-command-center' ) ); ?>,
 		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'wp-command-center' ) ); ?>,
 		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
-		pageInfo: <?php echo wp_json_encode( __( 'Showing %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>,
+		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>,
 		// GA#2 Slice 2b — generation (drafts only).
 		colSel:    <?php echo wp_json_encode( esc_html__( 'Select', 'wp-command-center' ) ); ?>,
 		gen:       <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'wp-command-center' ) ); ?>,
 		generating:<?php echo wp_json_encode( esc_html__( 'Generating…', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		genDone:   <?php echo wp_json_encode( __( '%1$d drafts created, %2$d skipped, %3$d failed.', 'wp-command-center' ) ); ?>,
+		genDone:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d drafts created, %2$d skipped, %3$d failed.', 'wp-command-center' ) ); ?>,
 		genCap:    <?php echo wp_json_encode( esc_html__( 'Up to 25 at a time; only the first 25 are used.', 'wp-command-center' ) ); ?>,
 		genErr:    <?php echo wp_json_encode( esc_html__( 'Generation failed. Please retry.', 'wp-command-center' ) ); ?>,
 		// Slice 3 — Suggestions tab.
@@ -299,17 +299,17 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		lblDismissed:<?php echo wp_json_encode( esc_html__( 'dismissed', 'wp-command-center' ) ); ?>,
 		lblFailed:   <?php echo wp_json_encode( esc_html__( 'failed', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of selected suggestions */
-		confirmBulkApplyDev:  <?php echo wp_json_encode( __( 'Apply the %d selected suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
+		confirmBulkApplyDev:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Apply the %d selected suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of selected suggestions */
-		confirmBulkApplyGate: <?php echo wp_json_encode( __( 'Submit the %d selected suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
+		confirmBulkApplyGate: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Submit the %d selected suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of selected suggestions */
-		confirmBulkDismiss:   <?php echo wp_json_encode( __( 'Dismiss the %d selected suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>,
+		confirmBulkDismiss:   <?php echo wp_json_encode( /* translators: %d: number */ __( 'Dismiss the %d selected suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>,
 		edit:      <?php echo wp_json_encode( esc_html__( 'Edit', 'wp-command-center' ) ); ?>,
 		none:      <?php echo wp_json_encode( esc_html__( '(not set)', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
-		ccTitle:   <?php echo wp_json_encode( __( '%1$d / %2$d', 'wp-command-center' ) ); ?>,
+		ccTitle:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d min, %3$d max */
-		ccDesc:    <?php echo wp_json_encode( __( '%1$d (target %2$d–%3$d)', 'wp-command-center' ) ); ?>,
+		ccDesc:    <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d (target %2$d–%3$d)', 'wp-command-center' ) ); ?>,
 		// Slice 4a — apply + Applied tab.
 		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'wp-command-center' ) ); ?>,
 		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'wp-command-center' ) ); ?>,

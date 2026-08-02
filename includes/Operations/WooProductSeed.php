@@ -65,7 +65,7 @@ final class WooProductSeed {
 		if ( ! empty( $sku ) ) {
 			$existing_id = wc_get_product_id_by_sku( $sku );
 			if ( $existing_id ) {
-				return new \WP_Error( 'wpcc_duplicate_sku', sprintf( __( 'Product with SKU "%s" already exists.', 'wp-command-center' ), $sku ) );
+				return new \WP_Error( 'wpcc_duplicate_sku', sprintf( /* translators: %s: value */ __( 'Product with SKU "%s" already exists.', 'wp-command-center' ), $sku ) );
 			}
 		}
 

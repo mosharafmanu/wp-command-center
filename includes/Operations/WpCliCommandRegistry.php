@@ -445,7 +445,7 @@ final class WpCliCommandRegistry {
 			if ( ! in_array( $key, $allowed_keys, true ) ) {
 				return new \WP_Error(
 					'wpcc_invalid_wpcli_arg',
-					sprintf( __( 'Unknown argument: %s', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Unknown argument: %s', 'wp-command-center' ), esc_html( $key ) )
 				);
 			}
 
@@ -454,7 +454,7 @@ final class WpCliCommandRegistry {
 			if ( ! empty( $def['required'] ) && ( null === $value || '' === $value ) ) {
 				return new \WP_Error(
 					'wpcc_missing_wpcli_arg',
-					sprintf( __( 'Missing required argument: %s', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Missing required argument: %s', 'wp-command-center' ), esc_html( $key ) )
 				);
 			}
 
@@ -463,28 +463,28 @@ final class WpCliCommandRegistry {
 			if ( is_string( $value ) && $this->contains_shell_metacharacters( $value ) ) {
 				return new \WP_Error(
 					'wpcc_unsafe_wpcli_arg',
-					sprintf( __( 'Arg %s contains unsafe shell characters.', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Arg %s contains unsafe shell characters.', 'wp-command-center' ), esc_html( $key ) )
 				);
 			}
 
 			if ( isset( $def['enum'] ) && ! in_array( $value, $def['enum'], true ) ) {
 				return new \WP_Error(
 					'wpcc_invalid_wpcli_arg_value',
-					sprintf( __( 'Invalid value for %s. Allowed: %s', 'wp-command-center' ), esc_html( $key ), implode( ', ', $def['enum'] ) )
+					sprintf( /* translators: 1: parameter name, 2: comma-separated list of allowed values */ __( 'Invalid value for %1$s. Allowed: %2$s', 'wp-command-center' ), esc_html( $key ), implode( ', ', $def['enum'] ) )
 				);
 			}
 
 			if ( isset( $def['pattern'] ) && ! preg_match( $def['pattern'], (string) $value ) ) {
 				return new \WP_Error(
 					'wpcc_invalid_wpcli_arg_pattern',
-					sprintf( __( 'Invalid format for %s', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Invalid format for %s', 'wp-command-center' ), esc_html( $key ) )
 				);
 			}
 
 			if ( isset( $def['max_length'] ) && is_string( $value ) && mb_strlen( $value ) > $def['max_length'] ) {
 				return new \WP_Error(
 					'wpcc_wpcli_arg_too_long',
-					sprintf( __( 'Value for %s exceeds maximum length of %d', 'wp-command-center' ), esc_html( $key ), $def['max_length'] )
+					sprintf( /* translators: 1: parameter name, 2: maximum length */ __( 'Value for %1$s exceeds maximum length of %2$d', 'wp-command-center' ), esc_html( $key ), $def['max_length'] )
 				);
 			}
 		}

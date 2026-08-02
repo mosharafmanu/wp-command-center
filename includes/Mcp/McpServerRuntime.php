@@ -39,6 +39,16 @@ final class McpServerRuntime {
 	const MCP_CLIENT_TIMEOUT = 240; // Observed MCP client abandonment (seconds).
 	const MCP_TIME_BUDGET    = 200; // Default server budget (< client timeout).
 
+	/**
+	 * ISSUE 14 — operations whose handlers shape their own output by context_mode
+	 * (rather than relying solely on the generic post-hoc ContextModeOptimizer).
+	 * context_mode is stripped from every tool's arguments by default so it never
+	 * collides with a runtime's own param validation (e.g. patch_manage rejects
+	 * unknown top-level fields); operations listed here get it forwarded back
+	 * into the payload so the handler can act on it directly.
+	 */
+	private const CONTEXT_AWARE_OPERATIONS = [ 'acf_manage' ];
+
 	private AuditLog $audit;
 	private Redactor $redactor;
 
@@ -355,9 +365,39 @@ final class McpServerRuntime {
 
 	private function tools_call( array $params, array $context ): array {
 		$tool_name = $params['name'] ?? '';
-		$args      = $params['arguments'] ?? [];
-		$mode      = ContextModeOptimizer::normalize( $args['context_mode'] ?? $params['context_mode'] ?? null );
+
+		// ISSUE 13 — every tool call, regardless of which runtime it dispatches to,
+		// must surface a failure as a structured in-band isError result, never let
+		// an uncaught Throwable fall through to the outer REST layer's bare
+		// JSON-RPC transport error (McpRestApi::handle_mcp). A transport-level
+		// error on a tools/call response is what MCP clients render as a generic
+		// "Failed to call tool X" toast with no actionable message; isError
+		// results are surfaced to the agent as readable tool output instead.
+		// OperationExecutor already converts a handler's own Throwable into a
+		// WP_Error (wpcc_handler_exception), but capability checks, idempotency,
+		// redaction, and context-mode optimization all run OUTSIDE that inner
+		// try/catch — this outer one is the actual universal envelope.
+		try {
+			return $this->tools_call_inner( (string) $tool_name, $params, $context );
+		} catch ( \Throwable $e ) {
+			$this->audit( 'mcp.tool.exception', [ 'tool' => $tool_name, 'exception' => get_class( $e ), 'message' => $e->getMessage() ], $context );
+			return $this->tool_error( 'wpcc_tool_exception', $e->getMessage() );
+		}
+	}
+
+	private function tools_call_inner( string $tool_name, array $params, array $context ): array {
+		$args = $params['arguments'] ?? [];
+		$mode = ContextModeOptimizer::normalize( $args['context_mode'] ?? $params['context_mode'] ?? null );
+		$raw_context_mode = $args['context_mode'] ?? null;
 		unset( $args['context_mode'] );
+
+		// ISSUE 14 — some operations shape their own output by context_mode rather
+		// than relying solely on the generic post-hoc optimizer below. Forward the
+		// raw value back into the payload for those only, so it never leaks into a
+		// runtime with strict unknown-param validation (e.g. patch_manage).
+		if ( null !== $raw_context_mode && in_array( $tool_name, self::CONTEXT_AWARE_OPERATIONS, true ) ) {
+			$args['context_mode'] = $raw_context_mode;
+		}
 
 		// B5: Lift AI continuity fields from args into context so OperationExecutor
 		// can store them on auto-created approval requests.
@@ -370,6 +410,19 @@ final class McpServerRuntime {
 
 		$this->audit( 'mcp.tool.invoke', [ 'tool' => $tool_name, 'args' => $args ], $context );
 
+		// Test-only fault injection (ISSUE 13 harness): inert unless a test
+		// explicitly hooks this filter — external callers cannot reach it, since
+		// only PHP code in-process can register a WordPress filter. Lets a
+		// regression test force a Throwable for any tool_name and assert the
+		// universal envelope above converts it into a structured isError result
+		// no matter which runtime is targeted.
+		if ( has_filter( 'wpcc_test_force_tool_exception' ) ) {
+			$forced = apply_filters( 'wpcc_test_force_tool_exception', null, $tool_name, $args );
+			if ( $forced instanceof \Throwable ) {
+				throw $forced;
+			}
+		}
+
 		// Scope check — a read_only token may only call read-only-scope operations,
 		// regardless of whether the operation is mapped in CapabilityRegistry::OPERATION_MAP.
 		// Mirrors RestApi::require_write() so MCP cannot grant more access than REST.
@@ -377,7 +430,13 @@ final class McpServerRuntime {
 		$token_scope = $context['token_scope'] ?? '';
 		if ( AuthTokens::SCOPE_READ_ONLY === $token_scope && $cap_reg->requires_full_scope( $tool_name ) ) {
 			$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'insufficient_scope' ], $context );
-			return $this->tool_error( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform this action.', 'wp-command-center' ) );
+			// Message only — the scope decision above is unchanged. The old wording
+			// named the rule but not the fix, so an assistant relaying it left the
+			// customer with a dead end. This states the boundary AND the next step.
+			return $this->tool_error(
+				'wpcc_token_read_only',
+				__( 'This token is restricted and cannot perform this action. A restricted token is limited to search, file and history lookups. To let the assistant do more, create a standard access token in WP Command Center → Settings → Connections; changes will still wait for your approval.', 'wp-command-center' )
+			);
 		}
 
 		// Capability check

@@ -160,9 +160,9 @@ final class SeoRuntimeManager {
 
 		$checks = [];
 		$checks[] = $this->check( 'title_present', '' !== $title, __( 'An SEO title is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'title_length', '' !== $title && mb_strlen( $title ) <= self::TITLE_MAX, sprintf( __( 'SEO title is within %d characters (is %d).', 'wp-command-center' ), self::TITLE_MAX, mb_strlen( $title ) ) );
+		$checks[] = $this->check( 'title_length', '' !== $title && mb_strlen( $title ) <= self::TITLE_MAX, sprintf( /* translators: 1: maximum characters allowed, 2: actual length */ __( 'SEO title is within %1$d characters (is %2$d).', 'wp-command-center' ), self::TITLE_MAX, mb_strlen( $title ) ) );
 		$checks[] = $this->check( 'description_present', '' !== $desc, __( 'A meta description is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'description_length', mb_strlen( $desc ) >= self::DESC_MIN && mb_strlen( $desc ) <= self::DESC_MAX, sprintf( __( 'Meta description is %d–%d characters (is %d).', 'wp-command-center' ), self::DESC_MIN, self::DESC_MAX, mb_strlen( $desc ) ) );
+		$checks[] = $this->check( 'description_length', mb_strlen( $desc ) >= self::DESC_MIN && mb_strlen( $desc ) <= self::DESC_MAX, sprintf( /* translators: 1: minimum characters, 2: maximum characters, 3: actual length */ __( 'Meta description is %1$d–%2$d characters (is %3$d).', 'wp-command-center' ), self::DESC_MIN, self::DESC_MAX, mb_strlen( $desc ) ) );
 		$checks[] = $this->check( 'focus_keyword_present', '' !== $kw, __( 'A focus keyword is set.', 'wp-command-center' ) );
 		$checks[] = $this->check( 'focus_keyword_in_title', '' !== $kw && str_contains( $haystk, $kw ), __( 'Focus keyword appears in the title.', 'wp-command-center' ) );
 		$checks[] = $this->check( 'focus_keyword_in_description', '' !== $kw && str_contains( strtolower( $desc ), $kw ), __( 'Focus keyword appears in the meta description.', 'wp-command-center' ) );
@@ -333,8 +333,8 @@ final class SeoRuntimeManager {
 
 		$code = 'conflict' === $status ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
 		$msg  = 'conflict' === $status
-			? sprintf( __( 'Rollback skipped: every targeted SEO field (%s) changed since this update was applied. No fields were restored.', 'wp-command-center' ), implode( ', ', $skipped ) )
-			: sprintf( __( 'Partial rollback: restored %1$s; skipped %2$s because they changed since this update was applied (drift).', 'wp-command-center' ), implode( ', ', $restored ), implode( ', ', $skipped ) );
+			? sprintf( /* translators: %s: value */ __( 'Rollback skipped: every targeted SEO field (%s) changed since this update was applied. No fields were restored.', 'wp-command-center' ), implode( ', ', $skipped ) )
+			: sprintf( /* translators: %1$s: value, %2$s: value */ __( 'Partial rollback: restored %1$s; skipped %2$s because they changed since this update was applied (drift).', 'wp-command-center' ), implode( ', ', $restored ), implode( ', ', $skipped ) );
 
 		return [
 			'error'           => true,
@@ -398,14 +398,14 @@ final class SeoRuntimeManager {
 		$issues = [];
 
 		if ( isset( $fields['title'] ) && mb_strlen( (string) $fields['title'] ) > self::TITLE_MAX ) {
-			$issues[] = [ 'field' => 'title', 'severity' => 'warning', 'message' => sprintf( __( 'SEO title exceeds %d characters and may be truncated.', 'wp-command-center' ), self::TITLE_MAX ) ];
+			$issues[] = [ 'field' => 'title', 'severity' => 'warning', 'message' => sprintf( /* translators: %d: number */ __( 'SEO title exceeds %d characters and may be truncated.', 'wp-command-center' ), self::TITLE_MAX ) ];
 		}
 		if ( isset( $fields['description'] ) && '' !== (string) $fields['description'] ) {
 			$len = mb_strlen( (string) $fields['description'] );
 			if ( $len > self::DESC_MAX ) {
-				$issues[] = [ 'field' => 'description', 'severity' => 'warning', 'message' => sprintf( __( 'Meta description exceeds %d characters and may be truncated.', 'wp-command-center' ), self::DESC_MAX ) ];
+				$issues[] = [ 'field' => 'description', 'severity' => 'warning', 'message' => sprintf( /* translators: %d: number */ __( 'Meta description exceeds %d characters and may be truncated.', 'wp-command-center' ), self::DESC_MAX ) ];
 			} elseif ( $len < self::DESC_MIN ) {
-				$issues[] = [ 'field' => 'description', 'severity' => 'info', 'message' => sprintf( __( 'Meta description is under the recommended %d characters.', 'wp-command-center' ), self::DESC_MIN ) ];
+				$issues[] = [ 'field' => 'description', 'severity' => 'info', 'message' => sprintf( /* translators: %d: number */ __( 'Meta description is under the recommended %d characters.', 'wp-command-center' ), self::DESC_MIN ) ];
 			}
 		}
 		if ( isset( $fields['canonical'] ) && '' !== (string) $fields['canonical'] && ! wp_http_validate_url( (string) $fields['canonical'] ) ) {
@@ -414,7 +414,7 @@ final class SeoRuntimeManager {
 		if ( isset( $fields['robots'] ) ) {
 			foreach ( (array) $fields['robots'] as $d ) {
 				if ( ! in_array( strtolower( trim( (string) $d ) ), SeoProvider::ROBOTS_DIRECTIVES, true ) ) {
-					$issues[] = [ 'field' => 'robots', 'severity' => 'error', 'message' => sprintf( __( 'Unknown robots directive: %s', 'wp-command-center' ), esc_html( (string) $d ) ) ];
+					$issues[] = [ 'field' => 'robots', 'severity' => 'error', 'message' => sprintf( /* translators: %s: value */ __( 'Unknown robots directive: %s', 'wp-command-center' ), esc_html( (string) $d ) ) ];
 				}
 			}
 		}

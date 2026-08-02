@@ -26,14 +26,73 @@
 
 .wpcc-shell__bar {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: var( --wpcc-space-5 );
 	flex-wrap: wrap;
 	padding: var( --wpcc-space-5 ) var( --wpcc-space-6 );
 	margin: var( --wpcc-space-5 ) 0 0;
 	background: var( --wpcc-surface-card );
 	border: 1px solid var( --wpcc-border-subtle );
-	border-radius: var( --wpcc-radius-md ) var( --wpcc-radius-md ) 0 0;
+	border-radius: 8px 8px 0 0;
+}
+
+/* Optional deep-dive disclosure (Connect explainer and friends). Styled here so
+ * views stop carrying inline style attributes for the same pattern. */
+.wpcc-agent-explainer {
+	max-width: 68ch;
+	margin: var( --wpcc-space-5 ) 0 var( --wpcc-space-6 );
+	padding: var( --wpcc-space-4 ) var( --wpcc-space-5 );
+	background: var( --wpcc-surface-sunken );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-radius-md );
+}
+
+.wpcc-agent-explainer > summary {
+	cursor: pointer;
+	font-size: var( --wpcc-fs-body );
+	font-weight: 600;
+	color: var( --wpcc-text-secondary );
+}
+
+.wpcc-agent-explainer[open] > summary {
+	margin-bottom: var( --wpcc-space-4 );
+	color: var( --wpcc-text-primary );
+}
+
+/* Brand + section + purpose, as one typographic unit. */
+.wpcc-shell__identity {
+	min-width: 0;
+}
+
+.wpcc-shell__desc {
+	margin: var( --wpcc-space-2 ) 0 0 34px; /* aligns under the wordmark, past the brand mark */
+	max-width: 60ch;
+	color: var( --wpcc-text-secondary );
+	font-size: var( --wpcc-fs-small );
+	line-height: 1.5;
+}
+
+/*
+ * Where WordPress puts admin notices on WPCC screens (see the `.wp-header-end`
+ * marker in AppShell::render). Everything core and other plugins emit still
+ * renders, in one predictable band below the product header rather than through
+ * the middle of it. Collapses to nothing when there are no notices, so a clean
+ * screen stays clean.
+ */
+.wpcc-shell__notices {
+	margin: 0;
+}
+
+.wpcc-shell__notices > .wp-header-end {
+	display: none;
+}
+
+/* Notices sit above the shell, so they space themselves downward toward it and
+ * collapse to nothing on a clean screen. */
+.wpcc-shell__notices > .notice,
+.wpcc-shell__notices > .updated,
+.wpcc-shell__notices > .error {
+	margin: 0 0 var( --wpcc-space-5 );
 }
 
 .wpcc-shell__brand {
@@ -151,7 +210,7 @@
 	background: var( --wpcc-surface-card );
 	border: 1px solid var( --wpcc-border-subtle );
 	border-top: 0;
-	border-radius: 0 0 var( --wpcc-radius-md ) var( --wpcc-radius-md );
+	border-radius: 0 0 8px 8px;
 }
 
 .wpcc-shell__tab {
@@ -181,6 +240,16 @@
 
 .wpcc-shell__canvas {
 	margin-top: var( --wpcc-space-6 );
+	/*
+	 * One left edge for the whole product.
+	 *
+	 * The bar is padded by --wpcc-space-6 but the canvas was not, so the brand
+	 * ("Command Center") and the content beneath it started on two different
+	 * vertical axes. Nothing was broken; it just read as unfinished, the way a
+	 * page looks when a column has slipped. Sharing the bar's inset gives every
+	 * screen a single spine to hang from.
+	 */
+	padding-inline: var( --wpcc-space-6 );
 }
 
 /* Neutralize the nested legacy `.wrap` so hosted views sit flush in the canvas. */
@@ -191,8 +260,15 @@
 }
 
 /* The hosted view's own top <h1> is redundant with the shell brand/tabs — hide it
- * visually but keep it for screen-reader document structure. */
-.wpcc-shell__canvas > .wrap > h1:first-child {
+ * visually but keep it for screen-reader document structure.
+ *
+ * Also covers views hosted one level deeper inside a hub (Settings › Connections,
+ * Settings › Advanced): those render inside `.wpcc-subnav__canvas`, so without the
+ * second selector a stale heading like "AI Clients" reappeared above the pane tab
+ * that already names it. */
+.wpcc-shell__canvas > .wrap > h1:first-child,
+.wpcc-subnav__canvas > .wrap > h1:first-child,
+.wpcc-subnav__canvas > .wpcc-ai-wrap > h1:first-child {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -392,9 +468,30 @@
 /* Risk tiers. */
 .wpcc-cds-pill--diagnostic { background: var( --wpcc-risk-diagnostic-bg ); color: var( --wpcc-risk-diagnostic-fg ); }
 .wpcc-cds-pill--low        { background: var( --wpcc-risk-low-bg );        color: var( --wpcc-risk-low-fg ); }
-.wpcc-cds-pill--medium     { background: var( --wpcc-risk-medium-bg );     color: var( --wpcc-risk-medium-fg ); }
-.wpcc-cds-pill--high       { background: var( --wpcc-risk-high-bg );       color: var( --wpcc-risk-high-fg ); }
-.wpcc-cds-pill--critical   { background: var( --wpcc-risk-critical-bg );   color: var( --wpcc-risk-critical-fg ); }
+/*
+ * Risk tiers are information, not an alarm.
+ *
+ * Rendered as saturated filled blocks, "HIGH RISK" beside "change your tagline"
+ * made an ordinary edit look dangerous. Customers calibrate on what they see: if
+ * routine changes shout, either they learn to ignore the badge — which is worse
+ * than not having one — or they hesitate over everything. A tinted pill with a
+ * coloured dot carries the same tier at a glance while letting the SENTENCE, which
+ * is what they actually need to read, stay the loudest thing in the row. Critical
+ * keeps a stronger treatment, because there the alarm is the point.
+ */
+.wpcc-cds-pill--medium,
+.wpcc-cds-pill--high,
+.wpcc-cds-pill--critical { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+
+.wpcc-cds-pill--medium::before,
+.wpcc-cds-pill--high::before,
+.wpcc-cds-pill--critical::before {
+	content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 auto;
+}
+
+.wpcc-cds-pill--medium     { background: var( --wpcc-risk-medium-bg );   color: var( --wpcc-risk-medium-fg ); }
+.wpcc-cds-pill--high       { background: var( --wpcc-risk-high-bg );     color: var( --wpcc-risk-high-fg ); }
+.wpcc-cds-pill--critical   { background: var( --wpcc-risk-critical-bg ); color: var( --wpcc-risk-critical-fg ); }
 
 /* Status pills. */
 .wpcc-cds-pill--success { background: var( --wpcc-state-success-bg ); color: var( --wpcc-state-success-fg ); }
@@ -570,12 +667,22 @@
 /* ──────────────────────────────────────────────────────────────────────────
  * Empty / loading states.
  * ────────────────────────────────────────────────────────────────────────── */
+/*
+ * Empty states are not placeholders.
+ *
+ * A dashed border is the universal sign for "something is missing here" — a drop
+ * target, an unfinished block, a slot waiting to be filled. But most empty states
+ * in this product are GOOD news: nothing is waiting for your approval, nothing has
+ * gone wrong, no changes need review. Drawing them as a gap made a calm, healthy
+ * site look like an unfinished screen. A solid, quiet surface says "this is a
+ * state, not an absence."
+ */
 .wpcc-cds-empty {
 	text-align: center;
 	padding: var( --wpcc-space-8 ) var( --wpcc-space-6 );
 	background: var( --wpcc-surface-sunken );
-	border: 1px dashed var( --wpcc-border-subtle );
-	border-radius: var( --wpcc-radius-md );
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: var( --wpcc-r-card );
 	color: var( --wpcc-text-secondary );
 }
 
@@ -944,4 +1051,277 @@
 }
 @media ( prefers-reduced-motion: reduce ) {
 	.wpcc-cds-subnav__item { transition: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * PROGRAM-7D — Product normalization layer.
+ *
+ * The views were written over many months and each invented its own surface
+ * treatment. Measured across the shipped UI before this layer: 13 different
+ * corner radii (3,4,5,6,7,8,9,10,12,14,20,999px), 8 shadow recipes, and font
+ * sizes including 12.5px and 16.9px. Nothing communicates "assembled from
+ * parts" faster than a customer seeing four card shapes on one screen.
+ *
+ * Rather than rewrite fifteen view files (a large, risky diff for a purely
+ * visual outcome), this section is the single authority for surface, shape,
+ * elevation and type inside the app shell. It wins by SPECIFICITY — every rule
+ * is prefixed `.wpcc-app`, which outranks the bare class selectors used in the
+ * views' own <style> blocks — so no `!important` is needed and any view can
+ * still opt out deliberately with a more specific selector.
+ *
+ * The system, stated once:
+ *   Shape      panels/cards 8px · controls 4px · pills 999px
+ *   Elevation  flat (1px border). Shadow is reserved for overlays only.
+ *   Type       h1 20 · h2 16 · h3 14 · body 13 · small 12 · caption 11
+ *   Rhythm     4 / 8 / 12 / 16 / 24 / 32
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+.wpcc-app {
+	--wpcc-r-card: 8px;
+	--wpcc-r-control: 4px;
+	--wpcc-r-pill: 999px;
+	--wpcc-elev-overlay: 0 12px 32px rgba( 16, 24, 40, .16 );
+	--wpcc-line: 1px solid var( --wpcc-border-subtle );
+}
+
+/* ── Surfaces: one shape, one elevation ─────────────────────────────────── */
+.wpcc-app .wpcc-cds-card,
+.wpcc-app .wpcc-ai-panel,
+.wpcc-app .wpcc-ai-hero,
+.wpcc-app .wpcc-approval-card,
+.wpcc-app .wpcc-aip-card,
+.wpcc-app .wpcc-aip-kpi,
+.wpcc-app .wpcc-home__next,
+.wpcc-app .wpcc-home__guide,
+.wpcc-app .wpcc-agent-explainer,
+.wpcc-app .wpcc-summary-bar,
+.wpcc-app .wpcc-detail-card,
+.wpcc-app .wpcc-cds-attn,
+.wpcc-app .wpcc-cds-empty,
+.wpcc-app .wpcc-apr-list,
+.wpcc-app .wpcc-apr-clear,
+.wpcc-app .wpcc-oc-attn,
+.wpcc-app .wpcc-oc-empty,
+.wpcc-app .wpcc-empty,
+.wpcc-app .wpcc-panel {
+	border-radius: var( --wpcc-r-card );
+	box-shadow: none;
+}
+
+/* Controls and inputs share one smaller radius. */
+.wpcc-app .button,
+.wpcc-app input[type="text"],
+.wpcc-app input[type="search"],
+.wpcc-app input[type="url"],
+.wpcc-app input[type="password"],
+.wpcc-app input[type="date"],
+.wpcc-app select,
+.wpcc-app textarea {
+	border-radius: var( --wpcc-r-control );
+}
+
+/* Anything pill-shaped is fully round, never "nearly" round. */
+.wpcc-app .wpcc-cds-chip,
+.wpcc-app .wpcc-cds-pill,
+.wpcc-app .wpcc-badge,
+.wpcc-app .wpcc-status-pill,
+.wpcc-app .wpcc-card-area,
+.wpcc-app .wpcc-shell__posture {
+	border-radius: var( --wpcc-r-pill );
+}
+
+/* Elevation belongs to overlays only — a page of raised cards has no depth. */
+.wpcc-app .wpcc-modal,
+.wpcc-app .wpcc-cds-palette,
+.wpcc-app .wpcc-restore-modal {
+	box-shadow: var( --wpcc-elev-overlay );
+}
+
+/* ── Type scale: collapse 12.5 / 14.5 / 16.9 / 22px onto real steps ─────── */
+.wpcc-app h1 { font-size: 20px; font-weight: 600; line-height: 1.3; }
+.wpcc-app h2 { font-size: 16px; font-weight: 600; line-height: 1.35; }
+.wpcc-app h3 { font-size: 14px; font-weight: 600; line-height: 1.4; }
+.wpcc-app h4 { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.wpcc-app .description,
+.wpcc-app p { line-height: 1.6; }
+
+/* The shell brand outranks page headings; it is chrome, not content. */
+.wpcc-app .wpcc-shell__brand { font-size: 18px; }
+
+/* ── Tabs: ONE tab language at every level ──────────────────────────────────
+ * Three visual tab styles coexisted — the shell's underline, a blue pill
+ * sub-nav, and WordPress's boxed .nav-tab — sometimes stacked on one screen
+ * (Diagnostics showed all three). A customer cannot learn a hierarchy that
+ * changes appearance at each level, so all three now render as underline tabs
+ * and differ only in SIZE, which is what actually encodes depth.
+ * ──────────────────────────────────────────────────────────────────────── */
+.wpcc-app .nav-tab-wrapper,
+.wpcc-app .wpcc-ai-tabs,
+.wpcc-app .wpcc-cds-subnav {
+	display: flex;
+	gap: 2px;
+	flex-wrap: wrap;
+	align-items: stretch;
+	border: 0;
+	border-bottom: var( --wpcc-line );
+	background: none;
+	padding: 0;
+	margin: 0 0 20px;
+	box-shadow: none;
+}
+
+.wpcc-app .nav-tab,
+.wpcc-app .wpcc-ai-tab,
+.wpcc-app .wpcc-cds-subnav__item {
+	appearance: none;
+	background: none;
+	border: 0;
+	border-bottom: 2px solid transparent;
+	border-radius: 0;
+	margin: 0;
+	padding: 8px 12px;
+	font-size: 13px;
+	font-weight: 500;
+	line-height: 1.5;
+	color: var( --wpcc-text-secondary );
+	text-decoration: none;
+	box-shadow: none;
+	transition: color .12s ease, border-color .12s ease;
+}
+
+.wpcc-app .nav-tab:hover,
+.wpcc-app .wpcc-ai-tab:hover,
+.wpcc-app .wpcc-cds-subnav__item:hover {
+	background: none;
+	color: var( --wpcc-text-primary );
+	border-bottom-color: var( --wpcc-border-strong );
+}
+
+.wpcc-app .nav-tab-active,
+.wpcc-app .nav-tab.nav-tab-active,
+.wpcc-app .wpcc-ai-tab--active,
+.wpcc-app .wpcc-cds-subnav__item.is-active {
+	background: none;
+	color: var( --wpcc-text-accent );
+	font-weight: 600;
+	border-bottom-color: var( --wpcc-brand-accent );
+}
+
+.wpcc-app .nav-tab:focus-visible,
+.wpcc-app .wpcc-ai-tab:focus-visible,
+.wpcc-app .wpcc-cds-subnav__item:focus-visible {
+	outline: 2px solid var( --wpcc-border-focus );
+	outline-offset: -2px;
+	box-shadow: none;
+}
+
+/* ── Tables: one header treatment, one density ──────────────────────────── */
+.wpcc-app table.widefat,
+.wpcc-app .wpcc-table,
+.wpcc-app .wpcc-ai-token-table {
+	border-radius: var( --wpcc-r-card );
+	border-collapse: separate;
+	border-spacing: 0;
+	overflow: hidden;
+	box-shadow: none;
+}
+
+.wpcc-app table.widefat thead th,
+.wpcc-app .wpcc-table thead th,
+.wpcc-app .wpcc-ai-token-table thead th {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+	color: var( --wpcc-text-secondary );
+	background: var( --wpcc-surface-sunken );
+	padding: 10px 12px;
+}
+
+.wpcc-app table.widefat tbody td,
+.wpcc-app .wpcc-table tbody td,
+.wpcc-app .wpcc-ai-token-table tbody td {
+	padding: 10px 12px;
+	font-size: 13px;
+	vertical-align: middle;
+}
+
+/* ── Focus: one visible ring everywhere (accessibility + polish) ────────── */
+.wpcc-app a:focus-visible,
+.wpcc-app button:focus-visible,
+.wpcc-app input:focus-visible,
+.wpcc-app select:focus-visible,
+.wpcc-app textarea:focus-visible,
+.wpcc-app summary:focus-visible {
+	outline: 2px solid var( --wpcc-border-focus );
+	outline-offset: 2px;
+}
+
+/* ── Section rhythm ─────────────────────────────────────────────────────── */
+.wpcc-app .wpcc-shell__canvas > * > h2 { margin: 32px 0 12px; }
+.wpcc-app .wpcc-shell__canvas > * > h2:first-child { margin-top: 0; }
+
+@media ( prefers-reduced-motion: reduce ) {
+	.wpcc-app * { transition: none !important; animation: none !important; }
+}
+
+/* Shared empty state — one treatment for every "nothing here yet" screen.
+ * Approvals had an icon, a heading and body copy; Changes had a single line of
+ * small grey text. Two sibling screens should not disagree about what empty
+ * looks like. */
+.wpcc-app .wpcc-empty-state {
+	text-align: center;
+	padding: 48px 24px;
+	border: 1px solid var( --wpcc-border-subtle );
+	border-radius: 8px;
+	background: var( --wpcc-surface-card );
+}
+.wpcc-app .wpcc-empty-state__mark {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	margin-bottom: 12px;
+	border-radius: 999px;
+	background: var( --wpcc-surface-sunken );
+	color: var( --wpcc-text-secondary );
+	font-size: 20px;
+}
+.wpcc-app .wpcc-empty-state__title {
+	margin: 0 0 4px;
+	font-size: 15px;
+	font-weight: 600;
+	color: var( --wpcc-text-primary );
+}
+.wpcc-app .wpcc-empty-state__detail {
+	margin: 0 auto;
+	max-width: 46ch;
+	font-size: 13px;
+	color: var( --wpcc-text-secondary );
+}
+
+/* ── Confirmation dialog (WPCC.cds.confirm) ───────────────────────────────────
+   The in-page replacement for window.confirm(). Matches the product's own
+   surfaces instead of the browser's, and can be read while the page behind it
+   still shows the context the decision is about. */
+.wpcc-cds-confirm {
+	position: fixed; inset: 0; z-index: var( --wpcc-z-modal );
+	display: flex; align-items: center; justify-content: center; padding: 20px;
+	background: var( --wpcc-overlay-scrim );
+}
+.wpcc-cds-confirm__box {
+	width: 100%; max-width: 460px; padding: 22px 24px;
+	background: var( --wpcc-surface-card );
+	border-radius: var( --wpcc-r-card );
+	box-shadow: var( --wpcc-shadow-modal ) );
+}
+.wpcc-cds-confirm__title { margin: 0 0 8px; font-size: var( --wpcc-fs-h1 ); line-height: 1.3; }
+.wpcc-cds-confirm__body { margin: 0 0 18px; font-size: var( --wpcc-fs-body ); line-height: 1.5; color: var( --wpcc-text-secondary ); }
+.wpcc-cds-confirm__actions { display: flex; gap: 10px; align-items: center; }
+.wpcc-cds-confirm .button.button-primary.wpcc-cds-confirm__danger,
+.wpcc-cds-confirm__danger {
+	background: var( --wpcc-btn-danger-bg );
+	border-color: var( --wpcc-btn-danger-border );
+	color: var( --wpcc-btn-danger-fg );
 }

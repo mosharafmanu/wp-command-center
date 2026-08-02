@@ -59,13 +59,13 @@ final class AcfSeed {
 			$field_object = acf_get_field( $field_key );
 
 			if ( ! $field_object ) {
-				return new \WP_Error( 'wpcc_unknown_acf_field', sprintf( __( 'ACF field "%s" not found.', 'wp-command-center' ), $field_key ) );
+				return new \WP_Error( 'wpcc_unknown_acf_field', sprintf( /* translators: %s: value */ __( 'ACF field "%s" not found.', 'wp-command-center' ), $field_key ) );
 			}
 
 			if ( ! in_array( $field_object['type'], self::ALLOWED_FIELD_TYPES, true ) ) {
 				return new \WP_Error(
 					'wpcc_unsupported_acf_field_type',
-					sprintf( __( 'ACF field type "%s" is not supported for seeding.', 'wp-command-center' ), $field_object['type'] )
+					sprintf( /* translators: %s: value */ __( 'ACF field type "%s" is not supported for seeding.', 'wp-command-center' ), $field_object['type'] )
 				);
 			}
 
@@ -79,7 +79,7 @@ final class AcfSeed {
 				// if the value actually changed or if it was already that value.
 				$current_value = get_field( $field_key, $post_id, false );
 				if ( $current_value !== $sanitized_value ) {
-					return new \WP_Error( 'wpcc_acf_update_failed', sprintf( __( 'Failed to update ACF field "%s".', 'wp-command-center' ), $field_key ) );
+					return new \WP_Error( 'wpcc_acf_update_failed', sprintf( /* translators: %s: value */ __( 'Failed to update ACF field "%s".', 'wp-command-center' ), $field_key ) );
 				}
 			}
 

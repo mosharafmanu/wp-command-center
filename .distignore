@@ -1,0 +1,59 @@
+# Everything that must NOT ship in the WordPress.org release package.
+#
+# The repository carries development history, test suites, program handoffs and
+# validation artifacts. None of it runs at runtime, and shipping it is called out
+# in the WordPress.org guidelines as a reason to reject a submission. The
+# authoritative packager is scripts/build-release.sh, which copies an ALLOWLIST
+# rather than trusting this file; this list exists so `wp dist-archive` and
+# similar tools produce the same result.
+
+# Version control / CI
+.git
+.gitignore
+.github
+.distignore
+.deploy-exclude
+
+# Development process: plans, handoffs, audits, validation output
+.ai
+.claude
+docs
+artifacts
+tests
+examples
+scripts
+sdk
+
+# Root development documents
+HANDOFF-STEP-*.md
+PROJECT-HANDOFF-WPCC.md
+WPCC-POST-STEP-101-ROADMAP.md
+WPCC-RUNTIME-ROADMAP.md
+*-REPORT.md
+*-FINDING-*.md
+STEP-*.md
+AGENTS.md
+CLAUDE.md
+
+# Developer tooling / local config
+composer.json
+composer.lock
+vendor
+node_modules
+package.json
+package-lock.json
+phpcs.xml
+phpcs.xml.dist
+phpunit.xml
+phpunit.xml.dist
+wpcc-env.sh
+wpcc-env*.sh
+*.local.json
+*.local.php
+
+# API description used for development, not needed at runtime
+openapi.json
+
+# OS noise
+.DS_Store
+Thumbs.db

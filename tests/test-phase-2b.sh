@@ -40,9 +40,9 @@ echo
 echo "== 2. Settings grouped to five tabs =="
 lint "Diagnostics hub lints" "$DIAG"
 lint "Advanced hub lints"    "$ADV"
-has "Diagnostics hub registered" "'view' => 'settings-diagnostics'" "$SHELL_PHP"
+has "Diagnostics hub registered" "'view' => 'settings-diagnostics'" "$ADV"
 has "Advanced hub registered"    "'view' => 'settings-advanced'"    "$SHELL_PHP"
-has "Tools tab kept"             "'view' => 'tools-search-replace'" "$SHELL_PHP"
+has "Tools tab kept"             "'view' => 'tools-search-replace'" "$ADV"
 # Retired flat tabs no longer registered in the shell.
 lacks "no flat recommendations tab" "'recommendations' => \[ 'label'" "$SHELL_PHP"
 lacks "no flat patches tab"         "'patches'      => \[ 'label'"    "$SHELL_PHP"
@@ -57,13 +57,13 @@ has "Advanced hosts Capabilities"       "'view' => 'operations-explorer'" "$ADV"
 has "Advanced hosts File Access"        "'view' => 'file-access'"        "$ADV"
 has "Diagnostics sub-nav uses namespaced ?dpane=" "dpane" "$DIAG"
 has "Advanced sub-nav uses namespaced ?apane="    "apane" "$ADV"
-has "Engine Inspector deferral documented"        "Engine Inspector" "$ADV"
+# Engine Inspector was retired with the legacy Runtime dashboard; nothing to defer.
 
 echo
 echo "== 3. Redirects re-home retired Settings sub-tabs + legacy slugs =="
-has "runtime → diagnostics"        "'runtime'         => \[ self::SETTINGS_SLUG, 'diagnostics' \]" "$SHELL_PHP"
-has "patches → diagnostics/patches" "'patches'         => \[ self::SETTINGS_SLUG, 'diagnostics', \[ 'dpane' => 'patches' \] \]" "$SHELL_PHP"
-has "capabilities → advanced/caps"  "'capabilities'    => \[ self::SETTINGS_SLUG, 'advanced', \[ 'apane' => 'capabilities' \] \]" "$SHELL_PHP"
+has "runtime → diagnostics"        "'runtime' *=> \\\$adv\\( 'diagnostics' \\)" "$SHELL_PHP"
+has "patches → diagnostics"        "'patches' *=> \\\$adv\\( 'diagnostics' \\)" "$SHELL_PHP"
+has "capabilities → advanced/caps"  "'capabilities' *=> \\\$adv\\( 'capabilities' \\)" "$SHELL_PHP"
 has "redirect_to carries hub-pane args" "extra_args" "$MENU"
 
 echo
@@ -77,11 +77,11 @@ else
 		$u=get_users(["role"=>"administrator","number"=>1]); if($u) wp_set_current_user($u[0]->ID);
 		$shell=new AppShell; $bad=0;
 		// every Settings tab + every hub pane renders
-		foreach(["security","access","tools","diagnostics","advanced"] as $t){ $_GET=["page"=>"wpcc-settings","wpcc_tab"=>$t]; ob_start(); try{$shell->render("wpcc-settings");}catch(\Throwable $e){$bad++;} $h=ob_get_clean(); if(strlen($h)<200||strpos($h,"wpcc-shell__brand")===false)$bad++; }
-		foreach([["diagnostics","dpane","health"],["diagnostics","dpane","recommendations"],["diagnostics","dpane","sitereport"],["diagnostics","dpane","patches"],["advanced","apane","capabilities"],["advanced","apane","files"]] as $p){ $_GET=["page"=>"wpcc-settings","wpcc_tab"=>$p[0],$p[1]=>$p[2]]; ob_start(); try{$shell->render("wpcc-settings");}catch(\Throwable $e){$bad++;} $h=ob_get_clean(); if(strlen($h)<200)$bad++; }
-		// Settings = exactly 5 tabs, Runtime absent
+		foreach(["security","connections","advanced"] as $t){ $_GET=["page"=>"wpcc-settings","wpcc_tab"=>$t]; ob_start(); try{$shell->render("wpcc-settings");}catch(\Throwable $e){$bad++;} $h=ob_get_clean(); if(strlen($h)<200||strpos($h,"wpcc-shell__brand")===false)$bad++; }
+		foreach([["advanced","apane","diagnostics"],["advanced","apane","capabilities"],["advanced","apane","files"],["advanced","apane","system"],["connections","cpane","assistants"],["connections","cpane","tokens"]] as $p){ $_GET=["page"=>"wpcc-settings","wpcc_tab"=>$p[0],$p[1]=>$p[2]]; ob_start(); try{$shell->render("wpcc-settings");}catch(\Throwable $e){$bad++;} $h=ob_get_clean(); if(strlen($h)<200)$bad++; }
+		// Settings = exactly 3 tabs, Runtime absent
 		$tabs=array_keys(AppShell::sections()["wpcc-settings"]["tabs"]);
-		if(count($tabs)!==5)$bad++; if(in_array("runtime",$tabs,true))$bad++;
+		if(count($tabs)!==3)$bad++; if(in_array("runtime",$tabs,true))$bad++;
 		// no redirect loops; live tabs never redirect
 		$follow=function($p,$t) use(&$follow){ $seen=[];$h=0; while(true){$k="$p|$t";if(isset($seen[$k]))return"LOOP";$seen[$k]=1;$r=AppShell::resolve_legacy($p,$t);if($r===null)return"OK";$p=$r[0];$t=$r[1];if(++$h>10)return"RUN";} };
 		foreach(AppShell::sections() as $slug=>$sec){ if(AppShell::resolve_legacy($slug,"")!==null)$bad++; foreach(array_keys($sec["tabs"]) as $tk){ if(AppShell::resolve_legacy($slug,$tk)!==null)$bad++; } }
@@ -89,7 +89,7 @@ else
 		foreach($cases as $c){ if($follow($c[0],$c[1])!=="OK")$bad++; }
 		echo $bad===0?"CLEAN":("BAD:".$bad);
 	')"
-	assert_eq "5 tabs · all render · all URLs terminate · no loops" "CLEAN" "$NAV"
+	assert_eq "3 tabs · all render · all URLs terminate · no loops" "CLEAN" "$NAV"
 
 	SR="$(wpe '
 		$om=new WPCommandCenter\Operations\OperationManager(); $oq=new WPCommandCenter\Operations\OperationQueue(); global $wpdb;
@@ -103,7 +103,7 @@ else
 	assert_eq "CAPABILITIES 23"  "23" "$(echo "$INV"|cut -d, -f2)"
 	assert_eq "catalogue 42"     "42" "$(echo "$INV"|cut -d, -f3)"
 	assert_eq "MCP tools 42"     "42" "$(echo "$INV"|cut -d, -f4)"
-	assert_eq "DB_VERSION 2.5.0" "2.5.0" "$(echo "$INV"|cut -d, -f5)"
+	assert_eq "DB_VERSION 2.6.0" "2.6.0" "$(echo "$INV"|cut -d, -f5)"
 fi
 
 echo

@@ -2,16 +2,17 @@
 /**
  * Experience Layer — App Shell + the "Three Doors, One Engine" information architecture.
  *
- * The single source of truth for WP Command Center's navigation. Per the canonical
- * UX Master Blueprint (§2) it presents SIX product-language sections —
- * Home · Built-in AI · Connect · Activity · History · Settings — that map onto the
- * platform's "Three Doors, One Engine" model: Built-in AI (Door 1), Connect
- * (Doors 2 & 3: AI Clients over MCP + API & Integrations over REST), and the engine's
- * activity / history / policy surfaces. Each section is rendered as a branded shell
- * (header + sub-tab bar) hosting the EXISTING view files in a content canvas. It adds
- * no REST routes, operations, capabilities, MCP tools, or schema: it only re-frames
- * where the existing read/write surfaces live, how they are reached, and what they
- * are called — so the user thinks in product terms, never in architecture terms.
+ * The single source of truth for WP Command Center's navigation. It presents FIVE
+ * product-language sections — Home · Connect · Activity · History · Settings —
+ * each rendered as a branded shell (header + sub-tab bar) hosting the EXISTING view
+ * files in a content canvas. It adds no REST routes, operations, capabilities, MCP
+ * tools, or schema: it only re-frames where the existing read/write surfaces live,
+ * how they are reached, and what they are called — so the user thinks in product
+ * terms, never in architecture terms.
+ *
+ * Built-in AI was retired as a sixth section (it is optional and off by default);
+ * it now lives at Settings › Built-in AI, and its slug redirects. Tab LABELS are
+ * product language and change freely; the tab KEYS are the URL contract and do not.
  *
  * Section-tab selection uses the namespaced `?wpcc_tab=` query arg so it never
  * collides with a hosted view's own `?tab=` / `?view=` sub-navigation. Every legacy
@@ -19,9 +20,10 @@
  * the retired 5-C section slugs, the old `wpcc_tab` value) onto the new section + tab,
  * passing through every other original query arg so deep links survive.
  *
- * Builder vs Engineer disclosure/density is a client-side concern (wpcc-cds.js +
- * data-wpcc-mode); the shell renders the toggle, the ⌘K trigger, and the live
- * security-posture pill.
+ * Simple vs Detailed disclosure/density is a client-side concern (wpcc-cds.js +
+ * data-wpcc-mode, whose stored values remain builder/engineer); the shell renders
+ * the toggle, the ⌘K trigger, the live security-posture pill, and the
+ * `.wp-header-end` marker that keeps admin notices out of the product header.
  */
 
 namespace WPCommandCenter\Admin;
@@ -35,7 +37,15 @@ final class AppShell {
 	/** The Home (Mission Control) section slug = the plugin's top-level menu slug. */
 	public const HOME_SLUG = 'wp-command-center';
 
-	/** Built-in AI (Door 1). */
+	/**
+	 * Built-in AI (Door 1) — RETIRED as a primary section in V1.
+	 *
+	 * Built-in AI is optional: its generation tools are build-flagged OFF by default,
+	 * so on a stock install this section was a lone "Providers" screen asking for an
+	 * API key to power tools the site had not switched on — while the actual V1
+	 * journey (connect an MCP assistant) needs no provider key at all. It now lives
+	 * as Settings › Built-in AI. The slug is kept ONLY so old bookmarks resolve.
+	 */
 	public const BUILTIN_SLUG = 'wpcc-built-in-ai';
 
 	/** Connect (Doors 2 & 3 — AI Clients + API & Integrations). */
@@ -51,16 +61,16 @@ final class AppShell {
 	public const SETTINGS_SLUG = 'wpcc-settings';
 
 	/**
-	 * The six section slugs in menu order. Home is the top-level (HOME_SLUG).
+	 * The five section slugs in menu order. Home is the top-level (HOME_SLUG).
+	 * This is also the "is a live section" test used by resolve_legacy(), so a slug
+	 * listed here must never also be a redirect source.
 	 *
 	 * @var array<string,string> slug => i18n label (resolved at runtime).
 	 */
 	public const SECTION_SLUGS = [
 		self::HOME_SLUG     => 'Home',
-		self::BUILTIN_SLUG  => 'Built-in AI',
-		self::CONNECT_SLUG  => 'Connect',
-		self::ACTIVITY_SLUG => 'Activity',
-		self::HISTORY_SLUG  => 'History',
+		self::ACTIVITY_SLUG => 'Approvals',
+		self::HISTORY_SLUG  => 'Changes',
 		self::SETTINGS_SLUG => 'Settings',
 	];
 
@@ -72,33 +82,32 @@ final class AppShell {
 	 * @return array<string,array{0:string,1:string}>
 	 */
 	public static function legacy_map(): array {
+		// Every retired standalone slug → its home in the redesigned IA.
+		// Panes: connections = assistants|api|tokens · advanced = ai|diagnostics|system|capabilities|files|tools|drafts
 		return [
-			// Phase A standalone surfaces.
 			'wpcc-dashboard-overview' => [ self::HOME_SLUG, '' ],
 			'wpcc-approval-center'    => [ self::ACTIVITY_SLUG, 'approvals' ],
 			'wpcc-approvals'          => [ self::ACTIVITY_SLUG, 'approvals' ], // pre-106 slug
-			'wpcc-operations'         => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'capabilities' ] ],
-			'wpcc-operations-center'  => [ self::ACTIVITY_SLUG, 'live' ],
 			'wpcc-change-history'     => [ self::HISTORY_SLUG, 'changes' ],
 			'wpcc-rollback'           => [ self::HISTORY_SLUG, 'changes' ],     // pre-105.3 slug
-			'wpcc-patches'            => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'patches' ] ],
-			'wpcc-diagnostics'        => [ self::SETTINGS_SLUG, 'diagnostics' ],
-			'wpcc-site-intelligence'  => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'sitereport' ] ],
-			'wpcc-tokens'             => [ self::SETTINGS_SLUG, 'access' ],
-			// NOTE: the retired Security-Mode page shared today's live Settings slug
-			// (`wpcc-settings`). It is intentionally NOT mapped here — a live section
-			// slug must never resolve as a legacy slug (that would self-redirect /
-			// loop). resolve_legacy() short-circuits live section slugs; the old
-			// `?page=wpcc-settings&section=tokens` deep-link is handled separately in
-			// AdminMenu before resolution.
-			'wpcc-ai-integrations'    => [ self::CONNECT_SLUG, 'clients' ],
-			'wpcc-ai-setup'           => [ self::BUILTIN_SLUG, 'providers' ],
+			// Connection surfaces.
+			self::CONNECT_SLUG        => [ self::SETTINGS_SLUG, 'connections', [ 'cpane' => 'assistants' ] ],
+			'wpcc-ai-integrations'    => [ self::SETTINGS_SLUG, 'connections', [ 'cpane' => 'assistants' ] ],
+			'wpcc-tokens'             => [ self::SETTINGS_SLUG, 'connections', [ 'cpane' => 'tokens' ] ],
+			// Everything engine-facing lives under Advanced.
+			'wpcc-operations'         => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'capabilities' ] ],
+			'wpcc-operations-center'  => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'system' ] ],
+			'wpcc-diagnostics'        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'diagnostics' ] ],
+			'wpcc-patches'            => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'diagnostics' ] ],
+			'wpcc-site-intelligence'  => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'diagnostics' ] ],
 			'wpcc-file-access'        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'files' ] ],
-			// Build-flagged AI surfaces (only reachable when their flag is on).
-			'wpcc-proposals'          => [ self::ACTIVITY_SLUG, 'drafts' ],
-			'wpcc-alt-text'           => [ self::BUILTIN_SLUG, 'alt_text' ],
-			'wpcc-seo'                => [ self::BUILTIN_SLUG, 'seo' ],
-			'wpcc-ai-content'         => [ self::BUILTIN_SLUG, 'content' ],
+			// Built-in AI (optional, off by default) and its flag-gated tools.
+			self::BUILTIN_SLUG        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
+			'wpcc-ai-setup'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
+			'wpcc-alt-text'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
+			'wpcc-seo'                => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
+			'wpcc-ai-content'         => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
+			'wpcc-proposals'          => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'drafts' ] ],
 		];
 	}
 
@@ -115,47 +124,68 @@ final class AppShell {
 	 * @return array<string,array<string,array{0:string,1:string}>>
 	 */
 	public static function legacy_tab_map(): array {
+		$adv = static fn ( string $pane ): array => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => $pane ] ];
+		$con = static fn ( string $pane ): array => [ self::SETTINGS_SLUG, 'connections', [ 'cpane' => $pane ] ];
+
 		return [
+			// Pre-5-C section slugs.
 			'wpcc-operate' => [
-				'*'          => [ self::ACTIVITY_SLUG, 'live' ],
-				'center'     => [ self::ACTIVITY_SLUG, 'live' ],
+				'*'          => [ self::ACTIVITY_SLUG, 'approvals' ],
+				'center'     => $adv( 'system' ),
 				'approvals'  => [ self::ACTIVITY_SLUG, 'approvals' ],
-				'operations' => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'capabilities' ] ],
-				'runtime'    => [ self::SETTINGS_SLUG, 'diagnostics' ],
-				'drafts'     => [ self::ACTIVITY_SLUG, 'drafts' ],
-				'alt_text'   => [ self::BUILTIN_SLUG, 'alt_text' ],
-				'seo'        => [ self::BUILTIN_SLUG, 'seo' ],
-				'ai_content' => [ self::BUILTIN_SLUG, 'content' ],
+				'operations' => $adv( 'capabilities' ),
+				'runtime'    => $adv( 'diagnostics' ),
+				'drafts'     => $adv( 'drafts' ),
+				'alt_text'   => $adv( 'ai' ),
+				'seo'        => $adv( 'ai' ),
+				'ai_content' => $adv( 'ai' ),
 			],
 			'wpcc-audit' => [
 				'*'            => [ self::HISTORY_SLUG, 'changes' ],
 				'changes'      => [ self::HISTORY_SLUG, 'changes' ],
-				'patches'      => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'patches' ] ],
-				'diagnostics'  => [ self::SETTINGS_SLUG, 'diagnostics' ],
-				'intelligence' => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'sitereport' ] ],
+				'patches'      => $adv( 'diagnostics' ),
+				'diagnostics'  => $adv( 'diagnostics' ),
+				'intelligence' => $adv( 'diagnostics' ),
 			],
 			'wpcc-access' => [
-				'*'        => [ self::SETTINGS_SLUG, 'access' ],
-				'tokens'   => [ self::SETTINGS_SLUG, 'access' ],
+				'*'        => $con( 'tokens' ),
+				'tokens'   => $con( 'tokens' ),
 				'security' => [ self::SETTINGS_SLUG, 'security' ],
 			],
-			// Old Connect tab keys (setup/integrations/files) → new homes.
-			'wpcc-connect' => [
-				'setup'        => [ self::BUILTIN_SLUG, 'providers' ],
-				'integrations' => [ self::CONNECT_SLUG, 'clients' ],
-				'files'        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'files' ] ],
+			// Retired Connect section: its tabs land on the matching Connections pane.
+			self::CONNECT_SLUG => [
+				'*'            => $con( 'assistants' ),
+				'clients'      => $con( 'assistants' ),
+				'integrations' => $con( 'assistants' ),
+				'api'          => $con( 'api' ),
+				'setup'        => $adv( 'ai' ),
+				'files'        => $adv( 'files' ),
 			],
-			// Phase 2B: Settings sub-tabs retired into the Diagnostics/Advanced hubs.
-			// Only the RETIRED keys are listed here; current tabs (security/access/tools/
-			// diagnostics/advanced) are absent, so they render directly via the live-section
-			// short-circuit (no self-redirect, no loop).
-			'wpcc-settings' => [
-				'runtime'         => [ self::SETTINGS_SLUG, 'diagnostics' ],
-				'patches'         => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'patches' ] ],
-				'intelligence'    => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'sitereport' ] ],
-				'recommendations' => [ self::SETTINGS_SLUG, 'diagnostics', [ 'dpane' => 'recommendations' ] ],
-				'files'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'files' ] ],
-				'capabilities'    => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'capabilities' ] ],
+			// Retired Built-in AI section.
+			self::BUILTIN_SLUG => [
+				'*'         => $adv( 'ai' ),
+				'providers' => $adv( 'ai' ),
+				'seo'       => $adv( 'ai' ),
+				'alt_text'  => $adv( 'ai' ),
+				'content'   => $adv( 'ai' ),
+			],
+			// Approvals: its former engine-facing siblings moved to Advanced.
+			self::ACTIVITY_SLUG => [
+				'live'   => $adv( 'system' ),
+				'drafts' => $adv( 'drafts' ),
+			],
+			// Settings: five tabs collapsed to three.
+			self::SETTINGS_SLUG => [
+				'access'          => $con( 'tokens' ),
+				'ai'              => $adv( 'ai' ),
+				'diagnostics'     => $adv( 'diagnostics' ),
+				'runtime'         => $adv( 'diagnostics' ),
+				'tools'           => $adv( 'tools' ),
+				'patches'         => $adv( 'diagnostics' ),
+				'intelligence'    => $adv( 'diagnostics' ),
+				'recommendations' => $adv( 'diagnostics' ),
+				'files'           => $adv( 'files' ),
+				'capabilities'    => $adv( 'capabilities' ),
 			],
 		];
 	}
@@ -208,84 +238,111 @@ final class AppShell {
 	}
 
 	/**
-	 * Build the full six-section/tab tree, already filtered by FeatureGate and the
+	 * The Built-in AI panes, gated exactly as before: "Providers" is always present,
+	 * and each generation tool (SEO / Alt Text / Content) appears only when BOTH its
+	 * build flag and its FeatureGate allow it — so the UI never promises a tool this
+	 * site cannot actually run.
+	 *
+	 * Extracted from sections() when Built-in AI stopped being a primary section, so
+	 * this gating stays in ONE place (and stays directly testable) now that the panes
+	 * are hosted by the Settings › Built-in AI hub.
+	 *
+	 * @return array<string,array{label:string,view:string,feature:?string}>
+	 */
+	public static function builtin_tabs(): array {
+		$tabs = [
+			'providers' => [ 'label' => __( 'Providers', 'wp-command-center' ), 'view' => 'ai-setup', 'feature' => null ],
+		];
+		if ( self::flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
+			$tabs['seo'] = [ 'label' => __( 'SEO', 'wp-command-center' ), 'view' => 'seo-meta', 'feature' => null ];
+		}
+		if ( self::flag( 'WPCC_ALT_TEXT_UI', 'wpcc_alt_text_ui' ) && FeatureGate::allows( 'ai_alt_text' ) ) {
+			$tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'wp-command-center' ), 'view' => 'ai-alt-text', 'feature' => null ];
+		}
+		if ( self::flag( 'WPCC_AI_CONTENT_UI', 'wpcc_ai_content_ui' ) && ( FeatureGate::allows( 'title_generator' ) || FeatureGate::allows( 'excerpt_generator' ) ) ) {
+			$tabs['content'] = [ 'label' => __( 'Content', 'wp-command-center' ), 'view' => 'ai-content', 'feature' => null ];
+		}
+		return $tabs;
+	}
+
+	/**
+	 * Whether the dev-only proposal ("Drafts") surface is switched on for this site.
+	 * Build-flagged and off on a stock install; extracted so the Advanced hub and
+	 * anything else asking the question share one answer.
+	 */
+	public static function proposals_ui_enabled(): bool {
+		return self::flag( 'WPCC_PROPOSALS_DEV_UI', 'wpcc_proposals_dev_ui' )
+			&& FeatureGate::allows( 'proposal_store' );
+	}
+
+	/**
+	 * Build the full four-section/tab tree, already filtered by FeatureGate and the
 	 * dev/build flags. Each tab: [ label, view (file stem), feature (key|null) ].
 	 *
 	 * @return array<string,array{label:string,desc:string,tabs:array<string,array{label:string,view:string,feature:?string}>}>
 	 */
 	public static function sections(): array {
-		// Door 1 — Built-in AI. Providers is always present; the generation tools
-		// (SEO / Alt Text / Content) appear only when their build flag + FeatureGate
-		// allow, so the section never promises a tool the site can't actually run.
-		$builtin_tabs = [
-			'providers' => [ 'label' => __( 'Providers', 'wp-command-center' ), 'view' => 'ai-setup', 'feature' => null ],
-		];
-		if ( self::flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
-			$builtin_tabs['seo'] = [ 'label' => __( 'SEO', 'wp-command-center' ), 'view' => 'seo-meta', 'feature' => null ];
-		}
-		if ( self::flag( 'WPCC_ALT_TEXT_UI', 'wpcc_alt_text_ui' ) && FeatureGate::allows( 'ai_alt_text' ) ) {
-			$builtin_tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'wp-command-center' ), 'view' => 'ai-alt-text', 'feature' => null ];
-		}
-		if ( self::flag( 'WPCC_AI_CONTENT_UI', 'wpcc_ai_content_ui' ) && ( FeatureGate::allows( 'title_generator' ) || FeatureGate::allows( 'excerpt_generator' ) ) ) {
-			$builtin_tabs['content'] = [ 'label' => __( 'Content', 'wp-command-center' ), 'view' => 'ai-content', 'feature' => null ];
-		}
-
-		// Activity — the live feed + approvals. The dev-only proposal store folds in
-		// here (review queue) when its flag is on.
-		$activity_tabs = [
-			'live'      => [ 'label' => __( 'Live', 'wp-command-center' ),      'view' => 'operations-center', 'feature' => null ],
-			'approvals' => [ 'label' => __( 'Approvals', 'wp-command-center' ), 'view' => 'approval-center',   'feature' => 'approval_center' ],
-		];
-		if ( self::flag( 'WPCC_PROPOSALS_DEV_UI', 'wpcc_proposals_dev_ui' ) && FeatureGate::allows( 'proposal_store' ) ) {
-			$activity_tabs['drafts'] = [ 'label' => __( 'Drafts (Dev)', 'wp-command-center' ), 'view' => 'proposals', 'feature' => null ];
-		}
-
+		/*
+		 * FOUR destinations, named after what the customer wants, not after what the
+		 * system contains.
+		 *
+		 * The previous five were named from the engine's point of view. "Activity"
+		 * and "History" were the same object — changes — split by tense, so a user
+		 * with a question ("did anything happen to my site?") had to know which of
+		 * two screens held the answer. "Connect" is a task you perform once and never
+		 * again, yet it held permanent top-level space forever. "Settings" was five
+		 * tabs, two of which were themselves hubs.
+		 *
+		 * A non-technical site owner has three thoughts, in this order:
+		 *   nothing is connected yet   → Home owns the whole setup
+		 *   something wants to change my site → Approvals
+		 *   something changed my site  → Changes
+		 * Everything else is Settings.
+		 *
+		 * Section SLUGS are deliberately unchanged so every existing URL, bookmark,
+		 * admin-bar link and redirect keeps resolving; only the labels, the grouping
+		 * and what lives inside them are redesigned.
+		 */
 		$tree = [
 			self::HOME_SLUG => [
 				'label' => __( 'Home', 'wp-command-center' ),
-				'desc'  => __( 'Mission control: what needs you, what changed, and where to start.', 'wp-command-center' ),
+				// Home's subtitle is the product's promise, not a description of the page.
+				'desc'  => __( 'Ask your AI assistant to change this site, in your own words and your own language. You approve anything that matters.', 'wp-command-center' ),
 				'tabs'  => [
 					'home' => [ 'label' => __( 'Home', 'wp-command-center' ), 'view' => 'command-home', 'feature' => null ],
 				],
 			],
-			self::BUILTIN_SLUG => [
-				'label' => __( 'Built-in AI', 'wp-command-center' ),
-				'desc'  => __( 'Use AI to do work on your site: connect a provider, then generate — every change is reviewed and reversible.', 'wp-command-center' ),
-				'tabs'  => $builtin_tabs,
-			],
-			self::CONNECT_SLUG => [
-				'label' => __( 'Connect', 'wp-command-center' ),
-				'desc'  => __( 'Let an external AI assistant or your own app act on this site — safely, under approval and audit.', 'wp-command-center' ),
+			// Was "Activity" — a word that describes nothing a customer wants. This
+			// section asks one thing of them: decide. The engine feed and the dev
+			// draft surface that used to share it are engine internals; they moved to
+			// Settings › Advanced where the rest of the machinery lives.
+			self::ACTIVITY_SLUG => [
+				'label' => __( 'Approvals', 'wp-command-center' ),
+				'desc'  => __( 'Changes waiting for your decision. Nothing runs until you approve it.', 'wp-command-center' ),
 				'tabs'  => [
-					'clients' => [ 'label' => __( 'AI Clients', 'wp-command-center' ),        'view' => 'ai-integrations', 'feature' => null ],
-					'api'     => [ 'label' => __( 'API & Integrations', 'wp-command-center' ), 'view' => 'api-integrations', 'feature' => null ],
+					'approvals' => [ 'label' => __( 'Approvals', 'wp-command-center' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
 				],
 			],
-			self::ACTIVITY_SLUG => [
-				'label' => __( 'Activity', 'wp-command-center' ),
-				'desc'  => __( 'What is happening right now, and what is waiting for your sign-off.', 'wp-command-center' ),
-				'tabs'  => $activity_tabs,
-			],
+			// Was "History" — the system's word for it. The customer calls these
+			// changes, and comes here to see or undo one.
 			self::HISTORY_SLUG => [
-				'label' => __( 'History', 'wp-command-center' ),
-				'desc'  => __( 'Every change to your site — review it, and undo what is reversible.', 'wp-command-center' ),
+				'label' => __( 'Changes', 'wp-command-center' ),
+				'desc'  => __( 'Everything that has changed on this site, and an undo for the changes that support it.', 'wp-command-center' ),
 				'tabs'  => [
 					'changes' => [ 'label' => __( 'Changes', 'wp-command-center' ), 'view' => 'change-history', 'feature' => 'change_history' ],
 				],
 			],
 			self::SETTINGS_SLUG => [
 				'label' => __( 'Settings', 'wp-command-center' ),
-				'desc'  => __( 'Rules and advanced controls: security mode, access, diagnostics, and developer tools.', 'wp-command-center' ),
-				// Phase 2B: five intent-grouped tabs. Diagnostics and Advanced are hubs that
-				// host the formerly-separate surfaces via a second-level ?dpane=/?apane= sub-nav.
-				// Runtime is RETIRED — its tools live in Tools + Diagnostics › Recommendations;
-				// its engine internals are deferred to a future Developer-mode Engine Inspector.
+				'desc'  => __( 'How this site is protected, who can reach it, and everything advanced.', 'wp-command-center' ),
+				// Five tabs → three, grouped by the question each answers:
+				//   Protection  — how much can AI change without asking?
+				//   Connections — who is allowed to reach this site?
+				//   Advanced    — everything a normal customer never needs.
 				'tabs'  => [
-					'security'    => [ 'label' => __( 'Security & Approvals', 'wp-command-center' ), 'view' => 'settings',              'feature' => null ],
-					'access'      => [ 'label' => __( 'Access', 'wp-command-center' ),               'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
-					'tools'       => [ 'label' => __( 'Tools', 'wp-command-center' ),                'view' => 'tools-search-replace',  'feature' => null ],
-					'diagnostics' => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),          'view' => 'settings-diagnostics',  'feature' => null ],
-					'advanced'    => [ 'label' => __( 'Advanced', 'wp-command-center' ),             'view' => 'settings-advanced',     'feature' => null ],
+					'security'    => [ 'label' => __( 'Protection', 'wp-command-center' ),  'view' => 'settings',             'feature' => null ],
+					'connections' => [ 'label' => __( 'Connections', 'wp-command-center' ), 'view' => 'settings-connections', 'feature' => null ],
+					'advanced'    => [ 'label' => __( 'Advanced', 'wp-command-center' ),    'view' => 'settings-advanced',    'feature' => null ],
 				],
 			],
 		];
@@ -359,35 +416,135 @@ final class AppShell {
 		$tabs    = $section['tabs'];
 		$is_home = ( self::HOME_SLUG === $section_slug );
 
+		/*
+		 * Render the hosted view FIRST, into a buffer, and echo it into the canvas
+		 * further down. The output lands in exactly the same place; only the order
+		 * of execution changes.
+		 *
+		 * Why: hosted views process their own form POSTs. The protection chip in the
+		 * bar below reads the security mode, but the bar used to render before the
+		 * view ran — so saving a new mode showed "Saved. This site is now set to
+		 * Strict approval." in the page while the chip above it still said "Standard
+		 * protection". The chip was always exactly one save behind, on the one screen
+		 * where being wrong about the security posture matters most.
+		 *
+		 * Buffering means any state a view changes is already committed when the
+		 * chrome reads it, so the shell can never contradict the page inside it.
+		 */
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view selection; the hosted view does its own nonce check.
+		$requested   = isset( $_GET['wpcc_tab'] ) ? sanitize_key( wp_unslash( $_GET['wpcc_tab'] ) ) : '';
+		$active      = isset( $tabs[ $requested ] ) ? $requested : ( empty( $tabs ) ? '' : array_key_first( $tabs ) );
+		$canvas_html = '';
+		if ( empty( $tabs ) ) {
+			ob_start();
+			// Every tab gated off (licensing seam): instruct, never show a blank page.
+			$this->render_empty_section( $section['label'] );
+			$canvas_html = (string) ob_get_clean();
+		} else {
+			ob_start();
+			$this->require_view( $tabs[ $active ]['view'] );
+			$canvas_html = (string) ob_get_clean();
+		}
+
+		// Read AFTER the view has run, so the chip reflects this request's save.
 		$mode  = SecurityModeManager::current();
 		$label = SecurityModeManager::label();
+
+		/*
+		 * Before an assistant has ever connected, the density toggle and the ⌘K
+		 * palette are controls for a product the customer has not started using:
+		 * there is no detail to expand and nowhere earned to jump to. Showing them
+		 * during onboarding is the interface talking about itself. They appear the
+		 * moment they can do something.
+		 */
+		$has_started = ConnectionStatus::ever_connected();
 		?>
 		<div class="wrap wpcc-app" data-wpcc-mode="builder" data-wpcc-density="comfortable">
+			<?php
+			/*
+			 * Notice boundary — ABOVE the application, not inside it.
+			 *
+			 * WordPress relocates every `admin_notices` output with:
+			 *   if ( ! $headerEnd.length ) { $headerEnd = $( '.wrap h1, .wrap h2' ).first(); }
+			 *   $( 'div.updated, div.error, div.notice' )…insertAfter( $headerEnd );
+			 * (wp-admin/js/common.js). With no marker, "the first h1 in .wrap" is our
+			 * brand heading, so a third-party banner lands inside the product header.
+			 *
+			 * Placing the marker FIRST puts notices above the whole application. This
+			 * matters more than it sounds: a tab bar and the panel it controls are one
+			 * control, and the earlier placement (after the tabs) inserted ~230px of
+			 * unrelated content between them, breaking proximity — the tabs visually
+			 * belonged to someone else's upsell rather than to their own content.
+			 * Above the shell, notices read as the platform speaking, the product keeps
+			 * one uninterrupted canvas, and header → tabs → content never separates.
+			 *
+			 * `.wp-header-end` is core's own supported opt-out for exactly this (core
+			 * uses it on the list-table screens). Nothing is hidden or suppressed:
+			 * core and every other plugin render normally, just in one predictable band.
+			 */
+			?>
+			<div class="wpcc-shell__notices" role="region" aria-label="<?php esc_attr_e( 'WordPress notices', 'wp-command-center' ); ?>">
+				<hr class="wp-header-end" />
+			</div>
+
 			<div class="wpcc-shell__bar">
-				<h1 class="wpcc-shell__brand">
-					<span class="wpcc-shell__brand-mark" aria-hidden="true">&#9783;</span>
-					<?php esc_html_e( 'Command Center', 'wp-command-center' ); ?>
-					<?php if ( $is_home ) : ?>
-						<span class="wpcc-shell__brand-section"><?php esc_html_e( 'Mission Control', 'wp-command-center' ); ?></span>
-					<?php else : ?>
-						<span class="wpcc-shell__brand-section"><?php echo esc_html( $section['label'] ); ?></span>
+				<?php
+				// Identity block: brand → section → one-line purpose. The purpose line
+				// used to float between the tab bar and the page content as a loose
+				// paragraph, which read as a stray caption and broke the vertical
+				// rhythm. As a subtitle it becomes real typographic hierarchy. Home
+				// omits it: that page opens with its own promise line, and saying the
+				// same thing twice on the first screen is worse than saying it once.
+				?>
+				<div class="wpcc-shell__identity">
+					<h1 class="wpcc-shell__brand">
+						<span class="wpcc-shell__brand-mark" aria-hidden="true">&#9783;</span>
+						<?php esc_html_e( 'Command Center', 'wp-command-center' ); ?>
+						<?php if ( ! $is_home ) : ?>
+							<span class="wpcc-shell__brand-section"><?php echo esc_html( $section['label'] ); ?></span>
+						<?php endif; ?>
+					</h1>
+					<?php
+					/*
+					 * Home states its promise in the setup hero at full size. Repeating
+					 * it in the subtitle immediately above meant a first-time customer
+					 * read the same sentence twice before reaching the first step. The
+					 * subtitle returns once setup is done and the hero is gone.
+					 */
+					$show_desc = ! empty( $section['desc'] ) && ( ! $is_home || $has_started );
+					?>
+					<?php if ( $show_desc ) : ?>
+						<p class="wpcc-shell__desc"><?php echo esc_html( $section['desc'] ); ?></p>
 					<?php endif; ?>
-				</h1>
+				</div>
 				<div class="wpcc-shell__tools">
 					<span class="wpcc-shell__posture" data-mode="<?php echo esc_attr( $mode ); ?>" title="<?php esc_attr_e( 'Current security mode', 'wp-command-center' ); ?>">
 						<?php echo esc_html( $label ); ?>
 					</span>
-					<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Display mode', 'wp-command-center' ); ?>">
-						<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Builder', 'wp-command-center' ); ?></button>
-						<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Engineer', 'wp-command-center' ); ?></button>
-					</div>
-					<button type="button" class="wpcc-shell__cmdk" aria-haspopup="dialog">
-						<?php esc_html_e( 'Search', 'wp-command-center' ); ?> <kbd>&#8984;K</kbd>
-					</button>
+					<?php
+					// Density disclosure. The stored values stay builder/engineer (the CSS
+					// and the persisted preference key depend on them) — only the words
+					// change: "Builder / Engineer" asked the customer to pick a job title
+					// to decide how much detail they wanted.
+					?>
+					<?php if ( $has_started ) : ?>
+						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'wp-command-center' ); ?>">
+							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'wp-command-center' ); ?></button>
+							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'wp-command-center' ); ?></button>
+						</div>
+						<button type="button" class="wpcc-shell__cmdk" aria-haspopup="dialog">
+							<?php esc_html_e( 'Search', 'wp-command-center' ); ?> <kbd>&#8984;K</kbd>
+						</button>
+					<?php endif; ?>
 				</div>
 			</div>
 
-			<?php if ( ! $is_home && count( $tabs ) > 0 ) : ?>
+			<?php
+			// A tab bar with one tab is chrome pretending to be navigation: it offers
+			// no choice, costs a row of vertical space, and makes the section look
+			// unfinished. History has exactly one view, so it simply renders it.
+			?>
+			<?php if ( ! $is_home && count( $tabs ) > 1 ) : ?>
 				<nav class="wpcc-shell__tabs" aria-label="<?php echo esc_attr( $section['label'] ); ?>">
 					<?php
 					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view selection, no state change.
@@ -404,35 +561,12 @@ final class AppShell {
 				</nav>
 			<?php endif; ?>
 
-			<?php if ( ! empty( $section['desc'] ) ) : ?>
-				<p class="wpcc-shell__desc" style="margin:10px 0 4px;color:#50575e;max-width:760px;font-size:13px;"><?php echo esc_html( $section['desc'] ); ?></p>
-			<?php endif; ?>
-
-			<?php
-			// Honest helper for the Built-in AI section when its generation tools are
-			// not enabled on this site (build-flag gated — contradiction C1). It does
-			// NOT fake a toggle; it tells the user where the tools live and that they
-			// are turned on per-site, so a first-timer who sees only "Providers" is
-			// never left wondering where SEO / Alt Text / Content are.
-			if ( self::BUILTIN_SLUG === $section_slug
-				&& ! isset( $tabs['seo'] ) && ! isset( $tabs['alt_text'] ) && ! isset( $tabs['content'] ) ) :
-				?>
-				<p class="wpcc-builtin-note" role="note" style="margin:6px 0 4px;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:760px;font-size:13px;color:#1d2327;">
-					<?php esc_html_e( 'Connect a provider below to power WP Command Center’s AI. The SEO, Alt Text, and Content tools appear here as tabs once enabled for this site — they are turned on per site and do not switch on just by adding a key.', 'wp-command-center' ); ?>
-				</p>
-			<?php endif; ?>
-
 			<div class="wpcc-shell__canvas">
 				<?php
-				if ( empty( $tabs ) ) {
-					// Every tab gated off (licensing seam): instruct, never show a blank page.
-					$this->render_empty_section( $section['label'] );
-				} else {
-					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only view selection.
-					$requested = isset( $_GET['wpcc_tab'] ) ? sanitize_key( wp_unslash( $_GET['wpcc_tab'] ) ) : '';
-					$active    = isset( $tabs[ $requested ] ) ? $requested : array_key_first( $tabs );
-					$this->require_view( $tabs[ $active ]['view'] );
-				}
+				// Already rendered into $canvas_html at the top of this method, before
+				// the chrome above read any state. Escaping is the hosted view's own
+				// responsibility, exactly as it was when it echoed directly here.
+				echo $canvas_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- pre-rendered view markup.
 				?>
 			</div>
 		</div>

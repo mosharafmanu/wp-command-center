@@ -151,7 +151,7 @@ final class ElementorRuntimeManager {
 		$prior = RollbackDelta::capture( $acc, $id, [ 'data' ] );
 
 		$found = $this->mutate_widget( $data, $widget_id, $mutator );
-		if ( ! $found ) return $this->error( 'wpcc_widget_not_found', sprintf( __( 'Widget %s not found on this page.', 'wp-command-center' ), esc_html( $widget_id ) ) );
+		if ( ! $found ) return $this->error( 'wpcc_widget_not_found', sprintf( /* translators: %s: value */ __( 'Widget %s not found on this page.', 'wp-command-center' ), esc_html( $widget_id ) ) );
 
 		$this->save_data( $id, $data );
 

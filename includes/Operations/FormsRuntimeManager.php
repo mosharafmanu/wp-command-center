@@ -18,7 +18,7 @@ final class FormsRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$provider = sanitize_key( (string) ( $payload['provider'] ?? 'cf7' ) );
 		if ( ! isset( $this->providers[ $provider ] ) ) {
-			return $this->error( 'wpcc_provider_not_available', sprintf( __( 'Form provider "%s" is not available.', 'wp-command-center' ), $provider ) );
+			return $this->error( 'wpcc_provider_not_available', sprintf( /* translators: %s: value */ __( 'Form provider "%s" is not available.', 'wp-command-center' ), $provider ) );
 		}
 		$p = $this->providers[ $provider ];
 		$a = (string) ( $payload['action'] ?? '' );

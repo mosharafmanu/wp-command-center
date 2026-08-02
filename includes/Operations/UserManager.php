@@ -94,9 +94,16 @@ final class UserManager {
 	}
 
 	private function search_users( array $payload ): array {
-		$search = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
+		/*
+		 * Accept `query` as well as `search`. Every other search action in the
+		 * catalogue — term_search, media_search, search_manage, code_search — takes
+		 * `query`, so an assistant that had just used one of those got "Search term
+		 * is required." here and had no way to tell which word this one wanted.
+		 * Mirrors TermRuntimeManager::term_search(), which already accepts both.
+		 */
+		$search = sanitize_text_field( (string) ( $payload['search'] ?? $payload['query'] ?? '' ) );
 		if ( '' === $search ) {
-			return $this->error( 'wpcc_missing_search', __( 'Search term is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_search', __( "user_search requires a 'search' (or 'query') parameter — it matches username, email and display name.", 'wp-command-center' ) );
 		}
 
 		$query = new \WP_User_Query( [

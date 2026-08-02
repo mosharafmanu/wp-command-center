@@ -67,7 +67,7 @@ final class ProposalApplyService {
 		if ( ProposalStore::STATUS_DRAFT !== $proposal['status'] ) {
 			return new \WP_Error(
 				'wpcc_proposal_not_draft',
-				sprintf( __( 'Only a draft proposal can be applied (current: %s).', 'wp-command-center' ), (string) $proposal['status'] )
+				sprintf( /* translators: %s: value */ __( 'Only a draft proposal can be applied (current: %s).', 'wp-command-center' ), (string) $proposal['status'] )
 			);
 		}
 

@@ -30,7 +30,24 @@ final class ContentSeed {
 	 * @return array|\WP_Error Result summary or error.
 	 */
 	public function run( array $params, array $context = [] ): array|\WP_Error {
-		$type             = sanitize_key( $params['type'] ?? 'post' );
+		/*
+		 * `type` is declared REQUIRED in the operation catalogue, but this runtime
+		 * used to default it to 'post'. The catalogue and the runtime disagreeing
+		 * is not academic here: this operation WRITES. A call carrying no usable
+		 * parameters at all — a malformed tool call, a hallucinated argument name,
+		 * a retry that dropped its body — silently created five posts instead of
+		 * being rejected. Every other operation with a required parameter enforces
+		 * it (option_id, query, title, user fields, term selector); this one did
+		 * not. Seeding demo content is only safe when someone actually asked for it.
+		 */
+		if ( ! isset( $params['type'] ) || '' === trim( (string) $params['type'] ) ) {
+			return new \WP_Error(
+				'wpcc_missing_seed_type',
+				__( 'type is required. Supported: post, page.', 'wp-command-center' )
+			);
+		}
+
+		$type             = sanitize_key( $params['type'] );
 		$count            = min( self::MAX_RECORDS, max( 1, (int) ( $params['count'] ?? 5 ) ) );
 		$status           = sanitize_key( $params['status'] ?? 'draft' );
 		$title_pattern    = sanitize_text_field( $params['title_pattern'] ?? 'Demo {n}' );

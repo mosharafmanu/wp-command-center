@@ -473,7 +473,7 @@ final class PatchOperation {
 				return $real;
 			}
 			if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-				return new \WP_Error( 'wpcc_not_readable', sprintf( __( '%s is not readable.', 'wp-command-center' ), $path ) );
+				return new \WP_Error( 'wpcc_not_readable', sprintf( /* translators: %s: value */ __( '%s is not readable.', 'wp-command-center' ), $path ) );
 			}
 
 			// Multiple ops on the same file within one change set must compose: each

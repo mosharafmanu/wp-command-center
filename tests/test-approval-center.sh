@@ -66,7 +66,7 @@ lint "AdminMenu lints"            "$MENU"
 
 echo
 echo "== 2. Schema: DB 2.4.0 + forward-only attribution columns =="
-has "DB_VERSION bumped to 2.5.0"        "DB_VERSION = '2.5.0'"   "$SCHEMA"
+has "DB_VERSION bumped to 2.6.0"        "DB_VERSION = '2.6.0'"   "$SCHEMA"
 has "column resolved_by_label"          "resolved_by_label"      "$SCHEMA"
 has "column resolved_by_type"           "resolved_by_type"       "$SCHEMA"
 has "column resolved_by_user_id"        "resolved_by_user_id"    "$SCHEMA"
@@ -179,7 +179,11 @@ lacks "no standalone approval-center submenu" "add_submenu_page.*wpcc-approval-c
 # Obsolete view removed
 [ ! -f "$PLUGIN_DIR/includes/Admin/views/approvals.php" ] && pass "obsolete approvals.php removed" || fail "approvals.php still present"
 # View uses new slug + a11y + i18n
-has "view base_url uses new slug"            "page=wpcc-approval-center" "$VIEW"
+# V1: links now use the CANONICAL section URL instead of the retired standalone
+# slug. The old slug still redirects, but shipping links that need a redirect
+# means every click pays for it.
+has "view base_url uses canonical URL"       "page=wpcc-activity&wpcc_tab=approvals" "$VIEW"
+lacks "view base_url avoids retired slug"    "page=wpcc-approval-center" "$VIEW"
 has "tabs expose aria-current"               'aria-current="page"'       "$VIEW"
 has "modal is role=dialog + aria-modal"      'role="dialog" aria-modal'  "$VIEW"
 has "modal focus trap (Tab handling)"        "ev.key !== 'Tab'"          "$VIEW"
@@ -191,7 +195,7 @@ has "unset lifecycle timestamps suppressed"  "function tsRow"            "$VIEW"
 has "nonce-expiry (403) error state"         "nonceExpired"              "$VIEW"
 lacks "no raw English risk labels in JS"     "critical: 'Critical'"      "$VIEW"
 # Cross-view consistency
-has "change-history links to new slug"       "page=wpcc-approval-center" "$CH"
+has "change-history links to canonical URL"  "page=wpcc-activity&wpcc_tab=approvals" "$CH"
 lacks "change-history drops stale Pending Approvals label" "Open Pending Approvals" "$CH"
 
 echo

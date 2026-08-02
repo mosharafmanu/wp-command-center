@@ -86,13 +86,104 @@ final class OperationExecutor {
 						'required'     => $validation['required_capability'],
 						'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 					] );
-					return $this->fail( $operation_id, 'wpcc_capability_denied', sprintf( __( 'Missing capability: %s', 'wp-command-center' ), $validation['required_capability'] ) );
+					return $this->fail( $operation_id, 'wpcc_capability_denied', sprintf( /* translators: %s: value */ __( 'Missing capability: %s', 'wp-command-center' ), $validation['required_capability'] ) );
 				}
 			}
 		}
 
 		$is_queued    = ! empty( $context['queue_id'] );
 		$is_requested = ! empty( $context['request_id'] );
+
+		// 1b-bis. Reject an unknown action BEFORE it can reach the approval gate.
+		//
+		// Action validation used to live inside each runtime, which runs after the
+		// gate below. In a mode that gates on risk, a misspelled or hallucinated
+		// action therefore did not fail — it was filed as an approval request at the
+		// operation's WORST-CASE risk (because SecurityModeManager::effective_risk()
+		// finds no 'action_risks' entry and falls back to 'risk_level'). Asking for
+		// a nonexistent plugin action put a CRITICAL-risk item in the site owner's
+		// queue that could only ever fail once approved. Assistants typo actions;
+		// the customer should not have to triage that.
+		//
+		// This only ever rejects — it can never admit a call the runtime would have
+		// refused, so it cannot widen access. It is limited to operations whose
+		// catalogue entry declares an `action` enum; the 23 operations without one
+		// are untouched and still validate inside their runtime as before. Already
+		// approved/queued runs skip it: their action passed this check when it was
+		// first submitted.
+		if ( ! $is_queued && ! $is_requested ) {
+			$requested_action = (string) ( $payload['action'] ?? '' );
+			$declared_actions = [];
+			foreach ( (array) ( $operation['parameters'] ?? [] ) as $param ) {
+				if ( 'action' === ( $param['name'] ?? '' ) && ! empty( $param['enum'] ) ) {
+					$declared_actions = (array) $param['enum'];
+					break;
+				}
+			}
+
+			/*
+			 * A call carrying NO action reaches here too.
+			 *
+			 * The guard below caught a wrong action but not a missing one, so a
+			 * malformed tool call — arguments dropped, arguments sent as null — was
+			 * still filed as an approval request. The customer then had a pending,
+			 * often critical-risk item describing nothing, which could only ever fail
+			 * once approved. Where the catalogue declares `action` required, absence
+			 * is as invalid as a typo.
+			 */
+			$action_required = false;
+			foreach ( (array) ( $operation['parameters'] ?? [] ) as $param ) {
+				if ( 'action' === ( $param['name'] ?? '' ) && ! empty( $param['required'] ) ) {
+					$action_required = true;
+					break;
+				}
+			}
+
+			if ( '' === $requested_action && $action_required ) {
+				$audit->record( 'operation.missing_action', [
+					'operation_id' => $operation_id,
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] );
+
+				return $this->fail(
+					$operation_id,
+					'wpcc_missing_action',
+					[] !== $declared_actions
+						? sprintf(
+							/* translators: 1: operation id, 2: comma-separated list of valid actions */
+							__( 'An action is required for %1$s. Valid actions: %2$s.', 'wp-command-center' ),
+							$operation_id,
+							implode( ', ', $declared_actions )
+						)
+						: sprintf(
+							/* translators: %s: operation id */
+							__( 'An action is required for %s.', 'wp-command-center' ),
+							$operation_id
+						)
+				);
+			}
+
+			if ( '' !== $requested_action && [] !== $declared_actions
+				&& ! in_array( $requested_action, $declared_actions, true ) ) {
+				$audit->record( 'operation.invalid_action', [
+					'operation_id' => $operation_id,
+					'action'       => $requested_action,
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] );
+
+				return $this->fail(
+					$operation_id,
+					'wpcc_invalid_action',
+					sprintf(
+						/* translators: 1: the action that was requested, 2: the operation id, 3: comma-separated list of valid actions. */
+						__( 'Invalid action "%1$s" for %2$s. Valid actions: %3$s.', 'wp-command-center' ),
+						$requested_action,
+						$operation_id,
+						implode( ', ', $declared_actions )
+					)
+				);
+			}
+		}
 
 		// 1c. STEP 84 — Destructive operation guardrail.
 		// Fires in EVERY security mode (including Developer) on the fresh-call
@@ -610,7 +701,7 @@ final class OperationExecutor {
 			'risk_level'         => $risk_level,
 			'security_mode'      => $mode,
 			'rollback_available' => null !== $destructive ? (bool) $destructive['backup_capable'] : true,
-			'approval_url'       => admin_url( 'admin.php?page=wpcc-approvals' ),
+			'approval_url'       => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ),
 		];
 
 		// STEP 84 — flag destructive requests so the AI and the approval card
@@ -631,7 +722,7 @@ final class OperationExecutor {
 			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'wp-command-center' ),
 			$mode,
 			$request['request_id'],
-			admin_url( 'admin.php?page=wpcc-approvals' )
+			admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' )
 		);
 
 		// One approval covers the entire change set — spell out what it touches.

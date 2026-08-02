@@ -36,7 +36,7 @@ $nonce     = wp_create_nonce( 'wp_rest' );
 $api_base  = esc_url( rest_url( 'wp-command-center/v1/admin' ) );
 $core_base = esc_url( rest_url( 'wp/v2' ) );
 $edit_base = esc_url( admin_url( 'post.php' ) ); // client builds ?post=ID&action=edit (any post type)
-$ai_url    = esc_url( admin_url( 'admin.php?page=wpcc-connect&wpcc_tab=clients' ) ); // connect an AI key
+$ai_url    = esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ); // connect an AI key
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
@@ -181,9 +181,9 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		dismiss:  <?php echo wp_json_encode( esc_html__( 'Dismiss', 'wp-command-center' ) ); ?>,
 		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from a post or page.', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
-		ccTitle:  <?php echo wp_json_encode( __( '%1$d / %2$d', 'wp-command-center' ) ); ?>,
+		ccTitle:  <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d current length */
-		ccExcerpt: <?php echo wp_json_encode( __( '%1$d characters', 'wp-command-center' ) ); ?>,
+		ccExcerpt: <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d characters', 'wp-command-center' ) ); ?>,
 		// Apply + Applied tab (mode-aware label; outcome from response).
 		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'wp-command-center' ) ); ?>,
 		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'wp-command-center' ) ); ?>,
@@ -200,7 +200,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'wp-command-center' ) ); ?>,
 		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
-		pageInfo: <?php echo wp_json_encode( __( 'Showing %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>,
+		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>,
 		// Post-apply confirmation toast.
 		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'wp-command-center' ) ); ?>,
 		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'wp-command-center' ) ); ?>,
@@ -218,7 +218,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		genSkipped:    <?php echo wp_json_encode( esc_html__( 'Nothing was generated for the selected items.', 'wp-command-center' ) ); ?>,
 		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		bulkSummary:   <?php echo wp_json_encode( __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'wp-command-center' ) ); ?>
+		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'wp-command-center' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );

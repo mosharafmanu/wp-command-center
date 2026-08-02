@@ -109,8 +109,10 @@ final class WooCommerceRuntimeManager {
 	}
 
 	private function product_search( array $payload ): array {
-		$s = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
-		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( 'Search term is required.', 'wp-command-center' ) );
+		// term_search, media_search, code_search, search_manage and user_search all
+		// accept `query`; this one accepted only `search`. Same rule everywhere.
+		$s = sanitize_text_field( (string) ( $payload['search'] ?? $payload['query'] ?? '' ) );
+		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( "product_search requires a 'search' (or 'query') parameter.", 'wp-command-center' ) );
 		$result = wc_get_products( [ 's' => $s, 'limit' => 50, 'paginate' => true ] );
 		$items = []; foreach ( $result->products as $p ) $items[] = $this->format_product( $p );
 		return [ 'action' => 'product_search', 'items' => $items, 'total' => $result->total ];
@@ -263,7 +265,26 @@ final class WooCommerceRuntimeManager {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
 		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
 		$before = [ 'stock' => $p->get_stock_quantity(), 'status' => $p->get_stock_status() ];
-		$qty = (int) ( $payload['quantity'] ?? 0 );
+
+		/*
+		 * A missing quantity used to fall back to 0 — and because this method also
+		 * force-enables stock management, that turned "I could not read your
+		 * quantity" into "this product is now out of stock", silently, with a
+		 * success response. A shop owner whose assistant sent WooCommerce's own
+		 * field name (`stock_quantity`) had the product stop selling.
+		 *
+		 * The value is required. Both spellings are accepted because the WooCommerce
+		 * REST API calls it stock_quantity and assistants copy that.
+		 */
+		$qty_raw = $payload['quantity'] ?? ( $payload['stock_quantity'] ?? null );
+		if ( null === $qty_raw || '' === $qty_raw || ! is_numeric( $qty_raw ) ) {
+			return $this->error(
+				'wpcc_missing_stock_quantity',
+				__( 'A stock quantity is required — pass quantity (or stock_quantity) as a number.', 'wp-command-center' )
+			);
+		}
+
+		$qty = (int) $qty_raw;
 		$p->set_manage_stock( true );
 		$p->set_stock_quantity( $qty );
 		$p->save();
@@ -301,7 +322,21 @@ final class WooCommerceRuntimeManager {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
 		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
 		$before = [ 'regular' => $p->get_regular_price(), 'sale' => $p->get_sale_price() ];
-		$p->set_regular_price( (string) ( $payload['regular_price'] ?? '' ) );
+
+		/*
+		 * Same defect, worse consequence: an absent price wrote an empty string,
+		 * which in WooCommerce removes the price altogether and makes the product
+		 * unpurchasable. Required, not defaulted.
+		 */
+		$price_raw = $payload['regular_price'] ?? ( $payload['price'] ?? null );
+		if ( null === $price_raw || '' === trim( (string) $price_raw ) || ! is_numeric( $price_raw ) ) {
+			return $this->error(
+				'wpcc_missing_regular_price',
+				__( 'A regular price is required — pass regular_price as a number.', 'wp-command-center' )
+			);
+		}
+
+		$p->set_regular_price( (string) $price_raw );
 		$p->save();
 		$this->store_rollback( $p->get_id(), 'price_update', $before, $context );
 		$this->audit->record( 'price.updated', [ 'product_id' => $p->get_id() ] );
@@ -312,7 +347,29 @@ final class WooCommerceRuntimeManager {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
 		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
 		$before = [ 'regular' => $p->get_regular_price(), 'sale' => $p->get_sale_price() ];
-		$p->set_sale_price( (string) ( $payload['sale_price'] ?? '' ) );
+
+		/*
+		 * Unlike stock and regular price, an EMPTY sale price is a legitimate
+		 * request — it is how you end a sale. So the rule here is narrower: an
+		 * explicit empty value clears the sale, but the key being absent altogether
+		 * is a malformed call and must not silently cancel a running promotion.
+		 */
+		if ( ! array_key_exists( 'sale_price', $payload ) ) {
+			return $this->error(
+				'wpcc_missing_sale_price',
+				__( 'A sale price is required — pass sale_price as a number, or an empty value to end the sale.', 'wp-command-center' )
+			);
+		}
+
+		$sale_raw = (string) $payload['sale_price'];
+		if ( '' !== trim( $sale_raw ) && ! is_numeric( $sale_raw ) ) {
+			return $this->error(
+				'wpcc_invalid_sale_price',
+				__( 'The sale price must be a number, or empty to end the sale.', 'wp-command-center' )
+			);
+		}
+
+		$p->set_sale_price( $sale_raw );
 		$p->save();
 		$this->store_rollback( $p->get_id(), 'price_update', $before, $context );
 		$this->audit->record( 'price.updated', [ 'product_id' => $p->get_id() ] );
@@ -512,7 +569,7 @@ final class WooCommerceRuntimeManager {
 		$status = sanitize_key( (string) ( $payload['status'] ?? '' ) );
 		$status = str_starts_with( $status, 'wc-' ) ? substr( $status, 3 ) : $status;
 		if ( ! array_key_exists( 'wc-' . $status, wc_get_order_statuses() ) ) {
-			return $this->error( 'wpcc_invalid_order_status', sprintf( __( 'Invalid order status: %s', 'wp-command-center' ), esc_html( $status ) ) );
+			return $this->error( 'wpcc_invalid_order_status', sprintf( /* translators: %s: value */ __( 'Invalid order status: %s', 'wp-command-center' ), esc_html( $status ) ) );
 		}
 
 		$before = [ 'status' => $o->get_status() ];

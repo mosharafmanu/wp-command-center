@@ -22,6 +22,10 @@ final class AdminMenu {
 
 	public function init(): void {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
+		// The Plugins screen offered only "Deactivate" — at the exact moment a
+		// customer activates the plugin, it gave them no way in. They had to notice
+		// a new sidebar item had appeared. One link closes the gap.
+		add_filter( 'plugin_action_links_' . WPCC_PLUGIN_BASENAME, [ $this, 'plugin_action_links' ] );
 		add_action( 'admin_bar_menu', [ $this, 'admin_bar_badge' ], 100 );
 		// The legacy-slug redirect MUST run on admin_menu (priority 0), NOT admin_init.
 		// Core requires wp-admin/includes/menu.php — which fires `admin_menu` and then,
@@ -31,6 +35,28 @@ final class AdminMenu {
 		// collapsed legacy slugs (e.g. wpcc-tokens, wpcc-file-access): they 403 first.
 		// Running at admin_menu priority 0 redirects them before that access check.
 		add_action( 'admin_menu', [ $this, 'redirect_legacy_slugs' ], 0 );
+	}
+
+	/**
+	 * Add a first-run entry point to this plugin's row on the Plugins screen.
+	 *
+	 * @param array<int|string,string> $links
+	 * @return array<int|string,string>
+	 */
+	public function plugin_action_links( array $links ): array {
+		// Label it for what the customer needs next, not "Settings" — on a fresh
+		// install the next thing is starting, not configuring.
+		$label = \WPCommandCenter\Admin\ConnectionStatus::ever_connected()
+			? __( 'Open', 'wp-command-center' )
+			: __( 'Get started', 'wp-command-center' );
+
+		array_unshift( $links, sprintf(
+			'<a href="%s"><strong>%s</strong></a>',
+			esc_url( admin_url( 'admin.php?page=' . AppShell::HOME_SLUG ) ),
+			esc_html( $label )
+		) );
+
+		return $links;
 	}
 
 	public function register_menu(): void {
@@ -44,14 +70,14 @@ final class AdminMenu {
 			65
 		);
 
-		// Submenu order mirrors the product-language IA (UX Master Blueprint §2):
-		// Home · Built-in AI · Connect · Activity · History · Settings. Home reuses
-		// the parent slug. Architecture words never appear in the menu.
+		// Four destinations, ordered by the customer's actual sequence of thoughts:
+		// Home (what now?) · Approvals (decide) · Changes (what happened?) · Settings.
+		// Home reuses the parent slug. "Connect" was retired from the top level: it is
+		// a one-time task, so Home owns the setup journey and Settings › Connections
+		// keeps it permanently available. Every retired slug redirects.
 		add_submenu_page( AppShell::HOME_SLUG, __( 'Home', 'wp-command-center' ), __( 'Home', 'wp-command-center' ), self::CAPABILITY, AppShell::HOME_SLUG, [ $this, 'render_overview' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Built-in AI', 'wp-command-center' ), __( 'Built-in AI', 'wp-command-center' ), self::CAPABILITY, AppShell::BUILTIN_SLUG, [ $this, 'render_builtin' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Connect', 'wp-command-center' ), __( 'Connect', 'wp-command-center' ), self::CAPABILITY, AppShell::CONNECT_SLUG, [ $this, 'render_connect' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Activity', 'wp-command-center' ), __( 'Activity', 'wp-command-center' ), self::CAPABILITY, AppShell::ACTIVITY_SLUG, [ $this, 'render_activity' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'History', 'wp-command-center' ), __( 'History', 'wp-command-center' ), self::CAPABILITY, AppShell::HISTORY_SLUG, [ $this, 'render_history' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Approvals', 'wp-command-center' ), __( 'Approvals', 'wp-command-center' ), self::CAPABILITY, AppShell::ACTIVITY_SLUG, [ $this, 'render_activity' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Changes', 'wp-command-center' ), __( 'Changes', 'wp-command-center' ), self::CAPABILITY, AppShell::HISTORY_SLUG, [ $this, 'render_history' ] );
 		add_submenu_page( AppShell::HOME_SLUG, __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, AppShell::SETTINGS_SLUG, [ $this, 'render_settings' ] );
 	}
 
@@ -82,7 +108,7 @@ final class AdminMenu {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				: ( isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '' );
 			if ( in_array( $section, [ 'tokens', 'api-tokens', 'api_tokens' ], true ) ) {
-				$this->redirect_to( AppShell::SETTINGS_SLUG, 'access' );
+				$this->redirect_to( AppShell::SETTINGS_SLUG, 'connections', [ 'cpane' => 'tokens' ] );
 				return;
 			}
 		}
@@ -162,14 +188,6 @@ final class AdminMenu {
 
 	public function render_overview(): void {
 		( new AppShell() )->render( AppShell::HOME_SLUG );
-	}
-
-	public function render_builtin(): void {
-		( new AppShell() )->render( AppShell::BUILTIN_SLUG );
-	}
-
-	public function render_connect(): void {
-		( new AppShell() )->render( AppShell::CONNECT_SLUG );
 	}
 
 	public function render_activity(): void {

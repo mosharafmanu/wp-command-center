@@ -238,12 +238,12 @@ final class OptionRegistry {
 			case self::TYPE_EMAIL:
 			case self::TYPE_URL:
 				if ( ! is_string( $value ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( __( 'Expected string, got %s.', 'wp-command-center' ), gettype( $value ) ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected string, got %s.', 'wp-command-center' ), gettype( $value ) ) );
 				}
 				break;
 			case self::TYPE_INTEGER:
 				if ( ! is_int( $value ) && ! ctype_digit( (string) $value ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( __( 'Expected integer, got %s.', 'wp-command-center' ), gettype( $value ) ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected integer, got %s.', 'wp-command-center' ), gettype( $value ) ) );
 				}
 				$value = (int) $value;
 				break;
@@ -258,26 +258,26 @@ final class OptionRegistry {
 		if ( is_string( $value ) ) {
 			$len = mb_strlen( $value );
 			if ( isset( $validation['min_length'] ) && $len < $validation['min_length'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_short', sprintf( __( 'Value must be at least %d characters.', 'wp-command-center' ), $validation['min_length'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_short', sprintf( /* translators: %d: number */ __( 'Value must be at least %d characters.', 'wp-command-center' ), $validation['min_length'] ) );
 			}
 			if ( isset( $validation['max_length'] ) && $len > $validation['max_length'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_long', sprintf( __( 'Value must be at most %d characters.', 'wp-command-center' ), $validation['max_length'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_long', sprintf( /* translators: %d: number */ __( 'Value must be at most %d characters.', 'wp-command-center' ), $validation['max_length'] ) );
 			}
 		}
 
 		// Min/max for integers.
 		if ( is_int( $value ) ) {
 			if ( isset( $validation['min'] ) && $value < $validation['min'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_small', sprintf( __( 'Value must be at least %d.', 'wp-command-center' ), $validation['min'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_small', sprintf( /* translators: %d: number */ __( 'Value must be at least %d.', 'wp-command-center' ), $validation['min'] ) );
 			}
 			if ( isset( $validation['max'] ) && $value > $validation['max'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_large', sprintf( __( 'Value must be at most %d.', 'wp-command-center' ), $validation['max'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_large', sprintf( /* translators: %d: number */ __( 'Value must be at most %d.', 'wp-command-center' ), $validation['max'] ) );
 			}
 		}
 
 		// Enum validation.
 		if ( isset( $validation['enum'] ) && ! in_array( $value, $validation['enum'], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_option_value', sprintf( __( 'Invalid value. Allowed: %s.', 'wp-command-center' ), implode( ', ', $validation['enum'] ) ) );
+			return new \WP_Error( 'wpcc_invalid_option_value', sprintf( /* translators: %s: value */ __( 'Invalid value. Allowed: %s.', 'wp-command-center' ), implode( ', ', $validation['enum'] ) ) );
 		}
 
 		// Valid timezone check.

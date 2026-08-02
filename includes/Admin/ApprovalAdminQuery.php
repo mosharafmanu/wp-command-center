@@ -289,11 +289,30 @@ final class ApprovalAdminQuery {
 			? (string) $row['resolved_by_label']
 			: null;
 
+		$operation_id = (string) ( $row['operation_id'] ?? '' );
+
 		return [
 			'request_id'    => (string) ( $row['request_id'] ?? '' ),
-			'operation_id'  => (string) ( $row['operation_id'] ?? '' ),
+			'operation_id'  => $operation_id,
 			'operation'     => (string) ( $operation['title'] ?? $row['operation_id'] ?? '' ),
 			'action'        => $action,
+			// V1 — plain-language decision line. Additive presentation fields: the
+			// raw operation_id/action above are unchanged, so nothing that reads
+			// this envelope by ID is affected. `headline` answers "what am I
+			// approving?"; `area` answers "where on my site?".
+			'headline'      => ActionLabels::describe( $operation_id, $action, $payload, (string) ( $operation['title'] ?? '' ) ),
+			'area'          => ActionLabels::area( ActionLabels::runtime_of( $operation_id ) ),
+			/*
+			 * The one thing a reviewer actually needs: the new value.
+			 *
+			 * The queue said WHICH setting was changing ("Tagline") but never what it
+			 * was changing TO, while Approve sat on the same row. The fastest path
+			 * through the product was therefore to approve without ever seeing the
+			 * change — which quietly defeats the promise the screen exists to keep.
+			 * A short preview means a routine edit can be judged from the list, and
+			 * anything longer still opens in full detail.
+			 */
+			'preview'       => self::preview( $payload ),
 			'risk_level'    => SecurityModeManager::effective_risk( $operation, $action ),
 			'status'        => (string) ( $row['status'] ?? '' ),
 			'reason'        => isset( $payload['reason'] ) ? (string) $payload['reason'] : '',
@@ -436,6 +455,33 @@ final class ApprovalAdminQuery {
 			}
 		}
 		return $payload;
+	}
+
+	/**
+	 * A short, human preview of what a request will set. Empty when the payload
+	 * carries nothing a person would recognise — never a guess.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
+	public static function preview_for( array $payload ): string { return self::preview( $payload ); }
+
+	private static function preview( array $payload ): string {
+		foreach ( [ 'value', 'post_title', 'title', 'display_name', 'name', 'caption', 'alt_text' ] as $key ) {
+			if ( ! isset( $payload[ $key ] ) || ! is_scalar( $payload[ $key ] ) ) {
+				continue;
+			}
+			$value = trim( (string) $payload[ $key ] );
+			if ( '' === $value ) {
+				continue;
+			}
+			// Long bodies belong in the detail view, not in a list row.
+			if ( mb_strlen( $value ) > 90 ) {
+				return mb_substr( $value, 0, 90 ) . '…';
+			}
+			return $value;
+		}
+
+		return '';
 	}
 
 	private function ts( mixed $value ): ?int {

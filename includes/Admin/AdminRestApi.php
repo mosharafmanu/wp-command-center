@@ -1281,6 +1281,16 @@ final class AdminRestApi {
 			'operation_id'        => $r['operation_id'],
 			'operation'           => $operation['title'] ?? $r['operation_id'],
 			'action'              => $action,
+			// Plain-language decision line. The Decided tab and Home already carried
+			// these; Pending — the one screen where the decision is actually made —
+			// did not, because it is shaped here rather than by ApprovalAdminQuery.
+			// Purely additive presentation strings: every existing field above is
+			// untouched, so nothing that reads this envelope by ID is affected.
+			'headline'            => ActionLabels::describe( (string) $r['operation_id'], (string) $action, $payload, (string) ( $operation['title'] ?? '' ) ),
+			'area'                => ActionLabels::area( ActionLabels::runtime_of( (string) $r['operation_id'] ) ),
+			// Same reasoning as ApprovalAdminQuery::preview(): the pending list is
+			// where the decision is actually made, so it has to show what will change.
+			'preview'             => ApprovalAdminQuery::preview_for( $payload ),
 			'risk_level'          => $risk,
 			'status'              => $r['status'],
 			'reason'              => $payload['reason'] ?? '',

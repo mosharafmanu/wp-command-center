@@ -29,7 +29,8 @@ done
 echo "== 2. Navigation rebuild — clarity, no regression =="
 has "sections carry a plain-language description" "'desc'  => __\(" "$SHELL_F"
 has "shell renders the section description" "wpcc-shell__desc" "$SHELL_F"
-has "AI client door uses plain 'AI Clients' label" "__\( 'AI Clients'" "$SHELL_F"
+# The tab is named for what the customer connects, not for the client category.
+has "assistant door uses plain 'Assistants' label" "__\( 'Assistants'" "$ROOT/includes/Admin/views/settings-connections.php"
 # Phase 2B: Runtime retired; the advanced area is now the Advanced hub.
 has "Advanced hub present under Settings" "__\( 'Advanced', 'wp-command-center' \)" "$SHELL_F"
 has "Connect section slug intact" "CONNECT_SLUG\s*=\s*'wpcc-connect'" "$SHELL_F"
@@ -52,18 +53,22 @@ hasnt "no fake per-provider key field names" "openai_api_key|gemini_api_key" "$A
 echo "== 5. Model management — per-connection model field =="
 has "per-connection model field" "name=\"wpcc_model_custom\"" "$AISETUP"
 has "provider default model shown" "default_model" "$AISETUP"
-has "honest: AI off until key+feature" "AI stays off until you turn a feature on" "$AISETUP"
+# The consent claim moved with the lede into the Settings > Built-in AI hub when
+# the provider screen shed its hero.
+has "honest: AI off until key+feature" "AI stays off until you turn a feature on" "$ROOT/includes/Admin/views/settings-ai.php"
 
 echo "== 6. First-run — how it works (AI→approve→record→undo) =="
-has "how-it-works strip present" "How WPCC keeps you in control" "$HOME_F"
-has "step: AI proposes" "AI proposes" "$HOME_F"
+has "how-it-works strip present" "How this keeps you in control" "$HOME_F"
+# Steps are written from the customer's side now ("You ask") rather than the
+# system's ("AI proposes").
+has "step: you ask" "You ask" "$HOME_F"
 has "step: you approve" "You approve" "$HOME_F"
 has "step: you can undo" "You can undo" "$HOME_F"
 
 echo "== 7. Safety mode UX — consequences obvious =="
-has "developer mode flagged not-for-client" "NOT FOR CLIENT SITES" "$SETTINGS"
-has "developer consequence in plain language" "change or delete things on this site immediately" "$SETTINGS"
-has "client mode still recommended" "RECOMMENDED" "$SETTINGS"
+has "developer mode flagged not-for-live" "NOT FOR LIVE SITES" "$SETTINGS"
+has "developer consequence in plain language" "can change this site immediately" "$SETTINGS"
+has "protected mode still recommended" "'Recommended'" "$SETTINGS"
 has "developer confirm guard retained" "window.confirm" "$SETTINGS"
 
 echo "== 8. STOP-condition guard — no architecture edits in this program =="

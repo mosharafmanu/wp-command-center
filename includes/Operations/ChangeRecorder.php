@@ -77,6 +77,24 @@ final class ChangeRecorder {
 			return;
 		}
 
+		/*
+		 * A dry run changes nothing, so it is not a change.
+		 *
+		 * safe_search_replace with dry_run:true correctly left the database
+		 * untouched but still recorded an `applied` row, so the Changes screen
+		 * reported "Find and replace text across the database" as done. A customer
+		 * checking what an assistant had done to their site would have read that as
+		 * a database-wide rewrite that never happened — the single most alarming
+		 * thing this history can say, said falsely.
+		 *
+		 * Recognised from either the request (the caller asked for a preview) or the
+		 * result (the runtime reports it performed one), because different runtimes
+		 * echo it in different places.
+		 */
+		if ( ! empty( $payload['dry_run'] ) || ! empty( $result['dry_run'] ) ) {
+			return;
+		}
+
 		$action         = (string) ( $payload['action'] ?? '' );
 		$effective_risk = SecurityModeManager::effective_risk( $operation, $action );
 		// 'rejected' (validation failure) is treated like 'failed' here so neither is
@@ -124,8 +142,26 @@ final class ChangeRecorder {
 		$updated = is_array( $result['updated'] ?? null ) ? $result['updated'] : [];
 		$affected_paths = is_array( $rdata['affected_paths'] ?? null ) ? array_values( $rdata['affected_paths'] ) : [];
 
+		/*
+		 * Record WHAT was changed, in words, not just how many things moved.
+		 *
+		 * This summary only ever carried machine facts — affected paths, created and
+		 * updated ids, a file count. For a file operation that is enough, but for
+		 * everything else it left nothing to show, so the Changes timeline printed
+		 * the same sentence for every row: three consecutive "Change a WordPress
+		 * setting" entries with no way to tell which was the tagline and which was
+		 * the site title. Choosing what to undo became guesswork on the one screen
+		 * built for choosing what to undo.
+		 *
+		 * ActionLabels::target() already turns a payload into the human target the
+		 * Approvals queue shows ("Tagline"). Storing it here means a change is
+		 * self-describing forever, including long after the request is gone.
+		 */
+		$target_label = \WPCommandCenter\Admin\ActionLabels::target( $payload );
+
 		$target_summary = array_filter(
 			[
+				'label'          => '' !== $target_label ? $target_label : null,
 				'affected_paths' => $affected_paths ?: null,
 				'created'        => $created ?: null,
 				'updated'        => $updated ?: null,

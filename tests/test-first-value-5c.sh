@@ -31,13 +31,17 @@ has "explainer answers what-talks-to-what" "What talks to what" "$EXPL"
 has "explainer has a jargon-free flow line" "function flow_line" "$EXPL"
 has "Connect screen renders the explainer" "AgentExplainer::faq\(\)" "$CONNECT"
 has "Connect screen H1 is plain language" "esc_html_e\( 'AI Clients'" "$CONNECT"
-has "Connect screen still explains a client in plain words" "An AI client is an assistant" "$CONNECT"
+has "Connect screen names assistants in plain words" "Connect Claude, Cursor, Codex" "$CONNECT"
 hasnt "Connect screen no longer leads with MCP-protocol jargon" "via the MCP protocol. All clients share" "$CONNECT"
 
 echo "== 3. First success — no-setup quick win (Phase D) =="
-has "no-AI quick win present" "no AI or setup needed" "$HOME_F"
-has "quick win runs a site report" "Run a site report" "$HOME_F"
-has "quick win is read-only/non-destructive" "Nothing is changed" "$HOME_F"
+# V1: the "run a site report" quick win was removed from Home. It competed with
+# the one action that actually starts the product (connect an assistant) and
+# pointed at Diagnostics, a surface V1 de-emphasises. The report still exists
+# at Settings > Diagnostics; it is simply no longer a second front-door CTA.
+lacks "no competing quick-win CTA" "no AI or setup needed" "$HOME_F"
+lacks "no second primary CTA on Home" "Run a site report" "$HOME_F"
+has "Home itself stays read-only" "READ-ONLY" "$HOME_F"
 
 echo "== 4. Approval & undo discoverability (Phase E) =="
 has "approvals link in how-it-works" "Approvals →" "$HOME_F"

@@ -25,7 +25,15 @@ final class SecurityModeManager {
 	const MODE_CLIENT     = 'client';
 	const MODE_ENTERPRISE = 'enterprise';
 	const MODES           = [ self::MODE_DEVELOPER, self::MODE_CLIENT, self::MODE_ENTERPRISE ];
-	const DEFAULT_MODE    = self::MODE_DEVELOPER;
+
+	/**
+	 * The fail-safe mode. This is what a site runs as when `wpcc_security_mode` is
+	 * missing, empty, or corrupt — so it MUST be a protected mode, never developer.
+	 * A missing option must never silently downgrade a public site into
+	 * execute-without-approval; the approval promise has to survive a lost row.
+	 * Activator seeds this same value on fresh installs.
+	 */
+	const DEFAULT_MODE    = self::MODE_CLIENT;
 
 	const RISK_DIAGNOSTIC = 'diagnostic';
 	const RISK_LOW        = 'low';
@@ -36,10 +44,10 @@ final class SecurityModeManager {
 	/**
 	 * Return the current security mode.
 	 *
-	 * Reads wpcc_security_mode; defaults to MODE_DEVELOPER when absent. Sites that
-	 * had wpcc_enforce_approval = 1 set manually before STEP 80 are NOT
-	 * auto-migrated — they default to developer mode and should be explicitly
-	 * switched via the WP Admin Security Mode UI (STEP 80B).
+	 * Reads wpcc_security_mode and falls back to DEFAULT_MODE (client — Standard
+	 * protection) whenever the stored value is absent, empty, or not a known mode.
+	 * Failing closed is deliberate: a site that loses this option must keep asking
+	 * for approval rather than start executing changes unattended.
 	 */
 	public static function current(): string {
 		$mode = (string) get_option( 'wpcc_security_mode', '' );
@@ -98,12 +106,39 @@ final class SecurityModeManager {
 
 	/**
 	 * Human-readable label for the current mode.
+	 *
+	 * These are the plain-language product names shown everywhere in the admin. The
+	 * mode KEYS (developer/client/enterprise) are the stable API and never change —
+	 * only the words a site owner reads. "Client"/"Enterprise" described who we
+	 * imagined buying it; these describe what the site actually does.
 	 */
 	public static function label(): string {
-		return match ( self::current() ) {
-			self::MODE_CLIENT     => __( 'Client Mode', 'wp-command-center' ),
-			self::MODE_ENTERPRISE => __( 'Enterprise Mode', 'wp-command-center' ),
-			default               => __( 'Developer Mode', 'wp-command-center' ),
+		return self::label_for( self::current() );
+	}
+
+	/** Plain-language label for any mode key. */
+	public static function label_for( string $mode ): string {
+		return match ( $mode ) {
+			self::MODE_CLIENT     => __( 'Standard protection', 'wp-command-center' ),
+			self::MODE_ENTERPRISE => __( 'Strict approval', 'wp-command-center' ),
+			default               => __( 'Development — no approval', 'wp-command-center' ),
 		};
+	}
+
+	/** One-sentence description of what a mode does, in the user's terms. */
+	public static function describe( string $mode ): string {
+		return match ( $mode ) {
+			self::MODE_CLIENT     => __( 'Safe read-only requests run straight away. Anything that changes the site waits for you to approve it.', 'wp-command-center' ),
+			self::MODE_ENTERPRISE => __( 'Only read-only requests run straight away. Every change of any size waits for you to approve it.', 'wp-command-center' ),
+			default               => __( 'Changes run immediately with no approval step. For your own development or staging site only.', 'wp-command-center' ),
+		};
+	}
+
+	/**
+	 * Whether the current mode holds changes for human approval. False only in
+	 * developer mode. Used by the UI to state the site's protection honestly.
+	 */
+	public static function is_protected(): bool {
+		return self::current() !== self::MODE_DEVELOPER;
 	}
 }

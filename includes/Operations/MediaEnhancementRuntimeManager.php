@@ -889,7 +889,7 @@ final class MediaEnhancementRuntimeManager {
 		// Snapshot BEFORE any mutation; abort if it cannot be captured.
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'thumbnail_regenerate' );
 		if ( is_wp_error( $snapshot ) ) {
-			return new \WP_Error( 'wpcc_thumbnail_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before regeneration: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_thumbnail_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before regeneration: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 		$before_files = $this->size_files_abs( $id );
@@ -909,7 +909,7 @@ final class MediaEnhancementRuntimeManager {
 			if ( is_wp_error( $editor ) ) {
 				( new MediaSnapshot() )->restore( $snapshot_id );
 				( new MediaSnapshot() )->delete( $snapshot_id );
-				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( __( 'No usable image editor: %s; restored pre-regeneration state.', 'wp-command-center' ), $editor->get_error_message() ) );
+				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( /* translators: %s: value */ __( 'No usable image editor: %s; restored pre-regeneration state.', 'wp-command-center' ), $editor->get_error_message() ) );
 			}
 			$to_make = [];
 			foreach ( $targets as $name ) {
@@ -937,7 +937,7 @@ final class MediaEnhancementRuntimeManager {
 			( new MediaSnapshot() )->restore( $snapshot_id );
 			$this->delete_created_files( $before_files, $id );
 			( new MediaSnapshot() )->delete( $snapshot_id );
-			return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( __( 'Regeneration did not produce: %s. Restored pre-regeneration state.', 'wp-command-center' ), implode( ', ', $still_missing ) ) );
+			return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( /* translators: %s: value */ __( 'Regeneration did not produce: %s. Restored pre-regeneration state.', 'wp-command-center' ), implode( ', ', $still_missing ) ) );
 		}
 
 		$created     = array_values( array_diff( $this->size_files_abs( $id ), $before_files ) );
@@ -1287,7 +1287,7 @@ final class MediaEnhancementRuntimeManager {
 	private function do_webp_generate( int $id, string $batch_id, array $cx ) {
 		$mime = (string) get_post_mime_type( $id );
 		if ( ! in_array( $mime, self::WEBP_SOURCE_MIMES, true ) ) {
-			return new \WP_Error( 'wpcc_webp_unsupported_mime', sprintf( __( 'WebP cannot be generated from this mime type (%s); JPEG/PNG only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
+			return new \WP_Error( 'wpcc_webp_unsupported_mime', sprintf( /* translators: %s: value */ __( 'WebP cannot be generated from this mime type (%s); JPEG/PNG only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
 		}
 
 		$files = $this->attachment_image_files( $id );
@@ -1320,7 +1320,7 @@ final class MediaEnhancementRuntimeManager {
 		// Snapshot before any write (defensive; originals are never modified).
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'webp_generate' );
 		if ( is_wp_error( $snapshot ) ) {
-			return new \WP_Error( 'wpcc_webp_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before WebP generation: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_webp_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before WebP generation: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 
@@ -1637,7 +1637,7 @@ final class MediaEnhancementRuntimeManager {
 	private function do_optimize( int $id, int $quality, string $batch_id, array $cx ) {
 		$mime = (string) get_post_mime_type( $id );
 		if ( ! in_array( $mime, self::OPTIMIZE_SOURCE_MIMES, true ) ) {
-			return new \WP_Error( 'wpcc_optimize_unsupported_mime', sprintf( __( 'Image optimization does not support this mime type (%s); JPEG/PNG/WebP only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
+			return new \WP_Error( 'wpcc_optimize_unsupported_mime', sprintf( /* translators: %s: value */ __( 'Image optimization does not support this mime type (%s); JPEG/PNG/WebP only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
 		}
 		$files    = $this->attachment_image_files( $id );
 		$original = get_attached_file( $id );
@@ -1700,7 +1700,7 @@ final class MediaEnhancementRuntimeManager {
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'image_optimize' );
 		if ( is_wp_error( $snapshot ) ) {
 			foreach ( $plan as $p ) { if ( is_file( $p['tmp'] ) ) { @unlink( $p['tmp'] ); } }
-			return new \WP_Error( 'wpcc_optimize_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before optimization: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_optimize_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before optimization: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 
@@ -1970,13 +1970,13 @@ final class MediaEnhancementRuntimeManager {
 		// (4) Hard-exclude protected categories.
 		$refused = $this->cleanup_exclusion( $id, $classification );
 		if ( null !== $refused ) {
-			return new \WP_Error( 'wpcc_media_cleanup_refused', sprintf( __( 'Cleanup refused: %s. Nothing was changed.', 'wp-command-center' ), $refused ) );
+			return new \WP_Error( 'wpcc_media_cleanup_refused', sprintf( /* translators: %s: value */ __( 'Cleanup refused: %s. Nothing was changed.', 'wp-command-center' ), $refused ) );
 		}
 
 		// Snapshot BEFORE any mutation — the real reversibility guarantee.
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'unused_media_cleanup' );
 		if ( is_wp_error( $snapshot ) ) {
-			return new \WP_Error( 'wpcc_media_cleanup_snapshot_failed', sprintf( __( 'Could not snapshot the attachment before cleanup: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_media_cleanup_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before cleanup: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 

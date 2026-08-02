@@ -5,7 +5,7 @@
  * Phase 2A of the Runtime migration: the Search & Replace tool is re-homed here from
  * the legacy Runtime dashboard, UNCHANGED in behavior. It creates a governed
  * `safe_search_replace` operation request (OperationManager) that must be approved and
- * run from Activity › Approvals; Dry Run auto-approves and runs a single preview only.
+ * run from Approvals; Dry Run auto-approves and runs a single preview only.
  * The dry-run risk model, the confirmation dialog for live requests, and the full
  * approval/audit path are preserved exactly — no engine, REST, capability, or schema
  * change. (Runtime keeps its own copy until Phase 2B; this is the intentional,
@@ -127,7 +127,7 @@ if ( isset( $_POST['wpcc_sr_action'] ) && check_admin_referer( 'wpcc_sr_action' 
 			} else {
 				$sr_success_msg = sprintf(
 					/* translators: %s: operation request ID */
-					__( 'Live Search & Replace request "%s" created and is pending review. Approve and run it from Activity › Approvals, or wait for the background worker.', 'wp-command-center' ),
+					__( 'Live Search & Replace request "%s" created and is pending review. Approve and run it from Approvals, or wait for the background worker.', 'wp-command-center' ),
 					$req['request_id']
 				);
 			}
@@ -224,16 +224,16 @@ $sr_preview_js = $sr_preview ? [
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<?php if ( ! empty( $sr_success_msg ) ) : ?>
-		<div class="notice notice-success is-dismissible"><p><?php echo esc_html( $sr_success_msg ); ?></p></div>
+		<div class="notice inline notice-success is-dismissible"><p><?php echo esc_html( $sr_success_msg ); ?></p></div>
 	<?php endif; ?>
 	<?php if ( ! empty( $sr_error ) ) : ?>
-		<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $sr_error ); ?></p></div>
+		<div class="notice inline notice-error is-dismissible"><p><?php echo esc_html( $sr_error ); ?></p></div>
 	<?php endif; ?>
 
 	<div class="wpcc-tools-panel">
 		<h2 class="wpcc-tools-panel-header"><?php esc_html_e( 'Safe Search & Replace', 'wp-command-center' ); ?></h2>
 		<div class="wpcc-tools-panel-body">
-			<p class="description" style="margin-top:0;"><?php esc_html_e( 'Find and replace text across database tables (for example after a domain change). Preview safely with Dry Run; a live run creates a governed request you approve in Activity › Approvals.', 'wp-command-center' ); ?></p>
+			<p class="description" style="margin-top:0;"><?php esc_html_e( 'Find and replace text across database tables (for example after a domain change). Preview safely with Dry Run; a live run creates a governed request you approve under Approvals.', 'wp-command-center' ); ?></p>
 			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
 				<div class="wpcc-sr-form">
 					<form method="post" id="wpcc-sr-form">
@@ -308,7 +308,7 @@ $sr_preview_js = $sr_preview ? [
 							</div>
 						</div>
 					<?php else : ?>
-						<div style="background: #f6f7f7; border: 1px dashed #ccd0d4; padding: 20px; text-align: center; color: #646970;">
+						<div style="background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 8px; padding: 20px; text-align: center; color: #646970;">
 							<?php esc_html_e( 'Enter search parameters, choose tables, and click "Run Dry Preview" to see matches found, affected rows, affected tables, and the computed risk level.', 'wp-command-center' ); ?>
 						</div>
 					<?php endif; ?>
@@ -328,7 +328,7 @@ $sr_preview_js = $sr_preview ? [
 				<tr><th><?php esc_html_e( 'Affected Rows', 'wp-command-center' ); ?></th><td id="wpcc-confirm-rows"></td></tr>
 				<tr><th><?php esc_html_e( 'Risk Level', 'wp-command-center' ); ?></th><td><span id="wpcc-confirm-risk" class="wpcc-risk-badge"></span></td></tr>
 			</table>
-			<p><?php esc_html_e( 'This creates a pending operation request only — no data changes until it is approved and executed from Activity › Approvals, or by the background worker.', 'wp-command-center' ); ?></p>
+			<p><?php esc_html_e( 'This creates a pending operation request only — no data changes until it is approved and executed from Approvals, or by the background worker.', 'wp-command-center' ); ?></p>
 			<div class="wpcc-modal-actions">
 				<button type="button" class="button" id="wpcc-sr-confirm-cancel"><?php esc_html_e( 'Cancel', 'wp-command-center' ); ?></button>
 				<button type="submit" class="button button-primary" name="wpcc_sr_action" value="run" form="wpcc-sr-form" id="wpcc-sr-confirm-submit"><?php esc_html_e( 'Confirm & Create Request', 'wp-command-center' ); ?></button>

@@ -28,8 +28,8 @@ $core_base  = rest_url( 'wp/v2' );
 // directly; client/enterprise submit for approval). The actual outcome is still
 // taken from the apply API response (defensive).
 $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
-$approval_url  = admin_url( 'admin.php?page=wpcc-approval-center' );
-$history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
+$approval_url  = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
+$history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 ?>
 <div class="wrap wpcc-wrap">
 	<h1><?php esc_html_e( 'Alt Text', 'wp-command-center' ); ?></h1>
@@ -203,8 +203,8 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'wp-command-center' ) ); ?>,
 		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'wp-command-center' ) ); ?>,
 		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'wp-command-center' ) ); ?>,
-		reviewAppr: <?php echo wp_json_encode( esc_html__( 'Review in Approval Center →', 'wp-command-center' ) ); ?>,
-		viewHist:  <?php echo wp_json_encode( esc_html__( 'View in Change History →', 'wp-command-center' ) ); ?>,
+		reviewAppr: <?php echo wp_json_encode( esc_html__( 'Review in Approvals →', 'wp-command-center' ) ); ?>,
+		viewHist:  <?php echo wp_json_encode( esc_html__( 'View in Changes →', 'wp-command-center' ) ); ?>,
 		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'wp-command-center' ) ); ?>,
 		// Task 8.4 — bulk action labels (Suggestions tab).
 		selectAllSg: <?php echo wp_json_encode( esc_html__( 'Select all on this page', 'wp-command-center' ) ); ?>,
@@ -227,15 +227,15 @@ $history_url   = admin_url( 'admin.php?page=wpcc-change-history' );
 		matchClear:   <?php echo wp_json_encode( esc_html__( 'Clear', 'wp-command-center' ) ); ?>,
 		matchNone:    <?php echo wp_json_encode( esc_html__( 'No matching draft suggestions.', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of matching draft suggestions */
-		matchSelected: <?php echo wp_json_encode( __( 'All %d matching draft suggestions selected (across pages).', 'wp-command-center' ) ); ?>,
+		matchSelected: <?php echo wp_json_encode( /* translators: %d: number */ __( 'All %d matching draft suggestions selected (across pages).', 'wp-command-center' ) ); ?>,
 		/* translators: %1$d: number of matches, %2$d: per-action cap */
-		matchOverCap: <?php echo wp_json_encode( __( '%1$d matches exceed the limit of %2$d. Narrow the view or act in pages.', 'wp-command-center' ) ); ?>,
+		matchOverCap: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d matches exceed the limit of %2$d. Narrow the view or act in pages.', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of matching suggestions */
-		confirmApplyAllDev:  <?php echo wp_json_encode( __( 'Apply all %d matching suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
+		confirmApplyAllDev:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Apply all %d matching suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of matching suggestions */
-		confirmApplyAllGate: <?php echo wp_json_encode( __( 'Submit all %d matching suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
+		confirmApplyAllGate: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Submit all %d matching suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
 		/* translators: %d: number of matching suggestions */
-		confirmDismissAll:   <?php echo wp_json_encode( __( 'Dismiss all %d matching suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>
+		confirmDismissAll:   <?php echo wp_json_encode( /* translators: %d: number */ __( 'Dismiss all %d matching suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );

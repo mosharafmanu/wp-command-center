@@ -14,7 +14,7 @@
 #   - Backward-compatibility: nothing removed from the public WPCC.cds surface.
 #   - Foundation is asset-only: no REST route / operation / capability / MCP tool /
 #     schema is introduced by these files.
-#   - Invariants unchanged: 34 / 23 / 40 / 40 / 2.5.0.
+#   - Invariants unchanged: 34 / 23 / 42 / 42 / 2.6.0.
 #
 # Requires: node (JS syntax), rg, wp-cli (invariants). Usage: bash tests/test-cds-foundation.sh
 
@@ -113,7 +113,7 @@ for f in "$TOKENS" "$CDS_CSS" "$CDS_JS" "$RUNTIME_JS"; do
 done
 
 echo
-echo "== 6. Invariants unchanged (34 / 23 / 40 / 40 / 2.5.0) =="
+echo "== 6. Invariants unchanged (34 / 23 / 42 / 42 / 2.6.0) =="
 if ! command -v wp >/dev/null 2>&1; then
 	echo "  SKIP: wp-cli not available — invariant checks skipped."
 else
@@ -121,7 +121,7 @@ else
 	assert_eq "ALL_CAPABILITIES stays 23" "23" "$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
 	assert_eq "catalogue stays 42" "42" "$(wpe '$r = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $r->get_operations() );')"
 	assert_eq "MCP tools stay 42" "42" "$(wpe '$r = ( new \WPCommandCenter\Mcp\McpServerRuntime() )->handle( [ "jsonrpc" => "2.0", "id" => 1, "method" => "tools/list" ], [] ); echo isset( $r["result"]["tools"] ) ? count( $r["result"]["tools"] ) : -1;')"
-	assert_eq "DB_VERSION stays 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+	assert_eq "DB_VERSION stays 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 fi
 
 echo

@@ -10,3 +10,6 @@ wpcc-env-*.sh
 # Claude Code harness runtime/lock files (never track transient harness state)
 .claude/scheduled_tasks.lock
 .claude/*.lock
+
+# Release packages produced by scripts/build-release.sh — regenerated, never tracked.
+/build/

@@ -167,7 +167,7 @@ final class WpCliBridge {
 		if ( $this->registry->is_blocked( $command_id ) ) {
 			return new \WP_Error(
 				'wpcc_wpcli_blocked',
-				sprintf( __( 'WP-CLI command blocked for security: %s', 'wp-command-center' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'wp-command-center' ), esc_html( $command_id ) )
 			);
 		}
 
@@ -176,7 +176,7 @@ final class WpCliBridge {
 		if ( null === $cmd ) {
 			return new \WP_Error(
 				'wpcc_invalid_wpcli_command',
-				sprintf( __( 'Unknown or unsupported WP-CLI command: %s', 'wp-command-center' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'Unknown or unsupported WP-CLI command: %s', 'wp-command-center' ), esc_html( $command_id ) )
 			);
 		}
 
@@ -194,7 +194,7 @@ final class WpCliBridge {
 		if ( $this->matches_blocked( $cmd['command_parts'] ) ) {
 			return new \WP_Error(
 				'wpcc_wpcli_blocked',
-				sprintf( __( 'WP-CLI command blocked for security: %s', 'wp-command-center' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'wp-command-center' ), esc_html( $command_id ) )
 			);
 		}
 

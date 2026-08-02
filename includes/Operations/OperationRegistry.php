@@ -112,7 +112,16 @@ final class OperationRegistry {
 				'id'                => 'cf7_seed',
 				'title'             => __( 'Contact Form 7 Seeding', 'wp-command-center' ),
 				'description'       => __( 'Generate sample forms and mail configurations for Contact Form 7.', 'wp-command-center' ),
-				'risk_level'        => 'low',
+				/*
+				 * Was 'low', which runs free under Standard protection — so an
+				 * assistant could create contact forms on a protected site with no
+				 * approval. Its three sibling seed operations (content, ACF, product)
+				 * are all 'medium', and this one already declared
+				 * requires_approval => true, so the tier simply contradicted both the
+				 * catalogue and the product's promise. Creating a form is a change to
+				 * the site and is now gated like every other one.
+				 */
+				'risk_level'        => 'medium',
 				'action_risks'      => [],
 				'requires_approval' => true,
 				'parameters'        => [
@@ -143,7 +152,7 @@ final class OperationRegistry {
 			[
 				'id'                => 'safe_search_replace',
 				'title'             => __( 'Safe Search & Replace', 'wp-command-center' ),
-				'description'       => __( 'Perform a dry-run or live search and replace in the database with rollback support.', 'wp-command-center' ),
+				'description'       => __( 'Perform a dry-run or live search and replace in the database with rollback support. dry_run (default true) returns matches_found/rows_affected as counts only unless return_matches is set — pass return_matches:true to also get a capped list (default 25, max_matches) of {table, primary_key_column, primary_key_value, column, excerpt} so you can see WHICH rows matched before running live.', 'wp-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -153,6 +162,8 @@ final class OperationRegistry {
 					[ 'name' => 'dry_run', 'type' => 'boolean', 'required' => false, 'default' => true ],
 					[ 'name' => 'tables', 'type' => 'array', 'required' => true, 'description' => 'List of tables to search.' ],
 					[ 'name' => 'case_sensitive', 'type' => 'boolean', 'required' => false, 'default' => false ],
+					[ 'name' => 'return_matches', 'type' => 'boolean', 'required' => false, 'default' => false, 'description' => 'Include a capped list of matched rows: {table, primary_key_column, primary_key_value, column, excerpt (~40 chars either side of the match)}.' ],
+					[ 'name' => 'max_matches', 'type' => 'integer', 'required' => false, 'default' => 25, 'description' => 'Cap on the return_matches list (default 25).' ],
 				],
 				'available'         => true,
 			],
@@ -282,10 +293,11 @@ final class OperationRegistry {
 					'theme_activate' => 'high',
 					'theme_update'   => 'high',
 					'theme_delete'   => 'critical',
+					'theme_rollback' => 'high',
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'theme_list', 'theme_install', 'theme_activate', 'theme_update', 'theme_delete' ], 'description' => 'The theme action to perform.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'theme_list', 'theme_install', 'theme_activate', 'theme_update', 'theme_delete', 'theme_rollback' ], 'description' => 'The theme action to perform.' ],
 					[ 'name' => 'slug', 'type' => 'string', 'required' => false, 'description' => 'The theme slug (required for all actions except theme_list).' ],
 					[ 'name' => 'confirm', 'type' => 'boolean', 'required' => false, 'description' => 'Must be true to execute theme_delete (destructive confirmation).' ],
 					[ 'name' => 'confirmation_phrase', 'type' => 'string', 'required' => false, 'description' => 'Must equal "DELETE_THEME" to execute theme_delete.' ],
@@ -305,10 +317,11 @@ final class OperationRegistry {
 					'plugin_deactivate' => 'high',
 					'plugin_update'     => 'high',
 					'plugin_delete'     => 'critical',
+					'plugin_rollback'   => 'high',
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'plugin_list', 'plugin_install', 'plugin_activate', 'plugin_deactivate', 'plugin_update', 'plugin_delete' ], 'description' => 'The plugin action to perform.' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => [ 'plugin_list', 'plugin_install', 'plugin_activate', 'plugin_deactivate', 'plugin_update', 'plugin_delete', 'plugin_rollback' ], 'description' => 'The plugin action to perform.' ],
 					[ 'name' => 'slug', 'type' => 'string', 'required' => false, 'description' => 'The plugin slug (required for all actions except plugin_list).' ],
 					[ 'name' => 'confirm', 'type' => 'boolean', 'required' => false, 'description' => 'Must be true to execute plugin_delete (destructive confirmation).' ],
 					[ 'name' => 'confirmation_phrase', 'type' => 'string', 'required' => false, 'description' => 'Must equal "DELETE_PLUGIN" to execute plugin_delete.' ],
@@ -434,6 +447,15 @@ final class OperationRegistry {
 					'customer_get'           => 'diagnostic',
 					'customer_search'        => 'diagnostic',
 					'coupon_list'            => 'diagnostic',
+					/*
+					 * Read-only actions must be classified, or they inherit the
+					 * operation's worst-case risk. Left unclassified, a shop owner
+					 * asking to SEARCH their products got an approval request, and the
+					 * search was written into Changes as if it had altered the site.
+					 * Only genuine reads are listed here — every write below keeps the
+					 * protection it already had.
+					 */
+					'product_search'         => 'diagnostic',
 					'coupon_get'             => 'diagnostic',
 					'order_update'           => 'medium',
 					'order_note_add'         => 'medium',
@@ -473,6 +495,10 @@ final class OperationRegistry {
 					'acf_describe'       => 'diagnostic',
 						'acf_value_get'      => 'diagnostic',
 					'acf_inventory'      => 'diagnostic',
+					// Inspection actions; import/sync/duplicate/assign remain gated.
+					'acf_json_export'    => 'diagnostic',
+					'acf_json_diff'      => 'diagnostic',
+					'acf_layout_usage'   => 'diagnostic',
 					'acf_json_status'    => 'diagnostic',
 					'acf_group_create'       => 'medium',
 					'acf_group_update'       => 'medium',
@@ -488,7 +514,7 @@ final class OperationRegistry {
 				],
 				'requires_approval' => true,
 				'parameters'        => [
-					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'ACF operation (acf_group_*, acf_field_*, acf_layout_create, acf_layout_update, acf_location_*, acf_value_*, etc.).' ],
+					[ 'name' => 'action', 'type' => 'string', 'required' => true, 'description' => 'ACF operation (acf_group_*, acf_field_*, acf_layout_create, acf_layout_update, acf_layout_usage, acf_location_*, acf_value_*, etc.).' ],
 					[ 'name' => 'group_id', 'type' => 'string', 'required' => false, 'description' => 'Field group key.' ],
 					[ 'name' => 'title', 'type' => 'string', 'required' => false, 'description' => 'Field group title (acf_group_create).' ],
 					[ 'name' => 'parent', 'type' => 'string', 'required' => false, 'description' => 'Parent for acf_field_create: a group key, or a repeater/group field key, or a flexible_content field key (with parent_layout).' ],
@@ -506,6 +532,14 @@ final class OperationRegistry {
 						[ 'name' => 'fields', 'type' => 'object', 'required' => false, 'description' => 'acf_value_set map of {field_key: value} to write to the target object.' ],
 						[ 'name' => 'value', 'type' => 'string', 'required' => false, 'description' => 'Single value for acf_value_update / acf_value_set (with field_key).' ],
 					[ 'name' => 'rollback_id', 'type' => 'string', 'required' => false, 'description' => 'Rollback record ID.' ],
+						[ 'name' => 'context_mode', 'type' => 'string', 'required' => false, 'enum' => [ 'compact', 'standard', 'verbose' ], 'description' => 'acf_value_get shaping: compact (images/files -> {ID,url,alt}; flexible content -> {index,layout,fields:<scalars only>}; repeaters -> {row_count,first_row}), standard (full tree, images reduced to {ID,url,alt,width,height}), verbose (untouched full tree). Defaults to standard.' ],
+						[ 'name' => 'format', 'type' => 'string', 'required' => false, 'enum' => [ 'formatted', 'raw' ], 'description' => 'acf_value_get: raw returns the unformatted meta value (get_field with format_value=false) — for flexible content that is just the ordered layout-name array, no sub-field payload at all.' ],
+						[ 'name' => 'layouts_only', 'type' => 'boolean', 'required' => false, 'description' => 'acf_value_get: for a flexible-content field, return only the ordered layout names (ignores context_mode/format shaping).' ],
+						[ 'name' => 'depth', 'type' => 'integer', 'required' => false, 'description' => 'acf_value_get: cap nesting depth in compact/standard context_mode; deeper arrays collapse to {_depth_truncated:true, count}.' ],
+						[ 'name' => 'layout', 'type' => 'string', 'required' => false, 'description' => 'acf_layout_usage: the flexible-content layout name to search for (e.g. "download_brochure").' ],
+						[ 'name' => 'field', 'type' => 'string', 'required' => false, 'description' => 'acf_layout_usage: restrict the search to this flexible-content field name (e.g. "cms"). Omit to search all flexible-content fields.' ],
+						[ 'name' => 'post_type', 'type' => 'array', 'required' => false, 'description' => 'acf_layout_usage: restrict to these post types (default: all).' ],
+						[ 'name' => 'post_status', 'type' => 'array', 'required' => false, 'description' => 'acf_layout_usage: restrict to these post statuses (default: ["publish"]).' ],
 				],
 				'available'         => function_exists( 'acf_get_field_groups' ),
 			],
@@ -564,6 +598,10 @@ final class OperationRegistry {
 					'form_search'   => 'diagnostic',
 					'entry_list'    => 'diagnostic',
 					'entry_get'     => 'diagnostic',
+					// Reads that were inheriting the operation's medium risk.
+					'entry_search'     => 'diagnostic',
+					'notification_get' => 'diagnostic',
+					'submission_stats' => 'diagnostic',
 					'form_analyze'  => 'diagnostic',
 					'form_create'   => 'medium',
 					'form_update'   => 'medium',
@@ -584,6 +622,10 @@ final class OperationRegistry {
 					'menu_item_list'     => 'diagnostic',
 					'menu_item_get'      => 'diagnostic',
 					'menu_location_list' => 'diagnostic',
+					// Inspection only; move/reorder/sync/repair stay gated.
+					'menu_analyze'       => 'diagnostic',
+					'menu_inventory'     => 'diagnostic',
+					'menu_tree_validate' => 'diagnostic',
 					'menu_tree_get'      => 'diagnostic',
 					'menu_create'        => 'medium',
 					'menu_update'        => 'medium',

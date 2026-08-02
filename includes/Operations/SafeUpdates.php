@@ -175,7 +175,7 @@ final class SafeUpdates {
 
 		$health = $this->run_health_check();
 		if ( is_wp_error( $health ) ) {
-			return new \WP_Error( 'wpcc_health_check_failed', sprintf( __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'wp-command-center' ), $health->get_error_message() ) );
+			return new \WP_Error( 'wpcc_health_check_failed', sprintf( /* translators: %s: value */ __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'wp-command-center' ), $health->get_error_message() ) );
 		}
 
 		return [
@@ -235,7 +235,7 @@ final class SafeUpdates {
 
 		$health = $this->run_health_check();
 		if ( is_wp_error( $health ) ) {
-			return new \WP_Error( 'wpcc_health_check_failed', sprintf( __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'wp-command-center' ), $health->get_error_message() ) );
+			return new \WP_Error( 'wpcc_health_check_failed', sprintf( /* translators: %s: value */ __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'wp-command-center' ), $health->get_error_message() ) );
 		}
 
 		return [
@@ -274,7 +274,7 @@ final class SafeUpdates {
 			if ( is_wp_error( $head ) ) {
 				return new \WP_Error(
 					'download_failed',
-					sprintf( __( 'Dry-run: update package unreachable: %s', 'wp-command-center' ), $head->get_error_message() )
+					sprintf( /* translators: %s: value */ __( 'Dry-run: update package unreachable: %s', 'wp-command-center' ), $head->get_error_message() )
 				);
 			}
 			$status = wp_remote_retrieve_response_code( $head );
@@ -376,7 +376,7 @@ final class SafeUpdates {
 
 		$code = wp_remote_retrieve_response_code( $response );
 		if ( $code >= 500 ) {
-			return new \WP_Error( 'wpcc_fatal_error', sprintf( __( 'Site returned a %d error after update.', 'wp-command-center' ), $code ) );
+			return new \WP_Error( 'wpcc_fatal_error', sprintf( /* translators: %d: number */ __( 'Site returned a %d error after update.', 'wp-command-center' ), $code ) );
 		}
 
 		return true;

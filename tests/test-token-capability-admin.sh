@@ -53,6 +53,8 @@ RESTAPI="$PLUGIN_DIR/includes/Admin/AdminRestApi.php"
 QUERY="$PLUGIN_DIR/includes/Admin/TokenCapabilityAdminQuery.php"
 MENU="$PLUGIN_DIR/includes/Admin/AdminMenu.php"
 SHELL="$PLUGIN_DIR/includes/Admin/AppShell.php"
+# The tokens pane moved from the shell into the Connections hub (IA redesign).
+CONN="$PLUGIN_DIR/includes/Admin/views/settings-connections.php"
 SETTINGS="$PLUGIN_DIR/includes/Admin/views/settings.php"
 REGISTRY="$PLUGIN_DIR/includes/Operations/CapabilityRegistry.php"
 
@@ -155,11 +157,11 @@ echo
 echo "== 4. App Shell hosts Tokens & Capabilities as Access › Tokens =="
 # Experience Layer: the standalone submenu became the Access › Tokens tab, routed
 # by the 5-C App Shell via ?wpcc_tab=tokens; the legacy slug redirects in.
-has "Access tab labeled in shell"     "__\( 'Access', 'wp-command-center' \)"   "$SHELL"
-has "Tokens tab renders the manager view" "'view' => 'token-capability-manager'" "$SHELL"
-has "Tokens tab gated by token_capability_manager feature" "'feature' => 'token_capability_manager'" "$SHELL"
+has "Access tokens pane labeled"      "__\( 'Access tokens', 'wp-command-center' \)" "$CONN"
+has "Tokens tab renders the manager view" "'view' => 'token-capability-manager'" "$CONN"
+has "Tokens tab gated by token_capability_manager feature" "'feature' => 'token_capability_manager'" "$CONN"
 has "FeatureGate gates the Tokens tab" "FeatureGate::allows"      "$SHELL"
-has "legacy tokens slug redirects (map)" "'wpcc-tokens'             => \[ self::SETTINGS_SLUG, 'access' \]" "$SHELL"
+has "legacy tokens slug redirects (map)" "'wpcc-tokens'             => \[ self::SETTINGS_SLUG, 'connections'" "$SHELL"
 has "Settings section registered"      "render_settings"          "$MENU"
 
 echo
@@ -201,12 +203,12 @@ lacks "settings.php: no AuthTokens import" "use WPCommandCenter\\\\Security\\\\A
 lacks "settings.php: no new AuthTokens"    "new AuthTokens"        "$SETTINGS"
 lacks "settings.php: no AuthTokens:: calls" "AuthTokens::"         "$SETTINGS"
 lacks "settings.php: no token POST handlers" "create_token|revoke_token|delete_token" "$SETTINGS"
-has   "settings.php: links to new manager"  "wpcc-tokens"          "$SETTINGS"
+has   "settings.php: links to new manager"  "cpane=tokens"         "$SETTINGS"
 has   "settings.php: retains Security Mode"  "set_security_mode"    "$SETTINGS"
 # Legacy redirect compatibility (Experience Layer consolidated handler).
 has   "menu: consolidated redirect handler" "function redirect_legacy_slugs" "$MENU"
 has   "menu: admin_init hook for redirect"  "'redirect_legacy_slugs'" "$MENU"
-has   "menu: settings token section -> Settings/Access" "redirect_to\( AppShell::SETTINGS_SLUG, 'access' \)" "$MENU"
+has   "menu: settings token section -> Settings/Connections" "redirect_to\( AppShell::SETTINGS_SLUG, 'connections'" "$MENU"
 
 echo
 echo "== 5c. STEP 107.5 — accessibility sweep =="
@@ -538,7 +540,7 @@ NEG="$(wpe '
 	( new \WPCommandCenter\Admin\AdminMenu() )->redirect_legacy_slugs();
 	echo "NO_REDIRECT";
 ')"
-case "$POS" in *"REDIRECT:"*"page=wpcc-settings"*"wpcc_tab=access"*) pass "legacy token deep-link redirects to Settings › Access";; *) fail "legacy redirect (positive) got: $POS";; esac
+case "$POS" in *"REDIRECT:"*"page=wpcc-settings"*"wpcc_tab=connections"*"cpane=tokens"*) pass "legacy token deep-link redirects to Settings › Connections › Access tokens";; *) fail "legacy redirect (positive) got: $POS";; esac
 case "$NEG" in *"NO_REDIRECT"*) pass "plain Settings renders directly (Security default tab) — no redirect, no loop";; *) fail "plain Settings should NOT redirect (loop risk); got: $NEG";; esac
 
 echo

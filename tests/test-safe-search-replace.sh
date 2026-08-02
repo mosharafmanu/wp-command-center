@@ -102,6 +102,36 @@ assert_true "dry run: rows affected >= 1" "$([[ $AFFECTED -ge 1 ]] && echo true 
 ACTUAL_OLD=$(wp eval "echo get_post_meta($POST_ID, 'test_meta', true)['text'];")
 assert_eq "dry run: data unchanged" "old-domain.com" "$ACTUAL_OLD"
 
+echo
+echo "== ISSUE 16: return_matches — row-level identity behind matches_found =="
+
+assert_true "without return_matches: no matches[] key" "$(echo "$DRY_RESP" | jq -r 'has("matches") | not')"
+
+META_ID=$(wp eval "global \$wpdb; echo \$wpdb->get_var(\$wpdb->prepare(\"SELECT meta_id FROM {\$wpdb->postmeta} WHERE post_id=%d AND meta_key='test_meta'\", $POST_ID));")
+
+RM_BODY=$(jq -n --arg prefix "$WP_PREFIX" '{search:"old-domain.com",replace:"new-domain.com",dry_run:true,tables:[$prefix+"postmeta"],return_matches:true,max_matches:10}')
+RM_RESP=$(api POST /operations/safe_search_replace/run "$RM_BODY")
+
+assert_true "return_matches: matches[] present" "$(echo "$RM_RESP" | jq -r 'has("matches")')"
+RM_COUNT=$(echo "$RM_RESP" | jq -r '.matches | length')
+assert_true "return_matches: matches[] non-empty" "$([[ $RM_COUNT -ge 1 ]] && echo true || echo false)"
+assert_true "return_matches: row identifies our test post's meta_id" "$(echo "$RM_RESP" | jq --arg mid "$META_ID" -r 'any(.matches[]; (.primary_key_value|tostring) == $mid)')"
+assert_true "return_matches: excerpt mentions the search term" "$(echo "$RM_RESP" | jq -r '[.matches[] | select(.column=="meta_value")][0].excerpt // "" | test("old-domain.com")')"
+assert_true "return_matches: primary_key_column is meta_id" "$(echo "$RM_RESP" | jq -r 'all(.matches[]; .primary_key_column == "meta_id")')"
+assert_eq "return_matches: matches_returned matches array length" "$RM_COUNT" "$(echo "$RM_RESP" | jq -r '.matches_returned')"
+assert_eq "return_matches: matches_omitted is 0 (under cap)" "0" "$(echo "$RM_RESP" | jq -r '.matches_omitted')"
+
+# Cap enforcement: a second disposable row gives 2 matching (row,column)
+# pairs, so max_matches=1 must cap the list to 1 and report 1 omitted.
+POST_ID2=$(wp post create --post_title="S&R Test 2" --post_status=publish --porcelain)
+wp eval "update_post_meta($POST_ID2, 'test_meta2', ['text' => 'old-domain.com']);"
+
+RM_CAP=$(api POST /operations/safe_search_replace/run "$(jq -n --arg prefix "$WP_PREFIX" '{search:"old-domain.com",replace:"new-domain.com",dry_run:true,tables:[$prefix+"postmeta"],return_matches:true,max_matches:1}')")
+assert_eq "return_matches: max_matches caps the list to 1" "1" "$(echo "$RM_CAP" | jq -r '.matches | length')"
+assert_eq "return_matches: matches_omitted counts the 1 capped-out row" "1" "$(echo "$RM_CAP" | jq -r '.matches_omitted')"
+
+wp post delete "$POST_ID2" --force > /dev/null 2>&1
+
 # Real Run via Queue
 REQ_BODY=$(jq -n --arg prefix "$WP_PREFIX" '{operation_id:"safe_search_replace",payload:{search:"old-domain.com",replace:"new-domain.com",dry_run:false,tables:[$prefix+"postmeta"]}}')
 REQ_ID=$(api POST /operations/requests "$REQ_BODY" | jq -r '.request_id')

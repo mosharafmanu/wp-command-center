@@ -74,6 +74,7 @@ final class ACFRuntimeManager {
 			ACFRegistry::ACTION_INVENTORY         => $this->inventory( $payload ),
 			ACFRegistry::ACTION_LAYOUT_CREATE     => $this->layout_create( $payload, $context ),
 			ACFRegistry::ACTION_LAYOUT_UPDATE     => $this->layout_update( $payload, $context ),
+			ACFRegistry::ACTION_LAYOUT_USAGE      => $this->layout_usage( $payload ),
 			default => $this->error( 'wpcc_unknown_acf_action', __( 'Unknown ACF action.', 'wp-command-center' ) ),
 		};
 	}
@@ -190,9 +191,28 @@ final class ACFRuntimeManager {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
 		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
-		$new_id = acf_duplicate_field_group( $g );
+
+		/*
+		 * acf_duplicate_field_group() takes an ID, key or name — NOT the field group
+		 * array. Passing the array made ACF try to use it as an array offset, so
+		 * every duplicate attempt died with "Illegal offset type in isset or empty"
+		 * and the caller got a handler exception instead of a new group. It also
+		 * RETURNS the new group array, so the old code stored an array where a
+		 * rollback id was expected.
+		 */
+		$dup = acf_duplicate_field_group( (string) ( $g['key'] ?? $id ) );
+		if ( ! is_array( $dup ) || empty( $dup['key'] ) ) {
+			return $this->error( 'wpcc_acf_duplicate_failed', __( 'The field group could not be duplicated.', 'wp-command-center' ) );
+		}
+
+		$new_id = (string) $dup['key'];
 		$this->store_rollback( $new_id, 'group_create', [], $cx );
-		return [ 'action' => 'acf_group_duplicate', 'group_id' => $new_id, 'original_id' => $id ];
+		return [
+			'action'      => 'acf_group_duplicate',
+			'group_id'    => $new_id,
+			'title'       => (string) ( $dup['title'] ?? '' ),
+			'original_id' => $id,
+		];
 	}
 
 	private function group_activate( array $p, array $cx ): array {
@@ -247,7 +267,7 @@ final class ACFRuntimeManager {
 
 		$type = sanitize_key( (string) ( $p['type'] ?? 'text' ) );
 		if ( ! in_array( $type, ACFRegistry::FIELD_TYPES, true ) ) {
-			return $this->error( 'wpcc_acf_unsupported_field_type', sprintf( __( 'Unsupported field type: %s', 'wp-command-center' ), esc_html( $type ) ) );
+			return $this->error( 'wpcc_acf_unsupported_field_type', sprintf( /* translators: %s: value */ __( 'Unsupported field type: %s', 'wp-command-center' ), esc_html( $type ) ) );
 		}
 
 		// acf_update_field only links a field when the parent is the numeric post
@@ -592,15 +612,261 @@ final class ACFRuntimeManager {
 			$selector = false;
 		}
 
-		$value = get_field( $key, $selector );
-		return [
+		// ISSUE 14 — format=raw returns get_field()'s unformatted value (for
+		// flexible content that's just the ordered layout-name array — tiny,
+		// no sub-field payload at all).
+		$format    = sanitize_key( (string) ( $p['format'] ?? 'formatted' ) );
+		$formatted = 'raw' !== $format;
+		$value     = get_field( $key, $selector, $formatted );
+
+		$base = [
 			'action'      => 'acf_value_get',
 			'object_type' => '' !== $object_type ? $object_type : null,
 			'selector'    => is_bool( $selector ) ? null : (string) $selector,
 			'post_id'     => is_int( $selector ) ? $selector : 0,
 			'field_key'   => $key,
-			'value'       => $value,
 		];
+
+		// layouts_only — for a flexible-content value, skip all sub-field payload
+		// entirely and return just the ordered layout names.
+		$layouts_only = filter_var( $p['layouts_only'] ?? false, FILTER_VALIDATE_BOOLEAN );
+		if ( $layouts_only && is_array( $value ) && $this->looks_like_row_list( $value ) ) {
+			$layouts = [];
+			foreach ( $value as $row ) {
+				$layouts[] = is_array( $row ) ? ( $row['acf_fc_layout'] ?? null ) : null;
+			}
+			return $base + [ 'layouts' => $layouts ];
+		}
+
+		$context_mode = sanitize_key( (string) ( $p['context_mode'] ?? 'standard' ) );
+		if ( ! in_array( $context_mode, [ 'compact', 'standard', 'verbose' ], true ) ) {
+			$context_mode = 'standard';
+		}
+		$depth_cap = isset( $p['depth'] ) ? max( 0, (int) $p['depth'] ) : null;
+
+		return $base + [
+			'context_mode' => $context_mode,
+			'value'        => $this->shape_acf_value( $value, $context_mode, $depth_cap ),
+		];
+	}
+
+	/**
+	 * ISSUE 14 — shape an ACF value by context_mode so a caller never has to pull
+	 * the full formatted tree just to see layout names or a few scalar fields.
+	 * Structural (duck-typed), not field-config-driven, so it works uniformly
+	 * across image/gallery/repeater/flexible-content/group without needing to
+	 * fetch and align each sub-field's definition:
+	 *   - compact:  images/files -> {ID, url, alt}; flexible content -> array of
+	 *               {index, layout, fields: <scalar sub-fields only>}; repeaters
+	 *               -> {row_count, first_row: <scalar sub-fields only>}.
+	 *   - standard: full structure, but every image/file array is reduced to
+	 *               {ID, url, alt, width, height}.
+	 *   - verbose:  untouched — the current full tree.
+	 */
+	private function shape_acf_value( $value, string $mode, ?int $depth_cap, int $depth = 0 ) {
+		if ( 'verbose' === $mode ) {
+			return $value;
+		}
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+		if ( null !== $depth_cap && $depth > $depth_cap ) {
+			return [ '_depth_truncated' => true, 'count' => count( $value ) ];
+		}
+
+		if ( $this->is_acf_image_array( $value ) ) {
+			return 'compact' === $mode
+				? [ 'ID' => $value['ID'] ?? ( $value['id'] ?? null ), 'url' => $value['url'] ?? null, 'alt' => $value['alt'] ?? '' ]
+				: [
+					'ID'     => $value['ID'] ?? ( $value['id'] ?? null ),
+					'url'    => $value['url'] ?? null,
+					'alt'    => $value['alt'] ?? '',
+					'width'  => $value['width'] ?? null,
+					'height' => $value['height'] ?? null,
+				];
+		}
+
+		if ( $this->looks_like_row_list( $value ) ) {
+			$is_flexible = $this->is_flexible_content_value( $value );
+
+			if ( 'compact' === $mode ) {
+				$rows = [];
+				foreach ( $value as $i => $row ) {
+					if ( ! is_array( $row ) ) {
+						$rows[] = $row;
+						continue;
+					}
+					$rows[] = $is_flexible
+						? [ 'index' => $i, 'layout' => $row['acf_fc_layout'] ?? null, 'fields' => $this->scalar_subfields( $row ) ]
+						: $this->scalar_subfields( $row );
+				}
+				if ( $is_flexible ) {
+					return $rows;
+				}
+				// Repeater in compact mode: row count + first row summary only.
+				return [ 'row_count' => count( $value ), 'first_row' => $rows[ array_key_first( $rows ) ] ?? null ];
+			}
+
+			// standard — keep every row, recursing so nested images still shrink.
+			$rows = [];
+			foreach ( $value as $i => $row ) {
+				$rows[ $i ] = is_array( $row )
+					? array_map( fn( $v ) => $this->shape_acf_value( $v, $mode, $depth_cap, $depth + 1 ), $row )
+					: $row;
+			}
+			return $rows;
+		}
+
+		// Plain assoc (group) or list of scalars — recurse per key.
+		$out = [];
+		foreach ( $value as $k => $v ) {
+			$out[ $k ] = $this->shape_acf_value( $v, $mode, $depth_cap, $depth + 1 );
+		}
+		return $out;
+	}
+
+	/** An ACF image/file field's formatted return_format=array shape. */
+	private function is_acf_image_array( array $v ): bool {
+		return ( isset( $v['ID'] ) || isset( $v['id'] ) ) && isset( $v['url'] ) && ! isset( $v['acf_fc_layout'] );
+	}
+
+	/** Repeater or flexible-content value: every key numeric, every value a row array. */
+	private function looks_like_row_list( array $v ): bool {
+		if ( empty( $v ) ) {
+			return false;
+		}
+		foreach ( array_keys( $v ) as $k ) {
+			if ( ! is_int( $k ) && ! ctype_digit( (string) $k ) ) {
+				return false;
+			}
+		}
+		foreach ( $v as $row ) {
+			if ( ! is_array( $row ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** A row-list is flexible content when every row carries acf_fc_layout. */
+	private function is_flexible_content_value( array $v ): bool {
+		foreach ( $v as $row ) {
+			if ( ! is_array( $row ) || ! array_key_exists( 'acf_fc_layout', $row ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** A row's non-array (scalar) sub-fields only — drops nested images/repeaters/groups. */
+	private function scalar_subfields( array $row ): array {
+		$out = [];
+		foreach ( $row as $k => $v ) {
+			if ( 'acf_fc_layout' === $k ) {
+				continue;
+			}
+			if ( ! is_array( $v ) ) {
+				$out[ $k ] = $v;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * ISSUE 15 — which posts use a given flexible-content layout, without paying
+	 * the acf_value_get payload cost per post. A flexible-content field's OWN
+	 * meta_key (the field name, e.g. "cms") holds a serialized {row_index =>
+	 * layout_name} map — confirmed empirically (this ACF version does NOT write
+	 * a separate "<field>_<n>_acf_fc_layout" meta row per row). One query on
+	 * that meta_key, joined to wp_posts and excluding revisions, then an
+	 * in-PHP check of the unserialized layout names, finds every match cheaply
+	 * — no per-post acf_value_get payload.
+	 */
+	private function layout_usage( array $p ): array {
+		global $wpdb;
+
+		$layout = sanitize_text_field( (string) ( $p['layout'] ?? '' ) );
+		if ( '' === $layout ) return $this->error( 'wpcc_missing_layout', __( 'A layout name is required.', 'wp-command-center' ) );
+
+		$field         = sanitize_text_field( (string) ( $p['field'] ?? '' ) );
+		$post_types    = array_values( array_filter( array_map( 'sanitize_key', (array) ( $p['post_type'] ?? [] ) ) ) );
+		$post_statuses = array_values( array_filter( array_map( 'sanitize_key', (array) ( $p['post_status'] ?? [ 'publish' ] ) ) ) );
+		if ( empty( $post_statuses ) ) {
+			$post_statuses = [ 'publish' ];
+		}
+
+		$field_names = '' !== $field ? [ $field ] : $this->all_flexible_content_field_names();
+		if ( empty( $field_names ) ) {
+			return [ 'action' => 'acf_layout_usage', 'layout' => $layout, 'field' => '' !== $field ? $field : null, 'total' => 0, 'posts' => [] ];
+		}
+
+		$where  = [ 'pm.meta_key IN (' . implode( ',', array_fill( 0, count( $field_names ), '%s' ) ) . ')', "p.post_type != 'revision'" ];
+		$values = array_values( $field_names );
+
+		if ( ! empty( $post_types ) ) {
+			$where[] = 'p.post_type IN (' . implode( ',', array_fill( 0, count( $post_types ), '%s' ) ) . ')';
+			array_push( $values, ...$post_types );
+		}
+		if ( ! empty( $post_statuses ) ) {
+			$where[] = 'p.post_status IN (' . implode( ',', array_fill( 0, count( $post_statuses ), '%s' ) ) . ')';
+			array_push( $values, ...$post_statuses );
+		}
+
+		$sql = "SELECT p.ID as post_id, p.post_title as title, p.post_type as post_type, p.post_status as status, pm.meta_value as meta_value
+			FROM {$wpdb->postmeta} pm
+			INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+			WHERE " . implode( ' AND ', $where ) . '
+			ORDER BY p.ID ASC';
+
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, ...$values ), ARRAY_A );
+
+		$by_post = [];
+		foreach ( (array) $rows as $row ) {
+			$layout_map = maybe_unserialize( $row['meta_value'] );
+			if ( ! is_array( $layout_map ) ) {
+				continue;
+			}
+			$occurrences = count( array_filter( $layout_map, static fn( $l ) => $l === $layout ) );
+			if ( $occurrences <= 0 ) {
+				continue;
+			}
+
+			$pid = (int) $row['post_id'];
+			if ( ! isset( $by_post[ $pid ] ) ) {
+				$by_post[ $pid ] = [
+					'post_id'     => $pid,
+					'title'       => $row['title'],
+					'post_type'   => $row['post_type'],
+					'status'      => $row['status'],
+					'permalink'   => get_permalink( $pid ) ?: null,
+					'occurrences' => 0,
+				];
+			}
+			$by_post[ $pid ]['occurrences'] += $occurrences;
+		}
+
+		$this->audit->record( 'acf.layout.usage', [ 'layout' => $layout, 'field' => $field, 'matches' => count( $by_post ) ] );
+
+		return [
+			'action' => 'acf_layout_usage',
+			'layout' => $layout,
+			'field'  => '' !== $field ? $field : null,
+			'total'  => count( $by_post ),
+			'posts'  => array_values( $by_post ),
+		];
+	}
+
+	/** Every flexible_content field's name across every registered field group. */
+	private function all_flexible_content_field_names(): array {
+		$names = [];
+		foreach ( acf_get_field_groups() as $g ) {
+			foreach ( acf_get_fields( $g['key'] ) ?: [] as $f ) {
+				if ( 'flexible_content' === ( $f['type'] ?? '' ) && ! empty( $f['name'] ) ) {
+					$names[ $f['name'] ] = true;
+				}
+			}
+		}
+		return array_keys( $names );
 	}
 
 	/**
@@ -621,7 +887,7 @@ final class ACFRuntimeManager {
 			'action'  => 'acf_describe',
 			'runtime' => 'acf_manage',
 			'actions' => $actions,
-			'notes'   => __( 'acf_value_set/get accept {object_type: post|term|user|option, object_id}. acf_value_set takes fields:{field_key:value}. Definition ops (group_*/field_*) are high-risk and approval-gated.', 'wp-command-center' ),
+			'notes'   => __( 'acf_value_set/get accept {object_type: post|term|user|option, object_id}. acf_value_set takes fields:{field_key:value}. acf_value_get accepts context_mode (compact|standard|verbose, default standard), format (formatted|raw), layouts_only (flexible content layout names only), depth (cap nesting). acf_layout_usage {layout, field?, post_type?, post_status?} finds every post using a flexible-content layout without reading each post\'s full field value. Definition ops (group_*/field_*) are high-risk and approval-gated.', 'wp-command-center' ),
 		];
 	}
 
@@ -716,7 +982,7 @@ final class ACFRuntimeManager {
 			$k = sanitize_text_field( (string) $rawk );
 			$field_object = acf_get_field( $k );
 			if ( ! $field_object ) {
-				return $this->error( 'wpcc_unknown_acf_field', sprintf( __( 'ACF field "%s" not found.', 'wp-command-center' ), $k ) );
+				return $this->error( 'wpcc_unknown_acf_field', sprintf( /* translators: %s: value */ __( 'ACF field "%s" not found.', 'wp-command-center' ), $k ) );
 			}
 			if ( 'no' === $this->field_targets_object_type( $field_object, $object_type ) ) {
 				return $this->error( 'wpcc_acf_location_mismatch', sprintf(

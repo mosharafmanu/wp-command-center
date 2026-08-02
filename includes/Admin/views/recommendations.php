@@ -98,7 +98,7 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 	.wpcc-rec-sev-critical, .wpcc-rec-sev-high { background: #fcf0f1; color: #b32d2e; }
 	.wpcc-rec-sev-medium { background: #fcf9e8; color: #8a6500; }
 	.wpcc-rec-sev-low, .wpcc-rec-sev-info { background: #f0f6fc; color: #2271b1; }
-	.wpcc-rec-empty { text-align: center; padding: 28px 16px; color: #646970; background: #f6f7f7; border: 1px dashed #c3c4c7; border-radius: 6px; }
+	.wpcc-rec-empty { text-align: center; padding: 28px 16px; color: #646970; background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 8px; }
 </style>
 
 <div class="wpcc-rec-wrap">
@@ -108,8 +108,8 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 	</p>
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
-	<?php if ( $wpcc_rec_notice ) : ?><div class="notice notice-success is-dismissible"><p><?php echo esc_html( $wpcc_rec_notice ); ?></p></div><?php endif; ?>
-	<?php if ( $wpcc_rec_error ) : ?><div class="notice notice-error is-dismissible"><p><?php echo esc_html( $wpcc_rec_error ); ?></p></div><?php endif; ?>
+	<?php if ( $wpcc_rec_notice ) : ?><div class="notice inline notice-success is-dismissible"><p><?php echo esc_html( $wpcc_rec_notice ); ?></p></div><?php endif; ?>
+	<?php if ( $wpcc_rec_error ) : ?><div class="notice inline notice-error is-dismissible"><p><?php echo esc_html( $wpcc_rec_error ); ?></p></div><?php endif; ?>
 
 	<div class="wpcc-rec-cards">
 		<div class="wpcc-rec-card"><div class="v"><?php echo esc_html( (string) $wpcc_c_open ); ?></div><div class="l"><?php esc_html_e( 'Open', 'wp-command-center' ); ?></div></div>

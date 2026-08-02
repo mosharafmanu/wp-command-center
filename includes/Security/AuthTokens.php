@@ -40,6 +40,61 @@ final class AuthTokens {
 	 * Render a token's effective status (active / expired / revoked) as an
 	 * HTML badge (escaped).
 	 */
+	/**
+	 * Resolve the raw bearer token from the request, across servers that do not
+	 * hand PHP the Authorization header the usual way.
+	 *
+	 * Discovered on a clean WordPress install: on Apache (apache2handler, and
+	 * commonly CGI/FastCGI) `$_SERVER['HTTP_AUTHORIZATION']` is never populated,
+	 * so `WP_REST_Request::get_header('authorization')` returns nothing and every
+	 * assistant request failed with "Missing API token" — even with a valid,
+	 * active token. The header IS present; only that one lookup cannot see it.
+	 *
+	 * This checks the same sources WordPress core and the wider ecosystem use, in
+	 * order of reliability. It changes NO authorization policy: whatever is found
+	 * still goes through validate() exactly as before. It only stops a correct
+	 * token from being thrown away before it is ever checked.
+	 *
+	 * @return string Raw token, or '' when the request carries no bearer header.
+	 */
+	public static function bearer_from_request( \WP_REST_Request $request ): string {
+		$candidates = [];
+
+		$header = $request->get_header( 'authorization' );
+		if ( is_string( $header ) && '' !== $header ) {
+			$candidates[] = $header;
+		}
+		// Apache rewrites the header into REDIRECT_* when it passes through a rule.
+		foreach ( [ 'HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION' ] as $key ) {
+			if ( ! empty( $_SERVER[ $key ] ) ) {
+				$candidates[] = (string) $_SERVER[ $key ];
+			}
+		}
+		// Last resort: ask the server module directly (case-insensitive key match).
+		foreach ( [ 'getallheaders', 'apache_request_headers' ] as $fn ) {
+			if ( ! function_exists( $fn ) ) {
+				continue;
+			}
+			$headers = call_user_func( $fn );
+			if ( ! is_array( $headers ) ) {
+				continue;
+			}
+			foreach ( $headers as $name => $value ) {
+				if ( 0 === strcasecmp( (string) $name, 'authorization' ) && '' !== (string) $value ) {
+					$candidates[] = (string) $value;
+				}
+			}
+		}
+
+		foreach ( $candidates as $candidate ) {
+			if ( preg_match( '/^Bearer\s+(.+)$/i', trim( $candidate ), $m ) ) {
+				return trim( $m[1] );
+			}
+		}
+
+		return '';
+	}
+
 	public static function status_badge( array $token ): string {
 		if ( self::STATUS_REVOKED === $token['status'] ) {
 			return sprintf( '<span class="wpcc-badge wpcc-badge--neutral">%s</span>', esc_html__( 'Revoked', 'wp-command-center' ) );
@@ -167,7 +222,7 @@ final class AuthTokens {
 		$raw_token = trim( $raw_token );
 
 		if ( '' === $raw_token ) {
-			return new \WP_Error( 'wpcc_missing_token', __( 'Missing API token.', 'wp-command-center' ), [ 'status' => 401 ] );
+			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'wp-command-center' ), [ 'status' => 401 ] );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -185,7 +240,7 @@ final class AuthTokens {
 			}
 
 			if ( self::STATUS_ACTIVE !== $record['status'] ) {
-				return new \WP_Error( 'wpcc_token_revoked', __( 'This API token has been revoked.', 'wp-command-center' ), [ 'status' => 401 ] );
+				return new \WP_Error( 'wpcc_token_revoked', __( 'This access token was revoked, so it no longer works. Create a new one in WP Command Center → Settings → Connections and update your assistant configuration.', 'wp-command-center' ), [ 'status' => 401 ] );
 			}
 
 			if ( null !== $record['expires_at'] && $record['expires_at'] < time() ) {
@@ -199,7 +254,7 @@ final class AuthTokens {
 		}
 		unset( $record );
 
-		return new \WP_Error( 'wpcc_invalid_token', __( 'Invalid API token.', 'wp-command-center' ), [ 'status' => 401 ] );
+		return new \WP_Error( 'wpcc_invalid_token', __( 'This access token was not recognised by this site. Check it was copied in full and belongs to this site, or create a new one in WP Command Center → Settings → Connections.', 'wp-command-center' ), [ 'status' => 401 ] );
 	}
 
 	/**

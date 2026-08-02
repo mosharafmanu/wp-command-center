@@ -27,12 +27,13 @@ final class McpRestApi {
 	}
 
 	public function require_read( \WP_REST_Request $request ): bool|\WP_Error {
-		$header = $request->get_header( 'authorization' );
-		if ( ! $header || ! preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
-			return new \WP_Error( 'wpcc_missing_token', __( 'Missing API token.', 'wp-command-center' ) );
+		// Resolve across servers that never expose Authorization to WordPress.
+		$raw = AuthTokens::bearer_from_request( $request );
+		if ( '' === $raw ) {
+			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'wp-command-center' ) );
 		}
 		$auth  = new AuthTokens();
-		$token = $auth->validate( $matches[1] );
+		$token = $auth->validate( $raw );
 		if ( is_wp_error( $token ) ) {
 			return $token;
 		}
@@ -49,13 +50,12 @@ final class McpRestApi {
 		// server cannot keep writing after the client has abandoned the request.
 		McpServerRuntime::apply_time_budget( $body['id'] ?? null );
 
-		$header  = $request->get_header( 'authorization' );
-		$matches = [];
-		$tid     = '';
-		$scope   = '';
-		if ( $header && preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
+		$raw   = AuthTokens::bearer_from_request( $request );
+		$tid   = '';
+		$scope = '';
+		if ( '' !== $raw ) {
 			$auth  = new AuthTokens();
-			$token = $auth->validate( $matches[1] );
+			$token = $auth->validate( $raw );
 			$tid   = is_array( $token ) ? ( $token['id'] ?? '' ) : '';
 			$scope = is_array( $token ) ? ( $token['scope'] ?? '' ) : '';
 

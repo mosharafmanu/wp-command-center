@@ -11,6 +11,9 @@ defined( 'ABSPATH' ) || exit;
 
 final class SearchReplace {
 
+	/** ISSUE 16 — default cap on the return_matches row list. */
+	private const DEFAULT_MAX_MATCHES = 25;
+
 	/**
 	 * Run the search and replace operation.
 	 *
@@ -33,6 +36,8 @@ final class SearchReplace {
 		$dry_run        = filter_var( $params['dry_run'] ?? true, FILTER_VALIDATE_BOOLEAN );
 		$case_sensitive = filter_var( $params['case_sensitive'] ?? false, FILTER_VALIDATE_BOOLEAN );
 		$tables         = (array) ( $params['tables'] ?? [] );
+		$return_matches = filter_var( $params['return_matches'] ?? false, FILTER_VALIDATE_BOOLEAN );
+		$max_matches    = isset( $params['max_matches'] ) ? max( 1, (int) $params['max_matches'] ) : self::DEFAULT_MAX_MATCHES;
 
 		if ( '' === $search ) {
 			return new \WP_Error( 'wpcc_empty_search', __( 'Search string cannot be empty.', 'wp-command-center' ) );
@@ -49,17 +54,19 @@ final class SearchReplace {
 		// Validate tables
 		foreach ( $tables as $table ) {
 			if ( ! str_starts_with( $table, $wpdb->prefix ) ) {
-				return new \WP_Error( 'wpcc_invalid_table_prefix', sprintf( __( 'Table %s does not start with the required WordPress prefix.', 'wp-command-center' ), $table ) );
+				return new \WP_Error( 'wpcc_invalid_table_prefix', sprintf( /* translators: %s: value */ __( 'Table %s does not start with the required WordPress prefix.', 'wp-command-center' ), $table ) );
 			}
 			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
-				return new \WP_Error( 'wpcc_invalid_table', sprintf( __( 'Table %s does not exist.', 'wp-command-center' ), $table ) );
+				return new \WP_Error( 'wpcc_invalid_table', sprintf( /* translators: %s: value */ __( 'Table %s does not exist.', 'wp-command-center' ), $table ) );
 			}
 		}
 
-		$tables_checked  = 0;
-		$matches_found   = 0;
-		$rows_affected   = 0;
-		$tables_affected = [];
+		$tables_checked   = 0;
+		$matches_found    = 0;
+		$rows_affected    = 0;
+		$tables_affected  = [];
+		$matches_detail   = [];
+		$matches_omitted  = 0;
 
 		foreach ( $tables as $table ) {
 			$tables_checked++;
@@ -100,6 +107,20 @@ final class SearchReplace {
 
 					if ( $new_val !== $val ) {
 						$updated_row[ $col ] = $new_val;
+
+						if ( $return_matches ) {
+							if ( count( $matches_detail ) < $max_matches ) {
+								$matches_detail[] = [
+									'table'              => $table,
+									'primary_key_column' => $primary_key,
+									'primary_key_value'  => $row[ $primary_key ],
+									'column'             => $col,
+									'excerpt'            => $this->build_excerpt( (string) $val, $search, $case_sensitive ),
+								];
+							} else {
+								++$matches_omitted;
+							}
+						}
 					}
 				}
 
@@ -119,7 +140,7 @@ final class SearchReplace {
 			}
 		}
 
-		return [
+		$result = [
 			'dry_run'         => $dry_run,
 			'tables_checked'  => $tables_checked,
 			'tables_affected' => $tables_affected,
@@ -127,6 +148,34 @@ final class SearchReplace {
 			'rows_affected'   => $rows_affected,
 			'warning'         => __( 'External database backup is strongly recommended before running a live search and replace.', 'wp-command-center' ),
 		];
+
+		if ( $return_matches ) {
+			$result['matches']          = $matches_detail;
+			$result['matches_returned'] = count( $matches_detail );
+			$result['matches_omitted']  = $matches_omitted;
+		}
+
+		return $result;
+	}
+
+	/**
+	 * ISSUE 16 — a short excerpt of the original column value centered on the
+	 * search term, so return_matches results are readable without dumping full
+	 * (possibly serialized) row contents.
+	 */
+	private function build_excerpt( string $haystack, string $search, bool $case_sensitive ): string {
+		$pos = $case_sensitive ? strpos( $haystack, $search ) : stripos( $haystack, $search );
+		if ( false === $pos ) {
+			// Match was inside a serialized/nested value rather than the raw
+			// column string itself — fall back to a plain leading excerpt.
+			return mb_substr( $haystack, 0, 80 );
+		}
+
+		$start   = max( 0, $pos - 40 );
+		$length  = strlen( $search ) + 80;
+		$excerpt = substr( $haystack, $start, $length );
+
+		return ( $start > 0 ? '…' : '' ) . $excerpt . ( ( $start + $length ) < strlen( $haystack ) ? '…' : '' );
 	}
 
 	/**
