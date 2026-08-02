@@ -269,7 +269,12 @@ final class McpServerRuntime {
 			'wpcc://manifest'        => ContextModeOptimizer::COMPACT === $mode ? ( new ContextSummaryBuilder() )->manifest_summary() : $this->fetch_rest( '/agent/manifest' ),
 			'wpcc://context'         => ContextModeOptimizer::COMPACT === $mode ? ( new ContextSummaryBuilder() )->build() : $this->fetch_rest( '/agent/context' ),
 			'wpcc://capabilities'    => ( new CapabilityRegistry() )->get_summary(),
-			'wpcc://operations'      => ( new OperationRegistry() )->get_operations(),
+			// V1 Phase 6 — the protocol's own discovery channel carries enough for an
+			// assistant to build a correct first request without guessing.
+			'wpcc://operations'      => array_map(
+				[ \WPCommandCenter\Operations\OperationDescriptor::class, 'enrich' ],
+				( new OperationRegistry() )->get_operations()
+			),
 			'wpcc://queue'           => $this->get_queue_status(),
 			'wpcc://results'         => $this->get_results(),
 			'wpcc://recommendations' => $this->get_recommendations(),

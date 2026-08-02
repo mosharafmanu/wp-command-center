@@ -2229,6 +2229,12 @@ final class RestApi {
 			return $this->with_status( new \WP_Error( 'wpcc_operation_not_found', __( 'Operation not found.', 'wp-command-center' ) ) );
 		}
 
+		// V1 Phase 6 — enough detail to build a correct first request: per-action risk
+		// and read/write kind, approval behaviour per protection mode, accepted
+		// parameter aliases, the rollback route, and whether this host and this site's
+		// plugins actually satisfy the operation's requirements.
+		$operation = \WPCommandCenter\Operations\OperationDescriptor::enrich( $operation );
+
 		$response = $this->redact_response( $operation, 'operations/detail', $request );
 
 		return new \WP_REST_Response( $response );
