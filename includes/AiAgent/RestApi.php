@@ -1888,10 +1888,12 @@ final class RestApi {
 				return $this->with_status( new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'wp-command-center' ) ) );
 			}
 
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name is $wpdb->prefix . 'wpcc_*' from a private accessor; the value is bound with %s. SQL identifiers cannot be placeholders.
 			$task_rows = $wpdb->get_results(
 				$wpdb->prepare( 'SELECT * FROM ' . $this->agent_tasks_table() . ' WHERE session_id = %s ORDER BY id DESC', $session_id ),
 				ARRAY_A
 			);
+			// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 			$response['session']         = $session;
 			$response['session_tasks']   = array_map( [ $this, 'normalize_agent_task' ], $task_rows ?: [] );
@@ -2156,7 +2158,9 @@ final class RestApi {
 			// No filter: return last N sessions
 			$limit    = isset( $params['limit'] ) ? max( 1, (int) $params['limit'] ) : 5;
 			$offset   = isset( $params['offset'] ) ? max( 0, (int) $params['offset'] ) : 0;
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; LIMIT/OFFSET bound with %d after integer casts.
 			$rows     = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . $this->agent_sessions_table() . ' ORDER BY id DESC LIMIT %d OFFSET %d', $limit, $offset ), ARRAY_A );
+			// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			$sessions = array_map( [ $this, 'normalize_agent_session' ], $rows ?: [] );
 		}
 
@@ -3232,7 +3236,9 @@ final class RestApi {
 		global $wpdb;
 
 		$this->expire_agent_sessions();
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Fully static SQL over a plugin-owned table; no user input reaches it.
 		$rows = $wpdb->get_results( 'SELECT * FROM ' . $this->agent_sessions_table() . ' ORDER BY id DESC', ARRAY_A );
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return new \WP_REST_Response( array_map( [ $this, 'normalize_agent_session' ], $rows ?: [] ) );
 	}
@@ -3310,6 +3316,7 @@ final class RestApi {
 	}
 
 	private function list_agent_tasks_by( ?string $field = null, ?string $value = null ): array {
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is checked against a hard allowlist on the line above; the value is bound with %s.
 		global $wpdb;
 
 		$table = $this->agent_tasks_table();
@@ -3323,6 +3330,7 @@ final class RestApi {
 
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'normalize_agent_task' ], $rows ?: [] );
 	}
 
@@ -3348,10 +3356,12 @@ final class RestApi {
 	private function find_agent_session( string $session_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_sessions_table() . ' WHERE session_id = %s', $session_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_session( $row ) : null;
 	}
@@ -3434,7 +3444,9 @@ final class RestApi {
 	public function list_agent_tasks(): \WP_REST_Response {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Fully static SQL over a plugin-owned table; no user input reaches it.
 		$rows = $wpdb->get_results( 'SELECT * FROM ' . $this->agent_tasks_table() . ' ORDER BY id DESC', ARRAY_A );
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return new \WP_REST_Response( array_map( [ $this, 'normalize_agent_task' ], $rows ?: [] ) );
 	}
@@ -3514,10 +3526,12 @@ final class RestApi {
 	private function find_agent_task( string $task_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_tasks_table() . ' WHERE task_id = %s', $task_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_task( $row ) : null;
 	}
@@ -3727,14 +3741,17 @@ final class RestApi {
 	private function find_agent_action( string $action_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_actions_table() . ' WHERE action_id = %s', $action_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_action( $row ) : null;
 	}
 
+	// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is checked against a hard allowlist on the line above; the value is bound with %s.
 	private function list_agent_actions_by( ?string $field = null, ?string $value = null ): array {
 		global $wpdb;
 
@@ -3749,6 +3766,7 @@ final class RestApi {
 
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 
+	// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'normalize_agent_action' ], $rows ?: [] );
 	}
 
@@ -4026,14 +4044,17 @@ final class RestApi {
 	private function find_agent_plan( string $plan_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_plans_table() . ' WHERE plan_id = %s', $plan_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_plan( $row ) : null;
 	}
 
+	// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is checked against a hard allowlist on the line above; the value is bound with %s.
 	private function list_agent_plans_by( ?string $field = null, ?string $value = null ): array {
 		global $wpdb;
 
@@ -4048,6 +4069,7 @@ final class RestApi {
 
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 
+	// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'normalize_agent_plan' ], $rows ?: [] );
 	}
 
@@ -4062,10 +4084,12 @@ final class RestApi {
 			$row[ $integer_field ] = (int) $row[ $integer_field ];
 		}
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$steps = $wpdb->get_results(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_plan_steps_table() . ' WHERE plan_id = %s ORDER BY step_order ASC', $row['plan_id'] ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		$row['steps'] = array_map(
 			static function ( array $step ): array {

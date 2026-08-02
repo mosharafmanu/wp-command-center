@@ -76,7 +76,10 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 }
 
 $page_url = static function ( array $args = [] ): string {
-	return esc_url( add_query_arg( array_merge( [ 'page' => 'wpcc-patches' ], $args ), admin_url( 'admin.php' ) ) );
+	// Returns the RAW url; every call site escapes at the point of output. Escaping
+	// inside the closure was correct but invisible to static analysis, so each echo
+	// read as unescaped output.
+	return add_query_arg( array_merge( [ 'page' => 'wpcc-patches' ], $args ), admin_url( 'admin.php' ) );
 };
 
 $risk_labels = [
@@ -121,11 +124,11 @@ $patches = $patch_manager->list();
 				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th>
-					<td><?php echo PatchManager::status_badge( $patch['status'] ); ?></td>
+					<td><?php echo wp_kses_post( PatchManager::status_badge( $patch['status'] ) ); ?></td>
 				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Risk Level', 'wp-command-center' ); ?></th>
-					<td><?php echo PatchManager::risk_badge( $patch['risk_level'] ); ?></td>
+					<td><?php echo wp_kses_post( PatchManager::risk_badge( $patch['risk_level'] ) ); ?></td>
 				</tr>
 				<tr>
 					<th scope="row"><?php esc_html_e( 'Target File(s)', 'wp-command-center' ); ?></th>
@@ -221,7 +224,7 @@ $patches = $patch_manager->list();
 				<?php endif; ?>
 			</p>
 
-			<p><a href="<?php echo $page_url(); ?>"><?php esc_html_e( '← Back to all patches', 'wp-command-center' ); ?></a></p>
+			<p><a href="<?php echo esc_url( $page_url() ); ?>"><?php esc_html_e( '← Back to all patches', 'wp-command-center' ); ?></a></p>
 
 		<?php endif; ?>
 
@@ -247,7 +250,7 @@ $patches = $patch_manager->list();
 			<?php foreach ( $patches as $summary ) : ?>
 				<tr>
 					<td>
-						<a href="<?php echo $page_url( [ 'view' => $summary['id'] ] ); ?>">
+						<a href="<?php echo esc_url( $page_url( [ 'view' => $summary['id'] ] ) ); ?>">
 							<code><?php echo esc_html( substr( $summary['id'], 0, 8 ) ); ?></code>
 						</a>
 					</td>
@@ -258,9 +261,9 @@ $patches = $patch_manager->list();
 						<?php endforeach; ?>
 					</td>
 					<td><?php echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $summary['created_at'] ) ); ?></td>
-					<td><?php echo PatchManager::status_badge( $summary['status'] ); ?></td>
+					<td><?php echo wp_kses_post( PatchManager::status_badge( $summary['status'] ) ); ?></td>
 					<td class="wpcc-actions">
-						<a class="button button-small" href="<?php echo $page_url( [ 'view' => $summary['id'] ] ); ?>"><?php esc_html_e( 'View', 'wp-command-center' ); ?></a>
+						<a class="button button-small" href="<?php echo esc_url( $page_url( [ 'view' => $summary['id'] ] ) ); ?>"><?php esc_html_e( 'View', 'wp-command-center' ); ?></a>
 
 						<?php if ( in_array( $summary['status'], [ PatchManager::STATUS_DRAFT, PatchManager::STATUS_PENDING_APPROVAL ], true ) ) : ?>
 							<form method="post" class="wpcc-inline-form">

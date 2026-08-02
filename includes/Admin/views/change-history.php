@@ -36,7 +36,10 @@ $f_from    = isset( $_GET['date_from'] ) ? sanitize_text_field( wp_unslash( $_GE
 $f_to      = isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '';     // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 $tab_url = static function ( string $t ) use ( $page ): string {
-	return esc_url( add_query_arg( [ 'page' => $page, 'tab' => $t ], admin_url( 'admin.php' ) ) );
+	// Returns the RAW url; every call site escapes at the point of output. Escaping
+	// inside the closure was correct but invisible to static analysis, so each echo
+	// read as unescaped output.
+	return add_query_arg( [ 'page' => $page, 'tab' => $t ], admin_url( 'admin.php' ) );
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-history">
@@ -63,7 +66,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo $tab_url( 'timeline' ); ?>">&larr; <?php esc_html_e( 'Back to Changes', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>">&larr; <?php esc_html_e( 'Back to Changes', 'wp-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-history-detail" data-change-id="<?php echo esc_attr( $view_id ); ?>">
 			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'wp-command-center' ); ?></p>
@@ -72,9 +75,9 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		<div id="wpcc-history-diff"></div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo $tab_url( 'timeline' ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'sessions' ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'reversible' ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Can be undone', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'sessions' ) ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'reversible' ) ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Can be undone', 'wp-command-center' ); ?></a>
 		</h2>
 
 		<?php if ( '' !== $session_id ) : ?>

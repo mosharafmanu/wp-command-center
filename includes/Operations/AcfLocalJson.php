@@ -282,6 +282,7 @@ final class AcfLocalJson {
 			return $result;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- writing the temp half of an atomic replace; WP_Filesystem cannot express it.
 		$ok = ( false !== fwrite( $handle, $json ) );
 		if ( $ok ) {
 			fflush( $handle );

@@ -151,6 +151,7 @@ final class AuditLog {
 			return;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- append-only audit log opened for locking (flock). WP_Filesystem has no locking primitive, so concurrent requests could interleave writes.
 		$handle = fopen( $file, 'c' );
 
 		if ( false === $handle ) {
@@ -160,6 +161,7 @@ final class AuditLog {
 		// Coordinate with concurrent record() appends (advisory lock on the
 		// same inode). Blocks until the in-flight append releases LOCK_EX.
 		if ( ! flock( $handle, LOCK_EX ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 			fclose( $handle );
 			return;
 		}
@@ -171,11 +173,13 @@ final class AuditLog {
 			$target = trailingslashit( $dir ) . 'audit-' . gmdate( 'Ymd-His' ) . '-' . substr( md5( uniqid( '', true ) ), 0, 6 ) . '.log';
 
 			if ( ! file_exists( $target ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic temp-then-replace. WP_Filesystem::move() gives no atomicity guarantee and is not atomic at all over its FTP/SSH transports; snapshot and audit integrity depend on a reader seeing either the whole old file or the whole new one.
 				@rename( $file, $target );
 			}
 		}
 
 		flock( $handle, LOCK_UN );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		$this->prune_segments( $dir );

@@ -226,6 +226,7 @@ final class WpCliBridge {
 	private function execute( string $shell_cmd, int $timeout, int $output_max, string $command_id ): array|\WP_Error {
 		$shell_cmd = $this->shell_path_prefix() . $shell_cmd . ' --path=' . escapeshellarg( ABSPATH ) . ' --allow-root';
 
+		// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found -- disclosed in the readme and in the reviewer notes. Degrades to unavailable where a host forbids process execution; removing it would make patching less safe.
 		$process = @proc_open(
 			$shell_cmd,
 			[
@@ -254,7 +255,9 @@ final class WpCliBridge {
 		while ( $status['running'] ) {
 			if ( time() - $start > $timeout ) {
 				@proc_terminate( $process );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 				@fclose( $pipes[1] );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 				@fclose( $pipes[2] );
 				@proc_close( $process );
 				return new \WP_Error( 'wpcc_wpcli_timeout', __( 'WP-CLI command timed out.', 'wp-command-center' ) );
@@ -280,7 +283,9 @@ final class WpCliBridge {
 			$stderr .= $chunk_err;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 		@fclose( $pipes[1] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 		@fclose( $pipes[2] );
 		@proc_close( $process );
 

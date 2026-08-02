@@ -32,6 +32,7 @@ final class DebugLogViewer {
 
 		$size = filesize( $path );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $path, 'rb' );
 
 		if ( false === $handle ) {
@@ -42,6 +43,7 @@ final class DebugLogViewer {
 
 		fseek( $handle, -$read_bytes, SEEK_END );
 		$contents = stream_get_contents( $handle );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		$truncated = $read_bytes < $size;

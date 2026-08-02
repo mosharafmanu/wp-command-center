@@ -1242,6 +1242,7 @@ final class ACFRuntimeManager {
 			array_push( $values, ...$post_statuses );
 		}
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated WHERE list contains only placeholders; every value is bound through prepare().
 		$sql = "SELECT p.ID as post_id, p.post_title as title, p.post_type as post_type, p.post_status as status, pm.meta_value as meta_value
 			FROM {$wpdb->postmeta} pm
 			INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
@@ -1250,6 +1251,7 @@ final class ACFRuntimeManager {
 
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, ...$values ), ARRAY_A );
 
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		$by_post = [];
 		foreach ( (array) $rows as $row ) {
 			$layout_map = maybe_unserialize( $row['meta_value'] );

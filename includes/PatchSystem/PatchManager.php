@@ -458,11 +458,13 @@ final class PatchManager {
 		if ( ! in_array( $field, [ 'session_id', 'task_id', 'plan_id' ], true ) ) {
 			return [];
 		}
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $field is validated against a hard allowlist immediately above; $table is $wpdb->prefix . 'wpcc_patches'; the value is bound with %s.
 
 		$table = $wpdb->prefix . 'wpcc_patches';
 		$sql   = $wpdb->prepare( "SELECT * FROM {$table} WHERE {$field} = %s ORDER BY created_at DESC", $value );
 		$rows  = $wpdb->get_results( $sql, ARRAY_A );
 
+// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'row_to_summary' ], $rows ?: [] );
 	}
 

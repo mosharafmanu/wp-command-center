@@ -282,6 +282,7 @@ final class OperationQueue {
 		$sql .= ' ORDER BY priority ASC, created_at DESC';
 
 		$limit  = isset( $filters['limit'] ) ? max( 1, (int) $filters['limit'] ) : 50;
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $wpdb->prepare() is applied into $sql above; the sniffer cannot follow prepare-into-variable.
 		$offset = isset( $filters['offset'] ) ? max( 0, (int) $filters['offset'] ) : 0;
 		$sql   .= $wpdb->prepare( ' LIMIT %d OFFSET %d', $limit, $offset );
 
@@ -291,6 +292,7 @@ final class OperationQueue {
 
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'normalize_item' ], $rows ?: [] );
 	}
 

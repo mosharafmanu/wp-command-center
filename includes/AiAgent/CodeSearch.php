@@ -341,6 +341,7 @@ final class CodeSearch {
 	 */
 	private function search_file( \SplFileInfo $file, string $relative, int $size, string $query, ?string $pattern ): array {
 		$matches = [];
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle  = fopen( $file->getPathname(), 'rb' );
 
 		if ( false === $handle ) {
@@ -374,6 +375,7 @@ final class CodeSearch {
 			}
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		return $matches;

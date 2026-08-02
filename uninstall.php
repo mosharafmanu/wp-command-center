@@ -132,7 +132,8 @@ function wpcc_uninstall_rmdir( string $path ): void {
 			wpcc_uninstall_rmdir( trailingslashit( $path ) . $entry );
 		}
 	}
-	@rmdir( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir,WordPress.PHP.NoSilencedErrors.Discouraged -- removes a now-empty directory this plugin created. WP_Filesystem requires credentialed initialisation that is not available on the uninstall path.
+	@rmdir( $path );
 }
 
 if ( is_multisite() ) {

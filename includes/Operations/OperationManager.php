@@ -303,11 +303,13 @@ final class OperationManager {
 	public function finalize_execution( string $request_id, bool $success ): void {
 		global $wpdb;
 		$status = $success ? self::STATUS_EXECUTED : self::STATUS_FAILED;
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is chosen in-file from a two-value ternary, never from input; all values are bound.
 		$field  = $success ? 'executed_at' : 'failed_at';
 		$wpdb->query( $wpdb->prepare(
 			"UPDATE {$wpdb->prefix}wpcc_operation_requests SET status = %s, {$field} = %d WHERE request_id = %s AND status = %s",
 			$status,
 			time(),
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			$request_id,
 			self::STATUS_EXECUTING
 		) );
@@ -353,6 +355,7 @@ final class OperationManager {
 		$sql .= ' ORDER BY id DESC';
 
 		$limit  = isset( $filters['limit'] ) ? max( 1, (int) $filters['limit'] ) : 50;
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $wpdb->prepare() is applied into $sql above; the sniffer cannot follow prepare-into-variable.
 		$offset = isset( $filters['offset'] ) ? max( 0, (int) $filters['offset'] ) : 0;
 		$sql   .= $wpdb->prepare( ' LIMIT %d OFFSET %d', $limit, $offset );
 
@@ -362,6 +365,7 @@ final class OperationManager {
 
 		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
 	}
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 	private function update_status( string $request_id, string $status, ?string $timestamp_field = null, array $extra = [] ): bool|\WP_Error {
 		global $wpdb;

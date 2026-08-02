@@ -165,6 +165,7 @@ final class ProposalStore {
 
 		$limit  = isset( $filters['limit'] ) ? max( 1, min( 200, (int) $filters['limit'] ) ) : 50;
 		$offset = isset( $filters['offset'] ) ? max( 0, (int) $filters['offset'] ) : 0;
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- build_where() returns placeholder-only fragments; all values are bound through prepare().
 
 		$sql      = "SELECT * FROM {$this->table()} {$where_sql} ORDER BY id DESC LIMIT %d OFFSET %d";
 		$params[] = $limit;
@@ -173,8 +174,10 @@ final class ProposalStore {
 		return $wpdb->get_results( $wpdb->prepare( $sql, ...$params ), ARRAY_A ) ?: [];
 	}
 
+// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 	/** Total rows matching the given filters (for pagination). */
 	public function count( array $filters = [] ): int {
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- build_where() returns placeholder-only fragments; the no-params branch is static SQL over a plugin-owned table.
 		global $wpdb;
 		[ $where_sql, $params ] = $this->build_where( $filters );
 		$sql = "SELECT COUNT(*) FROM {$this->table()} {$where_sql}";
@@ -182,6 +185,7 @@ final class ProposalStore {
 			? $wpdb->get_var( $sql )
 			: $wpdb->get_var( $wpdb->prepare( $sql, ...$params ) ) );
 	}
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 	/** @return array{0:string,1:array<int,mixed>} prepared WHERE fragment + params. */
 	private function build_where( array $filters ): array {

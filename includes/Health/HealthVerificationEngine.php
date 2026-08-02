@@ -81,11 +81,13 @@ final class HealthVerificationEngine {
 			$params[] = $filters['status'];
 		}
 		$sql .= ' ORDER BY id DESC' . $wpdb->prepare( ' LIMIT %d OFFSET %d', max( 1, min( 100, (int) ( $filters['limit'] ?? 20 ) ) ), max( 0, (int) ( $filters['offset'] ?? 0 ) ) );
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $wpdb->prepare() is applied into $sql above; LIMIT/OFFSET are prepared separately after max()/min() integer casts. The sniffer cannot follow prepare-into-variable.
 		if ( $params ) {
 			$sql = $wpdb->prepare( $sql, ...$params );
 		}
 		return array_map( [ $this, 'normalize' ], $wpdb->get_results( $sql, ARRAY_A ) ?: [] );
 	}
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 	public function get( string $verification_id ): ?array {
 		global $wpdb;

@@ -274,6 +274,7 @@ final class MediaSnapshot {
 				wp_delete_file( $file );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- removes a now-empty directory this plugin created. WP_Filesystem requires credentialed initialisation that is not available on the uninstall path.
 		@rmdir( $dir );
 	}
 

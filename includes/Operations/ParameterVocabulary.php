@@ -36,17 +36,24 @@ final class ParameterVocabulary {
 	 * @var array<string,array<string,array<int,string>>>
 	 */
 	private const ALIASES = [
-		'content_manage'      => [ 'content_id' => [ 'post_id', 'page_id', 'object_id', 'id' ] ],
-		'seo_manage'          => [ 'content_id' => [ 'post_id', 'page_id', 'object_id', 'id' ] ],
-		'site_builder_manage' => [ 'page_id'    => [ 'post_id', 'content_id', 'id' ] ],
-		'elementor_manage'    => [ 'page_id'    => [ 'post_id', 'content_id', 'id' ] ],
-		'media_manage'        => [ 'media_id'   => [ 'attachment_id', 'post_id', 'id' ] ],
-		'media_enhance'       => [ 'media_id'   => [ 'attachment_id', 'post_id', 'id' ] ],
+		// Kept deliberately narrow. An alias is listed only where the two names
+		// identify THE SAME object for THIS operation.
+		//
+		// media_manage/media_enhance do NOT alias post_id, and that is the point:
+		// featured_image_assign takes post_id as the TARGET POST and media_id as the
+		// IMAGE. Mapping one to the other would silently retarget the write — the
+		// exact hazard the rule above exists to prevent. attachment_id is the genuine
+		// synonym for media_id there.
+		//
+		// A bare `id` is not aliased anywhere. It is ambiguous by nature, and guessing
+		// what a caller meant by it is not a service.
+		'content_manage'      => [ 'content_id' => [ 'post_id', 'page_id' ] ],
+		'seo_manage'          => [ 'content_id' => [ 'post_id', 'page_id' ] ],
+		'site_builder_manage' => [ 'page_id'    => [ 'post_id', 'content_id' ] ],
+		'elementor_manage'    => [ 'page_id'    => [ 'post_id', 'content_id' ] ],
+		'media_manage'        => [ 'media_id'   => [ 'attachment_id' ] ],
+		'media_enhance'       => [ 'media_id'   => [ 'attachment_id' ] ],
 		'acf_manage'          => [ 'object_id'  => [ 'content_id' ] ],
-		'woocommerce_manage'  => [ 'product_id' => [ 'id' ] ],
-		'comments_manage'     => [ 'comment_id' => [ 'id' ] ],
-		'term_manage'         => [ 'term_id'    => [ 'id' ] ],
-		'user_manage'         => [ 'user_id'    => [ 'id' ] ],
 		'option_manage'       => [ 'option_id'  => [ 'option', 'option_name' ] ],
 		'safe_updates'        => [ 'type'       => [ 'update_type' ] ],
 	];

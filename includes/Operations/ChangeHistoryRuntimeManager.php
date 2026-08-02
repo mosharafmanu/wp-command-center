@@ -110,11 +110,13 @@ final class ChangeHistoryRuntimeManager {
 
 		$where_sql = $where ? ( 'WHERE ' . implode( ' AND ', $where ) ) : '';
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $where_sql is built from placeholder-only fragments; values are bound through prepare(). The no-params branch has no user input.
 		$total = (int) $wpdb->get_var(
 			$params
 				? $wpdb->prepare( "SELECT COUNT(*) FROM {$table} {$where_sql}", $params )
 				: "SELECT COUNT(*) FROM {$table} {$where_sql}"
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		$rows = $this->fetch_rows( $table, $where_sql, $params, 'created_at DESC, id DESC', $limit, $offset );
 
@@ -197,11 +199,13 @@ final class ChangeHistoryRuntimeManager {
 		[ $limit, $offset ] = $this->paging( $p );
 		$where_sql          = $where ? ( 'WHERE ' . implode( ' AND ', $where ) ) : '';
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $where_sql is built from placeholder-only fragments; values are bound through prepare(). The no-params branch has no user input.
 		$total = (int) $wpdb->get_var(
 			$params
 				? $wpdb->prepare( "SELECT COUNT(*) FROM {$table} {$where_sql}", $params )
 				: "SELECT COUNT(*) FROM {$table} {$where_sql}"
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		$rows = $this->fetch_rows( $table, $where_sql, $params, 'created_at DESC, id DESC', $limit, $offset );
 
@@ -483,9 +487,11 @@ final class ChangeHistoryRuntimeManager {
 
 		$sql       = "SELECT {$cols} FROM {$table} {$where_sql} ORDER BY {$order} LIMIT %d OFFSET %d";
 		$all_params = array_merge( $params, [ $limit, $offset ] );
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $sql is assembled from placeholder-only fragments and executed through prepare() with the bound array.
 
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $all_params ), ARRAY_A );
 		if ( ! is_array( $rows ) ) {
+// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			return [];
 		}
 

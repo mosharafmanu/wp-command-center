@@ -165,6 +165,7 @@ final class RecommendationEngine {
 				$params[] = $filters[ $field ];
 			}
 		}
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $wpdb->prepare() is applied into $sql above; LIMIT/OFFSET are prepared separately after max()/min() integer casts.
 
 		$sql = "SELECT * FROM {$table}" . ( $where ? ' WHERE ' . implode( ' AND ', $where ) : '' ) . ' ORDER BY updated_at DESC, id DESC';
 		$sql .= $wpdb->prepare( ' LIMIT %d OFFSET %d', max( 1, min( 200, (int) ( $filters['limit'] ?? 50 ) ) ), max( 0, (int) ( $filters['offset'] ?? 0 ) ) );
@@ -174,6 +175,7 @@ final class RecommendationEngine {
 
 		return array_map( [ $this, 'normalize' ], $wpdb->get_results( $sql, ARRAY_A ) ?: [] );
 	}
+// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 	public function get( string $recommendation_id ): ?array {
 		global $wpdb;
@@ -465,6 +467,7 @@ final class RecommendationEngine {
 		if ( ! is_readable( $file ) || filemtime( $file ) < time() - WEEK_IN_SECONDS ) {
 			return [ 'count' => 0 ];
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $file, 'rb' );
 		if ( false === $handle ) {
 			return [ 'count' => 0 ];
@@ -474,6 +477,7 @@ final class RecommendationEngine {
 			fseek( $handle, -131072, SEEK_END );
 		}
 		$text = stream_get_contents( $handle ) ?: '';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 		preg_match_all( '/^.*(?:fatal|error|exception|warning).*$/mi', $text, $matches );
 		return [ 'count' => count( $matches[0] ?? [] ) ];

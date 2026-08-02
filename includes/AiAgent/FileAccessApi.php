@@ -156,6 +156,7 @@ final class FileAccessApi {
 		$eff_count = $req_count + $ctx_before + $ctx_after;
 		$end_line  = $eff_start + $eff_count - 1;
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $real, 'rb' );
 		if ( false === $handle ) {
 			return [
@@ -194,6 +195,7 @@ final class FileAccessApi {
 			$collected[] = $line;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		$returned_lines = count( $collected );
@@ -239,6 +241,7 @@ final class FileAccessApi {
 			return null;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $real, 'rb' );
 		if ( false === $handle ) {
 			return null;
@@ -247,6 +250,7 @@ final class FileAccessApi {
 		$count = 0;
 		$last  = "\n";
 		while ( ! feof( $handle ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread -- paired with the streamed fopen above.
 			$chunk = fread( $handle, 1 << 16 );
 			if ( false === $chunk || '' === $chunk ) {
 				break;
@@ -254,6 +258,7 @@ final class FileAccessApi {
 			$count += substr_count( $chunk, "\n" );
 			$last   = substr( $chunk, -1 );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		if ( "\n" !== $last ) {

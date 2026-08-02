@@ -36,7 +36,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo $list_url; ?>">&larr; <?php esc_html_e( 'Back to all operations', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $list_url ); ?>">&larr; <?php esc_html_e( 'Back to all operations', 'wp-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-op-detail" data-op-id="<?php echo esc_attr( $view_id ); ?>">
 			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operation…', 'wp-command-center' ); ?></span></div>

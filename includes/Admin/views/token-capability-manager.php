@@ -33,7 +33,10 @@ $tab        = in_array( $tab, $valid_tabs, true ) ? $tab : 'tokens';
 $view_id = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 $tab_url = static function ( string $t ) use ( $page ): string {
-	return esc_url( add_query_arg( [ 'page' => $page, 'tab' => $t ], admin_url( 'admin.php' ) ) );
+	// Returns the RAW url; every call site escapes at the point of output. Escaping
+	// inside the closure was correct but invisible to static analysis, so each echo
+	// read as unescaped output.
+	return add_query_arg( [ 'page' => $page, 'tab' => $t ], admin_url( 'admin.php' ) );
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-tokens">
@@ -44,16 +47,16 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo $tab_url( 'tokens' ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'wp-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-token-detail" data-token-id="<?php echo esc_attr( $view_id ); ?>">
 			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading token…', 'wp-command-center' ); ?></p>
 		</div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo $tab_url( 'tokens' ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'capabilities' ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'operations' ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'capabilities' ) ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'operations' ) ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'wp-command-center' ); ?></a>
 		</h2>
 
 		<div id="wpcc-tokens-panel">

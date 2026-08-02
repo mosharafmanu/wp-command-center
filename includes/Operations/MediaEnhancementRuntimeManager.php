@@ -1709,6 +1709,7 @@ final class MediaEnhancementRuntimeManager {
 		$before_total = 0;
 		$after_total  = 0;
 		foreach ( $plan as $p ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic temp-then-replace. WP_Filesystem::move() gives no atomicity guarantee and is not atomic at all over its FTP/SSH transports; snapshot and audit integrity depend on a reader seeing either the whole old file or the whole new one.
 			if ( @rename( $p['tmp'], $p['file'] ) ) {
 				$before_total += $p['before'];
 				$after_total  += $p['after'];

@@ -110,6 +110,7 @@ final class SnapshotManager {
 		if ( false === file_put_contents( $tmp, $contents ) ) {
 			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to store the snapshot.', 'wp-command-center' ) );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic temp-then-replace. WP_Filesystem::move() gives no atomicity guarantee and is not atomic at all over its FTP/SSH transports; snapshot and audit integrity depend on a reader seeing either the whole old file or the whole new one.
 		if ( ! @rename( $tmp, $dest ) ) {
 			wp_delete_file( $tmp );
 			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to finalize the snapshot.', 'wp-command-center' ) );

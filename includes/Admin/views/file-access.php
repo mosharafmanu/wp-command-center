@@ -8,7 +8,10 @@ $path  = isset( $_GET['path'] ) ? trim( wp_unslash( $_GET['path'] ), '/' ) : '';
 $query = isset( $_GET['q'] ) ? sanitize_text_field( wp_unslash( $_GET['q'] ) ) : '';
 
 $page_url = static function ( array $args = [] ): string {
-	return esc_url( add_query_arg( array_merge( [ 'page' => 'wpcc-file-access' ], $args ), admin_url( 'admin.php' ) ) );
+	// Returns the RAW url; every call site escapes at the point of output. Escaping
+	// inside the closure was correct but invisible to static analysis, so each echo
+	// read as unescaped output.
+	return add_query_arg( array_merge( [ 'page' => 'wpcc-file-access' ], $args ), admin_url( 'admin.php' ) );
 };
 
 $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
@@ -16,10 +19,10 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 	$built    = '';
 	?>
 	<p class="wpcc-breadcrumbs">
-		<a href="<?php echo $page_url(); ?>"><?php esc_html_e( 'wp-content', 'wp-command-center' ); ?></a>
+		<a href="<?php echo esc_url( $page_url() ); ?>"><?php esc_html_e( 'wp-content', 'wp-command-center' ); ?></a>
 		<?php foreach ( $segments as $segment ) : ?>
 			<?php $built = '' === $built ? $segment : $built . '/' . $segment; ?>
-			/ <a href="<?php echo $page_url( [ 'path' => $built ] ); ?>"><?php echo esc_html( $segment ); ?></a>
+			/ <a href="<?php echo esc_url( $page_url( [ 'path' => $built ] ) ); ?>"><?php echo esc_html( $segment ); ?></a>
 		<?php endforeach; ?>
 	</p>
 	<?php
@@ -38,7 +41,7 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 		<input type="search" id="wpcc-search-q" name="q" value="<?php echo esc_attr( $query ); ?>" placeholder="<?php esc_attr_e( 'Search file contents…', 'wp-command-center' ); ?>" class="regular-text" />
 		<?php submit_button( __( 'Search', 'wp-command-center' ), 'secondary', '', false ); ?>
 		<?php if ( '' !== $query ) : ?>
-			<a class="button" href="<?php echo $page_url( [ 'path' => $path ] ); ?>"><?php esc_html_e( 'Clear Search', 'wp-command-center' ); ?></a>
+			<a class="button" href="<?php echo esc_url( $page_url( [ 'path' => $path ] ) ); ?>"><?php esc_html_e( 'Clear Search', 'wp-command-center' ); ?></a>
 		<?php endif; ?>
 		<?php if ( '' !== $path ) : ?>
 			<p class="description">
@@ -104,7 +107,7 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 			?>
 
 			<?php foreach ( $grouped as $file => $file_matches ) : ?>
-				<h3><a href="<?php echo $page_url( [ 'path' => $file ] ); ?>"><?php echo esc_html( $file ); ?></a></h3>
+				<h3><a href="<?php echo esc_url( $page_url( [ 'path' => $file ] ) ); ?>"><?php echo esc_html( $file ); ?></a></h3>
 				<pre class="wpcc-search-matches"><?php foreach ( $file_matches as $match ) : ?><span class="wpcc-search-match"><span class="wpcc-search-match__line"><?php echo (int) $match['line']; ?>:</span> <?php echo esc_html( $match['text'] ); ?>
 </span><?php endforeach; ?></pre>
 			<?php endforeach; ?>
@@ -181,7 +184,7 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 				<?php if ( null !== $listing['parent'] ) : ?>
 					<tr>
 						<td>
-							<a href="<?php echo $page_url( [ 'path' => $listing['parent'] ] ); ?>">.. <?php esc_html_e( '(parent directory)', 'wp-command-center' ); ?></a>
+							<a href="<?php echo esc_url( $page_url( [ 'path' => $listing['parent'] ] ) ); ?>">.. <?php esc_html_e( '(parent directory)', 'wp-command-center' ); ?></a>
 						</td>
 						<td><?php esc_html_e( 'Directory', 'wp-command-center' ); ?></td>
 						<td>—</td>
@@ -191,7 +194,7 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 				<?php foreach ( $listing['entries'] as $entry ) : ?>
 					<tr>
 						<td>
-							<a href="<?php echo $page_url( [ 'path' => $entry['path'] ] ); ?>">
+							<a href="<?php echo esc_url( $page_url( [ 'path' => $entry['path'] ] ) ); ?>">
 								<?php echo esc_html( $entry['name'] ); ?><?php echo 'dir' === $entry['type'] ? '/' : ''; ?>
 							</a>
 						</td>
