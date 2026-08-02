@@ -464,9 +464,15 @@ final class McpServerRuntime {
 			// Message only — the scope decision above is unchanged. The old wording
 			// named the rule but not the fix, so an assistant relaying it left the
 			// customer with a dead end. This states the boundary AND the next step.
+			//
+			// It says "read-only" because that is what the scope is called everywhere
+			// the customer can see it: AuthTokens::scope_label() renders it "Read-only"
+			// in the Connections screen and in every token listing. The message
+			// previously said "restricted", so an assistant relaying it named a scope
+			// the customer could not find in their own UI.
 			return $this->tool_error(
 				'wpcc_token_read_only',
-				__( 'This token is restricted and cannot perform this action. A restricted token is limited to search, file and history lookups. To let the assistant do more, create a standard access token in WP Command Center → Settings → Connections; changes will still wait for your approval.', 'wp-command-center' )
+				__( 'This token is read-only and cannot perform this action. A read-only token is limited to search, file and history lookups. To let the assistant do more, create a full access token in WP Command Center → Settings → Connections; changes will still wait for your approval.', 'wp-command-center' )
 			);
 		}
 

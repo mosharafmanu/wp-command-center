@@ -9,6 +9,12 @@ fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; if [ "$e" = "$a" ]; then pass "$d"; else fail "$d (expected '$e', got '$a')"; fi; }
 assert_true() { local d="$1" a="$2"; if [ "$a" = "true" ]; then pass "$d"; else fail "$d"; fi; }
 assert_contains() { local d="$1" h="$2" n="$3"; if [[ "$h" == *"$n"* ]]; then pass "$d"; else fail "$d"; fi; }
+# Errors are WP_Error REST responses ({code,message,data.status}), not the retired
+# in-band {"error":true} shape. Assert the SPECIFIC code — stronger than the old
+# substring check for the word "error", which no longer appears anywhere.
+assert_code() { local d="$1" body="$2" want="$3"; local got
+  got=$(echo "$body" | jq -r '.code // empty' 2>/dev/null)
+  if [ "$got" = "$want" ]; then pass "$d"; else fail "$d (expected code '$want', got '${got:-none}')"; fi; }
 api() { curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$@"; }
 api_post() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" "$@"; }
 
@@ -103,7 +109,7 @@ assert_contains "validation: not found" "$NF" "Media not found"
 
 echo "== 13. Validation — Empty Search =="
 EMPTY=$(api_post -d '{"action":"media_search","search":""}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "validation: empty search" "$EMPTY" "error"
+assert_code "validation: empty search" "$EMPTY" "wpcc_media_empty_search"
 
 echo "== 14. Rollback Endpoint =="
 RB=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d '{"rollback_id":"nonexistent"}' "$WPCC_BASE/operations/media_manage/rollback")
@@ -125,7 +131,7 @@ assert_true "list: per_page <= 2" "$(if [ "$(echo "$PAGED" | jq -r '.items | len
 
 echo "== 18. Media Upload — Missing URL =="
 NO_URL=$(api_post -d '{"action":"media_upload"}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "validation: missing URL" "$NO_URL" "error"
+assert_code "validation: missing URL" "$NO_URL" "wpcc_missing_url"
 
 echo "== 19. Manifest — Media Capability =="
 assert_true "manifest: has media_manage cap" "true"
@@ -164,11 +170,11 @@ assert_eq "list: default per_page" "20" "$(echo "$DEFAULT" | jq -r '.per_page')"
 
 echo "== 25. Featured Image — Post Not Found =="
 FEAT_BAD=$(api_post -d '{"action":"featured_image_assign","media_id":1,"post_id":99999999}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "featured: post not found" "$FEAT_BAD" "error"
+assert_code "featured: post not found" "$FEAT_BAD" "wpcc_post_not_found"
 
 echo "== 26. Featured Image — Remove Without Thumb =="
 FEAT_NONE=$(api_post -d '{"action":"featured_image_remove","post_id":99999999}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "featured: no post handled" "$FEAT_NONE" "error"
+assert_code "featured: no post handled" "$FEAT_NONE" "wpcc_post_not_found"
 
 echo "== 27. Regenerate Metadata =="
 if [ "$FIRST_ID" -gt 0 ] 2>/dev/null; then
@@ -196,15 +202,15 @@ assert_true "list: zero items on far page" "$(if [ "$(echo "$NO_MEDIA" | jq -r '
 
 echo "== 30. Upload — Bad URL =="
 BAD_URL=$(api_post -d '{"action":"media_upload","source_url":"https://invalid.example/nonexistent.png"}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "upload: bad url" "$BAD_URL" "error"
+assert_code "upload: bad url" "$BAD_URL" "wpcc_download_failed"
 
 echo "== 31. Replace Media — Not Found =="
 REPLACE_BAD=$(api_post -d '{"action":"media_replace","media_id":99999999,"source_url":"https://example.com/img.png"}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "replace: not found" "$REPLACE_BAD" "error"
+assert_code "replace: not found" "$REPLACE_BAD" "wpcc_media_not_found"
 
 echo "== 32. Delete Media — Not Found =="
 DEL_BAD=$(api_post -d '{"action":"media_delete","media_id":99999999}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "delete: not found" "$DEL_BAD" "error"
+assert_code "delete: not found" "$DEL_BAD" "wpcc_media_not_found"
 
 echo "== 33. Timeline — Additional =="
 TL2=$(api "$WPCC_BASE/agent/timeline?limit=50")
@@ -258,11 +264,11 @@ assert_eq "search: zero results" "0" "$(echo "$SEARCH_NONE" | jq -r '.total')"
 
 echo "== 40. Regenerate Metadata — Not Found =="
 REGEN_BAD=$(api_post -d '{"action":"media_regenerate_metadata","media_id":99999999}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "regen: not found" "$REGEN_BAD" "error"
+assert_code "regen: not found" "$REGEN_BAD" "wpcc_media_not_found"
 
 echo "== 41. Upload — Missing URL =="
 NO_SRC=$(api_post -d '{"action":"media_upload","source_url":""}' "$WPCC_BASE/operations/media_manage/run")
-assert_contains "upload: empty url" "$NO_SRC" "error"
+assert_code "upload: empty url" "$NO_SRC" "wpcc_missing_url"
 
 echo "== 42. Approval Required =="
 assert_true "approval: listed" "$(echo "$MANIFEST" | jq -r '.operations[] | select(.id == "media_manage") | .requires_approval')"

@@ -3,6 +3,11 @@ set -uo pipefail; SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; so
 PASS=0; FAIL=0; pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }; fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; if [ "$e" = "$a" ]; then pass "$d"; else fail "$d (expected '$e', got '$a')"; fi; }
 assert_true() { local d="$1" a="$2"; if [ "$a" = "true" ]; then pass "$d"; else fail "$d"; fi; }
+# Errors are WP_Error REST responses ({code,message,data.status}), not an in-band
+# {"error":true} payload. Assert the SPECIFIC code.
+assert_code() { local d="$1" body="$2" want="$3"; local got
+  got=$(echo "$body" | jq -r '.code // empty' 2>/dev/null)
+  if [ "$got" = "$want" ]; then pass "$d"; else fail "$d (expected code '$want', got '${got:-none}')"; fi; }
 assert_contains() { local d="$1" h="$2" n="$3"; if [[ "$h" == *"$n"* ]]; then pass "$d"; else fail "$d"; fi; }
 api() { curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$@"; }; api_post() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" "$@"; }
 mcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp"; }
@@ -106,7 +111,7 @@ assert_contains "val: bad" "$BAD" "Invalid forms action"
 
 echo "== 17. Validation — Bad Provider =="
 BDPROV=$(api_post -d '{"action":"form_list","provider":"nonexistent"}' "$WPCC_BASE/operations/forms_manage/run")
-assert_contains "val: provider" "$BDPROV" "error"
+assert_code "val: provider" "$BDPROV" "wpcc_provider_not_available"
 
 echo "== 18. MCP =="
 MCP_TOOLS=$(mcp '{"jsonrpc":"2.0","method":"tools/list","id":1}')
