@@ -50,7 +50,11 @@ echo "== 6. Safety — escaping, link, nav, access =="
 has "operation output escaped" "esc_html\( \\\$row\['operation'\]" "$V"
 has "session id url-safe" "rawurlencode\( \(string\) \\\$s\['session_id'\] \)" "$V"
 has "review link to change history sessions" "wpcc-history&wpcc_tab=changes&tab=sessions" "$V"
-has "tab registered under Operate" "'view' => 'operations-center'" "$SHELL_F"
+# The Operations Center view is registered as the "System" pane of Settings > Advanced
+# (settings-advanced.php), not in AppShell. AppShell only keeps the legacy
+# wpcc-operations-center slug as a redirect to that pane.
+has "view registered as the Advanced > System pane" "'view' => 'operations-center'" "$ROOT/includes/Admin/views/settings-advanced.php"
+has "legacy slug still redirects to it" "'wpcc-operations-center'" "$SHELL_F"
 has "legacy slug mapped" "'wpcc-operations-center'" "$SHELL_F"
 
 echo "== 7. Functional (wp eval-file) =="

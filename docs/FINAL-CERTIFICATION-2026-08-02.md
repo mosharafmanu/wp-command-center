@@ -1,5 +1,11 @@
 # WP Command Center — Final Custom Development Qualification
 
+> **SUPERSEDED.** This report records an earlier stage of the V1 release
+> programme and is kept as a record. It is not current. See
+> [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) for the current
+> state, and [README.md](README.md) for the product documentation. Where this
+> report disagrees with those, they are correct.
+
 **Date:** 2026-08-02
 **Site:** `https://purple-surgical.mosdev.site` — a real customer WordPress site
 **Build certified:** 1.0.0 at **`3b6fe49`** (branch `fix/prod-session-issues-1-12`)

@@ -1,5 +1,11 @@
 # V1 Finalization — Report
 
+> **SUPERSEDED.** This report records an earlier stage of the V1 release
+> programme and is kept as a record. It is not current. See
+> [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) for the current
+> state, and [README.md](README.md) for the product documentation. Where this
+> report disagrees with those, they are correct.
+
 **Branch:** `release/v1-finalization` (from certified `1e71d5e`, which contains `3b6fe49`)
 **Final commit:** `984aa3c`
 **Checkpoint tag:** `checkpoint/pre-v1-finalization`

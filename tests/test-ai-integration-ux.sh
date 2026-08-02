@@ -21,8 +21,11 @@ PAGE=$(curl -s -b <(echo "") -H "Cookie: $(curl -s -c - -X POST -d "log=admin&pw
 echo "== 2. Claude config generation REST =="
 CONFIG=$(api "$WPCC_BASE/claude/config")
 assert_true "config: has mcpServers" "$(echo "$CONFIG" | jq -r 'if .mcpServers then "true" else "false" end')"
-assert_contains "config: command is npx" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].command')" "npx"
-assert_contains "config: dynamic MCP URL" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args[-1]')" "wp-command-center/v1/mcp"
+# The MCP endpoint travels in env.WPCC_MCP_URL, not as the last launcher argument —
+# the generated config runs the relay this site ships (bash -c "curl …; node …")
+# rather than an npx package.
+assert_contains "config: command is a shell launcher" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].command')" "bash"
+assert_contains "config: dynamic MCP URL" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "wp-command-center/v1/mcp"
 assert_true "config: env object" "$(echo "$CONFIG" | jq -r 'if (.mcpServers["wp-command-center"].env | type) == "object" then "true" else "false" end')"
 assert_contains "config: WPCC_TOKEN placeholder" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_TOKEN')" "WPCC_TOKEN"
 assert_contains "config: site_url dynamic" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_SITE_URL')" "http"
@@ -99,7 +102,7 @@ assert_true "routes: claude/config" "$(echo "$MANIFEST" | jq -r 'any(.endpoints[
 assert_true "routes: claude/tools" "$(echo "$MANIFEST" | jq -r 'any(.endpoints[]; .path == "/claude/tools")')"
 
 echo "== 13. Config is dynamically generated (no hardcoding) =="
-MCP_URL=$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args[-1]')
+MCP_URL=$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')
 MANIFEST_MCP=$(echo "$MANIFEST" | jq -r '.mcp_server.endpoint')
 assert_contains "config: MCP URL in args is actual site URL" "$MCP_URL" "wp-command-center/v1/mcp"
 assert_contains "config: matches manifest mcp endpoint" "$MANIFEST_MCP" "wp-command-center/v1/mcp"

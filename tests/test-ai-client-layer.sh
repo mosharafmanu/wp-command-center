@@ -56,7 +56,10 @@ assert_true "ai-client config: has config" "$(echo "$CLAUDE_CFG" | jq -r 'if .co
 assert_eq "ai-client config: client=claude" "claude" "$(echo "$CLAUDE_CFG" | jq -r '.client')"
 assert_eq "ai-client config: name" "Claude Desktop" "$(echo "$CLAUDE_CFG" | jq -r '.name')"
 assert_true "ai-client config: mcpServers in config" "$(echo "$CLAUDE_CFG" | jq -r 'if .config.mcpServers then "true" else "false" end')"
-assert_contains "ai-client config: MCP URL" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["wp-command-center"].args[-1]')" "wp-command-center/v1/mcp"
+# The MCP endpoint travels in env.WPCC_MCP_URL, not as the last launcher argument —
+# the generated config runs the relay this site ships (bash -c "curl …; node …")
+# rather than an npx package.
+assert_contains "ai-client config: MCP URL" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "wp-command-center/v1/mcp"
 
 echo "== 8. Unknown client returns 404 =="
 UNK=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/nonexistent/config")

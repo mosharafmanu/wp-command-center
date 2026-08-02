@@ -66,8 +66,14 @@ has "step: you approve" "You approve" "$HOME_F"
 has "step: you can undo" "You can undo" "$HOME_F"
 
 echo "== 7. Safety mode UX — consequences obvious =="
-has "developer mode flagged not-for-live" "NOT FOR LIVE SITES" "$SETTINGS"
-has "developer consequence in plain language" "can change this site immediately" "$SETTINGS"
+# Current copy on the Protection card for Development mode. The old strings
+# ("NOT FOR LIVE SITES", "can change this site immediately") were replaced when the
+# Protection screen was rebuilt as mode cards; these assert what it says now.
+has "developer mode flagged not-for-live" "Never use this mode on a live production website" "$SETTINGS"
+has "developer mode badged local-only"    "Local & staging only" "$SETTINGS"
+has "developer consequence in plain language" "AI changes run immediately" "$SETTINGS"
+# Switching INTO the unapproved mode still requires an explicit confirmation.
+has "developer switch is confirm-guarded" "with no review. Continue?" "$SETTINGS"
 has "protected mode still recommended" "'Recommended'" "$SETTINGS"
 has "developer confirm guard retained" "window.confirm" "$SETTINGS"
 

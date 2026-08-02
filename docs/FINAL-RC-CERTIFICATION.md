@@ -1,5 +1,11 @@
 # Final RC Certification — WP Command Center 1.0.0
 
+> **SUPERSEDED.** This report records an earlier stage of the V1 release
+> programme and is kept as a record. It is not current. See
+> [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) for the current
+> state, and [README.md](README.md) for the product documentation. Where this
+> report disagrees with those, they are correct.
+
 **Commit:** `984aa3c` on `release/v1-finalization`
 **Artifact:** `build/wp-command-center-1.0.0.zip` — 279 files, 916 KB
 **sha256:** `51f1d4b4a3d4ac54a8bfc5627535061c704c03d0320e146539d6541ee570d258`

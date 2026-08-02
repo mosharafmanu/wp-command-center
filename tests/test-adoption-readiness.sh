@@ -80,7 +80,11 @@ echo "== 7. Security Mode UX — audit + recommend + confirm =="
 has "mode change is audited" "security.mode.changed" "$SETTINGS"
 has "protected mode recommended" "'Recommended'" "$SETTINGS"
 has "developer mode carries a confirm guard" "window.confirm" "$SETTINGS"
-has "developer warning visible" "Approval is currently turned off" "$SETTINGS"
+# The standing "approvals are off" warning lives on Home, where the owner lands, and
+# the mode card carries the never-on-production footnote. The old single string
+# ("Approval is currently turned off") no longer exists on either surface.
+has "developer warning visible" "Never use this mode on a live production website" "$SETTINGS"
+has "approvals-off stated on Home" "Approvals are off" "$ROOT/includes/Admin/views/command-home.php"
 
 echo "== 8. Invariants unchanged =="
 has "DB_VERSION still 2.6.0" "DB_VERSION = '2.6.0'" "$SCHEMA"
