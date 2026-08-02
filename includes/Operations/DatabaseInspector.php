@@ -101,8 +101,16 @@ final class DatabaseInspector {
 			return new \WP_Error( 'wpcc_missing_db_table', __( 'table is required.', 'wp-command-center' ) );
 		}
 		global $wpdb;
-		$safe = esc_sql( $table );
-		$row  = $wpdb->get_row( "SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, ROUND(DATA_LENGTH/1024,2) AS data_kb, ROUND(INDEX_LENGTH/1024,2) AS index_kb, ROUND((DATA_LENGTH+INDEX_LENGTH)/1024,2) AS total_kb FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='$safe'", ARRAY_A );
+		// The table name is a VALUE here (matched against information_schema), so bind it
+		// rather than escaping it into the string. esc_sql() was adequate in this quoted
+		// context, but a placeholder removes the question entirely.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT TABLE_NAME, ENGINE, TABLE_COLLATION, TABLE_ROWS, ROUND(DATA_LENGTH/1024,2) AS data_kb, ROUND(INDEX_LENGTH/1024,2) AS index_kb, ROUND((DATA_LENGTH+INDEX_LENGTH)/1024,2) AS total_kb FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s",
+				$table
+			),
+			ARRAY_A
+		);
 		if ( ! $row ) {
 			return new \WP_Error( 'wpcc_db_table_not_found', __( 'Table not found.', 'wp-command-center' ) );
 		}
@@ -209,6 +217,9 @@ final class DatabaseInspector {
 
 		foreach ( $targets as $t ) {
 			$short = str_replace( $wpdb->prefix, '', $t );
+			// $t is always a registry-resolved core table name: run() puts every caller
+			// -supplied table through DatabaseRegistry::sanitize_table(), which only ever
+			// returns a name from the fixed CORE_TABLES allow-list (or null).
 			$indexes = $wpdb->get_results( "SHOW INDEX FROM `" . esc_sql( $t ) . "`", ARRAY_A );
 			$ix_list = [];
 			foreach ( (array) $indexes as $ix ) {
