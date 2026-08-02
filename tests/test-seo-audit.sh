@@ -142,9 +142,16 @@ else
 			return $id;
 		};
 		$good_desc = str_repeat( "good description sentence. ", 6 ); // ~150 chars (120-160)
+		// Seed the meta keys of whichever provider is ACTIVE. These fixtures previously
+		// used the Yoast keys unconditionally, so on a Rank Math site the audit read
+		// nothing and every classification assertion failed, certifying neither.
+		$P  = \WPCommandCenter\Operations\SeoProvider::detect();
+		$kT = \WPCommandCenter\Operations\SeoProvider::meta_key( "title", $P );
+		$kD = \WPCommandCenter\Operations\SeoProvider::meta_key( "description", $P );
+		$kK = \WPCommandCenter\Operations\SeoProvider::meta_key( "focus_keyword", $P );
 		$id_missing = $mk( [] ); // no title/desc -> missing
-		$id_weak    = $mk( [ "_yoast_wpseo_title"=>"A fine title", "_yoast_wpseo_metadesc"=>"too short", "_yoast_wpseo_focuskw"=>"kw" ] ); // desc<120 -> weak
-		$id_ok      = $mk( [ "_yoast_wpseo_title"=>"A fine SEO title", "_yoast_wpseo_metadesc"=>substr($good_desc,0,150), "_yoast_wpseo_focuskw"=>"keyword" ] ); // -> ok
+		$id_weak    = $mk( [ $kT=>"A fine title", $kD=>"too short", $kK=>"kw" ] ); // desc<120 -> weak
+		$id_ok      = $mk( [ $kT=>"A fine SEO title", $kD=>substr($good_desc,0,150), $kK=>"keyword" ] ); // -> ok
 
 		// Newest posts (highest IDs) appear first under ORDER BY ID DESC.
 		$page = $Q->audit( [ "state" => "all" ], 100, 0 );
@@ -168,7 +175,7 @@ else
 		// Read-only: our ok post meta unchanged; no proposals created; rollbacks
 		// unchanged in BOTH stores (legacy option AND Slice 4c per-post meta).
 		$rbmeta_after = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_wpcc\_seo\_rb\_%'" );
-		$out["meta_intact"]       = ( get_post_meta( $id_ok, "_yoast_wpseo_title", true ) === "A fine SEO title" ) ? 1 : 0;
+		$out["meta_intact"]       = ( get_post_meta( $id_ok, $kT, true ) === "A fine SEO title" ) ? 1 : 0;
 		$out["no_proposals"]      = ( ( new \WPCommandCenter\Proposals\ProposalStore() )->count([]) === $prop_before ) ? 1 : 0;
 		$out["no_rollbacks"]      = ( get_option( "wpcc_seo_rollbacks", [] ) === $rb_before ) ? 1 : 0;
 		$out["no_rollback_meta"]  = ( $rbmeta_after === $rbmeta_before ) ? 1 : 0;

@@ -123,8 +123,10 @@ echo "== 9. Notices: contextual entry args =="
 has  "reads wpcc_content_gen arg"           "wpcc_content_gen"           "$VIEW"
 has  "reads wpcc_content_bulk arg"          "wpcc_content_bulk"          "$VIEW"
 has  "reads kind arg"                       "sp.get( 'kind' )"           "$VIEW"
-# Phase 1 canonicalized the connect-a-key link to Connect › AI Clients.
-has  "no_provider links Connect › AI Clients" "wpcc-connect"             "$VIEW"
+# The connect-a-key link points at the CANONICAL destination, not the legacy
+# `wpcc-connect` alias (AppShell maps that alias to the same place). Asserting the real
+# target also proves the link lands on the assistants pane, not just the Settings page.
+has  "no_provider links Connect > AI Clients" "page=wpcc-settings&wpcc_tab=connections&cpane=assistants" "$VIEW"
 
 echo
 echo "== 10. Config injection + escaping helpers =="

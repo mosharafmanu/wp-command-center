@@ -73,8 +73,9 @@ has  "Generate->Suggestions handoff"          "switchTab( 'suggestions' )" "$VIE
 # U1.4 — no_provider results surface AI-key guidance linking to AI Integrations.
 has  "no-provider notice element"             "wpcc-seo-gen-notice"  "$VIEW"
 has  "detects no_provider skip reason"        "reason === 'no_provider'" "$VIEW"
-# Phase 1 canonicalized the connect-a-key link to Connect › AI Clients.
-has  "links to Connect › AI Clients"          "wpcc-connect" "$VIEW"
+# The connect-a-key link points at the CANONICAL destination, not the legacy
+# `wpcc-connect` alias (AppShell maps that alias to the same place).
+has  "links to Connect > AI Clients"          "page=wpcc-settings&wpcc_tab=connections&cpane=assistants" "$VIEW"
 has  "uses server-provided AI URL const"      "AI_URL"               "$VIEW"
 # (Apply arrives in Slice 4a; per-item Undo in Slice 4b — both covered by
 # test-seo-apply.sh / test-seo-undo.sh. The shared view now legitimately contains the
@@ -119,7 +120,11 @@ $errStub = new class implements SeoMetaProvider {
 $mkResolver = function($p){ return new class($p) extends SeoMetaProviderResolver { private $p; public function __construct($p){ $this->p=$p; } public function active(): ?SeoMetaProvider { return $this->p; } }; };
 
 $pid = wp_insert_post(['post_title'=>'WPCC SEO gen test','post_status'=>'publish','post_type'=>'post','post_content'=>'Content about widgets.']);
-update_post_meta($pid, '_yoast_wpseo_title', 'Existing Title'); // prior source (yoast on dev)
+// Seed the ACTIVE provider's own title key. Hardcoding Yoast's key meant that on a
+// Rank Math site nothing was seeded, the prior-capture read an empty value, and the
+// assertion failed while telling us nothing about either provider.
+$wpcc_title_key = \WPCommandCenter\Operations\SeoProvider::meta_key( 'title', \WPCommandCenter\Operations\SeoProvider::detect() );
+update_post_meta($pid, $wpcc_title_key, 'Existing Title'); // prior source (active provider)
 
 $before = $store->count([]);
 $env = (new SeoMetaGenerator($store, $mkResolver($okStub)))->generate([$pid], ['actor'=>['type'=>'admin']]);
@@ -141,7 +146,9 @@ if ($row) {
 }
 
 // Read-only: post's REAL SEO meta unchanged (generator must not write seo_update).
-$out['meta_intact'] = ( get_post_meta($pid, '_yoast_wpseo_title', true) === 'Existing Title' ) ? 1 : 0;
+// Read the same ACTIVE-provider key that was seeded above, so this proves generation
+// left the real site meta untouched rather than reading a key nobody writes.
+$out['meta_intact'] = ( get_post_meta($pid, $wpcc_title_key, true) === 'Existing Title' ) ? 1 : 0;
 
 // Dedup: a second run skips (open proposal exists).
 $env2 = (new SeoMetaGenerator($store, $mkResolver($okStub)))->generate([$pid], ['actor'=>[]]);

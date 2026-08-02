@@ -23,10 +23,15 @@ done
 
 echo "== 2. Dashboard experience =="
 has "hero/landing present" "wpcc-aip-hero" "$VIEW"
-has "setup readiness score" "Setup readiness" "$VIEW"
 has "KPI grid" "wpcc-aip-kpis" "$VIEW"
-has "default environment KPI" "Default environment" "$VIEW"
-has "AI status KPI" "AI status" "$VIEW"
+# The KPI labels the page actually renders. The previous three ("Setup readiness",
+# "Default environment", "AI status") were removed when this screen was redesigned and
+# exist nowhere in the codebase, so those assertions could not pass.
+has "recent events KPI" "Recent events" "$VIEW"
+has "pending approvals KPI" "Pending approvals" "$VIEW"
+has "token usage KPI" "Token usage & cost" "$VIEW"
+# Honesty anchor kept from the old design: cost is not estimated when it is not metered.
+has "cost not invented when unmetered" "Not tracked yet" "$VIEW"
 has "warnings surface" "wpcc-aip-warn" "$VIEW"
 has "quick action new connection" "New connection" "$VIEW"
 
@@ -73,7 +78,26 @@ has "honest runtime badges" "USED BY RUNTIME" "$VIEW"
 has "stored-only honesty" "STORED ONLY" "$VIEW"
 hasnt "key never echoed" "echo .*(wpcc_key|->secret\()" "$VIEW"
 hasnt "key input not prefilled" "name=\"wpcc_key\"[^>]*value=" "$VIEW"
-has "AI off until key+feature" "AI stays off until you add a key" "$VIEW"
+# The old copy string "AI stays off until you add a key" was removed in the redesign.
+# Assert the PROPERTY it was promising instead of the sentence — a behavioural check
+# cannot rot when the wording changes, and it is what actually protects the customer.
+AI_OFF=$(wp --path="$WP_PATH" eval '
+$saved_opt = get_option("wpcc_anthropic_api_key", "");
+$saved_alt = get_option("wpcc_alt_text_api_key", "");
+delete_option("wpcc_anthropic_api_key");
+delete_option("wpcc_alt_text_api_key");
+$constant_key = ( defined("WPCC_ANTHROPIC_API_KEY") && "" !== (string) WPCC_ANTHROPIC_API_KEY )
+	|| ( defined("WPCC_VISION_API_KEY") && "" !== (string) WPCC_VISION_API_KEY );
+$configured = ( new \WPCommandCenter\Ai\AnthropicClient() )->is_configured();
+if ( "" !== (string) $saved_opt ) { update_option("wpcc_anthropic_api_key", $saved_opt); }
+if ( "" !== (string) $saved_alt ) { update_option("wpcc_alt_text_api_key", $saved_alt); }
+echo $constant_key ? "constant" : ( $configured ? "on" : "off" );
+' 2>/dev/null)
+case "$AI_OFF" in
+	off)      pass "AI stays off until a key is added (verified at runtime)";;
+	constant) pass "AI stays off until a key is added (SKIPPED: key constant defined in wp-config)";;
+	*)        fail "AI stays off until a key is added (client reported configured with no key: '$AI_OFF')";;
+esac
 
 echo "== 9. Functional (wp eval-file) — health derivation =="
 PHPF="$(mktemp -t wpcc6s.XXXXXX.php)"
