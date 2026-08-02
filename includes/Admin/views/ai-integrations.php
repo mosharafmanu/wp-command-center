@@ -827,13 +827,29 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			var authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
 			var authHeaderGet = { 'Authorization': 'Bearer ' + token };
 			var baseUrl = <?php echo wp_json_encode( rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE ) ); ?>;
+			// The connector is the first thing a real client touches: the generated
+			// configuration downloads this file from this site and runs it. If it is not
+			// reachable nothing else matters — every other check below can pass while the
+			// assistant is still unable to connect, so it is checked first and by URL.
+			var relayUrl = <?php echo wp_json_encode( WPCC_PLUGIN_URL . 'sdk/javascript/wpcc-mcp-relay.mjs?v=' . WPCC_VERSION ); ?>;
 			var checks = [];
 
 			function record(name, pass, detail) {
 				checks.push({ name: name, pass: pass, detail: detail || '' });
 			}
 
-			fetch(baseUrl + '/health', { headers: authHeaderGet })
+			fetch(relayUrl, { cache: 'no-store' })
+				.then(function(r) { return r.text().then(function(t) { return { ok: r.ok, status: r.status, text: t }; }); })
+				.then(function(r) {
+					var pass = r.ok && r.text.length > 0;
+					var detail = pass ? '' : ( r.status === 404
+						? '<?php echo esc_js( __( 'Not found on this site — your assistant cannot start the connector.', 'wp-command-center' ) ); ?>'
+						: ( 'HTTP ' + r.status ) );
+					record('<?php echo esc_js( __( 'Connector script', 'wp-command-center' ) ); ?>', pass, detail);
+				}, function(err) {
+					record('<?php echo esc_js( __( 'Connector script', 'wp-command-center' ) ); ?>', false, err.message);
+				})
+				.then(function() { return fetch(baseUrl + '/health', { headers: authHeaderGet }); })
 				.then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
 				.then(function(r) {
 					var pass = r.ok && r.data.status === 'ok';
