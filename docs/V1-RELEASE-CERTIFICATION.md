@@ -1,5 +1,11 @@
 # WP Command Center 1.0.0 — V1 Release Certification
 
+> **SUPERSEDED.** This certification was accurate when written, but the closeout
+> programme that followed fixed six further product defects and took the test suite
+> to zero accepted failures. See
+> [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) for the current state.
+
+
 **Date:** 2026-08-02
 **Branch:** `release/v1-finalization` (not merged; `main` remains owner-controlled)
 **Artifact:** `build/wp-command-center-1.0.0.zip` — 284 files, 940 KB
