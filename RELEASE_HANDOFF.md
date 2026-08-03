@@ -13,12 +13,16 @@ Engineering is complete. What remains is independent certification and submissio
 | | |
 |---|---|
 | Branch | `release/v1-finalization` |
-| Commit | `7a404df1d99378028d3a369c4fb4480553e271ab` (`7a404df`) |
-| Remote | in sync with `origin/release/v1-finalization` |
+| Commit | `b6c46ec49ec98f898e849bf016ff532a5bfbc3cd` (`b6c46ec`) |
+| Remote | `origin/release/v1-finalization` is BEHIND — 4 commits unpushed |
 | `main` | `13549c2` — **untouched, not merged** |
-| Commits ahead of `main` | 53 |
+| Commits ahead of `main` | 57 |
 | Uncommitted | none |
 | Plugin directory | `wp-content/plugins/ai-command-center/` |
+
+> **Superseded:** this section previously recorded `7a404df` / 53 commits. That commit
+> shipped four defects found by the independent staging certification of 2026-08-03,
+> including a **release blocker** in the rollback subsystem. See §5.5.
 
 `main` auto-deploys to production. Nothing has been merged. The merge is the owner's
 decision and should happen **after** WordPress.org approval, not before.
@@ -44,12 +48,25 @@ da96af2  test: empty the regression baseline — nothing is accepted any more
 
 ```
 File    build/ai-command-center-1.0.0.zip
-Size    963,210 bytes (944 KB)
+Size    964,440 bytes (944 KB)
 Entries 318 (284 files)
-SHA256  022e994a3428d52086b5a5673d2f9ab18e2133521126f876cb3d46ed8da4ad29
-MD5     3a86816ae30884afbf0877383fe22f32
-Built   2026-08-03 14:47 from 7a404df
+SHA256  4449222140b441c2c5d2374fdeba9cc69fac04c451eb130d3c2dd6cf115e268d
+MD5     a1a268dbec2abeb12ae95e58ba4ac0d2
+Built   2026-08-03 18:2x from b6c46ec
 ```
+
+> **The previous artifact (`022e994a…`, built from `7a404df`) MUST NOT be uploaded.**
+> It contains the rollback-corruption blocker described in §5.5.
+
+**The checksum identifies this one built file — it is not a fingerprint of the commit.**
+The build is *not* byte-reproducible: two builds from the same clean tree at the same
+commit differ in ZIP metadata (per-file mtimes and entry order) while their extracted
+contents are identical (verified with `diff -r`). So:
+
+- Verify the **exact ZIP you are about to upload** against the SHA256 above.
+- After **any** rebuild, the checksum changes — re-record it; a mismatch after a rebuild
+  does **not** mean the tree is dirty.
+- To prove two builds are equivalent, compare **extracted contents**, not archive bytes.
 
 **Verify before uploading** — if the checksum differs, the artifact is not the certified one:
 
@@ -213,6 +230,60 @@ resolved to fixed / proven false positive / accepted with evidence in
 
 ---
 
+### 5.5 Independent staging certification — 2026-08-03 (found the blocker)
+
+Two production-grade sites, artifact-only install, nothing reused from earlier sessions.
+
+| | Site 1 `webo-euro-gv` | Site 2 `lsc-group` |
+|---|---|---|
+| WordPress / PHP | 6.9.5 / 8.3.30 | **7.0.2** / 8.3.30 |
+| Theme | `webo` (hello-elementor child) | `lsc-group` (custom) |
+| Stack | Elementor + Pro 3.35, WooCommerce 10.6.2, ACF Pro 6.4.2, YITH | ACF Pro 6.8.4, CF7 6.1.6, Yoast 28.1 |
+| Installed for coverage | Rank Math, CF7 (both removed afterwards) | — |
+
+**Five defects found. Four were code and are fixed (`5973e64`, `6c49bed`, `b6c46ec`);
+the fifth is this document's own rebuild instructions, corrected in §2/§10.1.**
+
+1. **BLOCKER — `PostMetaRollbackStore` stripped backslashes from every snapshot.**
+   `add_post_meta()`/`update_post_meta()` run `wp_unslash()` recursively, so snapshots
+   lost one level of backslashes *at capture time*; restore faithfully wrote back the
+   damaged document. An Elementor page went `2032B/5\/valid` → patch → **rollback →
+   `2027B/0\/INVALID JSON`**. Undo destroyed the page it was asked to restore. Also
+   affected the ACF and Bulk runtimes. Fixed and verified byte-identical.
+2. **HIGH — telemetry recorded `error_code="Array"` on successful operations** (90 of 159
+   rows on a fresh install) and raised `Array to string conversion` warnings 4-5× per
+   operation on the main happy path.
+3. **MEDIUM — `content_list`/`content_get` were the only pure reads in the catalogue that
+   waited for approval in Strict mode**, contradicting the Settings screen's own promise
+   that "questions and diagnostics are never held back in any mode".
+4. **MEDIUM — `acf_inventory` reported `unsynced: 0`** (false all-clear) on a site where
+   `acf_json_status` correctly reported 9 of 9 groups out of sync.
+5. **MEDIUM — the build is not byte-reproducible**, contradicting §10.1. See §2.
+
+**Verified on both sites from the rebuilt artifact:** clean install → activate (16 tables,
+DB 2.6.0, mode `client`, no fatal) · MCP handshake `2024-11-05` with **42 tools** and
+7 resources · a Standard-mode write returned `pending_approval` and **wrote nothing**
+(post count unchanged, zero rows in any status) · **the agent cannot self-approve**
+(`wpcc_approval_requires_human`) · admin approval in the browser → executed, attributed
+`resolved_by_type=wp_user` · undo restored content exactly, second undo refused
+(`wpcc_already_rolled_back`) · a UI undo correctly reported "waiting for your approval —
+nothing has changed yet" · read-only token refused every write (`wpcc_token_read_only`)
+while its permitted reads worked · all three protection modes gate per §3 · WooCommerce
+stock/price write + rollback restored exactly · SEO certified on **both** providers with
+provider-correct storage (Rank Math single `rank_math_robots` array; Yoast three split
+keys) · theme `functions.php` patch → apply → rollback byte-identical with hash
+verification, and applying it demanded `APPLY_PATCH` + reason **even in developer mode** ·
+`acf_json_sync` refused a blanket rewrite (`wpcc_acf_sync_scope_required`) · full
+lifecycle **6/6 on both sites** (deactivate → reactivate → uninstall-retain 16 tables →
+reinstall-adopt → uninstall-purge 0 tables / 0 options / 0 tokens, site HTTP 200
+throughout).
+
+**Both sites were restored to their exact pre-certification baselines** (content counts,
+active-plugin lists, Elementor `_elementor_data` byte-identical, theme `acf-json`
+byte-identical, product meta at baseline, plugin fully purged).
+
+---
+
 ## 6. Known limitations
 
 ### 6.1 Intentional — by design, do not "fix"
@@ -356,15 +427,32 @@ If WordPress.org requests changes, work this order:
 ```bash
 cd wp-content/plugins/ai-command-center
 git checkout release/v1-finalization
-git rev-parse HEAD                 # must be 7a404df1d99378028d3a369c4fb4480553e271ab
+git rev-parse HEAD                 # must be b6c46ec49ec98f898e849bf016ff532a5bfbc3cd
 git status --porcelain             # must be empty
 rm -rf build
 bash scripts/build-release.sh
 shasum -a 256 build/ai-command-center-1.0.0.zip
 ```
 
-The build is deterministic from a clean tree at that commit. If the checksum does not match
-§2, the tree is not clean or the commit is wrong — do not upload.
+**A rebuild produces a DIFFERENT checksum from §2 even when the tree and commit are
+correct.** The archive is not byte-reproducible: per-file mtimes and entry order vary
+between runs while the extracted contents are identical. This was verified — two builds
+from the same clean tree at `b6c46ec` gave `7cc74327…` and `44492221…`, and `diff -r` of
+the extracted trees showed no difference.
+
+So a checksum mismatch after a rebuild is **expected** and does not indicate a dirty tree.
+What matters is that the checksum recorded in §2 belongs to the exact file you upload:
+
+```bash
+# equivalence check between a rebuild and the recorded artifact
+mkdir -p /tmp/a /tmp/b
+unzip -q build/ai-command-center-1.0.0.zip -d /tmp/a
+unzip -q <the-artifact-matching-§2>.zip     -d /tmp/b
+diff -r /tmp/a /tmp/b && echo "contents identical"
+```
+
+If you rebuild and intend to ship the rebuild, **update §2 with the new checksum** and
+upload that file.
 
 ### 10.2 Roll back an unwanted change
 
