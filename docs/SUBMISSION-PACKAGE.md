@@ -36,10 +36,10 @@ rollback-corruption blocker.
 | | |
 |---|---|
 | **Branch** | `release/v1-finalization` |
-| **Commit** | `10145b40ab634fbd5d8ba587ef0cc982f7fadc56` (`10145b4`) |
+| **Branch head** | `06c3c8937d82d9d8f2231437766ac7594f472794` (`06c3c89`) — docs-only commits after `b6c46ec` do not change the package; content identity `dffb1413…` is the stable anchor |
 | **Remote** | pushed; `origin/release/v1-finalization` in sync |
 | **`main`** | `13549c2` — untouched, **not merged** (merge after approval) |
-| **Ahead of `main`** | 59 commits |
+| **Ahead of `main`** | 60 commits |
 | **Working tree** | clean |
 
 Release commits:
@@ -82,8 +82,8 @@ WordPress has stated the WP trademark does not cover the abbreviation "WP".
 
 | Check | Result |
 |---|---|
-| Full T2 regression | **6,361 passed · 0 failed · net-new 0** |
-| Regression baseline | empty (unchanged) |
+| Full T2 regression | **6,361 passed · 0 failed · net-new 0** (run 3 of 3) |
+| Regression baseline | 0 entries (unchanged — comments only) |
 | Plugin Check (artifact) | 0 errors · 814 warnings |
 | ZIP contains only distributables | verified — see §5 |
 | Clean-install lifecycle | 6/6 on two sites |
@@ -109,6 +109,30 @@ WordPress has stated the WP trademark does not cover the abbreviation "WP".
 Internally coherent: 42 catalogue = 34 mapped + 8 deliberately unmapped
 (`system_info`, `content_seed`, `acf_seed`, `cf7_seed`, `woo_product_seed`, `term_manage`,
 `cache_manage`, `report_manage` — read-only/low-risk, unrestricted by design).
+
+### T2 was run three times on this identical commit — full disclosure
+
+```
+run 1   6361 passed   0 failed   net-new 0   2905s
+run 2   6360 passed   1 failed   net-new 1   2917s   <- test-proposal-rest.sh
+run 3   6361 passed   0 failed   net-new 0   3127s
+```
+
+Run 2's single failure is a **flaky test, not a product regression**:
+
+- The plugin code is byte-identical across all three runs (content identity `dffb1413…`).
+- `test-proposal-rest.sh` passed **4 out of 4** isolated runs (24/0 each).
+- The suite pipes its assertion battery through `wp eval-file … 2>/dev/null`, discarding
+  stderr — any transient hiccup silently truncates its parsed output.
+- It also mutates the global `wpcc_security_mode` option, as 13 other suites do. This is
+  the contention hazard RELEASE_HANDOFF §4.4 already documents.
+
+**Nothing was added to `tests/regression-baseline.tsv`** — it still has 0 entries, per §4.4.
+
+This was deliberately **not** "fixed" at the release gate: the failure is unreproducible, so
+a change could not be verified to fix it, and editing test code at the final gate on an
+unverifiable hypothesis adds risk. Logged for V1.1 — stop discarding stderr in that suite,
+and add setup/teardown guards to the suites that mutate the global protection mode.
 
 ---
 
