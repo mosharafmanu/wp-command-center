@@ -24,7 +24,10 @@ echo "== 1. Platform Health =="
 HEALTH=$(api "$WPCC_BASE/health")
 assert_eq "health: status ok" "ok" "$(echo "$HEALTH" | jq -r '.status')"
 # Derived from the plugin header, not hardcoded — a version bump must not make this stale.
-WPCC_DECLARED_VERSION=$(grep -m1 "^ \* Version:" "$SCRIPT_DIR/../wp-command-center.php" | sed 's/.*Version: *//;s/ *$//')
+# Find the main plugin file rather than naming it — the file is named after the slug,
+# and a slug rename must not silently make this assertion read an empty version.
+WPCC_MAIN_FILE=$(grep -rl "^ \* Plugin Name:" "$SCRIPT_DIR/.."/*.php | head -1)
+WPCC_DECLARED_VERSION=$(grep -m1 "^ \* Version:" "$WPCC_MAIN_FILE" | sed 's/.*Version: *//;s/ *$//')
 assert_eq "health: plugin version matches the plugin header" "$WPCC_DECLARED_VERSION" "$(echo "$HEALTH" | jq -r '.plugin_version')"
 
 MANIFEST=$(api "$WPCC_BASE/agent/manifest")
@@ -266,7 +269,9 @@ PLUGINS=$(api_post -d '{"action":"plugin_list"}' "$WPCC_BASE/operations/plugin_m
 assert_true "plugin: list has plugins" "$(echo "$PLUGINS" | jq -r 'if .plugins then "true" else "false" end')"
 assert_true "plugin: acf-pro present" "$(echo "$PLUGINS" | jq -r 'any(.plugins.plugins[]; .slug == "advanced-custom-fields-pro")')"
 assert_true "plugin: woocommerce present" "$(echo "$PLUGINS" | jq -r 'any(.plugins.plugins[]; .slug == "woocommerce")')"
-assert_true "plugin: wp-command-center present" "$(echo "$PLUGINS" | jq -r 'any(.plugins.plugins[]; .slug == "wp-command-center")')"
+# This plugin's own slug, derived from its directory rather than hardcoded.
+WPCC_OWN_SLUG=$(basename "$(cd "$SCRIPT_DIR/.." && pwd)")
+assert_true "plugin: $WPCC_OWN_SLUG present" "$(echo "$PLUGINS" | jq -r --arg s "$WPCC_OWN_SLUG" 'any(.plugins.plugins[]; .slug == $s)')"
 
 # ===================================================================
 echo "== 22. Theme Runtime Validation =="

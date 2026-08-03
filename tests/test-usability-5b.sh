@@ -5,6 +5,9 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derived, not hardcoded: the text domain follows the plugin slug, and these
+# assertions must survive a slug rename.
+WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/../*.php | sed 's/.*Text Domain: *//;s/ *$//')
 ROOT="$(cd "$DIR/.." && pwd)"
 
 SHELL_F="$ROOT/includes/Admin/AppShell.php"
@@ -32,7 +35,7 @@ has "shell renders the section description" "wpcc-shell__desc" "$SHELL_F"
 # The tab is named for what the customer connects, not for the client category.
 has "assistant door uses plain 'Assistants' label" "__\( 'Assistants'" "$ROOT/includes/Admin/views/settings-connections.php"
 # Phase 2B: Runtime retired; the advanced area is now the Advanced hub.
-has "Advanced hub present under Settings" "__\( 'Advanced', 'wp-command-center' \)" "$SHELL_F"
+has "Advanced hub present under Settings" "__\( 'Advanced', '$WPCC_TEXTDOMAIN' \)" "$SHELL_F"
 has "Connect section slug intact" "CONNECT_SLUG\s*=\s*'wpcc-connect'" "$SHELL_F"
 has "Providers (AI Setup) tab still present" "'view' => 'ai-setup'" "$SHELL_F"
 

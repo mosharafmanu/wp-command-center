@@ -23,6 +23,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WP_PATH="$SCRIPT_DIR/../../../.."
+PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 PASS=0; FAIL=0
 
@@ -31,8 +32,10 @@ fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_contains() { local d="$1" needle="$2" haystack="$3"; echo "$haystack" | grep -q "$needle" && pass "$d" || fail "$d (expected '$needle' in output)"; }
 assert_not_contains() { local d="$1" needle="$2" haystack="$3"; echo "$haystack" | grep -q "$needle" && fail "$d (should NOT contain '$needle')" || pass "$d"; }
 
-SAFE="$WP_PATH/wp-content/plugins/wp-command-center/includes/Operations/SafeUpdates.php"
-PM="$WP_PATH/wp-content/plugins/wp-command-center/includes/Operations/PluginManager.php"
+# Derived from this script location, not the plugin directory name — a slug rename
+# must not break the suite.
+SAFE="$PLUGIN_DIR/includes/Operations/SafeUpdates.php"
+PM="$PLUGIN_DIR/includes/Operations/PluginManager.php"
 
 # ===================================================================
 echo "== 1. SafeUpdates: was_active captured before upgrade =="

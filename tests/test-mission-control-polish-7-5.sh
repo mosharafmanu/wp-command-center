@@ -2,6 +2,9 @@
 # PROGRAM-7.5 — Mission Control experience polish (UX only). Static lint + rg.
 set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derived, not hardcoded: the text domain follows the plugin slug, and these
+# assertions must survive a slug rename.
+WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/../*.php | sed 's/.*Text Domain: *//;s/ *$//')
 ROOT="$(cd "$DIR/.." && pwd)"
 VIEW="$ROOT/includes/Admin/views/ai-setup.php"
 HOME_F="$ROOT/includes/Admin/views/command-home.php"
@@ -44,7 +47,7 @@ has "provider connections still listed" "wpcc_conns" "$VIEW"
 echo "== 6. Activity timeline polish =="
 has "timeline component" "wpcc-aip-timeline" "$VIEW"
 has "category icons" "wpcc_cat_icon" "$VIEW"
-has "time grouping Today/Earlier" "'Today', 'wp-command-center'" "$VIEW"
+has "time grouping Today/Earlier" "'Today', '$WPCC_TEXTDOMAIN'" "$VIEW"
 
 echo "== 7. Feature routing clarity =="
 has "route describes what it powers" "Powers AI-written SEO" "$VIEW"

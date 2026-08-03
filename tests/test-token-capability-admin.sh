@@ -42,6 +42,9 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derived, not hardcoded: the text domain follows the plugin slug, and these
+# assertions must survive a slug rename.
+WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/../*.php | sed 's/.*Text Domain: *//;s/ *$//')
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
@@ -157,7 +160,7 @@ echo
 echo "== 4. App Shell hosts Tokens & Capabilities as Access › Tokens =="
 # Experience Layer: the standalone submenu became the Access › Tokens tab, routed
 # by the 5-C App Shell via ?wpcc_tab=tokens; the legacy slug redirects in.
-has "Access tokens pane labeled"      "__\( 'Access tokens', 'wp-command-center' \)" "$CONN"
+has "Access tokens pane labeled"      "__\( 'Access tokens', '$WPCC_TEXTDOMAIN' \)" "$CONN"
 has "Tokens tab renders the manager view" "'view' => 'token-capability-manager'" "$CONN"
 has "Tokens tab gated by token_capability_manager feature" "'feature' => 'token_capability_manager'" "$CONN"
 has "FeatureGate gates the Tokens tab" "FeatureGate::allows"      "$SHELL"

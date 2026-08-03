@@ -30,7 +30,10 @@ echo "= 1. GATEWAY HEALTH ="
 HEALTH=$(api "$WPCC_BASE/health")
 assert_eq "gateway: status ok" "ok" "$(echo "$HEALTH" | jq -r '.status')"
 # Derived from the plugin header, not hardcoded — a version bump must not make this stale.
-WPCC_DECLARED_VERSION=$(grep -m1 "^ \* Version:" "$SCRIPT_DIR/../wp-command-center.php" | sed 's/.*Version: *//;s/ *$//')
+# Find the main plugin file rather than naming it — the file is named after the slug,
+# and a slug rename must not silently make this assertion read an empty version.
+WPCC_MAIN_FILE=$(grep -rl "^ \* Plugin Name:" "$SCRIPT_DIR/.."/*.php | head -1)
+WPCC_DECLARED_VERSION=$(grep -m1 "^ \* Version:" "$WPCC_MAIN_FILE" | sed 's/.*Version: *//;s/ *$//')
 assert_eq "gateway: plugin version matches the plugin header" "$WPCC_DECLARED_VERSION" "$(echo "$HEALTH" | jq -r '.plugin_version')"
 assert_eq "gateway: api version" "v1" "$(echo "$HEALTH" | jq -r '.api_version')"
 assert_gt "gateway: timestamp > 0" "$(echo "$HEALTH" | jq -r '.timestamp')" "0"

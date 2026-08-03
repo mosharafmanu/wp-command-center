@@ -29,6 +29,9 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derived, not hardcoded: the text domain follows the plugin slug, and these
+# assertions must survive a slug rename.
+WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/../*.php | sed 's/.*Text Domain: *//;s/ *$//')
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
@@ -185,10 +188,10 @@ has "filters reference panel (aria-controls)" "aria-controls=\"wpcc-ops-panel\""
 echo
 echo "== 5d. STEP 108.3 — i18n completeness (no raw user-facing JS strings) =="
 # Extract the <script> region, drop every PHP-localized line (lines containing a
-# __( … 'wp-command-center' ) call), then look for any remaining quoted 3+ word
+# __( … '$WPCC_TEXTDOMAIN' ) call), then look for any remaining quoted 3+ word
 # English sentence — a sign of an un-localized literal. None expected.
 RAW_STRINGS="$(awk '/<script>/,/<\/script>/' "$VIEW" \
-	| rg -v "wp-command-center'" \
+	| rg -v "$WPCC_TEXTDOMAIN'" \
 	| rg -n "'[A-Za-z]+ [A-Za-z]+ [A-Za-z]+" \
 	| rg -v "wpcc-|aria-|scope=|class=|widefat|encodeURIComponent" || true)"
 if [ -z "$RAW_STRINGS" ]; then pass "no un-localized user-facing JS string literals"; else fail "un-localized strings: $RAW_STRINGS"; fi

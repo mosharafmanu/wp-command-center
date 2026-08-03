@@ -2,6 +2,9 @@
 # PROGRAM-10 — Live Operations Center. Structural + functional (wp eval-file).
 set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derived, not hardcoded: the text domain follows the plugin slug, and these
+# assertions must survive a slug rename.
+WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/../*.php | sed 's/.*Text Domain: *//;s/ *$//')
 ROOT="$(cd "$DIR/.." && pwd)"
 WP_PATH="$DIR/../../../.."
 
@@ -30,7 +33,7 @@ has "cost explicitly not tracked" "'cost_tracked'     => false" "$Q"
 has "view shows cost not tracked" "Not tracked yet" "$V"
 hasnt "no fabricated cost figure" 'Cost.*\$[0-9]' "$V"
 has "running shown only from real telemetry" "running.*=> .int. \\\$s\['running'\]|'running'   => \(int\) \\\$s\['running'\]" "$Q"
-has "duration unknown surfaced honestly" "'unknown', 'wp-command-center'" "$V"
+has "duration unknown surfaced honestly" "'unknown', '$WPCC_TEXTDOMAIN'" "$V"
 has "audit fallback marks duration not measured" "duration not measured" "$V"
 
 echo "== 4. Required sections present =="
