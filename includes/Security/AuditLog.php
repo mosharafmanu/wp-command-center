@@ -278,7 +278,7 @@ final class AuditLog {
 		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
 
 		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the audit log directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the audit log directory.', 'ai-command-center' ) );
 		}
 
 		$this->protect_directory( $dir );

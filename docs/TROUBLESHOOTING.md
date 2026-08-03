@@ -49,7 +49,7 @@ Work through these in order:
 1. **Is Node installed** on the machine running the client? `node --version`.
 2. **Is the relay reachable?**
    ```bash
-   curl -sI https://example.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs
+   curl -sI https://example.com/wp-content/plugins/ai-command-center/sdk/javascript/wpcc-mcp-relay.mjs
    ```
    Expect `200`. A `404` means the plugin files are not where the config expects.
 3. **Does the endpoint answer?**

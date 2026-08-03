@@ -62,10 +62,10 @@ $wpcc_ready = min( 100, $wpcc_ready );
 // that produced it (no scoring-logic change), plus honest context for AI being
 // inactive (not part of the score — purely informational).
 $wpcc_ready_steps = [
-	[ 'done' => ! empty( $wpcc_conns ),                                      'label' => __( 'A connection added', 'wp-command-center' ) ],
-	[ 'done' => '' !== $wpcc_default,                                        'label' => __( 'A default chosen', 'wp-command-center' ) ],
-	[ 'done' => $wpcc_has_healthy,                                           'label' => __( 'Tested healthy', 'wp-command-center' ) ],
-	[ 'done' => ( $wpcc_health['attention'] === 0 && ! empty( $wpcc_conns ) ), 'label' => __( 'No connection issues', 'wp-command-center' ) ],
+	[ 'done' => ! empty( $wpcc_conns ),                                      'label' => __( 'A connection added', 'ai-command-center' ) ],
+	[ 'done' => '' !== $wpcc_default,                                        'label' => __( 'A default chosen', 'ai-command-center' ) ],
+	[ 'done' => $wpcc_has_healthy,                                           'label' => __( 'Tested healthy', 'ai-command-center' ) ],
+	[ 'done' => ( $wpcc_health['attention'] === 0 && ! empty( $wpcc_conns ) ), 'label' => __( 'No connection issues', 'ai-command-center' ) ],
 ];
 
 // Provider groups for the wizard.
@@ -75,7 +75,7 @@ foreach ( $wpcc_providers as $pid => $pdef ) {
 	elseif ( ! empty( $pdef['needs_endpoint'] ) && empty( $pdef['needs_deployment'] ) ) { $wpcc_groups['gateway'][ $pid ] = $pdef['label']; }
 	else { $wpcc_groups['cloud'][ $pid ] = $pdef['label']; }
 }
-$wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ] ) ? $wpcc_conns[ $wpcc_default ]['name'] : __( 'none yet', 'wp-command-center' );
+$wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ] ) ? $wpcc_conns[ $wpcc_default ]['name'] : __( 'none yet', 'ai-command-center' );
 ?>
 <style>
 .wpcc-aip { max-width: 1080px; }
@@ -169,26 +169,26 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	 */
 	?>
 	<?php if ( $wpcc_health['attention'] > 0 ) : ?>
-		<div class="wpcc-aip-warn" role="status">⚠ <?php printf( esc_html( /* translators: %d: number */ _n( '%d connection needs attention. Open it below for the recommended fix.', '%d connections need attention. Open them below for the recommended fix.', $wpcc_health['attention'], 'wp-command-center' ) ), (int) $wpcc_health['attention'] ); ?></div>
+		<div class="wpcc-aip-warn" role="status">⚠ <?php printf( esc_html( /* translators: %d: number */ _n( '%d connection needs attention. Open it below for the recommended fix.', '%d connections need attention. Open them below for the recommended fix.', $wpcc_health['attention'], 'ai-command-center' ) ), (int) $wpcc_health['attention'] ); ?></div>
 	<?php elseif ( '' === $wpcc_default && ! empty( $wpcc_conns ) ) : ?>
-		<div class="wpcc-aip-warn" role="status"><?php esc_html_e( 'No default connection yet. Add a key to a connection and set it as default so AI features have something to use.', 'wp-command-center' ); ?></div>
+		<div class="wpcc-aip-warn" role="status"><?php esc_html_e( 'No default connection yet. Add a key to a connection and set it as default so AI features have something to use.', 'ai-command-center' ); ?></div>
 	<?php endif; ?>
 
 	<!-- ===== Built-in AI tools enablement (Phase 4) ===== -->
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-tools.php'; ?>
 
 	<!-- ===== Recent AI activity ===== -->
-	<h2><?php esc_html_e( 'Recent AI activity', 'wp-command-center' ); ?></h2>
+	<h2><?php esc_html_e( 'Recent AI activity', 'ai-command-center' ); ?></h2>
 	<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;">
 		<div style="background:#fff;border:1px solid #dcdfe3;border-radius:12px;padding:16px 18px;">
 			<?php // The card repeated the section heading sitting directly above it. ?>
 			<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
 				<?php if ( (int) $wpcc_act['pending_approvals'] > 0 ) : ?>
-					<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>"><?php printf( esc_html( /* translators: %d: number */ _n( '%d pending approval', '%d pending approvals', (int) $wpcc_act['pending_approvals'], 'wp-command-center' ) ), (int) $wpcc_act['pending_approvals'] ); ?></a>
+					<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>"><?php printf( esc_html( /* translators: %d: number */ _n( '%d pending approval', '%d pending approvals', (int) $wpcc_act['pending_approvals'], 'ai-command-center' ) ), (int) $wpcc_act['pending_approvals'] ); ?></a>
 				<?php endif; ?>
 			</div>
 			<?php if ( empty( $wpcc_feed ) ) : ?>
-				<p class="muted" style="font-size:13px;margin:0;"><?php esc_html_e( 'No activity yet. When AI or an agent acts on this site, the governed history appears here — every action recorded, reversible where supported.', 'wp-command-center' ); ?></p>
+				<p class="muted" style="font-size:13px;margin:0;"><?php esc_html_e( 'No activity yet. When AI or an agent acts on this site, the governed history appears here — every action recorded, reversible where supported.', 'ai-command-center' ); ?></p>
 			<?php else : ?>
 				<?php
 				// Category → dashicon (visual scanning aid; presentation only).
@@ -201,56 +201,56 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 				$wpcc_today = (int) current_time( 'timestamp' ) - (int) ( current_time( 'timestamp' ) % DAY_IN_SECONDS );
 				$wpcc_bucket = '';
 				?>
-				<ul class="wpcc-aip-timeline" aria-label="<?php esc_attr_e( 'Recent AI activity', 'wp-command-center' ); ?>">
+				<ul class="wpcc-aip-timeline" aria-label="<?php esc_attr_e( 'Recent AI activity', 'ai-command-center' ); ?>">
 					<?php foreach ( $wpcc_feed as $ev ) :
 						$b = ( $ev['time'] && $ev['time'] >= $wpcc_today ) ? 'today' : 'earlier';
 						if ( $b !== $wpcc_bucket ) :
 							$wpcc_bucket = $b;
 							?>
-							<li class="grp"><?php echo 'today' === $b ? esc_html__( 'Today', 'wp-command-center' ) : esc_html__( 'Earlier', 'wp-command-center' ); ?></li>
+							<li class="grp"><?php echo 'today' === $b ? esc_html__( 'Today', 'ai-command-center' ) : esc_html__( 'Earlier', 'ai-command-center' ); ?></li>
 						<?php endif; ?>
 						<li class="ev">
 							<span class="ic" style="color:<?php echo esc_attr( $ev['color'] ); ?>" aria-hidden="true"><span class="dashicons <?php echo esc_attr( $wpcc_cat_icon[ $ev['category'] ] ?? 'dashicons-marker' ); ?>"></span></span>
 							<span class="bd"><strong><?php echo esc_html( $ev['cat_label'] ); ?></strong> <span class="muted"><?php echo esc_html( $ev['label'] ); ?></span><?php if ( '' !== $ev['actor'] ) : ?> <span class="muted">· <?php echo esc_html( $ev['actor'] ); ?></span><?php endif; ?></span>
-							<span class="tm muted"><?php echo $ev['time'] ? esc_html( sprintf( /* translators: %s ago */ __( '%s ago', 'wp-command-center' ), human_time_diff( $ev['time'], time() ) ) ) : ''; ?></span>
+							<span class="tm muted"><?php echo $ev['time'] ? esc_html( sprintf( /* translators: %s ago */ __( '%s ago', 'ai-command-center' ), human_time_diff( $ev['time'], time() ) ) ) : ''; ?></span>
 						</li>
 					<?php endforeach; ?>
 				</ul>
 			<?php endif; ?>
 			<p style="margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap;">
-				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ) ); ?>"><?php esc_html_e( 'Review changes & undo', 'wp-command-center' ); ?></a>
-				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>"><?php esc_html_e( 'Approvals', 'wp-command-center' ); ?></a>
-				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ); ?>"><?php esc_html_e( 'Connect an AI client', 'wp-command-center' ); ?></a>
+				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ) ); ?>"><?php esc_html_e( 'Review changes & undo', 'ai-command-center' ); ?></a>
+				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>"><?php esc_html_e( 'Approvals', 'ai-command-center' ); ?></a>
+				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ); ?>"><?php esc_html_e( 'Connect an AI client', 'ai-command-center' ); ?></a>
 			</p>
 		</div>
 		<div style="display:grid;gap:10px;">
-			<div class="wpcc-aip-kpi"><div class="v"><?php echo (int) $wpcc_act['events']; ?></div><div class="l"><?php esc_html_e( 'Recent events', 'wp-command-center' ); ?></div></div>
-			<div class="wpcc-aip-kpi"><div class="v" style="color:<?php echo (int) $wpcc_act['pending_approvals'] ? '#d63638' : '#0a7a33'; ?>;"><?php echo (int) $wpcc_act['pending_approvals']; ?></div><div class="l"><?php esc_html_e( 'Pending approvals', 'wp-command-center' ); ?></div></div>
-			<div class="wpcc-aip-kpi" title="<?php esc_attr_e( 'Per-token usage and cost are not metered yet — they arrive when the AI runtime is instrumented. No estimated figure is shown to avoid misleading you.', 'wp-command-center' ); ?>"><div class="v" style="font-size:15px;color:#646970;"><?php esc_html_e( 'Not tracked yet', 'wp-command-center' ); ?></div><div class="l"><?php esc_html_e( 'Token usage & cost', 'wp-command-center' ); ?></div></div>
+			<div class="wpcc-aip-kpi"><div class="v"><?php echo (int) $wpcc_act['events']; ?></div><div class="l"><?php esc_html_e( 'Recent events', 'ai-command-center' ); ?></div></div>
+			<div class="wpcc-aip-kpi"><div class="v" style="color:<?php echo (int) $wpcc_act['pending_approvals'] ? '#d63638' : '#0a7a33'; ?>;"><?php echo (int) $wpcc_act['pending_approvals']; ?></div><div class="l"><?php esc_html_e( 'Pending approvals', 'ai-command-center' ); ?></div></div>
+			<div class="wpcc-aip-kpi" title="<?php esc_attr_e( 'Per-token usage and cost are not metered yet — they arrive when the AI runtime is instrumented. No estimated figure is shown to avoid misleading you.', 'ai-command-center' ); ?>"><div class="v" style="font-size:15px;color:#646970;"><?php esc_html_e( 'Not tracked yet', 'ai-command-center' ); ?></div><div class="l"><?php esc_html_e( 'Token usage & cost', 'ai-command-center' ); ?></div></div>
 		</div>
 	</div>
 
 	<!-- ===== Quick action ===== -->
-	<p style="margin:18px 0;"><button type="button" class="button button-primary button-hero" id="wpcc-aip-new" aria-expanded="false" aria-controls="wpcc-aip-wizard">+ <?php esc_html_e( 'New connection', 'wp-command-center' ); ?></button></p>
+	<p style="margin:18px 0;"><button type="button" class="button button-primary button-hero" id="wpcc-aip-new" aria-expanded="false" aria-controls="wpcc-aip-wizard">+ <?php esc_html_e( 'New connection', 'ai-command-center' ); ?></button></p>
 
 	<!-- ===== Connection wizard (progressive; degrades to a full form without JS) ===== -->
-	<form method="post" class="wpcc-aip-wizard" id="wpcc-aip-wizard" aria-label="<?php esc_attr_e( 'New connection wizard', 'wp-command-center' ); ?>">
+	<form method="post" class="wpcc-aip-wizard" id="wpcc-aip-wizard" aria-label="<?php esc_attr_e( 'New connection wizard', 'ai-command-center' ); ?>">
 		<?php wp_nonce_field( ConnectionController::NONCE ); ?>
 		<input type="hidden" name="wpcc_conn_action" value="create" />
 		<input type="hidden" name="wpcc_model" value="custom" />
 		<div class="wpcc-aip-steps" aria-hidden="true"><span class="s active"></span><span class="s"></span><span class="s"></span><span class="s"></span><span class="s"></span></div>
 
 		<div class="wpcc-aip-step active" data-step="1">
-			<h3><?php esc_html_e( 'Step 1 — Choose a provider', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick the AI service. Cloud = hosted (Claude, GPT, Gemini); Local = a model on your own machine (Ollama, LM Studio); Gateway / Custom = your own endpoint. Only Anthropic powers WPCC’s features today — each option shows whether WPCC can use it, test it, or just store it.', 'wp-command-center' ); ?></p>
+			<h3><?php esc_html_e( 'Step 1 — Choose a provider', 'ai-command-center' ); ?></h3>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick the AI service. Cloud = hosted (Claude, GPT, Gemini); Local = a model on your own machine (Ollama, LM Studio); Gateway / Custom = your own endpoint. Only Anthropic powers WPCC’s features today — each option shows whether WPCC can use it, test it, or just store it.', 'ai-command-center' ); ?></p>
 			<div class="wpcc-aip-field">
-				<label for="wpcc-w-provider"><?php esc_html_e( 'Provider', 'wp-command-center' ); ?></label>
+				<label for="wpcc-w-provider"><?php esc_html_e( 'Provider', 'ai-command-center' ); ?></label>
 				<select name="wpcc_provider" id="wpcc-w-provider">
-					<?php foreach ( [ 'cloud' => __( 'Cloud', 'wp-command-center' ), 'local' => __( 'Local', 'wp-command-center' ), 'gateway' => __( 'Gateway / Custom', 'wp-command-center' ) ] as $gk => $glabel ) : ?>
+					<?php foreach ( [ 'cloud' => __( 'Cloud', 'ai-command-center' ), 'local' => __( 'Local', 'ai-command-center' ), 'gateway' => __( 'Gateway / Custom', 'ai-command-center' ) ] as $gk => $glabel ) : ?>
 						<?php if ( ! empty( $wpcc_groups[ $gk ] ) ) : ?>
 							<optgroup label="<?php echo esc_attr( $glabel ); ?>">
 								<?php foreach ( $wpcc_groups[ $gk ] as $pid => $plabel ) : ?>
-									<option value="<?php echo esc_attr( $pid ); ?>"><?php echo esc_html( $plabel ); ?> — <?php echo esc_html( ProviderCatalog::runtime_usable( $pid ) ? __( 'used by runtime', 'wp-command-center' ) : ( ProviderCatalog::test_supported( $pid ) ? __( 'testable', 'wp-command-center' ) : __( 'stored only', 'wp-command-center' ) ) ); ?></option>
+									<option value="<?php echo esc_attr( $pid ); ?>"><?php echo esc_html( $plabel ); ?> — <?php echo esc_html( ProviderCatalog::runtime_usable( $pid ) ? __( 'used by runtime', 'ai-command-center' ) : ( ProviderCatalog::test_supported( $pid ) ? __( 'testable', 'ai-command-center' ) : __( 'stored only', 'ai-command-center' ) ) ); ?></option>
 								<?php endforeach; ?>
 							</optgroup>
 						<?php endif; ?>
@@ -260,74 +260,74 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		</div>
 
 		<div class="wpcc-aip-step" data-step="2">
-			<h3><?php esc_html_e( 'Step 2 — Name & where it runs', 'wp-command-center' ); ?></h3>
-			<div class="wpcc-aip-field"><label for="wpcc-w-name"><?php esc_html_e( 'Connection name', 'wp-command-center' ); ?></label><input type="text" id="wpcc-w-name" name="wpcc_name" placeholder="<?php esc_attr_e( 'e.g. Production Claude', 'wp-command-center' ); ?>" /></div>
-			<div class="wpcc-aip-field" id="wpcc-w-endpoint-field"><label for="wpcc-w-endpoint"><?php esc_html_e( 'Base URL', 'wp-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'required for this provider', 'wp-command-center' ); ?>)</span></label><input type="url" id="wpcc-w-endpoint" name="wpcc_endpoint" style="font-family:monospace;" placeholder="https://…" /><p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Cloud providers use their official URL automatically — you only set this for local, Azure, gateway, or custom endpoints.', 'wp-command-center' ); ?></p></div>
+			<h3><?php esc_html_e( 'Step 2 — Name & where it runs', 'ai-command-center' ); ?></h3>
+			<div class="wpcc-aip-field"><label for="wpcc-w-name"><?php esc_html_e( 'Connection name', 'ai-command-center' ); ?></label><input type="text" id="wpcc-w-name" name="wpcc_name" placeholder="<?php esc_attr_e( 'e.g. Production Claude', 'ai-command-center' ); ?>" /></div>
+			<div class="wpcc-aip-field" id="wpcc-w-endpoint-field"><label for="wpcc-w-endpoint"><?php esc_html_e( 'Base URL', 'ai-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'required for this provider', 'ai-command-center' ); ?>)</span></label><input type="url" id="wpcc-w-endpoint" name="wpcc_endpoint" style="font-family:monospace;" placeholder="https://…" /><p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Cloud providers use their official URL automatically — you only set this for local, Azure, gateway, or custom endpoints.', 'ai-command-center' ); ?></p></div>
 		</div>
 
 		<div class="wpcc-aip-step" data-step="3">
-			<h3><?php esc_html_e( 'Step 3 — Credentials', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Paste your API key. It is stored on this site and never shown again. Local models usually need no key.', 'wp-command-center' ); ?></p>
+			<h3><?php esc_html_e( 'Step 3 — Credentials', 'ai-command-center' ); ?></h3>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Paste your API key. It is stored on this site and never shown again. Local models usually need no key.', 'ai-command-center' ); ?></p>
 			<?php
 			// Disclosure BEFORE a key is entered, not buried in the readme: the user
 			// is about to authorise this site to send content to a third party, and
 			// that is the moment to say so plainly.
 			?>
 			<div role="note" style="margin:0 0 12px;padding:12px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;font-size:13px;color:#1d2327;max-width:640px;">
-				<strong style="display:block;margin-bottom:4px;"><?php esc_html_e( 'What this key does', 'wp-command-center' ); ?></strong>
-				<?php esc_html_e( 'When you use a built-in AI tool, the content it works on — for example a post title, an excerpt, or an image — is sent to the provider you selected, under your account and their terms. It is stored on this site so the plugin can authenticate, never shown again, and never written to logs. You can remove it at any time. Connecting an external AI assistant does not require this key.', 'wp-command-center' ); ?>
+				<strong style="display:block;margin-bottom:4px;"><?php esc_html_e( 'What this key does', 'ai-command-center' ); ?></strong>
+				<?php esc_html_e( 'When you use a built-in AI tool, the content it works on — for example a post title, an excerpt, or an image — is sent to the provider you selected, under your account and their terms. It is stored on this site so the plugin can authenticate, never shown again, and never written to logs. You can remove it at any time. Connecting an external AI assistant does not require this key.', 'ai-command-center' ); ?>
 			</div>
-			<div class="wpcc-aip-field"><label for="wpcc-w-key"><?php esc_html_e( 'API key', 'wp-command-center' ); ?></label><input type="password" id="wpcc-w-key" name="wpcc_key" autocomplete="off" spellcheck="false" style="font-family:monospace;" placeholder="<?php esc_attr_e( 'Paste your API key (optional for local)', 'wp-command-center' ); ?>" /></div>
+			<div class="wpcc-aip-field"><label for="wpcc-w-key"><?php esc_html_e( 'API key', 'ai-command-center' ); ?></label><input type="password" id="wpcc-w-key" name="wpcc_key" autocomplete="off" spellcheck="false" style="font-family:monospace;" placeholder="<?php esc_attr_e( 'Paste your API key (optional for local)', 'ai-command-center' ); ?>" /></div>
 		</div>
 
 		<div class="wpcc-aip-step" data-step="4">
-			<h3><?php esc_html_e( 'Step 4 — Model', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Recommended models are shown during setup. After you save and test this connection, WP Command Center automatically adds any other models your account exposes — you’ll find them in this connection’s Model list under “Edit”. Providers that don’t publish a model list simply keep the recommended set. You can change the model any time.', 'wp-command-center' ); ?></p>
+			<h3><?php esc_html_e( 'Step 4 — Model', 'ai-command-center' ); ?></h3>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Recommended models are shown during setup. After you save and test this connection, WP Command Center automatically adds any other models your account exposes — you’ll find them in this connection’s Model list under “Edit”. Providers that don’t publish a model list simply keep the recommended set. You can change the model any time.', 'ai-command-center' ); ?></p>
 			<div class="wpcc-aip-field">
-				<label for="wpcc-w-model-select"><?php esc_html_e( 'Model', 'wp-command-center' ); ?></label>
-				<input type="search" id="wpcc-w-model-search" style="display:none;width:100%;margin-bottom:6px;" placeholder="<?php esc_attr_e( 'Filter models…', 'wp-command-center' ); ?>" aria-label="<?php esc_attr_e( 'Filter models', 'wp-command-center' ); ?>" />
+				<label for="wpcc-w-model-select"><?php esc_html_e( 'Model', 'ai-command-center' ); ?></label>
+				<input type="search" id="wpcc-w-model-search" style="display:none;width:100%;margin-bottom:6px;" placeholder="<?php esc_attr_e( 'Filter models…', 'ai-command-center' ); ?>" aria-label="<?php esc_attr_e( 'Filter models', 'ai-command-center' ); ?>" />
 				<select id="wpcc-w-model-select" style="display:none;"></select>
 				<input type="text" id="wpcc-w-model" name="wpcc_model_custom" style="font-family:monospace;" placeholder="model-id" />
 				<p class="muted" id="wpcc-w-model-help" style="font-size:12px;margin:4px 0 0;"></p>
 			</div>
 			<details class="wpcc-aip-advanced" style="margin-top:4px;">
-				<summary style="cursor:pointer;font-size:13px;"><?php esc_html_e( 'Advanced options', 'wp-command-center' ); ?></summary>
+				<summary style="cursor:pointer;font-size:13px;"><?php esc_html_e( 'Advanced options', 'ai-command-center' ); ?></summary>
 				<div class="wpcc-aip-field" style="margin-top:10px;">
-					<label for="wpcc-w-tags"><?php esc_html_e( 'Tags', 'wp-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'optional', 'wp-command-center' ); ?>)</span></label>
+					<label for="wpcc-w-tags"><?php esc_html_e( 'Tags', 'ai-command-center' ); ?> <span class="muted">(<?php esc_html_e( 'optional', 'ai-command-center' ); ?>)</span></label>
 					<input type="text" id="wpcc-w-tags" name="wpcc_tags" placeholder="prod, premium" />
-					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Internal labels to organize and route your connections (for example “prod” or “cheap”). Optional, used only inside WP Command Center — never sent to the provider.', 'wp-command-center' ); ?></p>
+					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Internal labels to organize and route your connections (for example “prod” or “cheap”). Optional, used only inside WP Command Center — never sent to the provider.', 'ai-command-center' ); ?></p>
 				</div>
 				<div class="wpcc-aip-field" id="wpcc-w-deployment-field" style="display:none;margin-top:10px;">
-					<label for="wpcc-w-deployment"><?php esc_html_e( 'Deployment name', 'wp-command-center' ); ?></label>
+					<label for="wpcc-w-deployment"><?php esc_html_e( 'Deployment name', 'ai-command-center' ); ?></label>
 					<input type="text" id="wpcc-w-deployment" name="wpcc_deployment" />
-					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Azure OpenAI only: the deployment name you created for this model in your Azure resource.', 'wp-command-center' ); ?></p>
+					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Azure OpenAI only: the deployment name you created for this model in your Azure resource.', 'ai-command-center' ); ?></p>
 				</div>
 			</details>
 		</div>
 
 		<div class="wpcc-aip-step" data-step="5">
-			<h3><?php esc_html_e( 'Step 5 — Create & test', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'We’ll create the connection now. Then use “Test” on its card to verify the key works — no changes are made to your site.', 'wp-command-center' ); ?></p>
-			<p style="font-size:13px;"><?php esc_html_e( 'Adding a key does not turn AI features on by itself — built-in AI screens are enabled per site.', 'wp-command-center' ); ?></p>
+			<h3><?php esc_html_e( 'Step 5 — Create & test', 'ai-command-center' ); ?></h3>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'We’ll create the connection now. Then use “Test” on its card to verify the key works — no changes are made to your site.', 'ai-command-center' ); ?></p>
+			<p style="font-size:13px;"><?php esc_html_e( 'Adding a key does not turn AI features on by itself — built-in AI screens are enabled per site.', 'ai-command-center' ); ?></p>
 		</div>
 
 		<div class="wpcc-aip-wnav">
-			<button type="button" class="button" id="wpcc-w-back" style="visibility:hidden;"><?php esc_html_e( 'Back', 'wp-command-center' ); ?></button>
+			<button type="button" class="button" id="wpcc-w-back" style="visibility:hidden;"><?php esc_html_e( 'Back', 'ai-command-center' ); ?></button>
 			<span>
-				<button type="button" class="button" id="wpcc-w-cancel"><?php esc_html_e( 'Cancel', 'wp-command-center' ); ?></button>
-				<button type="button" class="button button-primary" id="wpcc-w-next"><?php esc_html_e( 'Next', 'wp-command-center' ); ?></button>
-				<button type="submit" class="button button-primary" id="wpcc-w-finish" style="display:none;"><?php esc_html_e( 'Create connection', 'wp-command-center' ); ?></button>
+				<button type="button" class="button" id="wpcc-w-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-w-next"><?php esc_html_e( 'Next', 'ai-command-center' ); ?></button>
+				<button type="submit" class="button button-primary" id="wpcc-w-finish" style="display:none;"><?php esc_html_e( 'Create connection', 'ai-command-center' ); ?></button>
 			</span>
 		</div>
 	</form>
 
 	<!-- ===== Connections ===== -->
-	<h2><?php esc_html_e( 'Your connections', 'wp-command-center' ); ?></h2>
+	<h2><?php esc_html_e( 'Your connections', 'ai-command-center' ); ?></h2>
 	<?php if ( empty( $wpcc_conns ) ) : ?>
 		<div class="wpcc-aip-empty">
-			<h3><?php esc_html_e( 'No AI connections yet', 'wp-command-center' ); ?></h3>
-			<p class="muted" style="max-width:460px;margin:0 auto 14px;"><?php esc_html_e( 'A connection links an AI provider to this site so WP Command Center can do work for you — safely, with your approval, and an undo for supported changes. Add a connection to get started.', 'wp-command-center' ); ?></p>
-			<button type="button" class="button button-primary" id="wpcc-aip-new2">+ <?php esc_html_e( 'Add a connection', 'wp-command-center' ); ?></button>
+			<h3><?php esc_html_e( 'No AI connections yet', 'ai-command-center' ); ?></h3>
+			<p class="muted" style="max-width:460px;margin:0 auto 14px;"><?php esc_html_e( 'A connection links an AI provider to this site so WP Command Center can do work for you — safely, with your approval, and an undo for supported changes. Add a connection to get started.', 'ai-command-center' ); ?></p>
+			<button type="button" class="button button-primary" id="wpcc-aip-new2">+ <?php esc_html_e( 'Add a connection', 'ai-command-center' ); ?></button>
 		</div>
 	<?php else : ?>
 		<div class="wpcc-aip-cards">
@@ -358,23 +358,23 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 					</div>
 
 					<div>
-						<?php if ( $is_def ) : ?><span class="wpcc-aip-badge" style="background:#e7f0fb;color:#1d62b0;"><?php esc_html_e( 'DEFAULT', 'wp-command-center' ); ?></span> <?php endif; ?>
-						<?php if ( $runtime ) : ?><span class="wpcc-aip-badge" style="background:#e7f6ec;color:#0a7a33;"><?php esc_html_e( 'USED BY RUNTIME', 'wp-command-center' ); ?></span>
-						<?php elseif ( $testable ) : ?><span class="wpcc-aip-badge" style="background:#eef4fb;color:#1d62b0;" title="<?php esc_attr_e( 'Configured and testable, but not used by WPCC’s AI features yet.', 'wp-command-center' ); ?>"><?php esc_html_e( 'TESTABLE', 'wp-command-center' ); ?></span>
-						<?php else : ?><span class="wpcc-aip-badge" style="background:#fcf6e6;color:#8a6a00;"><?php esc_html_e( 'STORED ONLY', 'wp-command-center' ); ?></span><?php endif; ?>
+						<?php if ( $is_def ) : ?><span class="wpcc-aip-badge" style="background:#e7f0fb;color:#1d62b0;"><?php esc_html_e( 'DEFAULT', 'ai-command-center' ); ?></span> <?php endif; ?>
+						<?php if ( $runtime ) : ?><span class="wpcc-aip-badge" style="background:#e7f6ec;color:#0a7a33;"><?php esc_html_e( 'USED BY RUNTIME', 'ai-command-center' ); ?></span>
+						<?php elseif ( $testable ) : ?><span class="wpcc-aip-badge" style="background:#eef4fb;color:#1d62b0;" title="<?php esc_attr_e( 'Configured and testable, but not used by WPCC’s AI features yet.', 'ai-command-center' ); ?>"><?php esc_html_e( 'TESTABLE', 'ai-command-center' ); ?></span>
+						<?php else : ?><span class="wpcc-aip-badge" style="background:#fcf6e6;color:#8a6a00;"><?php esc_html_e( 'STORED ONLY', 'ai-command-center' ); ?></span><?php endif; ?>
 						<?php foreach ( $c['tags'] as $tag ) : ?><span class="wpcc-aip-badge" style="background:#f0f0f1;color:#50575e;">#<?php echo esc_html( $tag ); ?></span> <?php endforeach; ?>
 					</div>
 
 					<div class="wpcc-aip-meta">
-						<?php if ( Dialect::endpoint_editable( $c['dialect'] ) ) : ?><div><?php esc_html_e( 'Endpoint', 'wp-command-center' ); ?>: <code><?php echo esc_html( $c['endpoint'] ?: '—' ); ?></code></div><?php endif; ?>
-						<div><?php esc_html_e( 'Model', 'wp-command-center' ); ?>: <code><?php echo esc_html( $c['model'] ?: ( $def['default_model'] ?? '—' ) ); ?></code></div>
+						<?php if ( Dialect::endpoint_editable( $c['dialect'] ) ) : ?><div><?php esc_html_e( 'Endpoint', 'ai-command-center' ); ?>: <code><?php echo esc_html( $c['endpoint'] ?: '—' ); ?></code></div><?php endif; ?>
+						<div><?php esc_html_e( 'Model', 'ai-command-center' ); ?>: <code><?php echo esc_html( $c['model'] ?: ( $def['default_model'] ?? '—' ) ); ?></code></div>
 						<?php if ( is_array( $lt ) && isset( $lt['time'] ) ) : ?>
 							<div class="muted">
 								<?php
 								$bits = [];
-								$bits[] = sprintf( /* translators: %s ago */ __( 'Last test %s ago', 'wp-command-center' ), human_time_diff( (int) $lt['time'], time() ) );
-								if ( ! empty( $lt['latency_ms'] ) ) { $bits[] = sprintf( /* translators: %d ms */ __( '%d ms', 'wp-command-center' ), (int) $lt['latency_ms'] ); }
-								if ( ! empty( $lt['models'] ) ) { $bits[] = sprintf( /* translators: %d models */ _n( '%d model', '%d models', (int) $lt['models'], 'wp-command-center' ), (int) $lt['models'] ); }
+								$bits[] = sprintf( /* translators: %s ago */ __( 'Last test %s ago', 'ai-command-center' ), human_time_diff( (int) $lt['time'], time() ) );
+								if ( ! empty( $lt['latency_ms'] ) ) { $bits[] = sprintf( /* translators: %d ms */ __( '%d ms', 'ai-command-center' ), (int) $lt['latency_ms'] ); }
+								if ( ! empty( $lt['models'] ) ) { $bits[] = sprintf( /* translators: %d models */ _n( '%d model', '%d models', (int) $lt['models'], 'ai-command-center' ), (int) $lt['models'] ); }
 								echo esc_html( implode( ' · ', $bits ) );
 								?>
 							</div>
@@ -383,23 +383,23 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 					</div>
 
 					<details>
-						<summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2271b1;"><?php esc_html_e( 'Capabilities (declared)', 'wp-command-center' ); ?></summary>
+						<summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2271b1;"><?php esc_html_e( 'Capabilities (declared)', 'ai-command-center' ); ?></summary>
 						<div class="wpcc-aip-caps" style="margin-top:8px;">
 							<?php foreach ( Capabilities::keys() as $ck => $clabel ) : $cv = $caps[ $ck ] ?? 'no'; ?>
 								<span class="wpcc-aip-cap <?php echo in_array( $cv, [ 'yes' ], true ) ? 'on' : ''; ?>"><?php echo esc_html( $clabel ); ?>: <?php echo esc_html( Capabilities::value_label( $cv ) ); ?></span>
 							<?php endforeach; ?>
 						</div>
-						<p class="muted" style="font-size:11px;margin:6px 0 0;"><?php esc_html_e( 'Declared from the provider’s API — not live-tested.', 'wp-command-center' ); ?></p>
+						<p class="muted" style="font-size:11px;margin:6px 0 0;"><?php esc_html_e( 'Declared from the provider’s API — not live-tested.', 'ai-command-center' ); ?></p>
 					</details>
 
 					<!-- Inline edit -->
 					<details>
-						<summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2271b1;"><?php esc_html_e( 'Edit', 'wp-command-center' ); ?></summary>
+						<summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2271b1;"><?php esc_html_e( 'Edit', 'ai-command-center' ); ?></summary>
 						<form method="post" style="margin-top:8px;display:grid;gap:8px;">
 							<?php wp_nonce_field( ConnectionController::NONCE ); ?>
 							<input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" />
-							<label style="font-size:12px;"><?php esc_html_e( 'Name', 'wp-command-center' ); ?><input type="text" name="wpcc_name" value="<?php echo esc_attr( $c['name'] ); ?>" style="width:100%;" /></label>
-							<?php if ( Dialect::endpoint_editable( $c['dialect'] ) ) : ?><label style="font-size:12px;"><?php esc_html_e( 'Base URL', 'wp-command-center' ); ?><input type="url" name="wpcc_endpoint" value="<?php echo esc_attr( $c['endpoint'] ); ?>" style="width:100%;font-family:monospace;" /></label><?php endif; ?>
+							<label style="font-size:12px;"><?php esc_html_e( 'Name', 'ai-command-center' ); ?><input type="text" name="wpcc_name" value="<?php echo esc_attr( $c['name'] ); ?>" style="width:100%;" /></label>
+							<?php if ( Dialect::endpoint_editable( $c['dialect'] ) ) : ?><label style="font-size:12px;"><?php esc_html_e( 'Base URL', 'ai-command-center' ); ?><input type="url" name="wpcc_endpoint" value="<?php echo esc_attr( $c['endpoint'] ); ?>" style="width:100%;font-family:monospace;" /></label><?php endif; ?>
 							<?php
 								$wpcc_rec   = ( isset( $def['models'] ) && is_array( $def['models'] ) ) ? $def['models'] : [];
 								$wpcc_disc  = ( is_array( $lt ) && ! empty( $lt['models_list'] ) && is_array( $lt['models_list'] ) ) ? $lt['models_list'] : [];
@@ -408,42 +408,42 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 								// Copy selection only: providers whose connection test lists account models.
 								$wpcc_lists = in_array( $c['dialect'], [ Dialect::OPENAI, Dialect::GEMINI ], true );
 								?>
-								<label style="font-size:12px;"><?php esc_html_e( 'Model', 'wp-command-center' ); ?>
+								<label style="font-size:12px;"><?php esc_html_e( 'Model', 'ai-command-center' ); ?>
 									<select name="wpcc_model" class="wpcc-edit-model" style="width:100%;">
-										<?php if ( $wpcc_rec ) : ?><optgroup label="<?php esc_attr_e( 'Recommended', 'wp-command-center' ); ?>"><?php foreach ( $wpcc_rec as $wpcc_mid => $wpcc_mlabel ) : ?><option value="<?php echo esc_attr( $wpcc_mid ); ?>" <?php selected( $wpcc_cur === (string) $wpcc_mid ); ?>><?php echo esc_html( $wpcc_mlabel ); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
-										<?php if ( $wpcc_disc ) : ?><optgroup label="<?php echo esc_attr( sprintf( /* translators: %d: number */ __( 'Discovered from your account (%d)', 'wp-command-center' ), count( $wpcc_disc ) ) ); ?>"><?php foreach ( $wpcc_disc as $wpcc_did ) : if ( isset( $wpcc_rec[ $wpcc_did ] ) ) { continue; } ?><option value="<?php echo esc_attr( $wpcc_did ); ?>" <?php selected( $wpcc_cur === (string) $wpcc_did ); ?>><?php echo esc_html( $wpcc_did ); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
-										<option value="custom" <?php selected( ! $wpcc_known ); ?>><?php esc_html_e( 'Custom model ID…', 'wp-command-center' ); ?></option>
+										<?php if ( $wpcc_rec ) : ?><optgroup label="<?php esc_attr_e( 'Recommended', 'ai-command-center' ); ?>"><?php foreach ( $wpcc_rec as $wpcc_mid => $wpcc_mlabel ) : ?><option value="<?php echo esc_attr( $wpcc_mid ); ?>" <?php selected( $wpcc_cur === (string) $wpcc_mid ); ?>><?php echo esc_html( $wpcc_mlabel ); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+										<?php if ( $wpcc_disc ) : ?><optgroup label="<?php echo esc_attr( sprintf( /* translators: %d: number */ __( 'Discovered from your account (%d)', 'ai-command-center' ), count( $wpcc_disc ) ) ); ?>"><?php foreach ( $wpcc_disc as $wpcc_did ) : if ( isset( $wpcc_rec[ $wpcc_did ] ) ) { continue; } ?><option value="<?php echo esc_attr( $wpcc_did ); ?>" <?php selected( $wpcc_cur === (string) $wpcc_did ); ?>><?php echo esc_html( $wpcc_did ); ?></option><?php endforeach; ?></optgroup><?php endif; ?>
+										<option value="custom" <?php selected( ! $wpcc_known ); ?>><?php esc_html_e( 'Custom model ID…', 'ai-command-center' ); ?></option>
 									</select>
 								</label>
 								<input type="text" name="wpcc_model_custom" class="wpcc-edit-model-custom" value="<?php echo esc_attr( $wpcc_known ? '' : $wpcc_cur ); ?>" style="width:100%;font-family:monospace;<?php echo $wpcc_known ? 'display:none;' : ''; ?>" placeholder="<?php echo esc_attr( (string) ( $def['default_model'] ?? 'model-id' ) ); ?>" />
 								<?php if ( ! empty( $wpcc_disc ) ) : ?>
-									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'Recommended = our defaults. Discovered from your account = pulled live from your last connection test. Custom = enter any model id.', 'wp-command-center' ); ?></p>
+									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'Recommended = our defaults. Discovered from your account = pulled live from your last connection test. Custom = enter any model id.', 'ai-command-center' ); ?></p>
 								<?php elseif ( $wpcc_lists ) : ?>
-									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'Test this connection once to discover the additional models available to your account.', 'wp-command-center' ); ?></p>
+									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'Test this connection once to discover the additional models available to your account.', 'ai-command-center' ); ?></p>
 								<?php else : ?>
-									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'This provider offers the recommended models only — it doesn’t publish an account model list to discover. Nothing is broken; use Custom to enter any model id.', 'wp-command-center' ); ?></p>
+									<p class="muted" style="font-size:11px;margin:0;"><?php esc_html_e( 'This provider offers the recommended models only — it doesn’t publish an account model list to discover. Nothing is broken; use Custom to enter any model id.', 'ai-command-center' ); ?></p>
 								<?php endif; ?>
-							<label style="font-size:12px;"><?php esc_html_e( 'Tags', 'wp-command-center' ); ?><input type="text" name="wpcc_tags" value="<?php echo esc_attr( implode( ', ', $c['tags'] ) ); ?>" style="width:100%;" placeholder="prod, cheap" /></label>
-							<div><button type="submit" name="wpcc_conn_action" value="update" class="button button-small"><?php esc_html_e( 'Save changes', 'wp-command-center' ); ?></button></div>
+							<label style="font-size:12px;"><?php esc_html_e( 'Tags', 'ai-command-center' ); ?><input type="text" name="wpcc_tags" value="<?php echo esc_attr( implode( ', ', $c['tags'] ) ); ?>" style="width:100%;" placeholder="prod, cheap" /></label>
+							<div><button type="submit" name="wpcc_conn_action" value="update" class="button button-small"><?php esc_html_e( 'Save changes', 'ai-command-center' ); ?></button></div>
 						</form>
 						<?php if ( ! $is_const ) : ?>
 						<form method="post" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
 							<?php wp_nonce_field( ConnectionController::NONCE ); ?>
 							<input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" />
-							<input type="password" name="wpcc_key" autocomplete="off" spellcheck="false" style="font-family:monospace;max-width:240px;" placeholder="<?php echo $has_key ? esc_attr__( '•••••• (replace key)', 'wp-command-center' ) : esc_attr__( 'API key', 'wp-command-center' ); ?>" />
-							<button type="submit" name="wpcc_conn_action" value="update_key" class="button button-small"><?php echo $has_key ? esc_html__( 'Update key', 'wp-command-center' ) : esc_html__( 'Save key', 'wp-command-center' ); ?></button>
-							<?php if ( $has_key ) : ?><button type="submit" name="wpcc_conn_action" value="clear_key" class="button button-small button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Remove this connection’s key?', 'wp-command-center' ) ); ?>');"><?php esc_html_e( 'Remove key', 'wp-command-center' ); ?></button><?php endif; ?>
+							<input type="password" name="wpcc_key" autocomplete="off" spellcheck="false" style="font-family:monospace;max-width:240px;" placeholder="<?php echo $has_key ? esc_attr__( '•••••• (replace key)', 'ai-command-center' ) : esc_attr__( 'API key', 'ai-command-center' ); ?>" />
+							<button type="submit" name="wpcc_conn_action" value="update_key" class="button button-small"><?php echo $has_key ? esc_html__( 'Update key', 'ai-command-center' ) : esc_html__( 'Save key', 'ai-command-center' ); ?></button>
+							<?php if ( $has_key ) : ?><button type="submit" name="wpcc_conn_action" value="clear_key" class="button button-small button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Remove this connection’s key?', 'ai-command-center' ) ); ?>');"><?php esc_html_e( 'Remove key', 'ai-command-center' ); ?></button><?php endif; ?>
 						</form>
-						<?php else : ?><p class="muted" style="font-size:12px;margin-top:8px;"><?php esc_html_e( 'Key defined in wp-config.php (constant) — read-only.', 'wp-command-center' ); ?></p><?php endif; ?>
+						<?php else : ?><p class="muted" style="font-size:12px;margin-top:8px;"><?php esc_html_e( 'Key defined in wp-config.php (constant) — read-only.', 'ai-command-center' ); ?></p><?php endif; ?>
 					</details>
 
 					<!-- Actions -->
 					<div class="wpcc-aip-actions">
-						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="test" class="button button-small" <?php disabled( ! $testable || ! $has_key ); ?>><?php esc_html_e( 'Test', 'wp-command-center' ); ?></button></form>
-						<?php if ( $runtime && ! $is_def && $has_key ) : ?><form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="set_default" class="button button-small"><?php esc_html_e( 'Set default', 'wp-command-center' ); ?></button></form><?php endif; ?>
-						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><input type="hidden" name="wpcc_enabled" value="<?php echo $c['enabled'] ? '0' : '1'; ?>" /><button type="submit" name="wpcc_conn_action" value="set_enabled" class="button button-small"><?php echo $c['enabled'] ? esc_html__( 'Disable', 'wp-command-center' ) : esc_html__( 'Enable', 'wp-command-center' ); ?></button></form>
-						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="duplicate" class="button button-small"><?php esc_html_e( 'Duplicate', 'wp-command-center' ); ?></button></form>
-						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="delete" class="button button-small button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Delete this connection and its key?', 'wp-command-center' ) ); ?>');"><?php esc_html_e( 'Delete', 'wp-command-center' ); ?></button></form>
+						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="test" class="button button-small" <?php disabled( ! $testable || ! $has_key ); ?>><?php esc_html_e( 'Test', 'ai-command-center' ); ?></button></form>
+						<?php if ( $runtime && ! $is_def && $has_key ) : ?><form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="set_default" class="button button-small"><?php esc_html_e( 'Set default', 'ai-command-center' ); ?></button></form><?php endif; ?>
+						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><input type="hidden" name="wpcc_enabled" value="<?php echo $c['enabled'] ? '0' : '1'; ?>" /><button type="submit" name="wpcc_conn_action" value="set_enabled" class="button button-small"><?php echo $c['enabled'] ? esc_html__( 'Disable', 'ai-command-center' ) : esc_html__( 'Enable', 'ai-command-center' ); ?></button></form>
+						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="duplicate" class="button button-small"><?php esc_html_e( 'Duplicate', 'ai-command-center' ); ?></button></form>
+						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="delete" class="button button-small button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Delete this connection and its key?', 'ai-command-center' ) ); ?>');"><?php esc_html_e( 'Delete', 'ai-command-center' ); ?></button></form>
 					</div>
 				</div>
 			<?php endforeach; ?>
@@ -451,18 +451,18 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	<?php endif; ?>
 
 	<!-- ===== Feature routing (visual) ===== -->
-	<h2><?php esc_html_e( 'Feature routing', 'wp-command-center' ); ?></h2>
-	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers your AI tasks. WP Command Center runs generation through the one connection you set as the default — Anthropic (Claude) and OpenAI-compatible providers both work once selected. Other providers can be saved and tested, but only a supported provider that you choose will generate. Nothing is selected automatically, and your content is sent only to the provider you pick.', 'wp-command-center' ); ?></p>
+	<h2><?php esc_html_e( 'Feature routing', 'ai-command-center' ); ?></h2>
+	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers your AI tasks. WP Command Center runs generation through the one connection you set as the default — Anthropic (Claude) and OpenAI-compatible providers both work once selected. Other providers can be saved and tested, but only a supported provider that you choose will generate. Nothing is selected automatically, and your content is sent only to the provider you pick.', 'ai-command-center' ); ?></p>
 	<?php if ( empty( $wpcc_runtime_conns ) ) : ?>
 		<?php if ( ! empty( $wpcc_ineligible_conns ) ) : ?>
 			<p class="muted" style="font-size:13px;max-width:700px;">
 				<?php
 				/* translators: 1: number of healthy connections, 2: their names. */
-				printf( esc_html__( 'You have %1$d connection(s) that connected and tested fine (%2$s) — but WP Command Center can only run AI through Anthropic (Claude) right now, so they can’t power features yet. Add a key to an Anthropic connection to choose routing.', 'wp-command-center' ), count( $wpcc_ineligible_conns ), esc_html( implode( ', ', $wpcc_ineligible_conns ) ) );
+				printf( esc_html__( 'You have %1$d connection(s) that connected and tested fine (%2$s) — but WP Command Center can only run AI through Anthropic (Claude) right now, so they can’t power features yet. Add a key to an Anthropic connection to choose routing.', 'ai-command-center' ), count( $wpcc_ineligible_conns ), esc_html( implode( ', ', $wpcc_ineligible_conns ) ) );
 				?>
 			</p>
 		<?php else : ?>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Add a key to an Anthropic connection to choose feature routing.', 'wp-command-center' ); ?></p>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Add a key to an Anthropic connection to choose feature routing.', 'ai-command-center' ); ?></p>
 		<?php endif; ?>
 	<?php else : ?>
 		<form method="post" style="background:#fff;border:1px solid #dcdfe3;border-radius:10px;padding:16px 18px;max-width:560px;">
@@ -470,24 +470,24 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 			<?php foreach ( ConnectionStore::FEATURES as $fk => $flabel ) : ?>
 				<div class="wpcc-aip-route">
 					<span class="f"><?php echo esc_html( $flabel ); ?><span style="display:block;font-weight:400;font-size:11.5px;color:#8a93a0;"><?php
-						$wpcc_fdesc = [ 'seo_meta' => __( 'Powers AI-written SEO titles & descriptions', 'wp-command-center' ), 'alt_text' => __( 'Powers AI image alt text for accessibility & SEO', 'wp-command-center' ), 'ai_content' => __( 'Powers AI title & excerpt suggestions', 'wp-command-center' ) ];
+						$wpcc_fdesc = [ 'seo_meta' => __( 'Powers AI-written SEO titles & descriptions', 'ai-command-center' ), 'alt_text' => __( 'Powers AI image alt text for accessibility & SEO', 'ai-command-center' ), 'ai_content' => __( 'Powers AI title & excerpt suggestions', 'ai-command-center' ) ];
 						echo esc_html( $wpcc_fdesc[ $fk ] ?? '' );
 					?></span></span>
 					<span class="arrow" aria-hidden="true">→</span>
-					<label class="screen-reader-text" for="wpcc-route-<?php echo esc_attr( $fk ); ?>"><?php printf( /* translators: %s: value */ esc_html__( 'Connection for %s', 'wp-command-center' ), esc_html( $flabel ) ); ?></label>
+					<label class="screen-reader-text" for="wpcc-route-<?php echo esc_attr( $fk ); ?>"><?php printf( /* translators: %s: value */ esc_html__( 'Connection for %s', 'ai-command-center' ), esc_html( $flabel ) ); ?></label>
 					<select name="wpcc_route_<?php echo esc_attr( $fk ); ?>" id="wpcc-route-<?php echo esc_attr( $fk ); ?>" style="flex:1;">
 						<?php foreach ( $wpcc_runtime_conns as $rid => $rname ) : ?>
 							<option value="<?php echo esc_attr( $rid ); ?>" <?php selected( ( $wpcc_routes[ $fk ] ?? '' ) === $rid ); ?>><?php echo esc_html( $rname ); ?></option>
 						<?php endforeach; ?>
 						<?php foreach ( $wpcc_ineligible_conns as $iname ) : ?>
-							<option disabled><?php echo esc_html( sprintf( /* translators: %s: connection label */ __( '%s — healthy, but WP Command Center can’t run it yet', 'wp-command-center' ), $iname ) ); ?></option>
+							<option disabled><?php echo esc_html( sprintf( /* translators: %s: connection label */ __( '%s — healthy, but WP Command Center can’t run it yet', 'ai-command-center' ), $iname ) ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</div>
 			<?php endforeach; ?>
-			<button type="submit" name="wpcc_conn_action" value="save_routes" class="button" style="margin-top:12px;"><?php esc_html_e( 'Save routing', 'wp-command-center' ); ?></button>
+			<button type="submit" name="wpcc_conn_action" value="save_routes" class="button" style="margin-top:12px;"><?php esc_html_e( 'Save routing', 'ai-command-center' ); ?></button>
 			<?php if ( ! empty( $wpcc_ineligible_conns ) ) : ?>
-				<p class="muted" style="font-size:12px;margin:12px 0 0;max-width:520px;"><?php esc_html_e( 'Connections marked “healthy, but WP Command Center can’t run it yet” connected and tested successfully — WP Command Center simply can’t run AI tasks through them yet (today it runs through Anthropic / Claude only). They’ll appear as selectable the moment that changes. Nothing is hidden or faked.', 'wp-command-center' ); ?></p>
+				<p class="muted" style="font-size:12px;margin:12px 0 0;max-width:520px;"><?php esc_html_e( 'Connections marked “healthy, but WP Command Center can’t run it yet” connected and tested successfully — WP Command Center simply can’t run AI tasks through them yet (today it runs through Anthropic / Claude only). They’ll appear as selectable the moment that changes. Nothing is hidden or faked.', 'ai-command-center' ); ?></p>
 			<?php endif; ?>
 		</form>
 	<?php endif; ?>
@@ -495,17 +495,17 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	<!-- ===== Next steps + security ===== -->
 	<?php if ( $wpcc_store->is_configured( $wpcc_conns[ $wpcc_default ] ?? [] ) ) : ?>
 		<div style="margin:18px 0 0;padding:12px 14px;background:#f0f6fc;border:1px solid #c3c4c7;border-radius:8px;max-width:720px;">
-			<strong style="font-size:13px;"><?php esc_html_e( 'Key added. What happens next?', 'wp-command-center' ); ?></strong>
+			<strong style="font-size:13px;"><?php esc_html_e( 'Key added. What happens next?', 'ai-command-center' ); ?></strong>
 			<ol style="margin:8px 0 0;padding-left:20px;color:#50575e;font-size:13px;line-height:1.6;">
-				<li><?php esc_html_e( 'Use “Test” on a connection to confirm the key works.', 'wp-command-center' ); ?></li>
-				<li><?php printf( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Connect an AI assistant so it can do the work — see %1$sAI Clients%2$s.', 'wp-command-center' ), '<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) . '">', '</a>' ); ?></li>
-				<li><?php esc_html_e( 'Adding a key does not turn AI features on by itself. Built-in AI screens are enabled per site; ask your developer to switch them on if you do not see them.', 'wp-command-center' ); ?></li>
+				<li><?php esc_html_e( 'Use “Test” on a connection to confirm the key works.', 'ai-command-center' ); ?></li>
+				<li><?php printf( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Connect an AI assistant so it can do the work — see %1$sAI Clients%2$s.', 'ai-command-center' ), '<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) . '">', '</a>' ); ?></li>
+				<li><?php esc_html_e( 'Adding a key does not turn AI features on by itself. Built-in AI screens are enabled per site; ask your developer to switch them on if you do not see them.', 'ai-command-center' ); ?></li>
 			</ol>
 		</div>
 	<?php endif; ?>
 
 	<p class="muted" style="font-size:12px;max-width:720px;margin-top:20px;">
-		<?php esc_html_e( 'Security: each key is stored in this site’s database (a WordPress option, not auto-loaded), used only for calls to that connection’s endpoint, never shown here, never written to the audit log, and never sent anywhere else. Anyone who can edit plugins could read stored options — use scoped keys. The default Anthropic connection also drives WPCC’s AI features (a wp-config constant always wins).', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'Security: each key is stored in this site’s database (a WordPress option, not auto-loaded), used only for calls to that connection’s endpoint, never shown here, never written to the audit log, and never sent anywhere else. Anyone who can edit plugins could read stored options — use scoped keys. The default Anthropic connection also drives WPCC’s AI features (a wp-config constant always wins).', 'ai-command-center' ); ?>
 	</p>
 </div>
 
@@ -542,9 +542,9 @@ unset( $wpcc_m );
 		var mFlag   = wiz.querySelector('input[name="wpcc_model"]');
 		if (!provSel || !mdlSel || !mdlTxt || !mFlag) return;
 		var CUSTOM = '__custom__';
-		var CUSTOM_LABEL = <?php echo wp_json_encode( __( 'Custom model ID…', 'wp-command-center' ) ); ?>;
-		var FREE_HELP = <?php echo wp_json_encode( __( 'Enter the model id your endpoint serves (free text).', 'wp-command-center' ) ); ?>;
-		var DISC_HELP = <?php echo wp_json_encode( __( 'Discovering models…', 'wp-command-center' ) ); ?>;
+		var CUSTOM_LABEL = <?php echo wp_json_encode( __( 'Custom model ID…', 'ai-command-center' ) ); ?>;
+		var FREE_HELP = <?php echo wp_json_encode( __( 'Enter the model id your endpoint serves (free text).', 'ai-command-center' ) ); ?>;
+		var DISC_HELP = <?php echo wp_json_encode( __( 'Discovering models…', 'ai-command-center' ) ); ?>;
 		var THRESHOLD = <?php echo (int) ProviderCatalog::SEARCH_THRESHOLD; ?>;
 
 		function syncModel() {

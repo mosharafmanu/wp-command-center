@@ -58,7 +58,7 @@ final class DestructiveGuard {
 						self::PHRASE_PLUGIN,
 						'slug',
 						true,
-						__( 'Permanently deletes the plugin files from disk. This cannot be undone except by restoring the pre-delete backup.', 'wp-command-center' )
+						__( 'Permanently deletes the plugin files from disk. This cannot be undone except by restoring the pre-delete backup.', 'ai-command-center' )
 					);
 				}
 				break;
@@ -69,7 +69,7 @@ final class DestructiveGuard {
 						self::PHRASE_THEME,
 						'slug',
 						false,
-						__( 'Permanently deletes the theme files from disk. This cannot be undone.', 'wp-command-center' )
+						__( 'Permanently deletes the theme files from disk. This cannot be undone.', 'ai-command-center' )
 					);
 				}
 				break;
@@ -80,7 +80,7 @@ final class DestructiveGuard {
 						self::PHRASE_USER,
 						'user_id',
 						false,
-						__( 'Permanently deletes the user account. Authored content is reassigned only when reassign_to is supplied, otherwise it is deleted with the user.', 'wp-command-center' )
+						__( 'Permanently deletes the user account. Authored content is reassigned only when reassign_to is supplied, otherwise it is deleted with the user.', 'ai-command-center' )
 					);
 				}
 				break;
@@ -93,7 +93,7 @@ final class DestructiveGuard {
 						self::PHRASE_MEDIA,
 						'media_id',
 						false,
-						__( 'Permanently deletes the media attachment and its files, bypassing the trash.', 'wp-command-center' )
+						__( 'Permanently deletes the media attachment and its files, bypassing the trash.', 'ai-command-center' )
 					);
 				}
 				break;
@@ -108,7 +108,7 @@ final class DestructiveGuard {
 						self::PHRASE_CLEANUP,
 						'media_id',
 						true,
-						__( 'Sends a media attachment inferred to be unused to the trash (recoverable). A byte snapshot is taken first and the action is fully reversible; it never permanently deletes.', 'wp-command-center' )
+						__( 'Sends a media attachment inferred to be unused to the trash (recoverable). A byte snapshot is taken first and the action is fully reversible; it never permanently deletes.', 'ai-command-center' )
 					);
 				}
 				break;
@@ -122,7 +122,7 @@ final class DestructiveGuard {
 						self::PHRASE_CONTENT,
 						'content_id',
 						false,
-						__( 'Permanently deletes content, bypassing the trash. This cannot be undone.', 'wp-command-center' )
+						__( 'Permanently deletes content, bypassing the trash. This cannot be undone.', 'ai-command-center' )
 					);
 				}
 				break;
@@ -139,7 +139,7 @@ final class DestructiveGuard {
 							self::PHRASE_PATCH,
 							'patch_id',
 							true,
-							__( 'This patch modifies a high-risk file (theme functions.php, an active theme template, or a plugin main file). A bad edit can take the site down; a pre-apply snapshot is taken so it can be rolled back.', 'wp-command-center' )
+							__( 'This patch modifies a high-risk file (theme functions.php, an active theme template, or a plugin main file). A bad edit can take the site down; a pre-apply snapshot is taken so it can be rolled back.', 'ai-command-center' )
 						);
 					}
 				}
@@ -160,7 +160,7 @@ final class DestructiveGuard {
 							self::PHRASE_ROLLBACK,
 							'change_id',
 							true,
-							__( 'This change reverses a patch that modified a high-risk file (theme functions.php, an active theme template, or a plugin main file). Restoring the prior snapshot can equally affect site availability; the original pre-apply snapshot is restored with hash verification.', 'wp-command-center' )
+							__( 'This change reverses a patch that modified a high-risk file (theme functions.php, an active theme template, or a plugin main file). Restoring the prior snapshot can equally affect site availability; the original pre-apply snapshot is restored with hash verification.', 'ai-command-center' )
 						);
 					}
 				}
@@ -175,7 +175,7 @@ final class DestructiveGuard {
 						self::PHRASE_DB,
 						'search',
 						false,
-						__( 'Runs a live database search-and-replace across tables. Rows are mutated in place and cannot be automatically reverted.', 'wp-command-center' )
+						__( 'Runs a live database search-and-replace across tables. Rows are mutated in place and cannot be automatically reverted.', 'ai-command-center' )
 					);
 				}
 				break;

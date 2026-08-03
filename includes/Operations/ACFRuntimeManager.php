@@ -27,7 +27,7 @@ final class ACFRuntimeManager {
 
 	public function run( array $payload, array $context = [] ): array {
 		if ( ! function_exists( 'acf_get_field_groups' ) ) {
-			return $this->error( 'wpcc_acf_inactive', __( 'Advanced Custom Fields is not active.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_inactive', __( 'Advanced Custom Fields is not active.', 'ai-command-center' ) );
 		}
 		$a = (string) ( $payload['action'] ?? '' );
 		if ( 'acf_describe' === $a ) {
@@ -38,7 +38,7 @@ final class ACFRuntimeManager {
 				'wpcc_invalid_acf_action',
 				sprintf(
 					/* translators: 1: the invalid action, 2: comma-separated valid actions */
-					__( 'Invalid ACF action "%1$s". Valid actions: %2$s. Call action="acf_describe" for details.', 'wp-command-center' ),
+					__( 'Invalid ACF action "%1$s". Valid actions: %2$s. Call action="acf_describe" for details.', 'ai-command-center' ),
 					$a,
 					implode( ', ', ACFRegistry::ACTIONS )
 				),
@@ -75,7 +75,7 @@ final class ACFRuntimeManager {
 			ACFRegistry::ACTION_LAYOUT_CREATE     => $this->layout_create( $payload, $context ),
 			ACFRegistry::ACTION_LAYOUT_UPDATE     => $this->layout_update( $payload, $context ),
 			ACFRegistry::ACTION_LAYOUT_USAGE      => $this->layout_usage( $payload ),
-			default => $this->error( 'wpcc_unknown_acf_action', __( 'Unknown ACF action.', 'wp-command-center' ) ),
+			default => $this->error( 'wpcc_unknown_acf_action', __( 'Unknown ACF action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -89,7 +89,7 @@ final class ACFRuntimeManager {
 	private function group_get( array $p ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		$fields = acf_get_fields( $id );
 		$this->audit->record( 'acf.group.get', [ 'group_id' => $id ] );
 		return [ 'action' => 'acf_group_get', 'group' => $this->summarize_group( $g ), 'fields' => array_map( [ $this, 'detail_field' ], $fields ?: [] ) ];
@@ -97,12 +97,12 @@ final class ACFRuntimeManager {
 
 	private function group_create( array $p, array $cx ): array {
 		$title = sanitize_text_field( (string) ( $p['title'] ?? '' ) );
-		if ( '' === $title ) return $this->error( 'wpcc_missing_title', __( 'Title is required.', 'wp-command-center' ) );
+		if ( '' === $title ) return $this->error( 'wpcc_missing_title', __( 'Title is required.', 'ai-command-center' ) );
 		$g = [ 'title' => $title, 'fields' => [], 'location' => [], 'menu_order' => 0, 'position' => 'normal', 'style' => 'default', 'label_placement' => 'top', 'instruction_placement' => 'label', 'hide_on_screen' => '', 'active' => true,
 			'key' => 'group_' . uniqid(), ];
 		if ( isset( $p['location'] ) ) $g['location'] = (array) $p['location'];
 		$result = acf_update_field_group( $g );
-		if ( ! $result ) return $this->error( 'wpcc_group_create_failed', __( 'Failed to create field group.', 'wp-command-center' ) );
+		if ( ! $result ) return $this->error( 'wpcc_group_create_failed', __( 'Failed to create field group.', 'ai-command-center' ) );
 		$id = $g['key'];
 		$this->store_rollback( $id, 'group_create', [], $cx );
 		$this->audit->record( 'acf.group.created', [ 'group_id' => $id, 'title' => $title ] );
@@ -113,7 +113,7 @@ final class ACFRuntimeManager {
 	private function group_update( array $p, array $cx ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		// STEP 102.6 (F-4): store the COMPLETE original group as the rollback before-state.
 		// summarize_group() was lossy (location collapsed to an int count, no post ID),
 		// so rollback()'s acf_update_field_group( $before ) could not faithfully restore.
@@ -123,7 +123,7 @@ final class ACFRuntimeManager {
 		if ( isset( $p['title'] ) ) $g['title'] = sanitize_text_field( (string) $p['title'] );
 		if ( isset( $p['active'] ) ) $g['active'] = (bool) $p['active'];
 		$result = acf_update_field_group( array_merge( $g, $p ) );
-		if ( ! $result ) return $this->error( 'wpcc_group_update_failed', __( 'Failed to update field group.', 'wp-command-center' ) );
+		if ( ! $result ) return $this->error( 'wpcc_group_update_failed', __( 'Failed to update field group.', 'ai-command-center' ) );
 		$this->store_rollback( $id, 'group_update', $before, $cx );
 		$this->audit->record( 'acf.group.updated', [ 'group_id' => $id ] );
 				AcfLocalJson::sync_for_group( (string) ( $g['key'] ?? $id ), 'acf_group_update' );
@@ -133,7 +133,7 @@ final class ACFRuntimeManager {
 	private function group_delete( array $p, array $cx ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		$key = (string) ( $g['key'] ?? '' );
 
 		// F3.1 — capture the FULL group definition (not the stripped summary, which
@@ -157,7 +157,7 @@ final class ACFRuntimeManager {
 		if ( $this->group_will_persist( $key, $id ) ) {
 			return $this->error(
 				'wpcc_acf_group_delete_failed',
-				__( 'Field group still exists after delete — it is defined in a read-only local JSON/PHP source (e.g. theme acf-json) and was not removed.', 'wp-command-center' )
+				__( 'Field group still exists after delete — it is defined in a read-only local JSON/PHP source (e.g. theme acf-json) and was not removed.', 'ai-command-center' )
 			);
 		}
 
@@ -192,7 +192,7 @@ final class ACFRuntimeManager {
 	private function group_duplicate( array $p, array $cx ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 
 		/*
 		 * acf_duplicate_field_group() takes an ID, key or name — NOT the field group
@@ -204,7 +204,7 @@ final class ACFRuntimeManager {
 		 */
 		$dup = acf_duplicate_field_group( (string) ( $g['key'] ?? $id ) );
 		if ( ! is_array( $dup ) || empty( $dup['key'] ) ) {
-			return $this->error( 'wpcc_acf_duplicate_failed', __( 'The field group could not be duplicated.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_duplicate_failed', __( 'The field group could not be duplicated.', 'ai-command-center' ) );
 		}
 
 		$new_id = (string) $dup['key'];
@@ -221,7 +221,7 @@ final class ACFRuntimeManager {
 	private function group_activate( array $p, array $cx ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		acf_update_field_group( array_merge( $g, [ 'active' => true ] ) );
 		// acf_update_field_group() fires ACF's own JSON writer, which appends
 		// acf_get_fields( $g ) — and $g came from a key lookup, so on a site with a
@@ -234,7 +234,7 @@ final class ACFRuntimeManager {
 	private function group_deactivate( array $p, array $cx ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		acf_update_field_group( array_merge( $g, [ 'active' => false ] ) );
 		AcfLocalJson::sync_for_group( (string) ( $g['key'] ?? $id ), 'acf_group_deactivate' );
 		return [ 'action' => 'acf_group_deactivate', 'group_id' => $id ];
@@ -267,7 +267,7 @@ final class ACFRuntimeManager {
 	private function field_get( array $p ): array {
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
 		$f = acf_get_field( $key );
-		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'wp-command-center' ) );
+		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'ai-command-center' ) );
 		return [ 'action' => 'acf_field_get', 'field' => $this->detail_field( $f ) ];
 	}
 
@@ -455,15 +455,15 @@ final class ACFRuntimeManager {
 		// with parent_layout — a flexible-content field key.
 		$parent = sanitize_text_field( (string) ( $p['parent'] ?? $p['group_id'] ?? '' ) );
 		if ( '' === $parent ) {
-			return $this->error( 'wpcc_acf_missing_parent', __( 'group_id or parent is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_missing_parent', __( 'group_id or parent is required.', 'ai-command-center' ) );
 		}
 		if ( ! $this->parent_exists( $parent ) ) {
-			return $this->error( 'wpcc_acf_parent_not_found', __( 'Parent field group or field not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_parent_not_found', __( 'Parent field group or field not found.', 'ai-command-center' ) );
 		}
 
 		$type = sanitize_key( (string) ( $p['type'] ?? 'text' ) );
 		if ( ! in_array( $type, ACFRegistry::FIELD_TYPES, true ) ) {
-			return $this->error( 'wpcc_acf_unsupported_field_type', sprintf( /* translators: %s: value */ __( 'Unsupported field type: %s', 'wp-command-center' ), esc_html( $type ) ) );
+			return $this->error( 'wpcc_acf_unsupported_field_type', sprintf( /* translators: %s: value */ __( 'Unsupported field type: %s', 'ai-command-center' ), esc_html( $type ) ) );
 		}
 
 		// acf_update_field only links a field when the parent is the numeric post
@@ -475,7 +475,7 @@ final class ACFRuntimeManager {
 				'wpcc_acf_parent_unresolved',
 				sprintf(
 					/* translators: %s: the field group or field key that could not be resolved */
-					__( 'Could not resolve "%s" to a stored field group or field, so the new field would not be attached to anything. Nothing was created.', 'wp-command-center' ),
+					__( 'Could not resolve "%s" to a stored field group or field, so the new field would not be attached to anything. Nothing was created.', 'ai-command-center' ),
 					$parent
 				)
 			);
@@ -513,7 +513,7 @@ final class ACFRuntimeManager {
 		}
 
 		if ( ! acf_update_field( $field ) ) {
-			return $this->error( 'wpcc_field_create_failed', __( 'Failed to create field.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_field_create_failed', __( 'Failed to create field.', 'ai-command-center' ) );
 		}
 
 		// Nested sub-fields (repeater / group): create each child under this field.
@@ -551,7 +551,7 @@ final class ACFRuntimeManager {
 	private function field_update( array $p, array $cx ): array {
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
 		$f = acf_get_field( $key );
-		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'wp-command-center' ) );
+		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'ai-command-center' ) );
 		$before = $this->summarize_field( $f );
 		if ( isset( $p['label'] ) ) $f['label'] = sanitize_text_field( (string) $p['label'] );
 		if ( isset( $p['type'] ) ) $f['type'] = sanitize_key( (string) $p['type'] );
@@ -589,7 +589,7 @@ final class ACFRuntimeManager {
 	private function field_delete( array $p, array $cx ): array {
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
 		$f = acf_get_field( $key );
-		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'wp-command-center' ) );
+		if ( ! $f ) return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'ai-command-center' ) );
 		$before = $this->summarize_field( $f );
 		$this->store_rollback( $key, 'field_delete', $before, $cx );
 		// Resolved before the delete — afterwards the field is gone and its owning
@@ -654,17 +654,17 @@ final class ACFRuntimeManager {
 		$field_key = sanitize_text_field( (string) ( $p['field_key'] ?? '' ) );
 		$f = acf_get_field( $field_key );
 		if ( ! $f ) {
-			return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_field_not_found', __( 'Field not found.', 'ai-command-center' ) );
 		}
 		if ( 'flexible_content' !== ( $f['type'] ?? '' ) ) {
-			return $this->error( 'wpcc_acf_not_flexible', __( 'Layouts can only be added to a flexible_content field.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_not_flexible', __( 'Layouts can only be added to a flexible_content field.', 'ai-command-center' ) );
 		}
 		$f = $this->with_stored_identity( $f, $field_key );
 
 		$name  = sanitize_title( (string) ( $p['name'] ?? $p['label'] ?? 'layout' ) );
 		$label = sanitize_text_field( (string) ( $p['label'] ?? $name ) );
 		if ( '' === $name ) {
-			return $this->error( 'wpcc_acf_missing_layout_name', __( 'A layout name or label is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_missing_layout_name', __( 'A layout name or label is required.', 'ai-command-center' ) );
 		}
 
 		$layout_key   = 'layout_' . uniqid();
@@ -682,7 +682,7 @@ final class ACFRuntimeManager {
 		];
 
 		if ( ! acf_update_field( $f ) ) {
-			return $this->error( 'wpcc_acf_layout_create_failed', __( 'Failed to create layout.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_layout_create_failed', __( 'Failed to create layout.', 'ai-command-center' ) );
 		}
 
 		// Optional inline sub-fields for the new layout.
@@ -714,7 +714,7 @@ final class ACFRuntimeManager {
 		$layout_key = sanitize_text_field( (string) ( $p['layout_key'] ?? '' ) );
 		$f = acf_get_field( $field_key );
 		if ( ! $f || 'flexible_content' !== ( $f['type'] ?? '' ) ) {
-			return $this->error( 'wpcc_acf_not_flexible', __( 'Flexible_content field not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_not_flexible', __( 'Flexible_content field not found.', 'ai-command-center' ) );
 		}
 		$f = $this->with_stored_identity( $f, $field_key );
 
@@ -727,7 +727,7 @@ final class ACFRuntimeManager {
 			}
 		}
 		if ( null === $target ) {
-			return $this->error( 'wpcc_acf_layout_not_found', __( 'Layout not found on this field.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_layout_not_found', __( 'Layout not found on this field.', 'ai-command-center' ) );
 		}
 
 		$before = [ 'layouts' => $layouts ];
@@ -743,7 +743,7 @@ final class ACFRuntimeManager {
 		$f['layouts'] = $layouts;
 
 		if ( ! acf_update_field( $f ) ) {
-			return $this->error( 'wpcc_acf_layout_update_failed', __( 'Failed to update layout.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_layout_update_failed', __( 'Failed to update layout.', 'ai-command-center' ) );
 		}
 
 		$rollback_id = $this->store_rollback( $field_key, 'layout_update', $before, $cx );
@@ -756,14 +756,14 @@ final class ACFRuntimeManager {
 	private function location_list( array $p ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		return [ 'action' => 'acf_location_list', 'group_id' => $id, 'location' => $g['location'] ?? [] ];
 	}
 
 	private function location_assign( array $p, array $cx ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 
 		// Accept a single rule { param, operator, value } or an array of rules
 		// (an AND group). ACF location = list of OR-groups; each OR-group is a
@@ -781,7 +781,7 @@ final class ACFRuntimeManager {
 			];
 		}
 		if ( empty( $and_group ) ) {
-			return $this->error( 'wpcc_acf_invalid_location', __( 'A location rule { param, operator, value } is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_invalid_location', __( 'A location rule { param, operator, value } is required.', 'ai-command-center' ) );
 		}
 
 		$before   = $g['location'] ?? [];
@@ -795,7 +795,7 @@ final class ACFRuntimeManager {
 	private function location_remove( array $p, array $cx ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
 		$g = acf_get_field_group( $id );
-		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( ! $g ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		$idx = (int) ( $p['rule_index'] ?? -1 );
 		$rules = $g['location'] ?? [];
 		$before = $rules;
@@ -851,26 +851,26 @@ final class ACFRuntimeManager {
 
 	private function json_export( array $p ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
-		if ( '' === $id ) return $this->error( 'wpcc_missing_id', __( 'Group ID is required for export.', 'wp-command-center' ) );
+		if ( '' === $id ) return $this->error( 'wpcc_missing_id', __( 'Group ID is required for export.', 'ai-command-center' ) );
 		// Built from the stored post ID. acf_get_fields( $key ) answers from the local
 		// JSON copy once a file exists, so exporting by key exported the stale file.
 		$group = AcfLocalJson::build( $id );
-		if ( [] === $group ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+		if ( [] === $group ) return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		$json = wp_json_encode( $group, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		return [ 'action' => 'acf_json_export', 'group_id' => $id, 'field_count' => count( $group['fields'] ), 'json' => $json ];
 	}
 
 	private function json_import( array $p, array $cx ): array {
 		$json = (string) ( $p['json'] ?? '' );
-		if ( '' === $json ) return $this->error( 'wpcc_missing_json', __( 'JSON content is required.', 'wp-command-center' ) );
+		if ( '' === $json ) return $this->error( 'wpcc_missing_json', __( 'JSON content is required.', 'ai-command-center' ) );
 		$data = json_decode( $json, true );
-		if ( ! $data ) return $this->error( 'wpcc_invalid_json', __( 'Invalid JSON.', 'wp-command-center' ) );
+		if ( ! $data ) return $this->error( 'wpcc_invalid_json', __( 'Invalid JSON.', 'ai-command-center' ) );
 		// Store before import rollback
 		$existing = isset( $data['key'] ) ? acf_get_field_group( $data['key'] ) : null;
 		if ( $existing ) $this->store_rollback( $data['key'], 'json_import', $this->summarize_group( $existing ), $cx );
 		// Import via ACF
 		$imported = acf_import_field_group( $data );
-		if ( ! $imported ) return $this->error( 'wpcc_import_failed', __( 'Failed to import field group.', 'wp-command-center' ) );
+		if ( ! $imported ) return $this->error( 'wpcc_import_failed', __( 'Failed to import field group.', 'ai-command-center' ) );
 		$this->audit->record( 'acf.json.imported', [ 'group_key' => $data['key'] ?? 'unknown' ] );
 		return [ 'action' => 'acf_json_import', 'imported_key' => $data['key'] ?? 'unknown' ];
 	}
@@ -901,7 +901,7 @@ final class ACFRuntimeManager {
 		if ( '' === $only && ! $all ) {
 			return $this->error(
 				'wpcc_acf_sync_scope_required',
-				__( 'Pass group_id to synchronise one field group, or all_groups: true to synchronise every group on the site. Rewriting every acf-json file by default would touch groups this plugin did not create.', 'wp-command-center' )
+				__( 'Pass group_id to synchronise one field group, or all_groups: true to synchronise every group on the site. Rewriting every acf-json file by default would touch groups this plugin did not create.', 'ai-command-center' )
 			);
 		}
 		$groups    = acf_get_field_groups();
@@ -931,7 +931,7 @@ final class ACFRuntimeManager {
 		}
 
 		if ( ! AcfLocalJson::enabled() ) {
-			return $this->error( 'wpcc_acf_json_disabled', __( 'ACF local JSON is not enabled, or its save directory is not writable, so there is nothing to write.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_json_disabled', __( 'ACF local JSON is not enabled, or its save directory is not writable, so there is nothing to write.', 'ai-command-center' ) );
 		}
 
 		foreach ( $groups as $g ) {
@@ -964,12 +964,12 @@ final class ACFRuntimeManager {
 
 	private function json_diff( array $p ): array {
 		$id = sanitize_text_field( (string) ( $p['group_id'] ?? '' ) );
-		if ( '' === $id ) return $this->error( 'wpcc_missing_id', __( 'Group ID required.', 'wp-command-center' ) );
+		if ( '' === $id ) return $this->error( 'wpcc_missing_id', __( 'Group ID required.', 'ai-command-center' ) );
 		// Reported only whether each side EXISTED, which cannot reveal a file that is
 		// present and wrong — the actual failure. Compare the definitions.
 		$st = AcfLocalJson::status( $id );
 		if ( 'group_not_stored' === $st['reason'] ) {
-			return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_acf_group_not_found', __( 'Field group not found.', 'ai-command-center' ) );
 		}
 		return [
 			'action'      => 'acf_json_diff',
@@ -985,7 +985,7 @@ final class ACFRuntimeManager {
 
 	private function value_get( array $p ): array {
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? $p['field_name'] ?? '' ) );
-		if ( '' === $key ) return $this->error( 'wpcc_missing_field', __( 'Field key or name is required.', 'wp-command-center' ) );
+		if ( '' === $key ) return $this->error( 'wpcc_missing_field', __( 'Field key or name is required.', 'ai-command-center' ) );
 
 		// ISSUE 10 — route through the same selector resolution as acf_value_set so a
 		// term/user/option value is read from the RIGHT object. Never silently fall
@@ -1013,7 +1013,7 @@ final class ACFRuntimeManager {
 			if ( $current <= 0 ) {
 				return $this->error(
 					'wpcc_acf_no_object_context',
-					__( 'No object to read the field from. Pass object_type ("post", "term", "user" or "option") together with object_id — for a post, post_id also works. Without one of those there is no current object in an API request, and an empty answer would be indistinguishable from a field that has no value.', 'wp-command-center' )
+					__( 'No object to read the field from. Pass object_type ("post", "term", "user" or "option") together with object_id — for a post, post_id also works. Without one of those there is no current object in an API request, and an empty answer would be indistinguishable from a field that has no value.', 'ai-command-center' )
 				);
 			}
 			$selector = false;
@@ -1036,7 +1036,7 @@ final class ACFRuntimeManager {
 				'wpcc_acf_field_not_found',
 				sprintf(
 					/* translators: %s: the field key or name that was requested */
-					__( 'No ACF field named "%s" is registered on this site. Use acf_field_list to see the fields of a group; an unknown field is reported here rather than as an empty value.', 'wp-command-center' ),
+					__( 'No ACF field named "%s" is registered on this site. Use acf_field_list to see the fields of a group; an unknown field is reported here rather than as an empty value.', 'ai-command-center' ),
 					$key
 				)
 			);
@@ -1216,7 +1216,7 @@ final class ACFRuntimeManager {
 		global $wpdb;
 
 		$layout = sanitize_text_field( (string) ( $p['layout'] ?? '' ) );
-		if ( '' === $layout ) return $this->error( 'wpcc_missing_layout', __( 'A layout name is required.', 'wp-command-center' ) );
+		if ( '' === $layout ) return $this->error( 'wpcc_missing_layout', __( 'A layout name is required.', 'ai-command-center' ) );
 
 		$field         = sanitize_text_field( (string) ( $p['field'] ?? '' ) );
 		$post_types    = array_values( array_filter( array_map( 'sanitize_key', (array) ( $p['post_type'] ?? [] ) ) ) );
@@ -1319,15 +1319,15 @@ final class ACFRuntimeManager {
 			'action'  => 'acf_describe',
 			'runtime' => 'acf_manage',
 			'actions' => $actions,
-			'notes'   => __( 'acf_value_set/get accept {object_type: post|term|user|option, object_id}. acf_value_set takes fields:{field_key:value}. acf_value_get accepts context_mode (compact|standard|verbose, default standard), format (formatted|raw), layouts_only (flexible content layout names only), depth (cap nesting). acf_layout_usage {layout, field?, post_type?, post_status?} finds every post using a flexible-content layout without reading each post\'s full field value. Definition ops (group_*/field_*) are high-risk and approval-gated.', 'wp-command-center' ),
+			'notes'   => __( 'acf_value_set/get accept {object_type: post|term|user|option, object_id}. acf_value_set takes fields:{field_key:value}. acf_value_get accepts context_mode (compact|standard|verbose, default standard), format (formatted|raw), layouts_only (flexible content layout names only), depth (cap nesting). acf_layout_usage {layout, field?, post_type?, post_status?} finds every post using a flexible-content layout without reading each post\'s full field value. Definition ops (group_*/field_*) are high-risk and approval-gated.', 'ai-command-center' ),
 		];
 	}
 
 	private function value_update( array $p, array $cx ): array {
 		$post_id = (int) ( $p['post_id'] ?? 0 );
-		if ( $post_id <= 0 ) return $this->error( 'wpcc_missing_post_id', __( 'Post ID is required.', 'wp-command-center' ) );
+		if ( $post_id <= 0 ) return $this->error( 'wpcc_missing_post_id', __( 'Post ID is required.', 'ai-command-center' ) );
 		$key = sanitize_text_field( (string) ( $p['field_key'] ?? $p['field_name'] ?? '' ) );
-		if ( '' === $key ) return $this->error( 'wpcc_missing_field', __( 'Field key or name is required.', 'wp-command-center' ) );
+		if ( '' === $key ) return $this->error( 'wpcc_missing_field', __( 'Field key or name is required.', 'ai-command-center' ) );
 
 		// PROGRAM-4.9 — field-scoped, drift-aware, existence-faithful whole-field delta. The ACF
 		// value (scalar or a WHOLE nested array) is captured atomically (never decomposed) and
@@ -1351,7 +1351,7 @@ final class ACFRuntimeManager {
 
 	private function bulk_value_update( array $p, array $cx ): array {
 		$post_id = (int) ( $p['post_id'] ?? 0 );
-		if ( $post_id <= 0 ) return $this->error( 'wpcc_missing_post_id', __( 'Post ID is required.', 'wp-command-center' ) );
+		if ( $post_id <= 0 ) return $this->error( 'wpcc_missing_post_id', __( 'Post ID is required.', 'ai-command-center' ) );
 		$fields = (array) ( $p['fields'] ?? [] );
 		$updated = [];
 		foreach ( $fields as $key => $value ) {
@@ -1396,7 +1396,7 @@ final class ACFRuntimeManager {
 			}
 		}
 		if ( empty( $fields ) ) {
-			return $this->error( 'wpcc_no_fields', __( 'No fields supplied. Provide fields:{field_key:value} (or field_key + value).', 'wp-command-center' ) );
+			return $this->error( 'wpcc_no_fields', __( 'No fields supplied. Provide fields:{field_key:value} (or field_key + value).', 'ai-command-center' ) );
 		}
 
 		// Resolve to a native ACF selector and validate the target object EXISTS.
@@ -1414,12 +1414,12 @@ final class ACFRuntimeManager {
 			$k = sanitize_text_field( (string) $rawk );
 			$field_object = acf_get_field( $k );
 			if ( ! $field_object ) {
-				return $this->error( 'wpcc_unknown_acf_field', sprintf( /* translators: %s: value */ __( 'ACF field "%s" not found.', 'wp-command-center' ), $k ) );
+				return $this->error( 'wpcc_unknown_acf_field', sprintf( /* translators: %s: value */ __( 'ACF field "%s" not found.', 'ai-command-center' ), $k ) );
 			}
 			if ( 'no' === $this->field_targets_object_type( $field_object, $object_type ) ) {
 				return $this->error( 'wpcc_acf_location_mismatch', sprintf(
 					/* translators: 1: field key, 2: object type */
-					__( 'ACF field "%1$s" does not apply to a %2$s — its field group location targets a different object type. Refusing to write to avoid corrupting unrelated data.', 'wp-command-center' ),
+					__( 'ACF field "%1$s" does not apply to a %2$s — its field group location targets a different object type. Refusing to write to avoid corrupting unrelated data.', 'ai-command-center' ),
 					$k,
 					$object_type
 				) );
@@ -1455,24 +1455,24 @@ final class ACFRuntimeManager {
 		switch ( $type ) {
 			case 'post':
 				if ( $id <= 0 || ! get_post( $id ) ) {
-					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent post ID.', 'wp-command-center' ) );
+					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent post ID.', 'ai-command-center' ) );
 				}
 				return $id;
 			case 'term':
 				$term = $id > 0 ? get_term( $id ) : null;
 				if ( ! $term || is_wp_error( $term ) ) {
-					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent term ID.', 'wp-command-center' ) );
+					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent term ID.', 'ai-command-center' ) );
 				}
 				return 'term_' . $id;
 			case 'user':
 				if ( $id <= 0 || ! get_userdata( $id ) ) {
-					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent user ID.', 'wp-command-center' ) );
+					return $this->error( 'wpcc_invalid_object', __( 'Invalid or non-existent user ID.', 'ai-command-center' ) );
 				}
 				return 'user_' . $id;
 			case 'option':
 				return 'option';
 			default:
-				return $this->error( 'wpcc_invalid_object_type', __( 'object_type must be one of: post, term, user, option.', 'wp-command-center' ) );
+				return $this->error( 'wpcc_invalid_object_type', __( 'object_type must be one of: post, term, user, option.', 'ai-command-center' ) );
 		}
 	}
 
@@ -1534,7 +1534,7 @@ final class ACFRuntimeManager {
 
 	public function rollback( array $p, array $cx = [] ): array {
 		$rid = (string) ( $p['rollback_id'] ?? '' );
-		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'wp-command-center' ) );
+		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'ai-command-center' ) );
 
 		// PROGRAM-4.9 — value_update v2 delta records live in postmeta (per post), resolved by id.
 		$store    = new PostMetaRollbackStore( self::VALUE_RB_PREFIX );
@@ -1547,8 +1547,8 @@ final class ACFRuntimeManager {
 		$rollbacks = get_option( 'wpcc_acf_rollbacks', [] );
 		$rec = null; $idx = null;
 		foreach ( $rollbacks as $i => $r ) { if ( ( $r['id'] ?? null ) === $rid ) { $rec = $r; $idx = $i; break; } }
-		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'wp-command-center' ) );
-		if ( ! empty( $rec['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
+		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'ai-command-center' ) );
+		if ( ! empty( $rec['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'ai-command-center' ) );
 		$eid   = $rec['entity_id'];
 		$act   = $rec['action'];
 		$before = (array) $rec['before_state'];
@@ -1556,7 +1556,7 @@ final class ACFRuntimeManager {
 		// PROGRAM-4.9 — json_import is not faithfully reversible (lossy summary, no restore path);
 		// report honestly instead of a phantom clean success.
 		if ( 'json_import' === $act ) {
-			return $this->rollback_unsupported( __( 'ACF JSON import cannot be automatically rolled back.', 'wp-command-center' ) );
+			return $this->rollback_unsupported( __( 'ACF JSON import cannot be automatically rolled back.', 'ai-command-center' ) );
 		}
 
 		// PROGRAM-4.9 — fingerprint drift guard for definition update-in-place actions (new
@@ -1564,7 +1564,7 @@ final class ACFRuntimeManager {
 		// Refuse on drift — never clobber a newer external definition edit.
 		if ( in_array( $act, self::FP_GUARDED, true ) && isset( $before['__after_fp'] ) ) {
 			if ( $this->definition_fingerprint( (string) $eid, $act ) !== (string) $before['__after_fp'] ) {
-				return $this->rollback_conflict( $rid, __( 'ACF definition changed since this update was applied; rollback skipped to avoid clobbering the newer change.', 'wp-command-center' ) );
+				return $this->rollback_conflict( $rid, __( 'ACF definition changed since this update was applied; rollback skipped to avoid clobbering the newer change.', 'ai-command-center' ) );
 			}
 		}
 		unset( $before['__after_fp'] ); // never feed the guard marker into acf_update_*
@@ -1639,7 +1639,7 @@ final class ACFRuntimeManager {
 		$rec     = $resolved['record'];
 		$post_id = (int) ( $resolved['entity_id'] ?? ( $rec['post_id'] ?? 0 ) );
 		if ( ! empty( $rec['rollback_applied'] ) ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'ai-command-center' ) );
 		}
 		$key    = (string) ( $rec['field_key'] ?? '' );
 		$fields = (array) ( $rec['fields'] ?? [] );

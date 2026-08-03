@@ -65,10 +65,10 @@ final class OpenAiCompatibleTransport {
 		$model = $request->model();
 
 		if ( '' === $api_key ) {
-			return GenerationResult::error( 'not_configured', __( 'No API key configured for this provider.', 'wp-command-center' ), $model );
+			return GenerationResult::error( 'not_configured', __( 'No API key configured for this provider.', 'ai-command-center' ), $model );
 		}
 		if ( '' === $endpoint ) {
-			return GenerationResult::error( 'not_configured', __( 'No endpoint configured for this provider.', 'wp-command-center' ), $model );
+			return GenerationResult::error( 'not_configured', __( 'No endpoint configured for this provider.', 'ai-command-center' ), $model );
 		}
 
 		$profile = OpenAiCompatProfiles::for_provider( $provider );

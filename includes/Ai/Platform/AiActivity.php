@@ -39,15 +39,15 @@ final class AiActivity {
 	/** Human label + dot color for a category. */
 	public static function category_meta( string $cat ): array {
 		$map = [
-			'rollback'   => [ __( 'Rollback', 'wp-command-center' ), '#7b3fbf' ],
-			'connection' => [ __( 'Connection', 'wp-command-center' ), '#2271b1' ],
-			'generation' => [ __( 'AI generation', 'wp-command-center' ), '#0a7a33' ],
-			'agent'      => [ __( 'AI agent', 'wp-command-center' ), '#1d62b0' ],
-			'change'     => [ __( 'Change', 'wp-command-center' ), '#8c5e00' ],
-			'operation'  => [ __( 'Operation', 'wp-command-center' ), '#50575e' ],
-			'security'   => [ __( 'Security', 'wp-command-center' ), '#d63638' ],
-			'patch'      => [ __( 'Patch', 'wp-command-center' ), '#2c3a4f' ],
-			'activity'   => [ __( 'Activity', 'wp-command-center' ), '#646970' ],
+			'rollback'   => [ __( 'Rollback', 'ai-command-center' ), '#7b3fbf' ],
+			'connection' => [ __( 'Connection', 'ai-command-center' ), '#2271b1' ],
+			'generation' => [ __( 'AI generation', 'ai-command-center' ), '#0a7a33' ],
+			'agent'      => [ __( 'AI agent', 'ai-command-center' ), '#1d62b0' ],
+			'change'     => [ __( 'Change', 'ai-command-center' ), '#8c5e00' ],
+			'operation'  => [ __( 'Operation', 'ai-command-center' ), '#50575e' ],
+			'security'   => [ __( 'Security', 'ai-command-center' ), '#d63638' ],
+			'patch'      => [ __( 'Patch', 'ai-command-center' ), '#2c3a4f' ],
+			'activity'   => [ __( 'Activity', 'ai-command-center' ), '#646970' ],
 		];
 		return $map[ $cat ] ?? $map['activity'];
 	}

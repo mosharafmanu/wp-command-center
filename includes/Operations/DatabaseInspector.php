@@ -30,7 +30,7 @@ final class DatabaseInspector {
 		$input_str = wp_json_encode( $params );
 		if ( false !== $input_str && $this->registry->contains_write_keywords( $input_str ) ) {
 			$this->audit( 'database.inspect.blocked', [ 'action' => $action, 'reason' => 'write_keyword_detected' ], $context );
-			return new \WP_Error( 'wpcc_db_write_blocked', __( 'Write keywords are not allowed in database inspection.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_db_write_blocked', __( 'Write keywords are not allowed in database inspection.', 'ai-command-center' ) );
 		}
 
 		$table_raw = sanitize_text_field( $params['table'] ?? '' );
@@ -38,7 +38,7 @@ final class DatabaseInspector {
 		if ( ! in_array( $action, [ DatabaseRegistry::ACTION_TABLE_LIST, DatabaseRegistry::ACTION_TABLE_SIZE, DatabaseRegistry::ACTION_AUTOLOAD_ANALYSIS, DatabaseRegistry::ACTION_OPTIONS_HEALTH, DatabaseRegistry::ACTION_ORPHAN_DETECTION, DatabaseRegistry::ACTION_HEALTH_SUMMARY, DatabaseRegistry::ACTION_ROW_COUNTS, DatabaseRegistry::ACTION_TABLE_STATS, DatabaseRegistry::ACTION_INDEX_ANALYSIS ], true ) ) {
 			$table = $this->registry->sanitize_table( $table_raw );
 			if ( null === $table ) {
-				return new \WP_Error( 'wpcc_invalid_db_table', __( 'Table not in the allowed core table list.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_db_table', __( 'Table not in the allowed core table list.', 'ai-command-center' ) );
 			}
 		} else {
 			$table = $table_raw ? $this->registry->sanitize_table( $table_raw ) : null;
@@ -57,7 +57,7 @@ final class DatabaseInspector {
 			DatabaseRegistry::ACTION_INDEX_ANALYSIS    => $this->index_analysis( $table ),
 			DatabaseRegistry::ACTION_ORPHAN_DETECTION  => $this->orphan_detection(),
 			DatabaseRegistry::ACTION_HEALTH_SUMMARY    => $this->health_summary(),
-			default => new \WP_Error( 'wpcc_invalid_db_action', __( 'Unknown action.', 'wp-command-center' ) ),
+			default => new \WP_Error( 'wpcc_invalid_db_action', __( 'Unknown action.', 'ai-command-center' ) ),
 		};
 
 		$duration = (int) ( ( microtime( true ) - $start ) * 1000 );
@@ -98,7 +98,7 @@ final class DatabaseInspector {
 
 	private function table_stats( ?string $table ): array|\WP_Error {
 		if ( ! $table ) {
-			return new \WP_Error( 'wpcc_missing_db_table', __( 'table is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_db_table', __( 'table is required.', 'ai-command-center' ) );
 		}
 		global $wpdb;
 		// The table name is a VALUE here (matched against information_schema), so bind it
@@ -112,7 +112,7 @@ final class DatabaseInspector {
 			ARRAY_A
 		);
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_db_table_not_found', __( 'Table not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_db_table_not_found', __( 'Table not found.', 'ai-command-center' ) );
 		}
 		return [
 			'action'     => 'db_table_stats',

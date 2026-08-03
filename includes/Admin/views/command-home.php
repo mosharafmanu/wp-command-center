@@ -104,24 +104,24 @@ $wpcc_show_guide   = $wpcc_incomplete || ! $wpcc_fr_dismissed;
 $wpcc_steps = [
 	[
 		'done'  => ConnectionStatus::STATE_NO_TOKEN !== $wpcc_conn['state'],
-		'title' => __( 'Connect your assistant', 'wp-command-center' ),
-		'body'  => __( 'Pick Claude, Cursor, Codex, ChatGPT or Gemini, create an access token, and copy the setup. No AI provider key needed.', 'wp-command-center' ),
-		'cta'   => __( 'Connect', 'wp-command-center' ),
+		'title' => __( 'Connect your assistant', 'ai-command-center' ),
+		'body'  => __( 'Pick Claude, Cursor, Codex, ChatGPT or Gemini, create an access token, and copy the setup. No AI provider key needed.', 'ai-command-center' ),
+		'cta'   => __( 'Connect', 'ai-command-center' ),
 		'url'   => $links['connect'],
-		'donce' => __( 'An access token is ready.', 'wp-command-center' ),
+		'donce' => __( 'An access token is ready.', 'ai-command-center' ),
 	],
 	[
 		'done'   => ConnectionStatus::ever_connected(),
-		'title'  => __( 'Ask your assistant to do something', 'wp-command-center' ),
-		'body'   => __( 'Questions are answered straight away. Anything that would change the site comes back here for your approval first.', 'wp-command-center' ),
+		'title'  => __( 'Ask your assistant to do something', 'ai-command-center' ),
+		'body'   => __( 'Questions are answered straight away. Anything that would change the site comes back here for your approval first.', 'ai-command-center' ),
 		// A step with no action and no completion signal is a dead end. This one
 		// gives the customer the exact words to type, and says plainly how it
 		// finishes — which is by evidence, not by them ticking a box.
-		'prompt' => __( 'What plugins are installed on my site?', 'wp-command-center' ),
-		'note'   => __( 'This step completes on its own the moment your assistant reaches the site.', 'wp-command-center' ),
-		'cta'    => __( 'Back to setup', 'wp-command-center' ),
+		'prompt' => __( 'What plugins are installed on my site?', 'ai-command-center' ),
+		'note'   => __( 'This step completes on its own the moment your assistant reaches the site.', 'ai-command-center' ),
+		'cta'    => __( 'Back to setup', 'ai-command-center' ),
 		'url'    => $links['connect'],
-		'donce'  => __( 'Your assistant has reached this site.', 'wp-command-center' ),
+		'donce'  => __( 'Your assistant has reached this site.', 'ai-command-center' ),
 	],
 ];
 
@@ -157,9 +157,9 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 */
 	?>
 	<section class="wpcc-setup" aria-labelledby="wpcc-setup-h">
-		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Let an AI assistant work on this site — safely', 'wp-command-center' ); ?></h2>
+		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Let an AI assistant work on this site — safely', 'ai-command-center' ); ?></h2>
 		<p class="wpcc-setup__lede">
-			<?php esc_html_e( 'Ask Claude, Cursor or ChatGPT to change your site, in your own words and your own language. You approve anything that matters, everything is recorded, and supported changes can be undone.', 'wp-command-center' ); ?>
+			<?php esc_html_e( 'Ask Claude, Cursor or ChatGPT to change your site, in your own words and your own language. You approve anything that matters, everything is recorded, and supported changes can be undone.', 'ai-command-center' ); ?>
 		</p>
 
 		<?php
@@ -171,12 +171,12 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			<span class="wpcc-setup__protection-dot <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 			<?php
 			if ( $wpcc_protected ) {
-				esc_html_e( 'Already protected — changes will wait for your approval.', 'wp-command-center' );
+				esc_html_e( 'Already protected — changes will wait for your approval.', 'ai-command-center' );
 			} else {
-				esc_html_e( 'Approvals are off — AI changes will apply immediately.', 'wp-command-center' );
+				esc_html_e( 'Approvals are off — AI changes will apply immediately.', 'ai-command-center' );
 			}
 			?>
-			<a href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Change', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Change', 'ai-command-center' ); ?></a>
 		</p>
 
 		<p class="wpcc-setup__progress">
@@ -186,7 +186,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			// "step 3 of 3" above an unfinished step 1 is simply wrong.
 			printf(
 				/* translators: 1: the step the customer is on, 2: total steps */
-				esc_html__( 'Step %1$d of %2$d', 'wp-command-center' ),
+				esc_html__( 'Step %1$d of %2$d', 'ai-command-center' ),
 				(int) ( null === $wpcc_active_step ? count( $wpcc_steps ) : $wpcc_active_step + 1 ),
 				(int) count( $wpcc_steps )
 			);
@@ -208,7 +208,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 						</p>
 						<?php if ( $wpcc_is_active && ! empty( $wpcc_step['prompt'] ) ) : ?>
 							<p class="wpcc-setup__prompt">
-								<span class="wpcc-setup__prompt-label"><?php esc_html_e( 'Try asking:', 'wp-command-center' ); ?></span>
+								<span class="wpcc-setup__prompt-label"><?php esc_html_e( 'Try asking:', 'ai-command-center' ); ?></span>
 								<code>“<?php echo esc_html( $wpcc_step['prompt'] ); ?>”</code>
 							</p>
 							<p class="wpcc-setup__note"><?php echo esc_html( $wpcc_step['note'] ); ?></p>
@@ -218,18 +218,18 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 							</a>
 						<?php endif; ?>
 					</div>
-					<span class="screen-reader-text"><?php echo $wpcc_step['done'] ? esc_html__( '(done)', 'wp-command-center' ) : esc_html__( '(to do)', 'wp-command-center' ); ?></span>
+					<span class="screen-reader-text"><?php echo $wpcc_step['done'] ? esc_html__( '(done)', 'ai-command-center' ) : esc_html__( '(to do)', 'ai-command-center' ); ?></span>
 				</li>
 			<?php endforeach; ?>
 		</ol>
 
 		<details class="wpcc-home__limits wpcc-setup__limits">
-			<summary><?php esc_html_e( 'What it does not do', 'wp-command-center' ); ?></summary>
+			<summary><?php esc_html_e( 'What it does not do', 'ai-command-center' ); ?></summary>
 			<ul>
-				<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'wp-command-center' ); ?></li>
-				<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'wp-command-center' ); ?></li>
-				<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'wp-command-center' ); ?></li>
-				<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'wp-command-center' ); ?></li>
+				<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'ai-command-center' ); ?></li>
+				<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'ai-command-center' ); ?></li>
+				<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'ai-command-center' ); ?></li>
+				<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'ai-command-center' ); ?></li>
 			</ul>
 		</details>
 	</section>
@@ -251,17 +251,17 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 * puts it, is worth more than two in two styles.
 	 */
 	?>
-	<h2 class="screen-reader-text"><?php esc_html_e( 'Site status', 'wp-command-center' ); ?></h2>
+	<h2 class="screen-reader-text"><?php esc_html_e( 'Site status', 'ai-command-center' ); ?></h2>
 	<div class="wpcc-home__status">
 		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Protection', 'wp-command-center' ); ?></span>
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Protection', 'ai-command-center' ); ?></span>
 			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['security'] ); ?>">
 				<span class="wpcc-home__dot <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 				<?php echo esc_html( SecurityModeManager::label() ); ?>
 			</a>
 		</div>
 		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Assistant', 'wp-command-center' ); ?></span>
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Assistant', 'ai-command-center' ); ?></span>
 			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['connect'] ); ?>">
 				<span class="wpcc-home__dot <?php echo ConnectionStatus::STATE_CONNECTED === $wpcc_conn['state'] ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 				<?php echo esc_html( $wpcc_conn['label'] ); ?>
@@ -269,10 +269,10 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			<span class="wpcc-home__stat-hint"><?php echo esc_html( $wpcc_conn['detail'] ); ?></span>
 		</div>
 		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Waiting for you', 'wp-command-center' ); ?></span>
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Waiting for you', 'ai-command-center' ); ?></span>
 			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['approvals'] ); ?>" id="wpcc-home-pending-stat">
 				<span class="wpcc-home__dot is-idle" aria-hidden="true"></span>
-				<span id="wpcc-home-pending-text"><?php esc_html_e( 'Checking…', 'wp-command-center' ); ?></span>
+				<span id="wpcc-home-pending-text"><?php esc_html_e( 'Checking…', 'ai-command-center' ); ?></span>
 			</a>
 		</div>
 	</div>
@@ -280,10 +280,10 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	<?php if ( ! $wpcc_protected ) : ?>
 		<section class="wpcc-home__next" aria-labelledby="wpcc-home-next-h">
 			<div>
-				<h2 id="wpcc-home-next-h"><?php esc_html_e( 'Approvals are turned off', 'wp-command-center' ); ?></h2>
-				<p><?php esc_html_e( 'This site applies AI changes with no review step. That is fine for staging, risky for a live site.', 'wp-command-center' ); ?></p>
+				<h2 id="wpcc-home-next-h"><?php esc_html_e( 'Approvals are turned off', 'ai-command-center' ); ?></h2>
+				<p><?php esc_html_e( 'This site applies AI changes with no review step. That is fine for staging, risky for a live site.', 'ai-command-center' ); ?></p>
 			</div>
-			<a class="button button-primary button-hero" href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Choose protection', 'wp-command-center' ); ?></a>
+			<a class="button button-primary button-hero" href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Choose protection', 'ai-command-center' ); ?></a>
 		</section>
 	<?php endif; ?>
 <?php endif; ?>
@@ -316,56 +316,56 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	?>
 	<div id="wpcc-home-ready" role="status" aria-live="polite"></div>
 
-	<h2><?php esc_html_e( 'Recent changes', 'wp-command-center' ); ?></h2>
+	<h2><?php esc_html_e( 'Recent changes', 'ai-command-center' ); ?></h2>
 	<div id="wpcc-home-activity" aria-live="polite">
-		<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></div>
+		<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></div>
 	</div>
 	<p class="wpcc-home__more">
-		<a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'View all changes and undo →', 'wp-command-center' ); ?></a>
+		<a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'View all changes and undo →', 'ai-command-center' ); ?></a>
 	</p>
 
 	<?php if ( $wpcc_show_guide ) : ?>
 		<section class="wpcc-home__guide" aria-labelledby="wpcc-home-guide-h">
-			<h2 id="wpcc-home-guide-h"><?php esc_html_e( 'How this keeps you in control', 'wp-command-center' ); ?></h2>
+			<h2 id="wpcc-home-guide-h"><?php esc_html_e( 'How this keeps you in control', 'ai-command-center' ); ?></h2>
 			<ol class="wpcc-home__steps">
-				<li><strong><?php esc_html_e( 'You ask', 'wp-command-center' ); ?></strong><?php esc_html_e( 'Tell your assistant what you want changed, in your own words.', 'wp-command-center' ); ?></li>
-				<li><strong><?php esc_html_e( 'You approve', 'wp-command-center' ); ?></strong><?php esc_html_e( 'Anything that changes the site waits for your yes.', 'wp-command-center' ); ?> <a href="<?php echo esc_url( $links['approvals'] ); ?>"><?php esc_html_e( 'Approvals →', 'wp-command-center' ); ?></a></li>
-				<li><strong><?php esc_html_e( 'It is recorded', 'wp-command-center' ); ?></strong><?php esc_html_e( 'Every change is logged with who made it and when.', 'wp-command-center' ); ?></li>
-				<li><strong><?php esc_html_e( 'You can undo', 'wp-command-center' ); ?></strong><?php esc_html_e( 'Supported changes can be undone. An undo is a change too, so it follows the same approval rules.', 'wp-command-center' ); ?> <a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'Changes →', 'wp-command-center' ); ?></a></li>
+				<li><strong><?php esc_html_e( 'You ask', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Tell your assistant what you want changed, in your own words.', 'ai-command-center' ); ?></li>
+				<li><strong><?php esc_html_e( 'You approve', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Anything that changes the site waits for your yes.', 'ai-command-center' ); ?> <a href="<?php echo esc_url( $links['approvals'] ); ?>"><?php esc_html_e( 'Approvals →', 'ai-command-center' ); ?></a></li>
+				<li><strong><?php esc_html_e( 'It is recorded', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Every change is logged with who made it and when.', 'ai-command-center' ); ?></li>
+				<li><strong><?php esc_html_e( 'You can undo', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Supported changes can be undone. An undo is a change too, so it follows the same approval rules.', 'ai-command-center' ); ?> <a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'Changes →', 'ai-command-center' ); ?></a></li>
 			</ol>
 
 			<details class="wpcc-home__limits">
-				<summary><?php esc_html_e( 'What it does not do', 'wp-command-center' ); ?></summary>
+				<summary><?php esc_html_e( 'What it does not do', 'ai-command-center' ); ?></summary>
 				<ul>
-					<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'wp-command-center' ); ?></li>
-					<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'wp-command-center' ); ?></li>
+					<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'ai-command-center' ); ?></li>
+					<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'ai-command-center' ); ?></li>
+					<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'ai-command-center' ); ?></li>
+					<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'ai-command-center' ); ?></li>
 				</ul>
 			</details>
 
 			<?php if ( ! $wpcc_incomplete ) : ?>
 				<form method="post" class="wpcc-home__dismiss">
 					<?php wp_nonce_field( 'wpcc_firstrun' ); ?>
-					<button type="submit" name="wpcc_firstrun_action" value="dismiss" class="button button-small"><?php esc_html_e( 'Hide this', 'wp-command-center' ); ?></button>
+					<button type="submit" name="wpcc_firstrun_action" value="dismiss" class="button button-small"><?php esc_html_e( 'Hide this', 'ai-command-center' ); ?></button>
 				</form>
 			<?php endif; ?>
 		</section>
 	<?php elseif ( $wpcc_fr_dismissed ) : ?>
 		<form method="post" class="wpcc-home__dismiss">
 			<?php wp_nonce_field( 'wpcc_firstrun' ); ?>
-			<button type="submit" name="wpcc_firstrun_action" value="reopen" class="button-link"><?php esc_html_e( 'Show how this works', 'wp-command-center' ); ?></button>
+			<button type="submit" name="wpcc_firstrun_action" value="reopen" class="button-link"><?php esc_html_e( 'Show how this works', 'ai-command-center' ); ?></button>
 		</form>
 	<?php endif; ?>
 
 	<!-- Engineering detail: present, never in the way. -->
 	<div class="wpcc-engineer-only">
-		<h2><?php esc_html_e( 'Platform invariants', 'wp-command-center' ); ?></h2>
+		<h2><?php esc_html_e( 'Platform invariants', 'ai-command-center' ); ?></h2>
 		<div id="wpcc-home-invariants" class="wpcc-cds-kpis" role="status" aria-live="polite"></div>
 		<p class="wpcc-home__more">
-			<a href="<?php echo esc_url( $links['advanced'] ); ?>"><?php esc_html_e( 'Capabilities & operation map →', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $links['advanced'] ); ?>"><?php esc_html_e( 'Capabilities & operation map →', 'ai-command-center' ); ?></a>
 			&nbsp;·&nbsp;
-			<a href="<?php echo esc_url( $links['diagnostics'] ); ?>"><?php esc_html_e( 'Diagnostics →', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $links['diagnostics'] ); ?>"><?php esc_html_e( 'Diagnostics →', 'ai-command-center' ); ?></a>
 		</p>
 	</div>
 	<?php endif; // dashboard (setup complete) ?>
@@ -466,52 +466,52 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	var sessBase = <?php echo wp_json_encode( $session_base ); ?>;
 
 	var i18n = {
-		loadFail:    <?php echo wp_json_encode( __( 'Could not load. Your admin session may have expired — refresh and try again.', 'wp-command-center' ) ); ?>,
-		tJustNow:    <?php echo wp_json_encode( __( 'Just now', 'wp-command-center' ) ); ?>,
+		loadFail:    <?php echo wp_json_encode( __( 'Could not load. Your admin session may have expired — refresh and try again.', 'ai-command-center' ) ); ?>,
+		tJustNow:    <?php echo wp_json_encode( __( 'Just now', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of minutes */
-		tMinutes:    <?php echo wp_json_encode( /* translators: %d: number */ __( '%d min ago', 'wp-command-center' ) ); ?>,
+		tMinutes:    <?php echo wp_json_encode( /* translators: %d: number */ __( '%d min ago', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of hours */
-		tHours:      <?php echo wp_json_encode( /* translators: %d: number */ __( '%d hr ago', 'wp-command-center' ) ); ?>,
+		tHours:      <?php echo wp_json_encode( /* translators: %d: number */ __( '%d hr ago', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of days */
-		tDays:       <?php echo wp_json_encode( /* translators: %d: number */ __( '%d days ago', 'wp-command-center' ) ); ?>,
-		attnTitle:   <?php echo wp_json_encode( __( 'Waiting for your approval', 'wp-command-center' ) ); ?>,
-		attnTitleFailed: <?php echo wp_json_encode( __( 'Something did not run', 'wp-command-center' ) ); ?>,
+		tDays:       <?php echo wp_json_encode( /* translators: %d: number */ __( '%d days ago', 'ai-command-center' ) ); ?>,
+		attnTitle:   <?php echo wp_json_encode( __( 'Waiting for your approval', 'ai-command-center' ) ); ?>,
+		attnTitleFailed: <?php echo wp_json_encode( __( 'Something did not run', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of pending approvals */
-		attnPending:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes need your decision before they can run.', 'wp-command-center' ) ); ?>,
-		attnPending1: <?php echo wp_json_encode( __( '1 change needs your decision before it can run.', 'wp-command-center' ) ); ?>,
+		attnPending:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes need your decision before they can run.', 'ai-command-center' ) ); ?>,
+		attnPending1: <?php echo wp_json_encode( __( '1 change needs your decision before it can run.', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of failed queue items */
-		attnFailed:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d requests failed to run.', 'wp-command-center' ) ); ?>,
-		attnFailed1: <?php echo wp_json_encode( __( '1 request failed to run.', 'wp-command-center' ) ); ?>,
-		attnReview:  <?php echo wp_json_encode( __( 'Review now', 'wp-command-center' ) ); ?>,
-		attnSeeFailed: <?php echo wp_json_encode( __( 'See what failed', 'wp-command-center' ) ); ?>,
-		pendingNone: <?php echo wp_json_encode( __( 'Nothing', 'wp-command-center' ) ); ?>,
+		attnFailed:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d requests failed to run.', 'ai-command-center' ) ); ?>,
+		attnFailed1: <?php echo wp_json_encode( __( '1 request failed to run.', 'ai-command-center' ) ); ?>,
+		attnReview:  <?php echo wp_json_encode( __( 'Review now', 'ai-command-center' ) ); ?>,
+		attnSeeFailed: <?php echo wp_json_encode( __( 'See what failed', 'ai-command-center' ) ); ?>,
+		pendingNone: <?php echo wp_json_encode( __( 'Nothing', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of pending approvals */
-		pendingSome:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d approvals', 'wp-command-center' ) ); ?>,
-		pendingSome1: <?php echo wp_json_encode( __( '1 approval', 'wp-command-center' ) ); ?>,
-		readyTitle:  <?php echo wp_json_encode( __( 'Your assistant is ready', 'wp-command-center' ) ); ?>,
-		readyBody:   <?php echo wp_json_encode( __( 'Go back to Claude, Codex, ChatGPT, or whichever assistant you connected, and describe what you want changed on this site — in your own words, in any language your assistant speaks. Requests arrive here under the same protection, approval and undo rules.', 'wp-command-center' ) ); ?>,
-		readyTryLbl: <?php echo wp_json_encode( __( 'Try asking:', 'wp-command-center' ) ); ?>,
+		pendingSome:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d approvals', 'ai-command-center' ) ); ?>,
+		pendingSome1: <?php echo wp_json_encode( __( '1 approval', 'ai-command-center' ) ); ?>,
+		readyTitle:  <?php echo wp_json_encode( __( 'Your assistant is ready', 'ai-command-center' ) ); ?>,
+		readyBody:   <?php echo wp_json_encode( __( 'Go back to Claude, Codex, ChatGPT, or whichever assistant you connected, and describe what you want changed on this site — in your own words, in any language your assistant speaks. Requests arrive here under the same protection, approval and undo rules.', 'ai-command-center' ) ); ?>,
+		readyTryLbl: <?php echo wp_json_encode( __( 'Try asking:', 'ai-command-center' ) ); ?>,
 		/* A read-only question: it answers instantly and changes nothing, so the
 		   first thing a customer tries cannot go wrong. */
-		readyPrompt: <?php echo wp_json_encode( __( 'What plugins are installed on this site?', 'wp-command-center' ) ); ?>,
+		readyPrompt: <?php echo wp_json_encode( __( 'What plugins are installed on this site?', 'ai-command-center' ) ); ?>,
 		/* The change-shaped example, which will come back here for approval. */
-		readyPrompt2: <?php echo wp_json_encode( __( 'Change my site tagline to “Handmade ceramics from Lisbon”.', 'wp-command-center' ) ); ?>,
-		readyCopy:   <?php echo wp_json_encode( __( 'Copy starter prompt', 'wp-command-center' ) ); ?>,
-		readyCopied: <?php echo wp_json_encode( __( 'Copied', 'wp-command-center' ) ); ?>,
-		readyGuide:  <?php echo wp_json_encode( __( 'View connection guide', 'wp-command-center' ) ); ?>,
-		actEmptyTitle:  <?php echo wp_json_encode( __( 'No changes yet', 'wp-command-center' ) ); ?>,
-		actEmptyDetail: <?php echo wp_json_encode( __( 'Once your assistant changes something here, it appears in this list — with an undo where the change supports one.', 'wp-command-center' ) ); ?>,
+		readyPrompt2: <?php echo wp_json_encode( __( 'Change my site tagline to “Handmade ceramics from Lisbon”.', 'ai-command-center' ) ); ?>,
+		readyCopy:   <?php echo wp_json_encode( __( 'Copy starter prompt', 'ai-command-center' ) ); ?>,
+		readyCopied: <?php echo wp_json_encode( __( 'Copied', 'ai-command-center' ) ); ?>,
+		readyGuide:  <?php echo wp_json_encode( __( 'View connection guide', 'ai-command-center' ) ); ?>,
+		actEmptyTitle:  <?php echo wp_json_encode( __( 'No changes yet', 'ai-command-center' ) ); ?>,
+		actEmptyDetail: <?php echo wp_json_encode( __( 'Once your assistant changes something here, it appears in this list — with an undo where the change supports one.', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of changes in a session */
-		actChanges:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes', 'wp-command-center' ) ); ?>,
-		actChanges1: <?php echo wp_json_encode( __( '1 change', 'wp-command-center' ) ); ?>,
-		chipReversible: <?php echo wp_json_encode( __( 'Can be undone', 'wp-command-center' ) ); ?>,
-		byLabel:     <?php echo wp_json_encode( __( 'by', 'wp-command-center' ) ); ?>,
-		view:        <?php echo wp_json_encode( __( 'View', 'wp-command-center' ) ); ?>,
-		invOpMap:    <?php echo wp_json_encode( __( 'Mapped operations', 'wp-command-center' ) ); ?>,
-		invCaps:     <?php echo wp_json_encode( __( 'Capabilities', 'wp-command-center' ) ); ?>,
-		invCat:      <?php echo wp_json_encode( __( 'Operations', 'wp-command-center' ) ); ?>,
-		invMcp:      <?php echo wp_json_encode( __( 'MCP tools', 'wp-command-center' ) ); ?>,
-		invDb:       <?php echo wp_json_encode( __( 'DB version', 'wp-command-center' ) ); ?>
+		actChanges:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes', 'ai-command-center' ) ); ?>,
+		actChanges1: <?php echo wp_json_encode( __( '1 change', 'ai-command-center' ) ); ?>,
+		chipReversible: <?php echo wp_json_encode( __( 'Can be undone', 'ai-command-center' ) ); ?>,
+		byLabel:     <?php echo wp_json_encode( __( 'by', 'ai-command-center' ) ); ?>,
+		view:        <?php echo wp_json_encode( __( 'View', 'ai-command-center' ) ); ?>,
+		invOpMap:    <?php echo wp_json_encode( __( 'Mapped operations', 'ai-command-center' ) ); ?>,
+		invCaps:     <?php echo wp_json_encode( __( 'Capabilities', 'ai-command-center' ) ); ?>,
+		invCat:      <?php echo wp_json_encode( __( 'Operations', 'ai-command-center' ) ); ?>,
+		invMcp:      <?php echo wp_json_encode( __( 'MCP tools', 'ai-command-center' ) ); ?>,
+		invDb:       <?php echo wp_json_encode( __( 'DB version', 'ai-command-center' ) ); ?>
 	};
 
 	function esc( s ) { return WPCC.escHtml ? WPCC.escHtml( s ) : String( s == null ? '' : s ); }

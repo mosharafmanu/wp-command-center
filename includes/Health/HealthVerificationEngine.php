@@ -68,7 +68,7 @@ final class HealthVerificationEngine {
 				'error'           => $exception->getMessage(),
 				'actor'           => AuditLog::resolve_actor( $actor ),
 			] );
-			return new \WP_Error( 'wpcc_health_verification_failed', __( 'Health verification failed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_health_verification_failed', __( 'Health verification failed.', 'ai-command-center' ) );
 		}
 	}
 

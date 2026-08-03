@@ -62,8 +62,8 @@ final class WpCliCommandRegistry {
 			// ── Low Risk ──────────────────────────────────────────────
 			'plugin_list' => [
 				'command_id'            => 'plugin_list',
-				'title'                 => __( 'List Plugins', 'wp-command-center' ),
-				'description'           => __( 'List all installed plugins with status and version.', 'wp-command-center' ),
+				'title'                 => __( 'List Plugins', 'ai-command-center' ),
+				'description'           => __( 'List all installed plugins with status and version.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'plugin', 'list' ],
 				'allowed_args_schema'   => [
@@ -80,8 +80,8 @@ final class WpCliCommandRegistry {
 			],
 			'theme_list' => [
 				'command_id'            => 'theme_list',
-				'title'                 => __( 'List Themes', 'wp-command-center' ),
-				'description'           => __( 'List all installed themes with status and version.', 'wp-command-center' ),
+				'title'                 => __( 'List Themes', 'ai-command-center' ),
+				'description'           => __( 'List all installed themes with status and version.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'theme', 'list' ],
 				'allowed_args_schema'   => [
@@ -98,8 +98,8 @@ final class WpCliCommandRegistry {
 			],
 			'option_get_siteurl' => [
 				'command_id'            => 'option_get_siteurl',
-				'title'                 => __( 'Get Site URL', 'wp-command-center' ),
-				'description'           => __( 'Retrieve the WordPress siteurl option.', 'wp-command-center' ),
+				'title'                 => __( 'Get Site URL', 'ai-command-center' ),
+				'description'           => __( 'Retrieve the WordPress siteurl option.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'option', 'get', 'siteurl' ],
 				'allowed_args_schema'   => [
@@ -114,8 +114,8 @@ final class WpCliCommandRegistry {
 			],
 			'option_get_home' => [
 				'command_id'            => 'option_get_home',
-				'title'                 => __( 'Get Home URL', 'wp-command-center' ),
-				'description'           => __( 'Retrieve the WordPress home option.', 'wp-command-center' ),
+				'title'                 => __( 'Get Home URL', 'ai-command-center' ),
+				'description'           => __( 'Retrieve the WordPress home option.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'option', 'get', 'home' ],
 				'allowed_args_schema'   => [
@@ -130,8 +130,8 @@ final class WpCliCommandRegistry {
 			],
 			'cron_event_list' => [
 				'command_id'            => 'cron_event_list',
-				'title'                 => __( 'List Cron Events', 'wp-command-center' ),
-				'description'           => __( 'List all scheduled WP-Cron events.', 'wp-command-center' ),
+				'title'                 => __( 'List Cron Events', 'ai-command-center' ),
+				'description'           => __( 'List all scheduled WP-Cron events.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'cron', 'event', 'list' ],
 				'allowed_args_schema'   => [
@@ -147,8 +147,8 @@ final class WpCliCommandRegistry {
 			],
 			'transient_delete_expired' => [
 				'command_id'            => 'transient_delete_expired',
-				'title'                 => __( 'Delete Expired Transients', 'wp-command-center' ),
-				'description'           => __( 'Delete all expired transients from the database.', 'wp-command-center' ),
+				'title'                 => __( 'Delete Expired Transients', 'ai-command-center' ),
+				'description'           => __( 'Delete all expired transients from the database.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'transient', 'delete-expired' ],
 				'allowed_args_schema'   => [
@@ -163,8 +163,8 @@ final class WpCliCommandRegistry {
 			],
 			'rewrite_list' => [
 				'command_id'            => 'rewrite_list',
-				'title'                 => __( 'List Rewrite Rules', 'wp-command-center' ),
-				'description'           => __( 'List current WordPress rewrite rules.', 'wp-command-center' ),
+				'title'                 => __( 'List Rewrite Rules', 'ai-command-center' ),
+				'description'           => __( 'List current WordPress rewrite rules.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'rewrite', 'list' ],
 				'allowed_args_schema'   => [
@@ -181,8 +181,8 @@ final class WpCliCommandRegistry {
 			// ── Medium Risk ───────────────────────────────────────────
 			'cache_flush' => [
 				'command_id'            => 'cache_flush',
-				'title'                 => __( 'Flush Cache', 'wp-command-center' ),
-				'description'           => __( 'Flush the WordPress object cache.', 'wp-command-center' ),
+				'title'                 => __( 'Flush Cache', 'ai-command-center' ),
+				'description'           => __( 'Flush the WordPress object cache.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_MEDIUM,
 				'command_parts'         => [ 'wp', 'cache', 'flush' ],
 				'allowed_args_schema'   => [],
@@ -195,8 +195,8 @@ final class WpCliCommandRegistry {
 			],
 			'rewrite_flush' => [
 				'command_id'            => 'rewrite_flush',
-				'title'                 => __( 'Flush Rewrite Rules', 'wp-command-center' ),
-				'description'           => __( 'Flush WordPress rewrite rules (regenerates .htaccess).', 'wp-command-center' ),
+				'title'                 => __( 'Flush Rewrite Rules', 'ai-command-center' ),
+				'description'           => __( 'Flush WordPress rewrite rules (regenerates .htaccess).', 'ai-command-center' ),
 				'risk_level'            => self::RISK_MEDIUM,
 				'command_parts'         => [ 'wp', 'rewrite', 'flush' ],
 				'allowed_args_schema'   => [
@@ -211,8 +211,8 @@ final class WpCliCommandRegistry {
 			],
 			'cron_event_run_due_now' => [
 				'command_id'            => 'cron_event_run_due_now',
-				'title'                 => __( 'Run Due Cron Events', 'wp-command-center' ),
-				'description'           => __( 'Run all due WP-Cron events now.', 'wp-command-center' ),
+				'title'                 => __( 'Run Due Cron Events', 'ai-command-center' ),
+				'description'           => __( 'Run all due WP-Cron events now.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_MEDIUM,
 				'command_parts'         => [ 'wp', 'cron', 'event', 'run', '--due-now' ],
 				'allowed_args_schema'   => [],
@@ -225,8 +225,8 @@ final class WpCliCommandRegistry {
 			],
 			'option_update_blogdescription' => [
 				'command_id'            => 'option_update_blogdescription',
-				'title'                 => __( 'Update Blog Description', 'wp-command-center' ),
-				'description'           => __( 'Update the WordPress blogdescription (tagline) option.', 'wp-command-center' ),
+				'title'                 => __( 'Update Blog Description', 'ai-command-center' ),
+				'description'           => __( 'Update the WordPress blogdescription (tagline) option.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_MEDIUM,
 				'command_parts'         => [ 'wp', 'option', 'update', 'blogdescription' ],
 				'allowed_args_schema'   => [
@@ -242,8 +242,8 @@ final class WpCliCommandRegistry {
 			],
 			'option_update_blogname' => [
 				'command_id'            => 'option_update_blogname',
-				'title'                 => __( 'Update Blog Name', 'wp-command-center' ),
-				'description'           => __( 'Update the WordPress blogname (site title) option.', 'wp-command-center' ),
+				'title'                 => __( 'Update Blog Name', 'ai-command-center' ),
+				'description'           => __( 'Update the WordPress blogname (site title) option.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_MEDIUM,
 				'command_parts'         => [ 'wp', 'option', 'update', 'blogname' ],
 				'allowed_args_schema'   => [
@@ -261,8 +261,8 @@ final class WpCliCommandRegistry {
 			// ── High Risk ─────────────────────────────────────────────
 			'plugin_update_single' => [
 				'command_id'            => 'plugin_update_single',
-				'title'                 => __( 'Update Single Plugin', 'wp-command-center' ),
-				'description'           => __( 'Update a single plugin to its latest version.', 'wp-command-center' ),
+				'title'                 => __( 'Update Single Plugin', 'ai-command-center' ),
+				'description'           => __( 'Update a single plugin to its latest version.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_HIGH,
 				'command_parts'         => [ 'wp', 'plugin', 'update' ],
 				'allowed_args_schema'   => [
@@ -279,8 +279,8 @@ final class WpCliCommandRegistry {
 			],
 			'theme_update_single' => [
 				'command_id'            => 'theme_update_single',
-				'title'                 => __( 'Update Single Theme', 'wp-command-center' ),
-				'description'           => __( 'Update a single theme to its latest version.', 'wp-command-center' ),
+				'title'                 => __( 'Update Single Theme', 'ai-command-center' ),
+				'description'           => __( 'Update a single theme to its latest version.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_HIGH,
 				'command_parts'         => [ 'wp', 'theme', 'update' ],
 				'allowed_args_schema'   => [
@@ -297,8 +297,8 @@ final class WpCliCommandRegistry {
 			],
 			'search_replace_dry_run' => [
 				'command_id'            => 'search_replace_dry_run',
-				'title'                 => __( 'Search & Replace (Dry Run)', 'wp-command-center' ),
-				'description'           => __( 'Preview a database search and replace without making changes.', 'wp-command-center' ),
+				'title'                 => __( 'Search & Replace (Dry Run)', 'ai-command-center' ),
+				'description'           => __( 'Preview a database search and replace without making changes.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_HIGH,
 				'command_parts'         => [ 'wp', 'search-replace' ],
 				'allowed_args_schema'   => [
@@ -320,8 +320,8 @@ final class WpCliCommandRegistry {
 			],
 			'search_replace_execute' => [
 				'command_id'            => 'search_replace_execute',
-				'title'                 => __( 'Search & Replace (Execute)', 'wp-command-center' ),
-				'description'           => __( 'Execute a live database search and replace.', 'wp-command-center' ),
+				'title'                 => __( 'Search & Replace (Execute)', 'ai-command-center' ),
+				'description'           => __( 'Execute a live database search and replace.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_HIGH,
 				'command_parts'         => [ 'wp', 'search-replace' ],
 				'allowed_args_schema'   => [
@@ -345,8 +345,8 @@ final class WpCliCommandRegistry {
 			// ── Critical Risk ─────────────────────────────────────────
 			'db_export' => [
 				'command_id'            => 'db_export',
-				'title'                 => __( 'Database Export', 'wp-command-center' ),
-				'description'           => __( 'Export the WordPress database via WP-CLI.', 'wp-command-center' ),
+				'title'                 => __( 'Database Export', 'ai-command-center' ),
+				'description'           => __( 'Export the WordPress database via WP-CLI.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_CRITICAL,
 				'command_parts'         => [ 'wp', 'db', 'export' ],
 				'allowed_args_schema'   => [
@@ -363,8 +363,8 @@ final class WpCliCommandRegistry {
 			],
 			'db_optimize' => [
 				'command_id'            => 'db_optimize',
-				'title'                 => __( 'Optimize Database', 'wp-command-center' ),
-				'description'           => __( 'Optimize WordPress database tables.', 'wp-command-center' ),
+				'title'                 => __( 'Optimize Database', 'ai-command-center' ),
+				'description'           => __( 'Optimize WordPress database tables.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_CRITICAL,
 				'command_parts'         => [ 'wp', 'db', 'optimize' ],
 				'allowed_args_schema'   => [
@@ -379,8 +379,8 @@ final class WpCliCommandRegistry {
 			],
 			'db_repair' => [
 				'command_id'            => 'db_repair',
-				'title'                 => __( 'Repair Database', 'wp-command-center' ),
-				'description'           => __( 'Repair WordPress database tables.', 'wp-command-center' ),
+				'title'                 => __( 'Repair Database', 'ai-command-center' ),
+				'description'           => __( 'Repair WordPress database tables.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_CRITICAL,
 				'command_parts'         => [ 'wp', 'db', 'repair' ],
 				'allowed_args_schema'   => [
@@ -397,8 +397,8 @@ final class WpCliCommandRegistry {
 			// ── Legacy compat commands (old 6-command allowlist) ──────
 			'db_size_check' => [
 				'command_id'            => 'db_size_check',
-				'title'                 => __( 'Database Size', 'wp-command-center' ),
-				'description'           => __( 'Check the WordPress database size.', 'wp-command-center' ),
+				'title'                 => __( 'Database Size', 'ai-command-center' ),
+				'description'           => __( 'Check the WordPress database size.', 'ai-command-center' ),
 				'risk_level'            => self::RISK_LOW,
 				'command_parts'         => [ 'wp', 'db', 'size' ],
 				'allowed_args_schema'   => [
@@ -445,7 +445,7 @@ final class WpCliCommandRegistry {
 			if ( ! in_array( $key, $allowed_keys, true ) ) {
 				return new \WP_Error(
 					'wpcc_invalid_wpcli_arg',
-					sprintf( /* translators: %s: value */ __( 'Unknown argument: %s', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Unknown argument: %s', 'ai-command-center' ), esc_html( $key ) )
 				);
 			}
 
@@ -454,7 +454,7 @@ final class WpCliCommandRegistry {
 			if ( ! empty( $def['required'] ) && ( null === $value || '' === $value ) ) {
 				return new \WP_Error(
 					'wpcc_missing_wpcli_arg',
-					sprintf( /* translators: %s: value */ __( 'Missing required argument: %s', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Missing required argument: %s', 'ai-command-center' ), esc_html( $key ) )
 				);
 			}
 
@@ -463,28 +463,28 @@ final class WpCliCommandRegistry {
 			if ( is_string( $value ) && $this->contains_shell_metacharacters( $value ) ) {
 				return new \WP_Error(
 					'wpcc_unsafe_wpcli_arg',
-					sprintf( /* translators: %s: value */ __( 'Arg %s contains unsafe shell characters.', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Arg %s contains unsafe shell characters.', 'ai-command-center' ), esc_html( $key ) )
 				);
 			}
 
 			if ( isset( $def['enum'] ) && ! in_array( $value, $def['enum'], true ) ) {
 				return new \WP_Error(
 					'wpcc_invalid_wpcli_arg_value',
-					sprintf( /* translators: 1: parameter name, 2: comma-separated list of allowed values */ __( 'Invalid value for %1$s. Allowed: %2$s', 'wp-command-center' ), esc_html( $key ), implode( ', ', $def['enum'] ) )
+					sprintf( /* translators: 1: parameter name, 2: comma-separated list of allowed values */ __( 'Invalid value for %1$s. Allowed: %2$s', 'ai-command-center' ), esc_html( $key ), implode( ', ', $def['enum'] ) )
 				);
 			}
 
 			if ( isset( $def['pattern'] ) && ! preg_match( $def['pattern'], (string) $value ) ) {
 				return new \WP_Error(
 					'wpcc_invalid_wpcli_arg_pattern',
-					sprintf( /* translators: %s: value */ __( 'Invalid format for %s', 'wp-command-center' ), esc_html( $key ) )
+					sprintf( /* translators: %s: value */ __( 'Invalid format for %s', 'ai-command-center' ), esc_html( $key ) )
 				);
 			}
 
 			if ( isset( $def['max_length'] ) && is_string( $value ) && mb_strlen( $value ) > $def['max_length'] ) {
 				return new \WP_Error(
 					'wpcc_wpcli_arg_too_long',
-					sprintf( /* translators: 1: parameter name, 2: maximum length */ __( 'Value for %1$s exceeds maximum length of %2$d', 'wp-command-center' ), esc_html( $key ), $def['max_length'] )
+					sprintf( /* translators: 1: parameter name, 2: maximum length */ __( 'Value for %1$s exceeds maximum length of %2$d', 'ai-command-center' ), esc_html( $key ), $def['max_length'] )
 				);
 			}
 		}

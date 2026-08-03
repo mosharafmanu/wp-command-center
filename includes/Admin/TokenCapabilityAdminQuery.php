@@ -227,7 +227,7 @@ final class TokenCapabilityAdminQuery {
 				'operations'      => $operations,
 				'operation_count' => count( $operations ),
 				'note'            => $is_admin
-					? __( 'Unrestricted — grants every operation regardless of individual capabilities. Cannot be assigned via the API or this manager.', 'wp-command-center' )
+					? __( 'Unrestricted — grants every operation regardless of individual capabilities. Cannot be assigned via the API or this manager.', 'ai-command-center' )
 					: '',
 			];
 		}

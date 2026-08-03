@@ -47,8 +47,8 @@ final class AdminMenu {
 		// Label it for what the customer needs next, not "Settings" — on a fresh
 		// install the next thing is starting, not configuring.
 		$label = \WPCommandCenter\Admin\ConnectionStatus::ever_connected()
-			? __( 'Open', 'wp-command-center' )
-			: __( 'Get started', 'wp-command-center' );
+			? __( 'Open', 'ai-command-center' )
+			: __( 'Get started', 'ai-command-center' );
 
 		array_unshift( $links, sprintf(
 			'<a href="%s"><strong>%s</strong></a>',
@@ -61,8 +61,8 @@ final class AdminMenu {
 
 	public function register_menu(): void {
 		add_menu_page(
-			__( 'WP Command Center', 'wp-command-center' ),
-			__( 'Command Center', 'wp-command-center' ),
+			__( 'WP Command Center', 'ai-command-center' ),
+			__( 'Command Center', 'ai-command-center' ),
 			self::CAPABILITY,
 			AppShell::HOME_SLUG,
 			[ $this, 'render_overview' ],
@@ -75,10 +75,10 @@ final class AdminMenu {
 		// Home reuses the parent slug. "Connect" was retired from the top level: it is
 		// a one-time task, so Home owns the setup journey and Settings › Connections
 		// keeps it permanently available. Every retired slug redirects.
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Home', 'wp-command-center' ), __( 'Home', 'wp-command-center' ), self::CAPABILITY, AppShell::HOME_SLUG, [ $this, 'render_overview' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Approvals', 'wp-command-center' ), __( 'Approvals', 'wp-command-center' ), self::CAPABILITY, AppShell::ACTIVITY_SLUG, [ $this, 'render_activity' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Changes', 'wp-command-center' ), __( 'Changes', 'wp-command-center' ), self::CAPABILITY, AppShell::HISTORY_SLUG, [ $this, 'render_history' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, AppShell::SETTINGS_SLUG, [ $this, 'render_settings' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Home', 'ai-command-center' ), __( 'Home', 'ai-command-center' ), self::CAPABILITY, AppShell::HOME_SLUG, [ $this, 'render_overview' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Approvals', 'ai-command-center' ), __( 'Approvals', 'ai-command-center' ), self::CAPABILITY, AppShell::ACTIVITY_SLUG, [ $this, 'render_activity' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Changes', 'ai-command-center' ), __( 'Changes', 'ai-command-center' ), self::CAPABILITY, AppShell::HISTORY_SLUG, [ $this, 'render_history' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Settings', 'ai-command-center' ), __( 'Settings', 'ai-command-center' ), self::CAPABILITY, AppShell::SETTINGS_SLUG, [ $this, 'render_settings' ] );
 	}
 
 	/**
@@ -179,7 +179,7 @@ final class AdminMenu {
 			'id'    => 'wpcc-pending-approvals',
 			'title' => sprintf(
 				'%s <span style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
-				esc_html__( 'AI Requests', 'wp-command-center' ),
+				esc_html__( 'AI Requests', 'ai-command-center' ),
 				$count
 			),
 			'href'  => admin_url( 'admin.php?page=' . AppShell::ACTIVITY_SLUG . '&wpcc_tab=approvals' ),

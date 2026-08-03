@@ -79,11 +79,11 @@ final class RollbackOperation {
 		if ( '' !== $offered ) {
 			return new \WP_Error(
 				'wpcc_not_a_patch_rollback',
-				__( 'rollback_manage undoes patches only, and takes patch_id. A rollback_id returned by another operation (ACF, SEO, WooCommerce, settings, media) is undone with change_history {action: "rollback_target", change_id: "..."} — use change_history {action: "rollback_discover"} to find the change_id.', 'wp-command-center' )
+				__( 'rollback_manage undoes patches only, and takes patch_id. A rollback_id returned by another operation (ACF, SEO, WooCommerce, settings, media) is undone with change_history {action: "rollback_target", change_id: "..."} — use change_history {action: "rollback_discover"} to find the change_id.', 'ai-command-center' )
 			);
 		}
 
-		return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required. rollback_manage undoes patches only; to undo any other change use change_history {action: "rollback_target"}.', 'wp-command-center' ) );
+		return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required. rollback_manage undoes patches only; to undo any other change use change_history {action: "rollback_target"}.', 'ai-command-center' ) );
 	}
 
 	private function get( array $params ): array|\WP_Error {
@@ -157,7 +157,7 @@ final class RollbackOperation {
 		}
 
 		if ( empty( $patch['snapshot_ids'] ) ) {
-			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'ai-command-center' ) );
 		}
 
 		$snapshots = new SnapshotManager();

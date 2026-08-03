@@ -80,7 +80,7 @@ final class DiffRenderer {
 		$html  = '<div class="wpcc-diff-summary">';
 		$html .= '<span class="wpcc-diff-stat">' . esc_html( sprintf(
 			/* translators: %d: number of files */
-			_n( '%d file changed', '%d files changed', $files_changed, 'wp-command-center' ),
+			_n( '%d file changed', '%d files changed', $files_changed, 'ai-command-center' ),
 			$files_changed
 		) ) . '</span> ';
 		$html .= '<span class="wpcc-diff-stat wpcc-diff-add">+' . esc_html( (string) $additions ) . '</span> ';
@@ -107,7 +107,7 @@ final class DiffRenderer {
 	 */
 	public static function render_file_diff( string $diff ): string {
 		if ( '' === trim( $diff ) ) {
-			return '<p class="description">' . esc_html__( 'No textual changes.', 'wp-command-center' ) . '</p>';
+			return '<p class="description">' . esc_html__( 'No textual changes.', 'ai-command-center' ) . '</p>';
 		}
 
 		$lines     = explode( "\n", $diff );
@@ -137,7 +137,7 @@ final class DiffRenderer {
 		if ( $truncated ) {
 			$html .= '<p class="description wpcc-diff-truncated">' . esc_html( sprintf(
 				/* translators: %d: number of hidden lines */
-				_n( 'Diff truncated — %d more line not shown.', 'Diff truncated — %d more lines not shown.', $total - self::MAX_LINES, 'wp-command-center' ),
+				_n( 'Diff truncated — %d more line not shown.', 'Diff truncated — %d more lines not shown.', $total - self::MAX_LINES, 'ai-command-center' ),
 				$total - self::MAX_LINES
 			) ) . '</p>';
 		}
@@ -153,7 +153,7 @@ final class DiffRenderer {
 	 */
 	public static function render_accordion( array $files, bool $open = false ): string {
 		if ( empty( $files ) ) {
-			return '<p class="description">' . esc_html__( 'No textual changes.', 'wp-command-center' ) . '</p>';
+			return '<p class="description">' . esc_html__( 'No textual changes.', 'ai-command-center' ) . '</p>';
 		}
 
 		$summary = self::summarize( $files );

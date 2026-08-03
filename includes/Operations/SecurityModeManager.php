@@ -119,18 +119,18 @@ final class SecurityModeManager {
 	/** Plain-language label for any mode key. */
 	public static function label_for( string $mode ): string {
 		return match ( $mode ) {
-			self::MODE_CLIENT     => __( 'Standard protection', 'wp-command-center' ),
-			self::MODE_ENTERPRISE => __( 'Strict approval', 'wp-command-center' ),
-			default               => __( 'Development — no approval', 'wp-command-center' ),
+			self::MODE_CLIENT     => __( 'Standard protection', 'ai-command-center' ),
+			self::MODE_ENTERPRISE => __( 'Strict approval', 'ai-command-center' ),
+			default               => __( 'Development — no approval', 'ai-command-center' ),
 		};
 	}
 
 	/** One-sentence description of what a mode does, in the user's terms. */
 	public static function describe( string $mode ): string {
 		return match ( $mode ) {
-			self::MODE_CLIENT     => __( 'Safe read-only requests run straight away. Anything that changes the site waits for you to approve it.', 'wp-command-center' ),
-			self::MODE_ENTERPRISE => __( 'Only read-only requests run straight away. Every change of any size waits for you to approve it.', 'wp-command-center' ),
-			default               => __( 'Changes run immediately with no approval step. For your own development or staging site only.', 'wp-command-center' ),
+			self::MODE_CLIENT     => __( 'Safe read-only requests run straight away. Anything that changes the site waits for you to approve it.', 'ai-command-center' ),
+			self::MODE_ENTERPRISE => __( 'Only read-only requests run straight away. Every change of any size waits for you to approve it.', 'ai-command-center' ),
+			default               => __( 'Changes run immediately with no approval step. For your own development or staging site only.', 'ai-command-center' ),
 		};
 	}
 

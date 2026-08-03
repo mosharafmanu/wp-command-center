@@ -12,7 +12,7 @@ Desktop, Cursor, Codex and similar tools. It contains:
 
 ```
 bash -c "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" \
-  'https://example.com/wp-content/plugins/wp-command-center/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""
+  'https://example.com/wp-content/plugins/ai-command-center/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""
 ```
 
 **What it is.** A stdio↔HTTP bridge that runs on the **site owner's own computer**, under

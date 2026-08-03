@@ -81,9 +81,9 @@ final class AiAssistRowActions {
 			. ' data-type="' . esc_attr( $post->post_type ) . '"'
 			. ' data-actions="' . esc_attr( implode( ',', $ids ) ) . '"'
 			. ' aria-haspopup="' . $popup . '"' . $expanded
-			. ' aria-label="' . esc_attr__( 'WP Command Center — AI actions', 'wp-command-center' ) . '">'
+			. ' aria-label="' . esc_attr__( 'WP Command Center — AI actions', 'ai-command-center' ) . '">'
 			. '<span aria-hidden="true">✨ </span>'
-			. esc_html__( 'WPCC AI', 'wp-command-center' )
+			. esc_html__( 'WPCC AI', 'ai-command-center' )
 			. '</a>';
 	}
 }

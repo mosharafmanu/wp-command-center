@@ -23,16 +23,16 @@ final class Health {
 		$const   = $store->credentials()->is_constant_backed( $conn );
 
 		if ( empty( $conn['enabled'] ) ) {
-			return self::r( 'disabled', __( 'Disabled', 'wp-command-center' ), '#646970', __( 'Enable this connection to use it.', 'wp-command-center' ) );
+			return self::r( 'disabled', __( 'Disabled', 'ai-command-center' ), '#646970', __( 'Enable this connection to use it.', 'ai-command-center' ) );
 		}
 		if ( ! $has_key ) {
-			return self::r( 'needs_setup', __( 'Needs a key', 'wp-command-center' ), '#dba617',
-				$const ? __( 'Define the key constant in wp-config.php.', 'wp-command-center' ) : __( 'Add an API key to finish setup.', 'wp-command-center' ) );
+			return self::r( 'needs_setup', __( 'Needs a key', 'ai-command-center' ), '#dba617',
+				$const ? __( 'Define the key constant in wp-config.php.', 'ai-command-center' ) : __( 'Add an API key to finish setup.', 'ai-command-center' ) );
 		}
 
 		$lt = $conn['last_test'];
 		if ( ! is_array( $lt ) || ! isset( $lt['code'] ) || 'untested' === $lt['code'] ) {
-			return self::r( 'untested', __( 'Not tested yet', 'wp-command-center' ), '#2271b1', __( 'Run a test to confirm the connection works.', 'wp-command-center' ) );
+			return self::r( 'untested', __( 'Not tested yet', 'ai-command-center' ), '#2271b1', __( 'Run a test to confirm the connection works.', 'ai-command-center' ) );
 		}
 
 		$code    = (string) $lt['code'];
@@ -40,25 +40,25 @@ final class Health {
 
 		if ( 'ok' === $code ) {
 			if ( $latency > 0 && $latency >= 4000 ) {
-				return self::r( 'slow', __( 'Healthy — slow', 'wp-command-center' ), '#dba617', __( 'Responding, but latency is high. Consider a faster model or region.', 'wp-command-center' ) );
+				return self::r( 'slow', __( 'Healthy — slow', 'ai-command-center' ), '#dba617', __( 'Responding, but latency is high. Consider a faster model or region.', 'ai-command-center' ) );
 			}
-			return self::r( 'healthy', __( 'Healthy', 'wp-command-center' ), '#00a32a', __( 'Working. Nothing to do.', 'wp-command-center' ) );
+			return self::r( 'healthy', __( 'Healthy', 'ai-command-center' ), '#00a32a', __( 'Working. Nothing to do.', 'ai-command-center' ) );
 		}
 		if ( in_array( $code, [ 'api_error_401', 'api_error_403' ], true ) ) {
-			return self::r( 'auth_failed', __( 'Authentication failed', 'wp-command-center' ), '#d63638', __( 'The key was rejected. Paste a new key and test again.', 'wp-command-center' ) );
+			return self::r( 'auth_failed', __( 'Authentication failed', 'ai-command-center' ), '#d63638', __( 'The key was rejected. Paste a new key and test again.', 'ai-command-center' ) );
 		}
 		if ( 'api_error_429' === $code ) {
-			return self::r( 'rate_limited', __( 'Rate limited', 'wp-command-center' ), '#dba617', __( 'The provider is rate-limiting. Wait and retry, or check your plan.', 'wp-command-center' ) );
+			return self::r( 'rate_limited', __( 'Rate limited', 'ai-command-center' ), '#dba617', __( 'The provider is rate-limiting. Wait and retry, or check your plan.', 'ai-command-center' ) );
 		}
 		if ( 'request_failed' === $code || 'no_endpoint' === $code ) {
-			return self::r( 'offline', __( 'Unreachable', 'wp-command-center' ), '#d63638', __( 'Could not reach the endpoint. Check the base URL and that the server is running.', 'wp-command-center' ) );
+			return self::r( 'offline', __( 'Unreachable', 'ai-command-center' ), '#d63638', __( 'Could not reach the endpoint. Check the base URL and that the server is running.', 'ai-command-center' ) );
 		}
 		if ( 'not_configured' === $code ) {
-			return self::r( 'needs_setup', __( 'Needs a key', 'wp-command-center' ), '#dba617', __( 'Add an API key, then test.', 'wp-command-center' ) );
+			return self::r( 'needs_setup', __( 'Needs a key', 'ai-command-center' ), '#dba617', __( 'Add an API key, then test.', 'ai-command-center' ) );
 		}
-		return self::r( 'attention', __( 'Needs attention', 'wp-command-center' ), '#d63638',
+		return self::r( 'attention', __( 'Needs attention', 'ai-command-center' ), '#d63638',
 			/* translators: %s: error code */
-			sprintf( __( 'Last test failed (%s). Review the connection and test again.', 'wp-command-center' ), $code ) );
+			sprintf( __( 'Last test failed (%s). Review the connection and test again.', 'ai-command-center' ), $code ) );
 	}
 
 	/** Roll up overall platform health into one line. */

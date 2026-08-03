@@ -38,9 +38,9 @@ final class Assets {
 			'mode' => $default_mode,
 			'nav'  => AppShell::nav_map(),
 			'i18n' => [
-				'section'       => __( 'Section', 'wp-command-center' ),
-				'paletteLabel'  => __( 'Command palette', 'wp-command-center' ),
-				'paletteSearch' => __( 'Jump to a section…', 'wp-command-center' ),
+				'section'       => __( 'Section', 'ai-command-center' ),
+				'paletteLabel'  => __( 'Command palette', 'ai-command-center' ),
+				'paletteSearch' => __( 'Jump to a section…', 'ai-command-center' ),
 			],
 		] );
 	}

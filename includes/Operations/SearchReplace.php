@@ -40,24 +40,24 @@ final class SearchReplace {
 		$max_matches    = isset( $params['max_matches'] ) ? max( 1, (int) $params['max_matches'] ) : self::DEFAULT_MAX_MATCHES;
 
 		if ( '' === $search ) {
-			return new \WP_Error( 'wpcc_empty_search', __( 'Search string cannot be empty.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_empty_search', __( 'Search string cannot be empty.', 'ai-command-center' ) );
 		}
 
 		if ( $search === $replace ) {
-			return new \WP_Error( 'wpcc_search_equals_replace', __( 'Search and replace strings cannot be identical.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_search_equals_replace', __( 'Search and replace strings cannot be identical.', 'ai-command-center' ) );
 		}
 
 		if ( empty( $tables ) ) {
-			return new \WP_Error( 'wpcc_no_tables_selected', __( 'No tables selected for search and replace.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_no_tables_selected', __( 'No tables selected for search and replace.', 'ai-command-center' ) );
 		}
 
 		// Validate tables
 		foreach ( $tables as $table ) {
 			if ( ! str_starts_with( $table, $wpdb->prefix ) ) {
-				return new \WP_Error( 'wpcc_invalid_table_prefix', sprintf( /* translators: %s: value */ __( 'Table %s does not start with the required WordPress prefix.', 'wp-command-center' ), $table ) );
+				return new \WP_Error( 'wpcc_invalid_table_prefix', sprintf( /* translators: %s: value */ __( 'Table %s does not start with the required WordPress prefix.', 'ai-command-center' ), $table ) );
 			}
 			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
-				return new \WP_Error( 'wpcc_invalid_table', sprintf( /* translators: %s: value */ __( 'Table %s does not exist.', 'wp-command-center' ), $table ) );
+				return new \WP_Error( 'wpcc_invalid_table', sprintf( /* translators: %s: value */ __( 'Table %s does not exist.', 'ai-command-center' ), $table ) );
 			}
 		}
 
@@ -146,7 +146,7 @@ final class SearchReplace {
 			'tables_affected' => $tables_affected,
 			'matches_found'   => $matches_found,
 			'rows_affected'   => $rows_affected,
-			'warning'         => __( 'External database backup is strongly recommended before running a live search and replace.', 'wp-command-center' ),
+			'warning'         => __( 'External database backup is strongly recommended before running a live search and replace.', 'ai-command-center' ),
 		];
 
 		if ( $return_matches ) {

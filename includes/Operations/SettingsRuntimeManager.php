@@ -53,7 +53,7 @@ final class SettingsRuntimeManager {
 	}
 
 	private function general_get(array $p):array{return['settings'=>['site_title'=>get_option('blogname'),'tagline'=>get_option('blogdescription'),'admin_email'=>get_option('admin_email'),'language'=>get_option('WPLANG')?:'en_US','timezone'=>get_option('timezone_string')?:'UTC','date_format'=>get_option('date_format'),'time_format'=>get_option('time_format'),'week_start'=>get_option('start_of_week')]];}
-	private function general_update(array $p):array{$f=['blogname'=>'site_title','blogdescription'=>'tagline','admin_email'=>null,'WPLANG'=>'language','timezone_string'=>'timezone','date_format'=>null,'time_format'=>null,'start_of_week'=>'week_start'];foreach($f as $opt=>$key){if(isset($p[$key??$opt])){if('admin_email'===$opt&&!is_email($p[$key]))return $this->err('wpcc_invalid_email',__('Invalid email.','wp-command-center'));update_option($opt,sanitize_text_field((string)$p[$key]));}}return['updated'=>true];}
+	private function general_update(array $p):array{$f=['blogname'=>'site_title','blogdescription'=>'tagline','admin_email'=>null,'WPLANG'=>'language','timezone_string'=>'timezone','date_format'=>null,'time_format'=>null,'start_of_week'=>'week_start'];foreach($f as $opt=>$key){if(isset($p[$key??$opt])){if('admin_email'===$opt&&!is_email($p[$key]))return $this->err('wpcc_invalid_email',__('Invalid email.','ai-command-center'));update_option($opt,sanitize_text_field((string)$p[$key]));}}return['updated'=>true];}
 	private function reading_get(array $p):array{return['settings'=>['front_page'=>get_option('page_on_front'),'posts_page'=>get_option('page_for_posts'),'posts_per_page'=>(int)get_option('posts_per_page'),'feed_limit'=>(int)get_option('posts_per_rss'),'search_visibility'=>(bool)get_option('blog_public')]];}
 	private function reading_update(array $p):array{foreach(['page_on_front'=>'front_page','page_for_posts'=>'posts_page','posts_per_page'=>null,'posts_per_rss'=>'feed_limit']as $opt=>$key){if(isset($p[$key??$opt]))update_option($opt,(int)$p[$key]);}if(isset($p['search_visibility']))update_option('blog_public',(int)$p['search_visibility']);return['updated'=>true];}
 	private function discussion_get(array $p):array{return['settings'=>['default_comment_status'=>get_option('default_comment_status'),'comment_moderation'=>(bool)get_option('comment_moderation'),'require_name_email'=>(bool)get_option('require_name_email'),'comment_registration'=>(bool)get_option('comment_registration'),'avatar_default'=>get_option('avatar_default'),'thread_comments'=>(bool)get_option('thread_comments')]];}
@@ -68,13 +68,13 @@ final class SettingsRuntimeManager {
 	private function analyze(array $p):array{$issues=[];if(!get_option('blog_public'))$issues[]=['type'=>'seo','severity'=>'high','setting'=>'blog_public','message'=>'Search engines discouraged (site not public)'];if(empty(get_option('permalink_structure')))$issues[]=['type'=>'seo','severity'=>'medium','setting'=>'permalink_structure','message'=>'Plain permalinks — SEO unfriendly'];if(!get_option('wp_page_for_privacy_policy'))$issues[]=['type'=>'privacy','severity'=>'high','setting'=>'privacy_page','message'=>'No privacy policy page assigned'];if('open'!==get_option('default_comment_status'))$issues[]=['type'=>'discussion','severity'=>'low','setting'=>'comments','message'=>'Comments disabled by default'];if(!get_option('comment_moderation'))$issues[]=['type'=>'spam','severity'=>'low','setting'=>'comment_moderation','message'=>'No comment moderation — spam risk'];return['issue_count'=>count($issues),'issues'=>$issues];}
 	public function rollback(array $p,array $cx=[]):array{
 		$rid=(string)($p['rollback_id']??'');
-		if(''===$rid)return $this->err('wpcc_missing_rb',__('Rollback ID required.','wp-command-center'));
+		if(''===$rid)return $this->err('wpcc_missing_rb',__('Rollback ID required.','ai-command-center'));
 		// PROGRAM-4B — resolve via the shared RollbackStore (consistent storage API).
 		$store=new OptionListRollbackStore('wpcc_settings_rollbacks',200);
 		$resolved=$store->resolve($rid);
-		if(!$resolved)return $this->err('wpcc_rb_nf',__('Not found.','wp-command-center'));
+		if(!$resolved)return $this->err('wpcc_rb_nf',__('Not found.','ai-command-center'));
 		$rec=$resolved['record'];
-		if(!empty($rec['rollback_applied']))return $this->err('wpcc_rb_done',__('Already applied.','wp-command-center'));
+		if(!empty($rec['rollback_applied']))return $this->err('wpcc_rb_done',__('Already applied.','ai-command-center'));
 
 		// PROGRAM-4 / P4.1 — v2 field-scoped, drift-aware delta restore via the RollbackDelta
 		// core. Only complete is terminal (idempotency); partial/conflict stay retryable.

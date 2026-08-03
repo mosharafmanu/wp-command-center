@@ -251,16 +251,16 @@ final class AppShell {
 	 */
 	public static function builtin_tabs(): array {
 		$tabs = [
-			'providers' => [ 'label' => __( 'Providers', 'wp-command-center' ), 'view' => 'ai-setup', 'feature' => null ],
+			'providers' => [ 'label' => __( 'Providers', 'ai-command-center' ), 'view' => 'ai-setup', 'feature' => null ],
 		];
 		if ( self::flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
-			$tabs['seo'] = [ 'label' => __( 'SEO', 'wp-command-center' ), 'view' => 'seo-meta', 'feature' => null ];
+			$tabs['seo'] = [ 'label' => __( 'SEO', 'ai-command-center' ), 'view' => 'seo-meta', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_ALT_TEXT_UI', 'wpcc_alt_text_ui' ) && FeatureGate::allows( 'ai_alt_text' ) ) {
-			$tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'wp-command-center' ), 'view' => 'ai-alt-text', 'feature' => null ];
+			$tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'ai-command-center' ), 'view' => 'ai-alt-text', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_AI_CONTENT_UI', 'wpcc_ai_content_ui' ) && ( FeatureGate::allows( 'title_generator' ) || FeatureGate::allows( 'excerpt_generator' ) ) ) {
-			$tabs['content'] = [ 'label' => __( 'Content', 'wp-command-center' ), 'view' => 'ai-content', 'feature' => null ];
+			$tabs['content'] = [ 'label' => __( 'Content', 'ai-command-center' ), 'view' => 'ai-content', 'feature' => null ];
 		}
 		return $tabs;
 	}
@@ -305,11 +305,11 @@ final class AppShell {
 		 */
 		$tree = [
 			self::HOME_SLUG => [
-				'label' => __( 'Home', 'wp-command-center' ),
+				'label' => __( 'Home', 'ai-command-center' ),
 				// Home's subtitle is the product's promise, not a description of the page.
-				'desc'  => __( 'Ask your AI assistant to change this site, in your own words and your own language. You approve anything that matters.', 'wp-command-center' ),
+				'desc'  => __( 'Ask your AI assistant to change this site, in your own words and your own language. You approve anything that matters.', 'ai-command-center' ),
 				'tabs'  => [
-					'home' => [ 'label' => __( 'Home', 'wp-command-center' ), 'view' => 'command-home', 'feature' => null ],
+					'home' => [ 'label' => __( 'Home', 'ai-command-center' ), 'view' => 'command-home', 'feature' => null ],
 				],
 			],
 			// Was "Activity" — a word that describes nothing a customer wants. This
@@ -317,32 +317,32 @@ final class AppShell {
 			// draft surface that used to share it are engine internals; they moved to
 			// Settings › Advanced where the rest of the machinery lives.
 			self::ACTIVITY_SLUG => [
-				'label' => __( 'Approvals', 'wp-command-center' ),
-				'desc'  => __( 'Changes waiting for your decision. Nothing runs until you approve it.', 'wp-command-center' ),
+				'label' => __( 'Approvals', 'ai-command-center' ),
+				'desc'  => __( 'Changes waiting for your decision. Nothing runs until you approve it.', 'ai-command-center' ),
 				'tabs'  => [
-					'approvals' => [ 'label' => __( 'Approvals', 'wp-command-center' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
+					'approvals' => [ 'label' => __( 'Approvals', 'ai-command-center' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
 				],
 			],
 			// Was "History" — the system's word for it. The customer calls these
 			// changes, and comes here to see or undo one.
 			self::HISTORY_SLUG => [
-				'label' => __( 'Changes', 'wp-command-center' ),
-				'desc'  => __( 'Everything that has changed on this site, and an undo for the changes that support it.', 'wp-command-center' ),
+				'label' => __( 'Changes', 'ai-command-center' ),
+				'desc'  => __( 'Everything that has changed on this site, and an undo for the changes that support it.', 'ai-command-center' ),
 				'tabs'  => [
-					'changes' => [ 'label' => __( 'Changes', 'wp-command-center' ), 'view' => 'change-history', 'feature' => 'change_history' ],
+					'changes' => [ 'label' => __( 'Changes', 'ai-command-center' ), 'view' => 'change-history', 'feature' => 'change_history' ],
 				],
 			],
 			self::SETTINGS_SLUG => [
-				'label' => __( 'Settings', 'wp-command-center' ),
-				'desc'  => __( 'How this site is protected, who can reach it, and everything advanced.', 'wp-command-center' ),
+				'label' => __( 'Settings', 'ai-command-center' ),
+				'desc'  => __( 'How this site is protected, who can reach it, and everything advanced.', 'ai-command-center' ),
 				// Five tabs → three, grouped by the question each answers:
 				//   Protection  — how much can AI change without asking?
 				//   Connections — who is allowed to reach this site?
 				//   Advanced    — everything a normal customer never needs.
 				'tabs'  => [
-					'security'    => [ 'label' => __( 'Protection', 'wp-command-center' ),  'view' => 'settings',             'feature' => null ],
-					'connections' => [ 'label' => __( 'Connections', 'wp-command-center' ), 'view' => 'settings-connections', 'feature' => null ],
-					'advanced'    => [ 'label' => __( 'Advanced', 'wp-command-center' ),    'view' => 'settings-advanced',    'feature' => null ],
+					'security'    => [ 'label' => __( 'Protection', 'ai-command-center' ),  'view' => 'settings',             'feature' => null ],
+					'connections' => [ 'label' => __( 'Connections', 'ai-command-center' ), 'view' => 'settings-connections', 'feature' => null ],
+					'advanced'    => [ 'label' => __( 'Advanced', 'ai-command-center' ),    'view' => 'settings-advanced',    'feature' => null ],
 				],
 			],
 		];
@@ -483,7 +483,7 @@ final class AppShell {
 			 * core and every other plugin render normally, just in one predictable band.
 			 */
 			?>
-			<div class="wpcc-shell__notices" role="region" aria-label="<?php esc_attr_e( 'WordPress notices', 'wp-command-center' ); ?>">
+			<div class="wpcc-shell__notices" role="region" aria-label="<?php esc_attr_e( 'WordPress notices', 'ai-command-center' ); ?>">
 				<hr class="wp-header-end" />
 			</div>
 
@@ -499,7 +499,7 @@ final class AppShell {
 				<div class="wpcc-shell__identity">
 					<h1 class="wpcc-shell__brand">
 						<span class="wpcc-shell__brand-mark" aria-hidden="true">&#9783;</span>
-						<?php esc_html_e( 'Command Center', 'wp-command-center' ); ?>
+						<?php esc_html_e( 'Command Center', 'ai-command-center' ); ?>
 						<?php if ( ! $is_home ) : ?>
 							<span class="wpcc-shell__brand-section"><?php echo esc_html( $section['label'] ); ?></span>
 						<?php endif; ?>
@@ -518,7 +518,7 @@ final class AppShell {
 					<?php endif; ?>
 				</div>
 				<div class="wpcc-shell__tools">
-					<span class="wpcc-shell__posture" data-mode="<?php echo esc_attr( $mode ); ?>" title="<?php esc_attr_e( 'Current security mode', 'wp-command-center' ); ?>">
+					<span class="wpcc-shell__posture" data-mode="<?php echo esc_attr( $mode ); ?>" title="<?php esc_attr_e( 'Current security mode', 'ai-command-center' ); ?>">
 						<?php echo esc_html( $label ); ?>
 					</span>
 					<?php
@@ -528,12 +528,12 @@ final class AppShell {
 					// to decide how much detail they wanted.
 					?>
 					<?php if ( $has_started ) : ?>
-						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'wp-command-center' ); ?>">
-							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'wp-command-center' ); ?></button>
-							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'wp-command-center' ); ?></button>
+						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'ai-command-center' ); ?>">
+							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'ai-command-center' ); ?></button>
+							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'ai-command-center' ); ?></button>
 						</div>
 						<button type="button" class="wpcc-shell__cmdk" aria-haspopup="dialog">
-							<?php esc_html_e( 'Search', 'wp-command-center' ); ?> <kbd>&#8984;K</kbd>
+							<?php esc_html_e( 'Search', 'ai-command-center' ); ?> <kbd>&#8984;K</kbd>
 						</button>
 					<?php endif; ?>
 				</div>
@@ -577,9 +577,9 @@ final class AppShell {
 	private function render_empty_section( string $label ): void {
 		?>
 		<div class="wpcc-cds-empty" role="status">
-			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'wp-command-center' ), $label ) ); ?></strong></p>
-			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in WP Command Center stays available.', 'wp-command-center' ); ?></p>
-			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'wp-command-center' ); ?></a></p>
+			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'ai-command-center' ), $label ) ); ?></strong></p>
+			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in WP Command Center stays available.', 'ai-command-center' ); ?></p>
+			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'ai-command-center' ); ?></a></p>
 		</div>
 		<?php
 	}

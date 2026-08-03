@@ -173,7 +173,7 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 
 == Installation ==
 
-1. Upload the plugin to `/wp-content/plugins/wp-command-center`, or install it from the Plugins screen.
+1. Upload the plugin to `/wp-content/plugins/ai-command-center`, or install it from the Plugins screen.
 2. Activate it through the **Plugins** menu.
 3. Open **Command Center** in the admin sidebar and follow the single next step shown on the Home screen.
 

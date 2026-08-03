@@ -81,14 +81,14 @@ final class PatchGuard {
 		}
 
 		$type = self::HEADER_PLUGIN === $header
-			? __( 'plugin', 'wp-command-center' )
-			: __( 'theme', 'wp-command-center' );
+			? __( 'plugin', 'ai-command-center' )
+			: __( 'theme', 'ai-command-center' );
 
 		return new \WP_Error(
 			'wpcc_patch_breaks_header',
 			sprintf(
 				/* translators: 1: header name (e.g. "Plugin Name"), 2: file path, 3: "plugin" or "theme" */
-				__( 'Patch rejected: it would remove or invalidate the "%1$s" header of %2$s, which would deactivate the %3$s. Keep a valid "%1$s" header (within the first 8 KB) in the modified file.', 'wp-command-center' ),
+				__( 'Patch rejected: it would remove or invalidate the "%1$s" header of %2$s, which would deactivate the %3$s. Keep a valid "%1$s" header (within the first 8 KB) in the modified file.', 'ai-command-center' ),
 				$header,
 				$relative_path,
 				$type

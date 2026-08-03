@@ -119,13 +119,13 @@ final class ParameterVocabulary {
 		foreach ( $map as $canonical => $aliases ) {
 			$bits[] = sprintf(
 				/* translators: 1: canonical parameter name, 2: comma-separated accepted aliases */
-				__( '%1$s (also accepted: %2$s)', 'wp-command-center' ),
+				__( '%1$s (also accepted: %2$s)', 'ai-command-center' ),
 				$canonical,
 				implode( ', ', $aliases )
 			);
 		}
 
 		/* translators: %s: list of canonical parameter names with their aliases */
-		return sprintf( __( 'This operation identifies its target with %s.', 'wp-command-center' ), implode( '; ', $bits ) );
+		return sprintf( __( 'This operation identifies its target with %s.', 'ai-command-center' ), implode( '; ', $bits ) );
 	}
 }

@@ -55,12 +55,12 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 				'type'    => 'success',
 				'message' => sprintf(
 					/* translators: %s: security mode label */
-					__( 'Saved. This site is now set to %s.', 'wp-command-center' ),
+					__( 'Saved. This site is now set to %s.', 'ai-command-center' ),
 					SecurityModeManager::label()
 				),
 			];
 		} else {
-			$notice = [ 'type' => 'error', 'message' => __( 'That is not a valid protection setting.', 'wp-command-center' ) ];
+			$notice = [ 'type' => 'error', 'message' => __( 'That is not a valid protection setting.', 'ai-command-center' ) ];
 		}
 	} elseif ( 'set_uninstall_policy' === $action ) {
 		// What happens to this site's change history if the plugin is deleted.
@@ -70,8 +70,8 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 		$notice = [
 			'type'    => 'success',
 			'message' => $purge
-				? __( 'Saved. Deleting the plugin will also erase its data.', 'wp-command-center' )
-				: __( 'Saved. Your history and audit trail will be kept if the plugin is deleted.', 'wp-command-center' ),
+				? __( 'Saved. Deleting the plugin will also erase its data.', 'ai-command-center' )
+				: __( 'Saved. Your history and audit trail will be kept if the plugin is deleted.', 'ai-command-center' ),
 		];
 	}
 }
@@ -98,34 +98,34 @@ $is_dev       = ( SecurityModeManager::MODE_DEVELOPER === $current_mode );
  */
 $wpcc_mode_cards = [
 	SecurityModeManager::MODE_CLIENT     => [
-		'badge'      => __( 'Recommended', 'wp-command-center' ),
+		'badge'      => __( 'Recommended', 'ai-command-center' ),
 		'badge_kind' => 'good',
 		'points'     => [
-			__( 'Questions and checks run instantly', 'wp-command-center' ),
-			__( 'Anything that could affect visitors waits for your approval', 'wp-command-center' ),
-			__( 'Every action recorded — supported changes can be undone', 'wp-command-center' ),
+			__( 'Questions and checks run instantly', 'ai-command-center' ),
+			__( 'Anything that could affect visitors waits for your approval', 'ai-command-center' ),
+			__( 'Every action recorded — supported changes can be undone', 'ai-command-center' ),
 		],
-		'footnote'   => __( 'Recommended for live websites.', 'wp-command-center' ),
+		'footnote'   => __( 'Recommended for live websites.', 'ai-command-center' ),
 	],
 	SecurityModeManager::MODE_ENTERPRISE => [
 		'badge'      => '',
 		'badge_kind' => '',
 		'points'     => [
-			__( 'Questions and checks run instantly', 'wp-command-center' ),
-			__( 'Every change waits for approval — including low-risk ones', 'wp-command-center' ),
-			__( 'Every action recorded — supported changes can be undone', 'wp-command-center' ),
+			__( 'Questions and checks run instantly', 'ai-command-center' ),
+			__( 'Every change waits for approval — including low-risk ones', 'ai-command-center' ),
+			__( 'Every action recorded — supported changes can be undone', 'ai-command-center' ),
 		],
-		'footnote'   => __( 'Maximum control. Best for enterprise and regulated sites.', 'wp-command-center' ),
+		'footnote'   => __( 'Maximum control. Best for enterprise and regulated sites.', 'ai-command-center' ),
 	],
 	SecurityModeManager::MODE_DEVELOPER  => [
-		'badge'      => __( 'Local & staging only', 'wp-command-center' ),
+		'badge'      => __( 'Local & staging only', 'ai-command-center' ),
 		'badge_kind' => 'warn',
 		'points'     => [
-			__( 'AI changes run immediately — no waiting', 'wp-command-center' ),
-			__( 'Everything is still recorded', 'wp-command-center' ),
-			__( 'Supported changes can still be undone at any time', 'wp-command-center' ),
+			__( 'AI changes run immediately — no waiting', 'ai-command-center' ),
+			__( 'Everything is still recorded', 'ai-command-center' ),
+			__( 'Supported changes can still be undone at any time', 'ai-command-center' ),
 		],
-		'footnote'   => __( 'Never use this mode on a live production website.', 'wp-command-center' ),
+		'footnote'   => __( 'Never use this mode on a live production website.', 'ai-command-center' ),
 	],
 ];
 ?>
@@ -199,9 +199,9 @@ $wpcc_mode_cards = [
 .wpcc-prot__card.is-risk .wpcc-prot__foot { color: var( --wpcc-state-danger-fg, #d63638 ); font-weight: 600; }
 </style>
 <div class="wrap wpcc-wrap wpcc-prot">
-	<h1><?php esc_html_e( 'Protection', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Protection', 'ai-command-center' ); ?></h1>
 	<p class="wpcc-prot__lead">
-		<?php esc_html_e( 'How much can an AI assistant change on this site without asking you first? Questions and diagnostics are never held back in any mode — this only controls changes.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'How much can an AI assistant change on this site without asking you first? Questions and diagnostics are never held back in any mode — this only controls changes.', 'ai-command-center' ); ?>
 	</p>
 
 	<?php if ( $notice ) : ?>
@@ -212,7 +212,7 @@ $wpcc_mode_cards = [
 		<?php wp_nonce_field( 'wpcc_settings' ); ?>
 		<input type="hidden" name="wpcc_action" value="set_security_mode" />
 		<fieldset class="wpcc-prot__set">
-			<legend class="screen-reader-text"><?php esc_html_e( 'How much can AI change without asking?', 'wp-command-center' ); ?></legend>
+			<legend class="screen-reader-text"><?php esc_html_e( 'How much can AI change without asking?', 'ai-command-center' ); ?></legend>
 
 			<div class="wpcc-prot__grid">
 			<?php foreach ( $wpcc_mode_cards as $wpcc_mode => $wpcc_card ) : ?>
@@ -229,7 +229,7 @@ $wpcc_mode_cards = [
 						<span class="wpcc-prot__name"><?php echo esc_html( SecurityModeManager::label_for( $wpcc_mode ) ); ?></span>
 						<span class="wpcc-prot__badges">
 							<?php if ( $wpcc_on ) : ?>
-								<span class="wpcc-prot__badge wpcc-prot__badge--current"><?php esc_html_e( 'Current', 'wp-command-center' ); ?></span>
+								<span class="wpcc-prot__badge wpcc-prot__badge--current"><?php esc_html_e( 'Current', 'ai-command-center' ); ?></span>
 							<?php endif; ?>
 							<?php if ( '' !== $wpcc_card['badge'] ) : ?>
 								<span class="wpcc-prot__badge wpcc-prot__badge--<?php echo esc_attr( $wpcc_card['badge_kind'] ); ?>"><?php echo esc_html( $wpcc_card['badge'] ); ?></span>
@@ -246,13 +246,13 @@ $wpcc_mode_cards = [
 			<?php endforeach; ?>
 			</div>
 		</fieldset>
-		<?php submit_button( __( 'Save', 'wp-command-center' ) ); ?>
+		<?php submit_button( __( 'Save', 'ai-command-center' ) ); ?>
 	</form>
 	<script>
 	(function () {
 		var form = document.getElementById( 'wpcc-security-mode-form' );
 		if ( ! form ) { return; }
-		var warn = <?php echo wp_json_encode( __( 'This turns off the approval step. An AI assistant will be able to change this site immediately, with no review. Continue?', 'wp-command-center' ) ); ?>;
+		var warn = <?php echo wp_json_encode( __( 'This turns off the approval step. An AI assistant will be able to change this site immediately, with no review. Continue?', 'ai-command-center' ) ); ?>;
 		var devValue = <?php echo wp_json_encode( SecurityModeManager::MODE_DEVELOPER ); ?>;
 		var wasDev = <?php echo wp_json_encode( $is_dev ); ?>;
 		form.addEventListener( 'submit', function ( e ) {
@@ -266,25 +266,25 @@ $wpcc_mode_cards = [
 	})();
 	</script>
 
-	<h2 style="margin-top:32px;padding-top:20px;border-top:1px solid #dcdcde;font-size:15px;"><?php esc_html_e( 'If you delete this plugin', 'wp-command-center' ); ?></h2>
+	<h2 style="margin-top:32px;padding-top:20px;border-top:1px solid #dcdcde;font-size:15px;"><?php esc_html_e( 'If you delete this plugin', 'ai-command-center' ); ?></h2>
 	<form method="post">
 		<?php wp_nonce_field( 'wpcc_settings' ); ?>
 		<input type="hidden" name="wpcc_action" value="set_uninstall_policy" />
 		<p class="description" style="max-width:620px;font-size:13px;">
-			<?php esc_html_e( 'By default your change history and audit trail are kept, in case you still need the record of what happened on this site. Tick this only if you want everything removed.', 'wp-command-center' ); ?>
+			<?php esc_html_e( 'By default your change history and audit trail are kept, in case you still need the record of what happened on this site. Tick this only if you want everything removed.', 'ai-command-center' ); ?>
 		</p>
 		<label style="display:block;margin:10px 0;">
 			<input type="checkbox" name="wpcc_delete_data_on_uninstall" value="1" <?php checked( (bool) get_option( 'wpcc_delete_data_on_uninstall', false ) ); ?> />
-			<?php esc_html_e( 'Also delete all WP Command Center data when the plugin is deleted', 'wp-command-center' ); ?>
+			<?php esc_html_e( 'Also delete all WP Command Center data when the plugin is deleted', 'ai-command-center' ); ?>
 		</label>
-		<?php submit_button( __( 'Save', 'wp-command-center' ), 'secondary', 'submit', false ); ?>
+		<?php submit_button( __( 'Save', 'ai-command-center' ), 'secondary', 'submit', false ); ?>
 	</form>
 
 	<p class="description" style="margin-top:24px;padding-top:16px;border-top:1px solid #dcdcde;font-size:13px;">
 		<?php
 		printf(
 			/* translators: %1$s, %2$s: opening/closing link tags for Access; %3$s, %4$s: for History */
-			esc_html__( 'Access tokens and what each one is allowed to do are managed in %1$sConnections%2$s. Everything that has already changed is listed in %3$sChanges%4$s.', 'wp-command-center' ),
+			esc_html__( 'Access tokens and what each one is allowed to do are managed in %1$sConnections%2$s. Everything that has already changed is listed in %3$sChanges%4$s.', 'ai-command-center' ),
 			'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=tokens' ) ) . '">',
 			'</a>',
 			'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-history' ) ) . '">',

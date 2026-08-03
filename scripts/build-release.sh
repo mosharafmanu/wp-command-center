@@ -9,13 +9,13 @@
 # default.
 #
 # Usage:  ./scripts/build-release.sh [output-dir]
-# Output: <output-dir>/wp-command-center-<version>.zip  (default: ./build)
+# Output: <output-dir>/ai-command-center-<version>.zip  (default: ./build)
 
 set -euo pipefail
 
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 OUT_DIR="${1:-$ROOT/build}"
-SLUG="wp-command-center"
+SLUG="ai-command-center"
 
 # Single source of truth for the version: the plugin header.
 VERSION="$( grep -m1 '^ \* Version:' "$ROOT/$SLUG.php" | sed -E 's/.*Version:[[:space:]]*//' | tr -d '[:space:]' )"
@@ -84,9 +84,9 @@ done < <( find "$DEST" -type f \( -name '*.md' -o -name 'composer.json' \
   -o -name 'openapi.json' -o -name '*.sh' -o -name 'phpcs.xml*' \) )
 
 # No developer machine paths left in shipped code. These are always a mistake.
-if grep -rIlE '/Users/|/home/[a-z]+/|AMPPS|MAMP|XAMPP|wp-content/plugins/wp-command-center/' "$DEST" >/dev/null 2>&1; then
+if grep -rIlE '/Users/|/home/[a-z]+/|AMPPS|MAMP|XAMPP|wp-content/plugins/ai-command-center/' "$DEST" >/dev/null 2>&1; then
   echo "ERROR: developer filesystem paths found in package:" >&2
-  grep -rInE '/Users/|/home/[a-z]+/|AMPPS|MAMP|XAMPP|wp-content/plugins/wp-command-center/' "$DEST" | sed "s|$DEST/|  |" >&2
+  grep -rInE '/Users/|/home/[a-z]+/|AMPPS|MAMP|XAMPP|wp-content/plugins/ai-command-center/' "$DEST" | sed "s|$DEST/|  |" >&2
   fail=1
 fi
 

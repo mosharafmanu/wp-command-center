@@ -60,14 +60,14 @@ final class ProposalApplyService {
 		// 1. Load.
 		$proposal = $this->store->get( $proposal_id );
 		if ( ! $proposal ) {
-			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
 		}
 
 		// 2. Verify draft (direct apply only acts on a draft).
 		if ( ProposalStore::STATUS_DRAFT !== $proposal['status'] ) {
 			return new \WP_Error(
 				'wpcc_proposal_not_draft',
-				sprintf( /* translators: %s: value */ __( 'Only a draft proposal can be applied (current: %s).', 'wp-command-center' ), (string) $proposal['status'] )
+				sprintf( /* translators: %s: value */ __( 'Only a draft proposal can be applied (current: %s).', 'ai-command-center' ), (string) $proposal['status'] )
 			);
 		}
 
@@ -106,7 +106,7 @@ final class ProposalApplyService {
 		if ( $outcome->is_gated() ) {
 			$request_id = $outcome->request_id();
 			if ( '' === $request_id ) {
-				return new \WP_Error( 'wpcc_apply_gated_no_request', __( 'Apply was gated for approval but no request id was returned.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_apply_gated_no_request', __( 'Apply was gated for approval but no request id was returned.', 'ai-command-center' ) );
 			}
 			return $this->store->mark_pending_approval( $proposal_id, $request_id );
 		}
@@ -128,7 +128,7 @@ final class ProposalApplyService {
 			// proposal is not left in a false draft state.
 			$error = [
 				'code'    => 'wpcc_change_id_unresolved',
-				'message' => __( 'Apply succeeded but no change record was found to attribute it.', 'wp-command-center' ),
+				'message' => __( 'Apply succeeded but no change record was found to attribute it.', 'ai-command-center' ),
 			];
 			$this->store->mark_failed( $proposal_id, $error );
 			return new \WP_Error( $error['code'], $error['message'] );
@@ -147,7 +147,7 @@ final class ProposalApplyService {
 		$raw   = ( '' !== $final ) ? $final : (string) ( $proposal['payload_json'] ?? '' );
 		$decoded = json_decode( $raw, true );
 		if ( ! is_array( $decoded ) ) {
-			return new \WP_Error( 'wpcc_proposal_payload_invalid', __( 'Proposal payload is not a valid object.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_payload_invalid', __( 'Proposal payload is not a valid object.', 'ai-command-center' ) );
 		}
 		return $decoded;
 	}

@@ -49,15 +49,15 @@ final class FileAccessApi {
 		}
 
 		if ( is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'ai-command-center' ) );
 		}
 
 		if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'ai-command-center' ) );
 		}
 
 		if ( $this->is_binary( $real ) ) {
-			return new \WP_Error( 'wpcc_binary_file', __( 'Binary files cannot be previewed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_binary_file', __( 'Binary files cannot be previewed.', 'ai-command-center' ) );
 		}
 
 		$total_bytes = (int) filesize( $real );
@@ -283,11 +283,11 @@ final class FileAccessApi {
 		}
 
 		if ( is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'ai-command-center' ) );
 		}
 
 		if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'ai-command-center' ) );
 		}
 
 		return [
@@ -329,7 +329,7 @@ final class FileAccessApi {
 		}
 
 		if ( ! is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_not_a_directory', __( 'The requested path is not a directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_a_directory', __( 'The requested path is not a directory.', 'ai-command-center' ) );
 		}
 
 		$entries = [];

@@ -178,7 +178,7 @@ final class BuiltinAiSettings {
 			return [
 				'type'    => 'warning',
 				/* translators: %s: tool name */
-				'message' => sprintf( __( '%s is controlled by your site configuration and can’t be changed here.', 'wp-command-center' ), $label ),
+				'message' => sprintf( __( '%s is controlled by your site configuration and can’t be changed here.', 'ai-command-center' ), $label ),
 			];
 		}
 		if ( self::set( $key, $on ) ) {
@@ -189,13 +189,13 @@ final class BuiltinAiSettings {
 		}
 		if ( ! $on ) {
 			/* translators: %s: tool name */
-			return [ 'type' => 'success', 'message' => sprintf( __( '%s is now turned off.', 'wp-command-center' ), $label ) ];
+			return [ 'type' => 'success', 'message' => sprintf( __( '%s is now turned off.', 'ai-command-center' ), $label ) ];
 		}
 		if ( ! AdoptionStatus::ai_configured() ) {
 			/* translators: %s: tool name */
-			return [ 'type' => 'success', 'message' => sprintf( __( '%s is on. Connect an AI provider to start generating.', 'wp-command-center' ), $label ) ];
+			return [ 'type' => 'success', 'message' => sprintf( __( '%s is on. Connect an AI provider to start generating.', 'ai-command-center' ), $label ) ];
 		}
 		/* translators: %s: tool name */
-		return [ 'type' => 'success', 'message' => sprintf( __( '%s is on and ready.', 'wp-command-center' ), $label ) ];
+		return [ 'type' => 'success', 'message' => sprintf( __( '%s is on and ready.', 'ai-command-center' ), $label ) ];
 	}
 }

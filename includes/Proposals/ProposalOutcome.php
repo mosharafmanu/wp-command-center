@@ -55,7 +55,7 @@ final class ProposalOutcome {
 		if ( ! is_array( $envelope ) ) {
 			return new self( self::KIND_HARD_FAILURE, '', [
 				'code'    => 'wpcc_apply_failed',
-				'message' => __( 'Apply failed (no result).', 'wp-command-center' ),
+				'message' => __( 'Apply failed (no result).', 'ai-command-center' ),
 			] );
 		}
 
@@ -90,17 +90,17 @@ final class ProposalOutcome {
 		if ( ! empty( $first ) ) {
 			return [
 				'code'    => (string) ( $first['code'] ?? 'wpcc_apply_failed' ),
-				'message' => (string) ( $first['message'] ?? __( 'Apply failed.', 'wp-command-center' ) ),
+				'message' => (string) ( $first['message'] ?? __( 'Apply failed.', 'ai-command-center' ) ),
 			];
 		}
 		// (b) In-band manager error: result.error=true with code/message.
 		if ( ! empty( $inner['error'] ) ) {
 			return [
 				'code'    => (string) ( $inner['code'] ?? 'wpcc_apply_failed' ),
-				'message' => (string) ( $inner['message'] ?? __( 'Apply failed.', 'wp-command-center' ) ),
+				'message' => (string) ( $inner['message'] ?? __( 'Apply failed.', 'ai-command-center' ) ),
 			];
 		}
-		return [ 'code' => 'wpcc_apply_failed', 'message' => __( 'Apply failed.', 'wp-command-center' ) ];
+		return [ 'code' => 'wpcc_apply_failed', 'message' => __( 'Apply failed.', 'ai-command-center' ) ];
 	}
 
 	public function kind(): string { return $this->kind; }

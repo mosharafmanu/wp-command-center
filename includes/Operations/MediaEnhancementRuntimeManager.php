@@ -746,10 +746,10 @@ final class MediaEnhancementRuntimeManager {
 		$id   = (int) ( $p['media_id'] ?? $p['attachment_id'] ?? 0 );
 		$post = $id ? get_post( $id ) : null;
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 		if ( ! wp_attachment_is_image( $id ) ) {
-			return new \WP_Error( 'wpcc_not_an_image', __( 'Attachment is not an image.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_an_image', __( 'Attachment is not an image.', 'ai-command-center' ) );
 		}
 		return $id;
 	}
@@ -866,7 +866,7 @@ final class MediaEnhancementRuntimeManager {
 	private function do_regenerate( int $id, string $mode, string $batch_id, array $cx ) {
 		$original = get_attached_file( $id );
 		if ( ! $original || ! is_file( $original ) ) {
-			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no original file on disk.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no original file on disk.', 'ai-command-center' ) );
 		}
 
 		$before    = $this->classify_sizes( $id );
@@ -882,14 +882,14 @@ final class MediaEnhancementRuntimeManager {
 				'no_action'   => true,
 				'regenerated' => [],
 				'skipped'     => $before['not_applicable'],
-				'message'     => __( 'No regeneration required; all applicable sizes are present.', 'wp-command-center' ),
+				'message'     => __( 'No regeneration required; all applicable sizes are present.', 'ai-command-center' ),
 			];
 		}
 
 		// Snapshot BEFORE any mutation; abort if it cannot be captured.
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'thumbnail_regenerate' );
 		if ( is_wp_error( $snapshot ) ) {
-			return new \WP_Error( 'wpcc_thumbnail_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before regeneration: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_thumbnail_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before regeneration: %s', 'ai-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 		$before_files = $this->size_files_abs( $id );
@@ -901,7 +901,7 @@ final class MediaEnhancementRuntimeManager {
 			if ( is_wp_error( $new_meta ) || ! is_array( $new_meta ) ) {
 				( new MediaSnapshot() )->restore( $snapshot_id );
 				( new MediaSnapshot() )->delete( $snapshot_id );
-				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', __( 'Regeneration failed to produce metadata; restored pre-regeneration state.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', __( 'Regeneration failed to produce metadata; restored pre-regeneration state.', 'ai-command-center' ) );
 			}
 			wp_update_attachment_metadata( $id, $new_meta );
 		} else {
@@ -909,7 +909,7 @@ final class MediaEnhancementRuntimeManager {
 			if ( is_wp_error( $editor ) ) {
 				( new MediaSnapshot() )->restore( $snapshot_id );
 				( new MediaSnapshot() )->delete( $snapshot_id );
-				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( /* translators: %s: value */ __( 'No usable image editor: %s; restored pre-regeneration state.', 'wp-command-center' ), $editor->get_error_message() ) );
+				return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( /* translators: %s: value */ __( 'No usable image editor: %s; restored pre-regeneration state.', 'ai-command-center' ), $editor->get_error_message() ) );
 			}
 			$to_make = [];
 			foreach ( $targets as $name ) {
@@ -937,7 +937,7 @@ final class MediaEnhancementRuntimeManager {
 			( new MediaSnapshot() )->restore( $snapshot_id );
 			$this->delete_created_files( $before_files, $id );
 			( new MediaSnapshot() )->delete( $snapshot_id );
-			return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( /* translators: %s: value */ __( 'Regeneration did not produce: %s. Restored pre-regeneration state.', 'wp-command-center' ), implode( ', ', $still_missing ) ) );
+			return new \WP_Error( 'wpcc_thumbnail_regenerate_failed', sprintf( /* translators: %s: value */ __( 'Regeneration did not produce: %s. Restored pre-regeneration state.', 'ai-command-center' ), implode( ', ', $still_missing ) ) );
 		}
 
 		$created     = array_values( array_diff( $this->size_files_abs( $id ), $before_files ) );
@@ -970,7 +970,7 @@ final class MediaEnhancementRuntimeManager {
 	public function rollback( array $payload, array $context = [] ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'ai-command-center' ) );
 		}
 
 		$store = get_option( self::ROLLBACK_STORE, [] );
@@ -984,10 +984,10 @@ final class MediaEnhancementRuntimeManager {
 			}
 		}
 		if ( null === $record ) {
-			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 		}
 		if ( ! empty( $record['rollback_applied'] ) ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 		}
 
 		$media_id = (int) $record['media_id'];
@@ -1198,7 +1198,7 @@ final class MediaEnhancementRuntimeManager {
 	 */
 	private function webp_generate( array $p, array $cx = [] ): array|\WP_Error {
 		if ( ! $this->webp_encode_available() ) {
-			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'WebP encoding is not available on this server (no GD/Imagick WebP support).', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'WebP encoding is not available on this server (no GD/Imagick WebP support).', 'ai-command-center' ) );
 		}
 		$id = $this->resolve_image_id( $p );
 		if ( is_wp_error( $id ) ) {
@@ -1219,7 +1219,7 @@ final class MediaEnhancementRuntimeManager {
 	 */
 	private function webp_generate_batch( array $p, array $cx = [] ): array|\WP_Error {
 		if ( ! $this->webp_encode_available() ) {
-			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'WebP encoding is not available on this server (no GD/Imagick WebP support).', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'WebP encoding is not available on this server (no GD/Imagick WebP support).', 'ai-command-center' ) );
 		}
 
 		$limit  = max( 1, min( self::BATCH_MAX, isset( $p['limit'] ) ? (int) $p['limit'] : self::BATCH_DEFAULT ) );
@@ -1287,13 +1287,13 @@ final class MediaEnhancementRuntimeManager {
 	private function do_webp_generate( int $id, string $batch_id, array $cx ) {
 		$mime = (string) get_post_mime_type( $id );
 		if ( ! in_array( $mime, self::WEBP_SOURCE_MIMES, true ) ) {
-			return new \WP_Error( 'wpcc_webp_unsupported_mime', sprintf( /* translators: %s: value */ __( 'WebP cannot be generated from this mime type (%s); JPEG/PNG only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
+			return new \WP_Error( 'wpcc_webp_unsupported_mime', sprintf( /* translators: %s: value */ __( 'WebP cannot be generated from this mime type (%s); JPEG/PNG only.', 'ai-command-center' ), $mime ?: 'unknown' ) );
 		}
 
 		$files = $this->attachment_image_files( $id );
 		$original = get_attached_file( $id );
 		if ( empty( $files ) || ! $original || ! is_file( $original ) ) {
-			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no source files on disk to convert.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no source files on disk to convert.', 'ai-command-center' ) );
 		}
 
 		// Targets = image files without an existing .webp sibling (no duplicates).
@@ -1313,14 +1313,14 @@ final class MediaEnhancementRuntimeManager {
 				'generated'        => [],
 				'skipped_existing' => $existing,
 				'count_generated'  => 0,
-				'message'          => __( 'WebP already present for all image files.', 'wp-command-center' ),
+				'message'          => __( 'WebP already present for all image files.', 'ai-command-center' ),
 			];
 		}
 
 		// Snapshot before any write (defensive; originals are never modified).
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'webp_generate' );
 		if ( is_wp_error( $snapshot ) ) {
-			return new \WP_Error( 'wpcc_webp_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before WebP generation: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_webp_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before WebP generation: %s', 'ai-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 
@@ -1350,7 +1350,7 @@ final class MediaEnhancementRuntimeManager {
 				if ( is_file( $c ) ) { wp_delete_file( $c ); }
 			}
 			( new MediaSnapshot() )->delete( $snapshot_id );
-			return new \WP_Error( 'wpcc_webp_generate_failed', __( 'No WebP files could be generated; pre-generation state restored.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_webp_generate_failed', __( 'No WebP files could be generated; pre-generation state restored.', 'ai-command-center' ) );
 		}
 
 		$rollback_id = $this->store_rollback( $id, $snapshot_id, $created, 'webp_generate', array_column( $generated, 'role' ), $batch_id, $cx );
@@ -1543,7 +1543,7 @@ final class MediaEnhancementRuntimeManager {
 	 */
 	private function image_optimize( array $p, array $cx = [] ): array|\WP_Error {
 		if ( ! $this->optimize_available() ) {
-			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'Image optimization is not available on this server (no GD/Imagick).', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'Image optimization is not available on this server (no GD/Imagick).', 'ai-command-center' ) );
 		}
 		$id = $this->resolve_image_id( $p );
 		if ( is_wp_error( $id ) ) {
@@ -1564,7 +1564,7 @@ final class MediaEnhancementRuntimeManager {
 	 */
 	private function image_optimize_batch( array $p, array $cx = [] ): array|\WP_Error {
 		if ( ! $this->optimize_available() ) {
-			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'Image optimization is not available on this server (no GD/Imagick).', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_image_lib_unavailable', __( 'Image optimization is not available on this server (no GD/Imagick).', 'ai-command-center' ) );
 		}
 		$quality = $this->clamp_quality( $p );
 		$limit   = max( 1, min( self::BATCH_MAX, isset( $p['limit'] ) ? (int) $p['limit'] : self::BATCH_DEFAULT ) );
@@ -1637,12 +1637,12 @@ final class MediaEnhancementRuntimeManager {
 	private function do_optimize( int $id, int $quality, string $batch_id, array $cx ) {
 		$mime = (string) get_post_mime_type( $id );
 		if ( ! in_array( $mime, self::OPTIMIZE_SOURCE_MIMES, true ) ) {
-			return new \WP_Error( 'wpcc_optimize_unsupported_mime', sprintf( /* translators: %s: value */ __( 'Image optimization does not support this mime type (%s); JPEG/PNG/WebP only.', 'wp-command-center' ), $mime ?: 'unknown' ) );
+			return new \WP_Error( 'wpcc_optimize_unsupported_mime', sprintf( /* translators: %s: value */ __( 'Image optimization does not support this mime type (%s); JPEG/PNG/WebP only.', 'ai-command-center' ), $mime ?: 'unknown' ) );
 		}
 		$files    = $this->attachment_image_files( $id );
 		$original = get_attached_file( $id );
 		if ( empty( $files ) || ! $original || ! is_file( $original ) ) {
-			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no source files on disk to optimize.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no source files on disk to optimize.', 'ai-command-center' ) );
 		}
 
 		// Phase 1: re-encode each file to a temp; measure. Originals untouched.
@@ -1692,7 +1692,7 @@ final class MediaEnhancementRuntimeManager {
 				'skipped'     => $skipped,
 				'failed'      => $failed,
 				'bytes_saved' => 0,
-				'message'     => __( 'No significant savings; originals left unchanged.', 'wp-command-center' ),
+				'message'     => __( 'No significant savings; originals left unchanged.', 'ai-command-center' ),
 			];
 		}
 
@@ -1700,7 +1700,7 @@ final class MediaEnhancementRuntimeManager {
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'image_optimize' );
 		if ( is_wp_error( $snapshot ) ) {
 			foreach ( $plan as $p ) { if ( is_file( $p['tmp'] ) ) { wp_delete_file( $p['tmp'] ); } }
-			return new \WP_Error( 'wpcc_optimize_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before optimization: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_optimize_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before optimization: %s', 'ai-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 
@@ -1723,7 +1723,7 @@ final class MediaEnhancementRuntimeManager {
 		if ( empty( $optimized ) ) {
 			( new MediaSnapshot() )->restore( $snapshot_id );
 			( new MediaSnapshot() )->delete( $snapshot_id );
-			return new \WP_Error( 'wpcc_optimize_failed', __( 'No files could be optimized; pre-optimization state restored.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_optimize_failed', __( 'No files could be optimized; pre-optimization state restored.', 'ai-command-center' ) );
 		}
 
 		// Refresh recorded file sizes (rollback restores prior metadata via snapshot).
@@ -1943,7 +1943,7 @@ final class MediaEnhancementRuntimeManager {
 		$id   = (int) ( $p['media_id'] ?? $p['attachment_id'] ?? 0 );
 		$post = $id ? get_post( $id ) : null;
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 		return $id;
 	}
@@ -1971,13 +1971,13 @@ final class MediaEnhancementRuntimeManager {
 		// (4) Hard-exclude protected categories.
 		$refused = $this->cleanup_exclusion( $id, $classification );
 		if ( null !== $refused ) {
-			return new \WP_Error( 'wpcc_media_cleanup_refused', sprintf( /* translators: %s: value */ __( 'Cleanup refused: %s. Nothing was changed.', 'wp-command-center' ), $refused ) );
+			return new \WP_Error( 'wpcc_media_cleanup_refused', sprintf( /* translators: %s: value */ __( 'Cleanup refused: %s. Nothing was changed.', 'ai-command-center' ), $refused ) );
 		}
 
 		// Snapshot BEFORE any mutation — the real reversibility guarantee.
 		$snapshot = ( new MediaSnapshot() )->capture( $id, 'unused_media_cleanup' );
 		if ( is_wp_error( $snapshot ) ) {
-			return new \WP_Error( 'wpcc_media_cleanup_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before cleanup: %s', 'wp-command-center' ), $snapshot->get_error_message() ) );
+			return new \WP_Error( 'wpcc_media_cleanup_snapshot_failed', sprintf( /* translators: %s: value */ __( 'Could not snapshot the attachment before cleanup: %s', 'ai-command-center' ), $snapshot->get_error_message() ) );
 		}
 		$snapshot_id = $snapshot['id'];
 
@@ -1998,7 +1998,7 @@ final class MediaEnhancementRuntimeManager {
 			delete_post_meta( $id, '_wp_trash_meta_status' );
 			delete_post_meta( $id, '_wp_trash_meta_time' );
 			( new MediaSnapshot() )->delete( $snapshot_id );
-			return new \WP_Error( 'wpcc_media_cleanup_failed', __( 'Could not trash the attachment; pre-cleanup state restored.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_cleanup_failed', __( 'Could not trash the attachment; pre-cleanup state restored.', 'ai-command-center' ) );
 		}
 		$snap_ok  = ( new MediaSnapshot() )->verify( $snapshot_id );
 		$verified = is_array( $snap_ok ) && ! empty( $snap_ok['valid'] );

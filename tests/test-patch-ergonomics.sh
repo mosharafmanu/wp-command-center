@@ -29,7 +29,7 @@ pm(){ curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: a
 
 # A harmless append edit (preview/create never write to disk).
 DANGER_FILE="themes/hello-elementor/functions.php"
-SAFE_FILE="plugins/wp-command-center/readme.txt"
+SAFE_FILE="plugins/ai-command-center/readme.txt"
 APPEND='\n// wpcc 105.6 ergonomics probe (never applied)\n'
 
 echo "== 1. patch_preview on a HIGH-RISK file exposes the confirmation contract =="

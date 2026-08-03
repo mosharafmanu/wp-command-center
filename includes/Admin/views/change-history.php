@@ -43,7 +43,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-history">
-	<h1><?php esc_html_e( 'Changes', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Changes', 'ai-command-center' ); ?></h1>
 
 	<?php
 	// This hero carried two paragraphs and four chips for one idea. Two of the
@@ -66,23 +66,23 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>">&larr; <?php esc_html_e( 'Back to Changes', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>">&larr; <?php esc_html_e( 'Back to Changes', 'ai-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-history-detail" data-change-id="<?php echo esc_attr( $view_id ); ?>">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'wp-command-center' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'ai-command-center' ); ?></p>
 		</div>
-		<h2 id="wpcc-diff-heading" style="display:none;"><?php esc_html_e( 'What changed', 'wp-command-center' ); ?></h2>
+		<h2 id="wpcc-diff-heading" style="display:none;"><?php esc_html_e( 'What changed', 'ai-command-center' ); ?></h2>
 		<div id="wpcc-history-diff"></div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'wp-command-center' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'sessions' ) ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'wp-command-center' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'reversible' ) ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Can be undone', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'sessions' ) ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'reversible' ) ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Can be undone', 'ai-command-center' ); ?></a>
 		</h2>
 
 		<?php if ( '' !== $session_id ) : ?>
 			<div id="wpcc-session-summary" data-session-id="<?php echo esc_attr( $session_id ); ?>" class="wpcc-session-summary">
-				<span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading session…', 'wp-command-center' ); ?>
+				<span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading session…', 'ai-command-center' ); ?>
 			</div>
 		<?php endif; ?>
 
@@ -102,43 +102,43 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		?>
 		<?php if ( 'sessions' !== $tab ) : ?>
 			<details class="wpcc-history-filtertoggle"<?php echo $wpcc_filters_active ? ' open' : ''; ?>>
-				<summary><?php esc_html_e( 'Filter', 'wp-command-center' ); ?></summary>
+				<summary><?php esc_html_e( 'Filter', 'ai-command-center' ); ?></summary>
 			<form method="get" class="wpcc-history-filters">
 				<input type="hidden" name="page" value="<?php echo esc_attr( $page ); ?>" />
 				<input type="hidden" name="tab" value="<?php echo esc_attr( $tab ); ?>" />
 				<?php if ( '' !== $session_id ) : ?>
 					<input type="hidden" name="session_id" value="<?php echo esc_attr( $session_id ); ?>" />
 				<?php endif; ?>
-				<label><?php esc_html_e( 'Area', 'wp-command-center' ); ?>
-					<input type="text" name="runtime" value="<?php echo esc_attr( $f_runtime ); ?>" placeholder="<?php esc_attr_e( 'e.g. seo', 'wp-command-center' ); ?>" />
+				<label><?php esc_html_e( 'Area', 'ai-command-center' ); ?>
+					<input type="text" name="runtime" value="<?php echo esc_attr( $f_runtime ); ?>" placeholder="<?php esc_attr_e( 'e.g. seo', 'ai-command-center' ); ?>" />
 				</label>
-				<label><?php esc_html_e( 'Status', 'wp-command-center' ); ?>
-					<input type="text" name="status" value="<?php echo esc_attr( $f_status ); ?>" placeholder="<?php esc_attr_e( 'e.g. success', 'wp-command-center' ); ?>" />
+				<label><?php esc_html_e( 'Status', 'ai-command-center' ); ?>
+					<input type="text" name="status" value="<?php echo esc_attr( $f_status ); ?>" placeholder="<?php esc_attr_e( 'e.g. success', 'ai-command-center' ); ?>" />
 				</label>
-				<label><?php esc_html_e( 'From', 'wp-command-center' ); ?>
+				<label><?php esc_html_e( 'From', 'ai-command-center' ); ?>
 					<input type="date" name="date_from" value="<?php echo esc_attr( $f_from ); ?>" />
 				</label>
-				<label><?php esc_html_e( 'To', 'wp-command-center' ); ?>
+				<label><?php esc_html_e( 'To', 'ai-command-center' ); ?>
 					<input type="date" name="date_to" value="<?php echo esc_attr( $f_to ); ?>" />
 				</label>
-				<?php submit_button( __( 'Apply', 'wp-command-center' ), 'secondary', '', false ); ?>
-				<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => $page, 'tab' => $tab ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Reset', 'wp-command-center' ); ?></a>
+				<?php submit_button( __( 'Apply', 'ai-command-center' ), 'secondary', '', false ); ?>
+				<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => $page, 'tab' => $tab ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Reset', 'ai-command-center' ); ?></a>
 			</form>
 			</details>
 		<?php endif; ?>
 
 		<div id="wpcc-history-list">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
 		</div>
 		<p id="wpcc-history-more" style="display:none;">
-			<button type="button" class="button" id="wpcc-history-more-btn"><?php esc_html_e( 'Load more', 'wp-command-center' ); ?></button>
+			<button type="button" class="button" id="wpcc-history-more-btn"><?php esc_html_e( 'Load more', 'ai-command-center' ); ?></button>
 		</p>
 	<?php endif; ?>
 </div>
 
 <div id="wpcc-restore-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-restore-title" aria-describedby="wpcc-restore-msg">
 	<div class="wpcc-modal-box" role="document">
-		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Undo change', 'wp-command-center' ); ?></h2>
+		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Undo change', 'ai-command-center' ); ?></h2>
 		<p id="wpcc-restore-msg"></p>
 		<div id="wpcc-restore-highrisk" style="display:none;">
 			<div class="wpcc-restore-warning" id="wpcc-restore-warning" role="alert"></div>
@@ -296,55 +296,55 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		page:       <?php echo wp_json_encode( $page ); ?>
 	};
 	var i18n = {
-		none:        <?php echo wp_json_encode( __( 'None', 'wp-command-center' ) ); ?>,
-		empty:       <?php echo wp_json_encode( __( 'No changes recorded yet. As soon as AI or an app changes this site, every change appears here — with a way to undo it.', 'wp-command-center' ) ); ?>,
-		emptySess:   <?php echo wp_json_encode( __( 'No agent sessions found. Changes made without a session id appear in the Timeline view.', 'wp-command-center' ) ); ?>,
-		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'wp-command-center' ) ); ?>,
-		reversible:  <?php echo wp_json_encode( __( 'Reversible', 'wp-command-center' ) ); ?>,
-		notRev:      <?php echo wp_json_encode( __( 'Not reversible', 'wp-command-center' ) ); ?>,
-		rolledBack:  <?php echo wp_json_encode( __( 'Rolled back', 'wp-command-center' ) ); ?>,
-		changes:     <?php echo wp_json_encode( __( 'changes', 'wp-command-center' ) ); ?>,
-		session:     <?php echo wp_json_encode( __( 'Session', 'wp-command-center' ) ); ?>,
-		changeSets:  <?php echo wp_json_encode( __( 'change-sets', 'wp-command-center' ) ); ?>,
-		allChanges:  <?php echo wp_json_encode( __( 'all changes', 'wp-command-center' ) ); ?>,
-		view:        <?php echo wp_json_encode( __( 'View', 'wp-command-center' ) ); ?>,
-		actor:       <?php echo wp_json_encode( __( 'Actor', 'wp-command-center' ) ); ?>,
-		restore:     <?php echo wp_json_encode( __( 'Undo', 'wp-command-center' ) ); ?>,
-		restoreQ:    <?php echo wp_json_encode( __( 'Undo this change? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'wp-command-center' ) ); ?>,
+		none:        <?php echo wp_json_encode( __( 'None', 'ai-command-center' ) ); ?>,
+		empty:       <?php echo wp_json_encode( __( 'No changes recorded yet. As soon as AI or an app changes this site, every change appears here — with a way to undo it.', 'ai-command-center' ) ); ?>,
+		emptySess:   <?php echo wp_json_encode( __( 'No agent sessions found. Changes made without a session id appear in the Timeline view.', 'ai-command-center' ) ); ?>,
+		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'ai-command-center' ) ); ?>,
+		reversible:  <?php echo wp_json_encode( __( 'Reversible', 'ai-command-center' ) ); ?>,
+		notRev:      <?php echo wp_json_encode( __( 'Not reversible', 'ai-command-center' ) ); ?>,
+		rolledBack:  <?php echo wp_json_encode( __( 'Rolled back', 'ai-command-center' ) ); ?>,
+		changes:     <?php echo wp_json_encode( __( 'changes', 'ai-command-center' ) ); ?>,
+		session:     <?php echo wp_json_encode( __( 'Session', 'ai-command-center' ) ); ?>,
+		changeSets:  <?php echo wp_json_encode( __( 'change-sets', 'ai-command-center' ) ); ?>,
+		allChanges:  <?php echo wp_json_encode( __( 'all changes', 'ai-command-center' ) ); ?>,
+		view:        <?php echo wp_json_encode( __( 'View', 'ai-command-center' ) ); ?>,
+		actor:       <?php echo wp_json_encode( __( 'Actor', 'ai-command-center' ) ); ?>,
+		restore:     <?php echo wp_json_encode( __( 'Undo', 'ai-command-center' ) ); ?>,
+		restoreQ:    <?php echo wp_json_encode( __( 'Undo this change? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'ai-command-center' ) ); ?>,
 		/* translators: %s: plain-language name of the change being undone */
-		restoreQNamed: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Undo “%s”? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'wp-command-center' ) ); ?>,
-		restoreOk:   <?php echo wp_json_encode( __( 'Change undone. Reloading…', 'wp-command-center' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This undo is waiting for your approval — nothing has changed yet.', 'wp-command-center' ) ); ?>,
-		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'wp-command-center' ) ); ?>,
-		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'wp-command-center' ) ); ?>,
-		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'wp-command-center' ) ); ?>,
-		genericFail: <?php echo wp_json_encode( __( 'Restore failed.', 'wp-command-center' ) ); ?>,
-		openApprove: <?php echo wp_json_encode( __( 'Review and approve it', 'wp-command-center' ) ); ?>,
-		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'wp-command-center' ) ); ?>,
-		close:       <?php echo wp_json_encode( __( 'Close', 'wp-command-center' ) ); ?>,
-		emptyRev:    <?php echo wp_json_encode( __( 'Nothing to undo yet. Changes that can be reversed will appear here.', 'wp-command-center' ) ); ?>,
-		emptyFiltered: <?php echo wp_json_encode( __( 'No changes match these filters. Your history is intact — only this view is narrowed.', 'wp-command-center' ) ); ?>,
-		emptyTitle:  <?php echo wp_json_encode( __( 'Nothing has changed yet', 'wp-command-center' ) ); ?>,
-		clearFilters:  <?php echo wp_json_encode( __( 'Clear filters', 'wp-command-center' ) ); ?>,
-		restoreOne:  <?php echo wp_json_encode( __( 'Undo this change', 'wp-command-center' ) ); ?>,
-		colRuntimes: <?php echo wp_json_encode( __( 'Runtimes', 'wp-command-center' ) ); ?>,
-		colLastAct:  <?php echo wp_json_encode( __( 'Last activity', 'wp-command-center' ) ); ?>,
-		dRuntimes:   <?php echo wp_json_encode( __( 'runtimes', 'wp-command-center' ) ); ?>,
-		lChangeId:   <?php echo wp_json_encode( __( 'Change ID', 'wp-command-center' ) ); ?>,
-		lOperation:  <?php echo wp_json_encode( __( 'Operation', 'wp-command-center' ) ); ?>,
-		lRuntime:    <?php echo wp_json_encode( __( 'Runtime', 'wp-command-center' ) ); ?>,
-		lStatus:     <?php echo wp_json_encode( __( 'Status', 'wp-command-center' ) ); ?>,
-		lRisk:       <?php echo wp_json_encode( __( 'Risk level', 'wp-command-center' ) ); ?>,
-		lSource:     <?php echo wp_json_encode( __( 'Source', 'wp-command-center' ) ); ?>,
-		lTarget:     <?php echo wp_json_encode( __( 'Target', 'wp-command-center' ) ); ?>,
-		lReversible: <?php echo wp_json_encode( __( 'Reversible', 'wp-command-center' ) ); ?>,
-		lKind:       <?php echo wp_json_encode( __( 'Rollback kind', 'wp-command-center' ) ); ?>,
-		lChangeSet:  <?php echo wp_json_encode( __( 'Change-set', 'wp-command-center' ) ); ?>,
-		lWhen:       <?php echo wp_json_encode( __( 'When', 'wp-command-center' ) ); ?>,
-		lCounts:     <?php echo wp_json_encode( __( 'Counts', 'wp-command-center' ) ); ?>,
+		restoreQNamed: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Undo “%s”? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'ai-command-center' ) ); ?>,
+		restoreOk:   <?php echo wp_json_encode( __( 'Change undone. Reloading…', 'ai-command-center' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This undo is waiting for your approval — nothing has changed yet.', 'ai-command-center' ) ); ?>,
+		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'ai-command-center' ) ); ?>,
+		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'ai-command-center' ) ); ?>,
+		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'ai-command-center' ) ); ?>,
+		genericFail: <?php echo wp_json_encode( __( 'Restore failed.', 'ai-command-center' ) ); ?>,
+		openApprove: <?php echo wp_json_encode( __( 'Review and approve it', 'ai-command-center' ) ); ?>,
+		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'ai-command-center' ) ); ?>,
+		close:       <?php echo wp_json_encode( __( 'Close', 'ai-command-center' ) ); ?>,
+		emptyRev:    <?php echo wp_json_encode( __( 'Nothing to undo yet. Changes that can be reversed will appear here.', 'ai-command-center' ) ); ?>,
+		emptyFiltered: <?php echo wp_json_encode( __( 'No changes match these filters. Your history is intact — only this view is narrowed.', 'ai-command-center' ) ); ?>,
+		emptyTitle:  <?php echo wp_json_encode( __( 'Nothing has changed yet', 'ai-command-center' ) ); ?>,
+		clearFilters:  <?php echo wp_json_encode( __( 'Clear filters', 'ai-command-center' ) ); ?>,
+		restoreOne:  <?php echo wp_json_encode( __( 'Undo this change', 'ai-command-center' ) ); ?>,
+		colRuntimes: <?php echo wp_json_encode( __( 'Runtimes', 'ai-command-center' ) ); ?>,
+		colLastAct:  <?php echo wp_json_encode( __( 'Last activity', 'ai-command-center' ) ); ?>,
+		dRuntimes:   <?php echo wp_json_encode( __( 'runtimes', 'ai-command-center' ) ); ?>,
+		lChangeId:   <?php echo wp_json_encode( __( 'Change ID', 'ai-command-center' ) ); ?>,
+		lOperation:  <?php echo wp_json_encode( __( 'Operation', 'ai-command-center' ) ); ?>,
+		lRuntime:    <?php echo wp_json_encode( __( 'Runtime', 'ai-command-center' ) ); ?>,
+		lStatus:     <?php echo wp_json_encode( __( 'Status', 'ai-command-center' ) ); ?>,
+		lRisk:       <?php echo wp_json_encode( __( 'Risk level', 'ai-command-center' ) ); ?>,
+		lSource:     <?php echo wp_json_encode( __( 'Source', 'ai-command-center' ) ); ?>,
+		lTarget:     <?php echo wp_json_encode( __( 'Target', 'ai-command-center' ) ); ?>,
+		lReversible: <?php echo wp_json_encode( __( 'Reversible', 'ai-command-center' ) ); ?>,
+		lKind:       <?php echo wp_json_encode( __( 'Rollback kind', 'ai-command-center' ) ); ?>,
+		lChangeSet:  <?php echo wp_json_encode( __( 'Change-set', 'ai-command-center' ) ); ?>,
+		lWhen:       <?php echo wp_json_encode( __( 'When', 'ai-command-center' ) ); ?>,
+		lCounts:     <?php echo wp_json_encode( __( 'Counts', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d updated, %3$d skipped, %4$d errors */
-		countsFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number, %4$d: number */ __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'wp-command-center' ) ); ?>,
-		restoreBusy: <?php echo wp_json_encode( __( 'Undoing…', 'wp-command-center' ) ); ?>
+		countsFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number, %4$d: number */ __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'ai-command-center' ) ); ?>,
+		restoreBusy: <?php echo wp_json_encode( __( 'Undoing…', 'ai-command-center' ) ); ?>
 	};
 	var REQUIRED_PHRASE = 'ROLLBACK_CHANGE';
 	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>;

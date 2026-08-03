@@ -78,7 +78,7 @@ PLAN_CREATE=$(api POST /agent/plans "$PLAN_BODY")
 PLAN_ID=$(echo "$PLAN_CREATE" | jq -r '.plan_id // empty')
 api POST "/agent/plans/$PLAN_ID/approve" > /dev/null
 
-FILE_PATH="plugins/wp-command-center/readme.txt"
+FILE_PATH="plugins/ai-command-center/readme.txt"
 ORIGINAL=$(api GET "/files/content?path=$FILE_PATH" | jq -r '.contents // empty')
 if [ -z "$ORIGINAL" ]; then
 	fail "could not read $FILE_PATH"

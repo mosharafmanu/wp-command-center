@@ -58,7 +58,7 @@ final class AnthropicTransport {
 		$model = $request->model();
 
 		if ( '' === $api_key ) {
-			return GenerationResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $model );
+			return GenerationResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'ai-command-center' ), $model );
 		}
 
 		$http_request = new AiHttpRequest(

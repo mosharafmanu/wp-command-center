@@ -85,7 +85,7 @@ pass "plan approved"
 
 # 7. Patch
 # We need a file to patch. Let's use readme.txt which always exists in the plugin.
-FILE_PATH="plugins/wp-command-center/readme.txt"
+FILE_PATH="plugins/ai-command-center/readme.txt"
 # Read original content
 GET_FILE_RESP=$(api GET "/files/content?path=$FILE_PATH")
 ORIGINAL_CONTENT=$(echo "$GET_FILE_RESP" | jq -r '.contents // empty')

@@ -49,11 +49,11 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 		$model = $this->runtime->model( self::DEFAULT_MODEL );
 
 		if ( 'title' !== $kind && 'excerpt' !== $kind ) {
-			return ContentFieldResult::error( 'invalid_kind', __( 'Unknown content field kind.', 'wp-command-center' ), $this->id(), $model );
+			return ContentFieldResult::error( 'invalid_kind', __( 'Unknown content field kind.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		if ( ! $this->runtime->is_configured() ) {
-			return ContentFieldResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $this->id(), $model );
+			return ContentFieldResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		$request = new GenerationRequest(
@@ -70,7 +70,7 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 
 		$value = self::extract_field( $result->text(), $kind );
 		if ( null === $value ) {
-			return ContentFieldResult::error( 'invalid_response', __( 'The provider did not return a valid content field JSON.', 'wp-command-center' ), $this->id(), $model );
+			return ContentFieldResult::error( 'invalid_response', __( 'The provider did not return a valid content field JSON.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		return ContentFieldResult::ok( $value, $this->id(), $model );

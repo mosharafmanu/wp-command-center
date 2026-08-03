@@ -70,7 +70,7 @@ final class OperationExecutor {
 
 		// 1. Validation: Operation exists.
 		if ( ! $operation ) {
-			return $this->fail( $operation_id, 'operation_not_found', __( 'Operation not found in registry.', 'wp-command-center' ) );
+			return $this->fail( $operation_id, 'operation_not_found', __( 'Operation not found in registry.', 'ai-command-center' ) );
 		}
 
 		// 1b. Capability enforcement (enabled by default).
@@ -86,7 +86,7 @@ final class OperationExecutor {
 						'required'     => $validation['required_capability'],
 						'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 					] );
-					return $this->fail( $operation_id, 'wpcc_capability_denied', sprintf( /* translators: %s: value */ __( 'Missing capability: %s', 'wp-command-center' ), $validation['required_capability'] ) );
+					return $this->fail( $operation_id, 'wpcc_capability_denied', sprintf( /* translators: %s: value */ __( 'Missing capability: %s', 'ai-command-center' ), $validation['required_capability'] ) );
 				}
 			}
 		}
@@ -112,7 +112,7 @@ final class OperationExecutor {
 				'wpcc_conflicting_parameters',
 				sprintf(
 					/* translators: 1: canonical parameter name, 2: alias supplied alongside it */
-					__( 'Both %1$s and %2$s were supplied with different values, and they mean the same thing. Send one. Nothing was changed.', 'wp-command-center' ),
+					__( 'Both %1$s and %2$s were supplied with different values, and they mean the same thing. Send one. Nothing was changed.', 'ai-command-center' ),
 					$vocabulary['conflict']['canonical'],
 					$vocabulary['conflict']['alias']
 				)
@@ -180,13 +180,13 @@ final class OperationExecutor {
 					[] !== $declared_actions
 						? sprintf(
 							/* translators: 1: operation id, 2: comma-separated list of valid actions */
-							__( 'An action is required for %1$s. Valid actions: %2$s.', 'wp-command-center' ),
+							__( 'An action is required for %1$s. Valid actions: %2$s.', 'ai-command-center' ),
 							$operation_id,
 							implode( ', ', $declared_actions )
 						)
 						: sprintf(
 							/* translators: %s: operation id */
-							__( 'An action is required for %s.', 'wp-command-center' ),
+							__( 'An action is required for %s.', 'ai-command-center' ),
 							$operation_id
 						)
 				);
@@ -286,7 +286,7 @@ final class OperationExecutor {
 						'wpcc_missing_parameters',
 						sprintf(
 							/* translators: 1: operation id, 2: comma-separated missing parameters, 3: comma-separated required parameters */
-							__( '%1$s cannot run without %2$s. It requires: %3$s. Nothing was queued for approval — a request that cannot execute should not need your decision.', 'wp-command-center' ),
+							__( '%1$s cannot run without %2$s. It requires: %3$s. Nothing was queued for approval — a request that cannot execute should not need your decision.', 'ai-command-center' ),
 							$operation_id,
 							implode( ', ', $missing ),
 							implode( ', ', $required_names )
@@ -403,18 +403,18 @@ final class OperationExecutor {
 				'' !== $needs
 					? sprintf(
 						/* translators: 1: operation id, 2: the integration it requires */
-						__( '%1$s requires %2$s, which is not active on this site.', 'wp-command-center' ),
+						__( '%1$s requires %2$s, which is not active on this site.', 'ai-command-center' ),
 						$operation_id,
 						$needs
 					)
-					: __( 'Operation is not available in the current environment.', 'wp-command-center' )
+					: __( 'Operation is not available in the current environment.', 'ai-command-center' )
 			);
 		}
 
 		// 3. Dispatch to handler.
 		$handler = $this->resolve_handler( $operation_id );
 		if ( ! $handler ) {
-			return $this->fail( $operation_id, 'execution_failed', __( 'Execution logic not yet implemented for this operation.', 'wp-command-center' ) );
+			return $this->fail( $operation_id, 'execution_failed', __( 'Execution logic not yet implemented for this operation.', 'ai-command-center' ) );
 		}
 
 		// PHASE 2 (B2-1 / A-1) — atomic execution claim for request-bound runs. Only
@@ -553,7 +553,7 @@ final class OperationExecutor {
 		// record: 'rejected' for validation-type rejections, 'failed' otherwise.
 		if ( is_array( $result ) && ! empty( $result['error'] ) && isset( $result['code'] ) && is_string( $result['code'] ) ) {
 			$error_code    = (string) $result['code'];
-			$error_message = (string) ( $result['message'] ?? __( 'Operation failed.', 'wp-command-center' ) );
+			$error_message = (string) ( $result['message'] ?? __( 'Operation failed.', 'ai-command-center' ) );
 			$is_rejection  = (bool) preg_match( '/(invalid|missing|unknown|not_found|unsupported|denied|required)/', $error_code );
 			$change_status = $is_rejection ? 'rejected' : 'failed';
 
@@ -629,7 +629,7 @@ final class OperationExecutor {
 			'error_count'   => $apply_failed ? 1 : 0,
 			'error_json'    => $apply_failed ? wp_json_encode( [
 				'code'    => 'wpcc_transactional_apply_failed',
-				'message' => __( 'The change did not apply and was rolled back. The site is unchanged.', 'wp-command-center' ),
+				'message' => __( 'The change did not apply and was rolled back. The site is unchanged.', 'ai-command-center' ),
 			] ) : null,
 			'result_json'   => wp_json_encode( $storable ),
 		] ) );
@@ -735,7 +735,7 @@ final class OperationExecutor {
 				'operation_id' => $operation_id,
 				'error'        => true,
 				'code'         => 'wpcc_rollback_unsupported',
-				'message'      => __( 'Operation does not support rollback.', 'wp-command-center' ),
+				'message'      => __( 'Operation does not support rollback.', 'ai-command-center' ),
 			];
 		}
 		$result = $handler->rollback( $payload, $context );
@@ -886,7 +886,7 @@ final class OperationExecutor {
 
 		$result['message'] = sprintf(
 			/* translators: 1: security mode label, 2: request ID, 3: approval URL */
-			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'wp-command-center' ),
+			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'ai-command-center' ),
 			$mode,
 			$request['request_id'],
 			admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' )
@@ -897,14 +897,14 @@ final class OperationExecutor {
 			$cs = $extra['change_set'];
 			$result['message'] .= ' ' . sprintf(
 				/* translators: 1: file count, 2: paths, 3: modes, 4: added, 5: removed, 6: risk, 7: high-risk suffix */
-				__( 'This single approval applies a change set of %1$d file(s) atomically: %2$s | modes: %3$s | +%4$d/-%5$d lines | risk: %6$s%7$s. All files apply together or none do; one combined rollback is available.', 'wp-command-center' ),
+				__( 'This single approval applies a change set of %1$d file(s) atomically: %2$s | modes: %3$s | +%4$d/-%5$d lines | risk: %6$s%7$s. All files apply together or none do; one combined rollback is available.', 'ai-command-center' ),
 				(int) $cs['file_count'],
 				implode( ', ', (array) $cs['affected_paths'] ),
 				implode( ', ', (array) $cs['modes'] ),
 				(int) $cs['total_lines_added'],
 				(int) $cs['total_lines_removed'],
 				(string) $cs['risk_level'],
-				! empty( $cs['has_high_risk_paths'] ) ? __( ' (HIGH-RISK paths included)', 'wp-command-center' ) : ''
+				! empty( $cs['has_high_risk_paths'] ) ? __( ' (HIGH-RISK paths included)', 'ai-command-center' ) : ''
 			);
 		}
 
@@ -931,8 +931,8 @@ final class OperationExecutor {
 		$required_parameters = [
 			'confirm'                 => true,
 			'confirmation_phrase'     => $descriptor['phrase'],
-			'reason'                  => __( 'a human-readable reason for the deletion', 'wp-command-center' ),
-			$descriptor['target_key'] => __( 'the identifier of the target to delete', 'wp-command-center' ),
+			'reason'                  => __( 'a human-readable reason for the deletion', 'ai-command-center' ),
+			$descriptor['target_key'] => __( 'the identifier of the target to delete', 'ai-command-center' ),
 		];
 
 		return [
@@ -953,7 +953,7 @@ final class OperationExecutor {
 				'required_parameters'   => $required_parameters,
 				'message'               => sprintf(
 					/* translators: 1: confirmation phrase, 2: target parameter name, 3: comma-separated missing fields */
-					__( 'This is a CRITICAL destructive operation. To proceed, resend the request with confirm=true, confirmation_phrase="%1$s", a non-empty reason, and the %2$s of the target. Missing: %3$s.', 'wp-command-center' ),
+					__( 'This is a CRITICAL destructive operation. To proceed, resend the request with confirm=true, confirmation_phrase="%1$s", a non-empty reason, and the %2$s of the target. Missing: %3$s.', 'ai-command-center' ),
 					$descriptor['phrase'],
 					$descriptor['target_key'],
 					implode( ', ', $missing )

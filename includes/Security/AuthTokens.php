@@ -29,8 +29,8 @@ final class AuthTokens {
 
 	public static function scope_label( string $scope ): string {
 		$labels = [
-			self::SCOPE_READ_ONLY => __( 'Read-only', 'wp-command-center' ),
-			self::SCOPE_FULL      => __( 'Full access', 'wp-command-center' ),
+			self::SCOPE_READ_ONLY => __( 'Read-only', 'ai-command-center' ),
+			self::SCOPE_FULL      => __( 'Full access', 'ai-command-center' ),
 		];
 
 		return $labels[ $scope ] ?? $scope;
@@ -97,14 +97,14 @@ final class AuthTokens {
 
 	public static function status_badge( array $token ): string {
 		if ( self::STATUS_REVOKED === $token['status'] ) {
-			return sprintf( '<span class="wpcc-badge wpcc-badge--neutral">%s</span>', esc_html__( 'Revoked', 'wp-command-center' ) );
+			return sprintf( '<span class="wpcc-badge wpcc-badge--neutral">%s</span>', esc_html__( 'Revoked', 'ai-command-center' ) );
 		}
 
 		if ( null !== $token['expires_at'] && $token['expires_at'] < time() ) {
-			return sprintf( '<span class="wpcc-badge wpcc-badge--critical">%s</span>', esc_html__( 'Expired', 'wp-command-center' ) );
+			return sprintf( '<span class="wpcc-badge wpcc-badge--critical">%s</span>', esc_html__( 'Expired', 'ai-command-center' ) );
 		}
 
-		return sprintf( '<span class="wpcc-badge wpcc-badge--good">%s</span>', esc_html__( 'Active', 'wp-command-center' ) );
+		return sprintf( '<span class="wpcc-badge wpcc-badge--good">%s</span>', esc_html__( 'Active', 'ai-command-center' ) );
 	}
 
 	/**
@@ -117,11 +117,11 @@ final class AuthTokens {
 		$label = sanitize_text_field( $label );
 
 		if ( '' === $label ) {
-			return new \WP_Error( 'wpcc_invalid_label', __( 'Please enter a label for this token.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_label', __( 'Please enter a label for this token.', 'ai-command-center' ) );
 		}
 
 		if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_scope', __( 'Invalid token scope.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_scope', __( 'Invalid token scope.', 'ai-command-center' ) );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -201,7 +201,7 @@ final class AuthTokens {
 		$filtered = array_values( array_filter( $manifest, static fn( array $r ): bool => $r['id'] !== $id ) );
 
 		if ( count( $filtered ) === count( $manifest ) ) {
-			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'ai-command-center' ) );
 		}
 
 		$this->write_manifest( $dir, $filtered );
@@ -222,7 +222,7 @@ final class AuthTokens {
 		$raw_token = trim( $raw_token );
 
 		if ( '' === $raw_token ) {
-			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'wp-command-center' ), [ 'status' => 401 ] );
+			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'ai-command-center' ), [ 'status' => 401 ] );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -240,11 +240,11 @@ final class AuthTokens {
 			}
 
 			if ( self::STATUS_ACTIVE !== $record['status'] ) {
-				return new \WP_Error( 'wpcc_token_revoked', __( 'This access token was revoked, so it no longer works. Create a new one in WP Command Center → Settings → Connections and update your assistant configuration.', 'wp-command-center' ), [ 'status' => 401 ] );
+				return new \WP_Error( 'wpcc_token_revoked', __( 'This access token was revoked, so it no longer works. Create a new one in WP Command Center → Settings → Connections and update your assistant configuration.', 'ai-command-center' ), [ 'status' => 401 ] );
 			}
 
 			if ( null !== $record['expires_at'] && $record['expires_at'] < time() ) {
-				return new \WP_Error( 'wpcc_token_expired', __( 'This API token has expired.', 'wp-command-center' ), [ 'status' => 401 ] );
+				return new \WP_Error( 'wpcc_token_expired', __( 'This API token has expired.', 'ai-command-center' ), [ 'status' => 401 ] );
 			}
 
 			$record['last_used_at'] = time();
@@ -254,7 +254,7 @@ final class AuthTokens {
 		}
 		unset( $record );
 
-		return new \WP_Error( 'wpcc_invalid_token', __( 'This access token was not recognised by this site. Check it was copied in full and belongs to this site, or create a new one in WP Command Center → Settings → Connections.', 'wp-command-center' ), [ 'status' => 401 ] );
+		return new \WP_Error( 'wpcc_invalid_token', __( 'This access token was not recognised by this site. Check it was copied in full and belongs to this site, or create a new one in WP Command Center → Settings → Connections.', 'ai-command-center' ), [ 'status' => 401 ] );
 	}
 
 	/**
@@ -280,7 +280,7 @@ final class AuthTokens {
 		unset( $record );
 
 		if ( ! $found ) {
-			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'ai-command-center' ) );
 		}
 
 		$this->write_manifest( $dir, $manifest );
@@ -306,7 +306,7 @@ final class AuthTokens {
 		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
 
 		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the token storage directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the token storage directory.', 'ai-command-center' ) );
 		}
 
 		$this->protect_directory( $dir );

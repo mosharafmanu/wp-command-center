@@ -26,7 +26,7 @@ pj(){ printf '%s' "$1" | jq -r "$2"; }
 pm(){ curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/operations/patch_manage/run"; }
 
 # A safe file (preview never writes). Two distinct appends to the SAME path.
-SAFE_FILE="plugins/wp-command-center/readme.txt"
+SAFE_FILE="plugins/ai-command-center/readme.txt"
 M1="WPCC_SAMEPATH_MARKER_ONE"
 M2="WPCC_SAMEPATH_MARKER_TWO"
 

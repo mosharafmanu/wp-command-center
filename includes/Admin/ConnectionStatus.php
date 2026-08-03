@@ -76,27 +76,27 @@ final class ConnectionStatus {
 	private static function shape( string $state, array $active, ?int $last_used ): array {
 		$ago = null !== $last_used
 			/* translators: %s: human-readable time difference, e.g. "2 hours" */
-			? sprintf( __( '%s ago', 'wp-command-center' ), human_time_diff( $last_used, time() ) )
+			? sprintf( __( '%s ago', 'ai-command-center' ), human_time_diff( $last_used, time() ) )
 			: '';
 
 		switch ( $state ) {
 			case self::STATE_CONNECTED:
-				$label  = __( 'Assistant connected', 'wp-command-center' );
+				$label  = __( 'Assistant connected', 'ai-command-center' );
 				/* translators: %s: how long ago, e.g. "2 hours ago" */
-				$detail = sprintf( __( 'Last request %s.', 'wp-command-center' ), $ago );
+				$detail = sprintf( __( 'Last request %s.', 'ai-command-center' ), $ago );
 				break;
 			case self::STATE_IDLE:
-				$label  = __( 'No recent activity', 'wp-command-center' );
+				$label  = __( 'No recent activity', 'ai-command-center' );
 				/* translators: %s: how long ago, e.g. "3 months ago" */
-				$detail = sprintf( __( 'An assistant last connected %s.', 'wp-command-center' ), $ago );
+				$detail = sprintf( __( 'An assistant last connected %s.', 'ai-command-center' ), $ago );
 				break;
 			case self::STATE_UNUSED:
-				$label  = __( 'Waiting for your assistant', 'wp-command-center' );
-				$detail = __( 'A token is ready, but nothing has connected with it yet. Finish setup in your assistant, then ask it something about this site.', 'wp-command-center' );
+				$label  = __( 'Waiting for your assistant', 'ai-command-center' );
+				$detail = __( 'A token is ready, but nothing has connected with it yet. Finish setup in your assistant, then ask it something about this site.', 'ai-command-center' );
 				break;
 			default:
-				$label  = __( 'Not connected', 'wp-command-center' );
-				$detail = __( 'No access token yet — an assistant needs one to reach this site.', 'wp-command-center' );
+				$label  = __( 'Not connected', 'ai-command-center' );
+				$detail = __( 'No access token yet — an assistant needs one to reach this site.', 'ai-command-center' );
 				break;
 		}
 

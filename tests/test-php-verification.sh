@@ -95,7 +95,7 @@ echo "== 5. Snapshot protection: large-file guard + atomic write + hash fidelity
 SNAP=$(wpe '
 // Snapshot is READ-ONLY on the source; use an existing allowed plugin file
 // (PathGuard permits themes/plugins/mu-plugins only).
-$rel = "plugins/wp-command-center/readme.txt";
+$rel = "plugins/ai-command-center/readme.txt";
 $src = WP_CONTENT_DIR . "/" . $rel;
 $m = new \WPCommandCenter\Rollback\SnapshotManager();
 $ok = $m->create($rel, "105.6 test");

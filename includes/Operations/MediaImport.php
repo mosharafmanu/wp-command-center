@@ -38,23 +38,23 @@ final class MediaImport {
 		$post_id     = (int) ( $params['attach_to_post_id'] ?? 0 );
 
 		if ( empty( $url ) || ! wp_http_validate_url( $url ) ) {
-			return new \WP_Error( 'wpcc_invalid_url', __( 'Invalid or unsafe source URL.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_url', __( 'Invalid or unsafe source URL.', 'ai-command-center' ) );
 		}
 
 		$parsed = wp_parse_url( $url );
 		if ( ! in_array( $parsed['scheme'] ?? '', [ 'http', 'https' ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_url_scheme', __( 'Only HTTP and HTTPS URLs are supported.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_url_scheme', __( 'Only HTTP and HTTPS URLs are supported.', 'ai-command-center' ) );
 		}
 
 		$path_parts = pathinfo( $parsed['path'] ?? '' );
 		$ext        = strtolower( $path_parts['extension'] ?? '' );
 
 		if ( ! in_array( $ext, self::ALLOWED_EXTS, true ) ) {
-			return new \WP_Error( 'wpcc_unsupported_file_extension', sprintf( /* translators: %s: value */ __( 'Unsupported file extension: %s.', 'wp-command-center' ), $ext ) );
+			return new \WP_Error( 'wpcc_unsupported_file_extension', sprintf( /* translators: %s: value */ __( 'Unsupported file extension: %s.', 'ai-command-center' ), $ext ) );
 		}
 
 		if ( ! current_user_can( 'upload_files' ) ) {
-			return new \WP_Error( 'wpcc_insufficient_permissions', __( 'You do not have permission to upload files.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_insufficient_permissions', __( 'You do not have permission to upload files.', 'ai-command-center' ) );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -70,14 +70,14 @@ final class MediaImport {
 		$filesize = filesize( $tmp_file );
 		if ( $filesize > self::MAX_FILE_SIZE ) {
 			wp_delete_file( $tmp_file );
-			return new \WP_Error( 'wpcc_file_too_large', __( 'File exceeds the maximum allowed size of 10MB.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_file_too_large', __( 'File exceeds the maximum allowed size of 10MB.', 'ai-command-center' ) );
 		}
 
 		if ( function_exists( 'mime_content_type' ) ) {
 			$real_mime = mime_content_type( $tmp_file );
 			if ( ! $real_mime || ( ! str_starts_with( $real_mime, 'image/' ) && 'application/pdf' !== $real_mime ) ) {
 				wp_delete_file( $tmp_file );
-				return new \WP_Error( 'wpcc_invalid_mime_type', __( 'Invalid or unsafe file content detected.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_mime_type', __( 'Invalid or unsafe file content detected.', 'ai-command-center' ) );
 			}
 		}
 

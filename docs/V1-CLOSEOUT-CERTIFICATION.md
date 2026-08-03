@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-03
 **Branch:** `release/v1-finalization` (not merged; `main` remains owner-controlled)
-**Artifact:** `build/wp-command-center-1.0.0.zip` — 284 files, 944 KB
+**Artifact:** `build/ai-command-center-1.0.0.zip` — 284 files, 944 KB
 **Programme:** PROGRAM-V1-CLOSEOUT — zero open items before WordPress.org.
 
 This supersedes `V1-RELEASE-CERTIFICATION.md`. One verdict, at the end.

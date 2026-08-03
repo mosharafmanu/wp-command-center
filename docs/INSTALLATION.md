@@ -14,7 +14,7 @@ Fields, Elementor, Contact Form 7, Rank Math or Yoast SEO.
 
 ## Install
 
-**Plugins → Add New → Upload Plugin**, choose `wp-command-center-1.0.0.zip`, install,
+**Plugins → Add New → Upload Plugin**, choose `ai-command-center-1.0.0.zip`, install,
 activate.
 
 Activation:

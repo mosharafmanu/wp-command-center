@@ -32,23 +32,23 @@ if ( ! isset( $wpcc_ai_panes[ $wpcc_ai_active ] ) ) {
 $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 ?>
 <div class="wpcc-settings-ai">
-	<h1><?php esc_html_e( 'Built-in AI', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Built-in AI', 'ai-command-center' ); ?></h1>
 	<p class="description" style="max-width:680px;font-size:14px;">
 		<?php
 		// The second sentence is a consent claim, not decoration: it is the same
 		// promise the readme makes to WordPress.org reviewers, so it has to be on
 		// the screen where a key is entered. It previously lived in the provider
 		// hero that this refinement removed.
-		esc_html_e( 'Optional. Add your own AI provider key here if you want WP Command Center itself to generate content for you. AI stays off until you turn a feature on — adding a key alone changes nothing. You do not need this to connect Claude, Cursor, or any other AI assistant; that works without a key.', 'wp-command-center' );
+		esc_html_e( 'Optional. Add your own AI provider key here if you want WP Command Center itself to generate content for you. AI stays off until you turn a feature on — adding a key alone changes nothing. You do not need this to connect Claude, Cursor, or any other AI assistant; that works without a key.', 'ai-command-center' );
 		?>
 	</p>
 
 	<?php if ( $wpcc_ai_tools_off ) : ?>
 		<p class="wpcc-builtin-note" role="note" style="margin:14px 0;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:680px;font-size:13px;color:#1d2327;">
-			<?php esc_html_e( 'The SEO, Alt Text, and Content tools are not switched on for this site. They appear here once enabled — adding a provider key on its own does not turn them on.', 'wp-command-center' ); ?>
+			<?php esc_html_e( 'The SEO, Alt Text, and Content tools are not switched on for this site. They appear here once enabled — adding a provider key on its own does not turn them on.', 'ai-command-center' ); ?>
 		</p>
 	<?php else : ?>
-		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Built-in AI sections', 'wp-command-center' ); ?>">
+		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Built-in AI sections', 'ai-command-center' ); ?>">
 			<?php foreach ( $wpcc_ai_panes as $wpcc_ai_key => $wpcc_ai_pane ) : ?>
 				<a class="wpcc-cds-subnav__item<?php echo $wpcc_ai_key === $wpcc_ai_active ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=' . $wpcc_ai_key ) ); ?>"

@@ -22,9 +22,9 @@ defined( 'ABSPATH' ) || exit;
 use WPCommandCenter\Admin\FeatureGate;
 
 $wpcc_conn_panes = [
-	'assistants' => [ 'label' => __( 'Assistants', 'wp-command-center' ),      'view' => 'ai-integrations',          'feature' => null ],
-	'api'        => [ 'label' => __( 'Your own software', 'wp-command-center' ), 'view' => 'api-integrations',       'feature' => null ],
-	'tokens'     => [ 'label' => __( 'Access tokens', 'wp-command-center' ),   'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
+	'assistants' => [ 'label' => __( 'Assistants', 'ai-command-center' ),      'view' => 'ai-integrations',          'feature' => null ],
+	'api'        => [ 'label' => __( 'Your own software', 'ai-command-center' ), 'view' => 'api-integrations',       'feature' => null ],
+	'tokens'     => [ 'label' => __( 'Access tokens', 'ai-command-center' ),   'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
 ];
 
 foreach ( $wpcc_conn_panes as $wpcc_ck => $wpcc_cp ) {
@@ -41,7 +41,7 @@ if ( ! isset( $wpcc_conn_panes[ $wpcc_conn_active ] ) ) {
 ?>
 <div class="wpcc-settings-connections">
 	<?php if ( count( $wpcc_conn_panes ) > 1 ) : ?>
-		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Connection types', 'wp-command-center' ); ?>">
+		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Connection types', 'ai-command-center' ); ?>">
 			<?php foreach ( $wpcc_conn_panes as $wpcc_ck => $wpcc_cp ) : ?>
 				<a class="wpcc-cds-subnav__item<?php echo $wpcc_ck === $wpcc_conn_active ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=' . $wpcc_ck ) ); ?>"

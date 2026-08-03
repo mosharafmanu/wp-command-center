@@ -42,7 +42,7 @@ final class SnapshotManager {
 			SnapshotRegistry::ACTION_DETAILS => $this->details( $params ),
 			SnapshotRegistry::ACTION_RESTORE => $this->restore( $params, $context ),
 			SnapshotRegistry::ACTION_VERIFY  => $this->verify( $params, $context ),
-			default => new \WP_Error( 'wpcc_invalid_snapshot_action', __( 'Unknown action.', 'wp-command-center' ) ),
+			default => new \WP_Error( 'wpcc_invalid_snapshot_action', __( 'Unknown action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -53,7 +53,7 @@ final class SnapshotManager {
 		$label = sanitize_text_field( $params['label'] ?? 'Manual snapshot' );
 
 		if ( '' === $path ) {
-			return new \WP_Error( 'wpcc_missing_snapshot_path', __( 'File path is required for snapshot creation.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_snapshot_path', __( 'File path is required for snapshot creation.', 'ai-command-center' ) );
 		}
 
 		if ( '' === $label ) {
@@ -111,7 +111,7 @@ final class SnapshotManager {
 	private function details( array $params ): array|\WP_Error {
 		$id = sanitize_text_field( $params['snapshot_id'] ?? '' );
 		if ( '' === $id ) {
-			return new \WP_Error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'ai-command-center' ) );
 		}
 
 		$record = $this->snapshots->get( $id );
@@ -140,7 +140,7 @@ final class SnapshotManager {
 	private function restore( array $params, array $context ): array|\WP_Error {
 		$id = sanitize_text_field( $params['snapshot_id'] ?? '' );
 		if ( '' === $id ) {
-			return new \WP_Error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'ai-command-center' ) );
 		}
 
 		$this->audit( 'snapshot.restore.started', [ 'snapshot_id' => $id ], $context );
@@ -191,7 +191,7 @@ final class SnapshotManager {
 	private function verify( array $params, array $context ): array|\WP_Error {
 		$id = sanitize_text_field( $params['snapshot_id'] ?? '' );
 		if ( '' === $id ) {
-			return new \WP_Error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'ai-command-center' ) );
 		}
 
 		$record = $this->snapshots->get( $id );

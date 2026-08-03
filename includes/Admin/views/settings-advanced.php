@@ -27,22 +27,22 @@ use WPCommandCenter\Admin\DeveloperTools;
 use WPCommandCenter\Admin\AppShell;
 
 $wpcc_adv_panes = [
-	'ai'           => [ 'label' => __( 'Built-in AI', 'wp-command-center' ),  'view' => 'settings-ai',           'feature' => null ],
-	'diagnostics'  => [ 'label' => __( 'Diagnostics', 'wp-command-center' ),  'view' => 'settings-diagnostics',  'feature' => null ],
-	'system'       => [ 'label' => __( 'System', 'wp-command-center' ),       'view' => 'operations-center',     'feature' => null ],
-	'capabilities' => [ 'label' => __( 'Capabilities', 'wp-command-center' ), 'view' => 'operations-explorer',   'feature' => 'operations_explorer' ],
+	'ai'           => [ 'label' => __( 'Built-in AI', 'ai-command-center' ),  'view' => 'settings-ai',           'feature' => null ],
+	'diagnostics'  => [ 'label' => __( 'Diagnostics', 'ai-command-center' ),  'view' => 'settings-diagnostics',  'feature' => null ],
+	'system'       => [ 'label' => __( 'System', 'ai-command-center' ),       'view' => 'operations-center',     'feature' => null ],
+	'capabilities' => [ 'label' => __( 'Capabilities', 'ai-command-center' ), 'view' => 'operations-explorer',   'feature' => 'operations_explorer' ],
 ];
 
 // Dev-only proposal surface: build-flagged, off on a stock install.
 if ( AppShell::proposals_ui_enabled() ) {
-	$wpcc_adv_panes['drafts'] = [ 'label' => __( 'Drafts (Dev)', 'wp-command-center' ), 'view' => 'proposals', 'feature' => null ];
+	$wpcc_adv_panes['drafts'] = [ 'label' => __( 'Drafts (Dev)', 'ai-command-center' ), 'view' => 'proposals', 'feature' => null ];
 }
 
 // File browsing and database search/replace stay fully functional over REST/MCP;
 // these screens appear only when developer tools are switched on for the site.
 if ( DeveloperTools::enabled() ) {
-	$wpcc_adv_panes['files'] = [ 'label' => __( 'File access', 'wp-command-center' ),     'view' => 'file-access',          'feature' => null ];
-	$wpcc_adv_panes['tools'] = [ 'label' => __( 'Search & replace', 'wp-command-center' ), 'view' => 'tools-search-replace', 'feature' => null ];
+	$wpcc_adv_panes['files'] = [ 'label' => __( 'File access', 'ai-command-center' ),     'view' => 'file-access',          'feature' => null ];
+	$wpcc_adv_panes['tools'] = [ 'label' => __( 'Search & replace', 'ai-command-center' ), 'view' => 'tools-search-replace', 'feature' => null ];
 }
 
 // Drop any pane whose FeatureGate is closed (licensing seam; ungated today).
@@ -60,11 +60,11 @@ if ( ! isset( $wpcc_adv_panes[ $wpcc_adv_active ] ) ) {
 ?>
 <div class="wpcc-settings-advanced">
 	<p class="description" style="max-width:70ch;margin:0 0 16px;">
-		<?php esc_html_e( 'Everything below is optional. A site that just wants an AI assistant working safely never needs to open this tab.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'Everything below is optional. A site that just wants an AI assistant working safely never needs to open this tab.', 'ai-command-center' ); ?>
 	</p>
 
 	<?php if ( count( $wpcc_adv_panes ) > 1 ) : ?>
-		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Advanced sections', 'wp-command-center' ); ?>">
+		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Advanced sections', 'ai-command-center' ); ?>">
 			<?php foreach ( $wpcc_adv_panes as $wpcc_ak => $wpcc_ap ) : ?>
 				<a class="wpcc-cds-subnav__item<?php echo $wpcc_ak === $wpcc_adv_active ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=' . $wpcc_ak ) ); ?>"
@@ -83,7 +83,7 @@ if ( ! isset( $wpcc_adv_panes[ $wpcc_adv_active ] ) ) {
 				require $wpcc_adv_path;
 			}
 		} else {
-			echo '<div class="wpcc-cds-empty" role="status"><p class="description">' . esc_html__( 'No advanced surfaces are available in this edition.', 'wp-command-center' ) . '</p></div>';
+			echo '<div class="wpcc-cds-empty" role="status"><p class="description">' . esc_html__( 'No advanced surfaces are available in this edition.', 'ai-command-center' ) . '</p></div>';
 		}
 		?>
 	</div>

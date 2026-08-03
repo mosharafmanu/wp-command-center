@@ -42,7 +42,7 @@ final class SiteBuilderRuntimeManager {
 			SiteBuilderRegistry::ACTION_MENU_CREATE     => $this->delegate_menu( 'menu_create', $payload, $context ),
 			SiteBuilderRegistry::ACTION_MENU_UPDATE     => $this->delegate_menu( 'menu_update', $payload, $context ),
 			SiteBuilderRegistry::ACTION_MENU_ASSIGN     => $this->delegate_menu( 'menu_location_assign', $payload, $context ),
-			default => $this->error( 'wpcc_invalid_site_builder_action', __( 'Invalid site builder action.', 'wp-command-center' ) ),
+			default => $this->error( 'wpcc_invalid_site_builder_action', __( 'Invalid site builder action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -63,13 +63,13 @@ final class SiteBuilderRuntimeManager {
 
 	private function page_get( array $p ): array {
 		$page = $this->get_page( $p );
-		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'wp-command-center' ) );
+		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'ai-command-center' ) );
 		return [ 'action' => 'page_get', 'page' => $this->format_page( $page ) ];
 	}
 
 	private function page_create( array $p, array $cx ): array {
 		$title = sanitize_text_field( (string) ( $p['title'] ?? '' ) );
-		if ( '' === $title ) return $this->error( 'wpcc_missing_title', __( 'Page title is required.', 'wp-command-center' ) );
+		if ( '' === $title ) return $this->error( 'wpcc_missing_title', __( 'Page title is required.', 'ai-command-center' ) );
 
 		$postarr = [
 			'post_type'    => 'page',
@@ -93,7 +93,7 @@ final class SiteBuilderRuntimeManager {
 
 	private function page_update( array $p, array $cx ): array {
 		$page = $this->get_page( $p );
-		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'wp-command-center' ) );
+		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'ai-command-center' ) );
 
 		$before = [
 			'post_title'   => $page->post_title,
@@ -124,7 +124,7 @@ final class SiteBuilderRuntimeManager {
 
 	private function page_delete( array $p, array $cx ): array {
 		$page = $this->get_page( $p );
-		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'wp-command-center' ) );
+		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'ai-command-center' ) );
 		$force  = ! empty( $p['force'] );
 		$before = [ 'post_status' => $page->post_status ];
 		$rollback_id = $force ? '' : $this->store_rollback( $page->ID, 'page_delete', $before, $cx );
@@ -137,18 +137,18 @@ final class SiteBuilderRuntimeManager {
 
 	private function template_list(): array {
 		$templates = wp_get_theme()->get_page_templates( null, 'page' );
-		return [ 'action' => 'template_list', 'templates' => array_merge( [ 'default' => __( 'Default Template', 'wp-command-center' ) ], $templates ) ];
+		return [ 'action' => 'template_list', 'templates' => array_merge( [ 'default' => __( 'Default Template', 'ai-command-center' ) ], $templates ) ];
 	}
 
 	private function template_assign( array $p, array $cx ): array {
 		$page = $this->get_page( $p );
-		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'wp-command-center' ) );
+		if ( is_string( $page ) ) return $this->error( $page, __( 'Page not found.', 'ai-command-center' ) );
 		$template = sanitize_text_field( (string) ( $p['template'] ?? '' ) );
-		if ( '' === $template ) return $this->error( 'wpcc_missing_template', __( 'A template is required.', 'wp-command-center' ) );
+		if ( '' === $template ) return $this->error( 'wpcc_missing_template', __( 'A template is required.', 'ai-command-center' ) );
 
 		$available = array_merge( [ 'default' ], array_keys( wp_get_theme()->get_page_templates( null, 'page' ) ) );
 		if ( ! in_array( $template, $available, true ) ) {
-			return $this->error( 'wpcc_invalid_template', sprintf( /* translators: %s: value */ __( 'Template not available in the active theme: %s', 'wp-command-center' ), esc_html( $template ) ) );
+			return $this->error( 'wpcc_invalid_template', sprintf( /* translators: %s: value */ __( 'Template not available in the active theme: %s', 'ai-command-center' ), esc_html( $template ) ) );
 		}
 
 		$before = [ 'template' => get_post_meta( $page->ID, '_wp_page_template', true ) ];
@@ -167,7 +167,7 @@ final class SiteBuilderRuntimeManager {
 
 	private function pattern_create( array $p, array $cx ): array {
 		$title = sanitize_text_field( (string) ( $p['title'] ?? '' ) );
-		if ( '' === $title ) return $this->error( 'wpcc_missing_title', __( 'Pattern title is required.', 'wp-command-center' ) );
+		if ( '' === $title ) return $this->error( 'wpcc_missing_title', __( 'Pattern title is required.', 'ai-command-center' ) );
 		$content = isset( $p['content'] ) ? (string) $p['content'] : '';
 
 		$id = wp_insert_post( [
@@ -195,13 +195,13 @@ final class SiteBuilderRuntimeManager {
 
 		if ( 'get' === $op ) {
 			$nav = get_post( (int) ( $p['navigation_id'] ?? 0 ) );
-			if ( ! $nav || 'wp_navigation' !== $nav->post_type ) return $this->error( 'wpcc_navigation_not_found', __( 'Navigation not found.', 'wp-command-center' ) );
+			if ( ! $nav || 'wp_navigation' !== $nav->post_type ) return $this->error( 'wpcc_navigation_not_found', __( 'Navigation not found.', 'ai-command-center' ) );
 			return [ 'action' => 'navigation_manage', 'op' => 'get', 'navigation' => [ 'id' => $nav->ID, 'title' => $nav->post_title, 'content' => $nav->post_content ] ];
 		}
 
 		if ( 'update' === $op ) {
 			$nav = get_post( (int) ( $p['navigation_id'] ?? 0 ) );
-			if ( ! $nav || 'wp_navigation' !== $nav->post_type ) return $this->error( 'wpcc_navigation_not_found', __( 'Navigation not found.', 'wp-command-center' ) );
+			if ( ! $nav || 'wp_navigation' !== $nav->post_type ) return $this->error( 'wpcc_navigation_not_found', __( 'Navigation not found.', 'ai-command-center' ) );
 			$before  = [ 'post_title' => $nav->post_title, 'post_content' => $nav->post_content ];
 			$arr     = [ 'ID' => $nav->ID ];
 			if ( isset( $p['title'] ) )   $arr['post_title']   = sanitize_text_field( (string) $p['title'] );
@@ -241,12 +241,12 @@ final class SiteBuilderRuntimeManager {
 
 	public function rollback( array $payload, array $context = [] ): array {
 		$rid = (string) ( $payload['rollback_id'] ?? '' );
-		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'wp-command-center' ) );
+		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'ai-command-center' ) );
 		$rollbacks = get_option( 'wpcc_sitebuilder_rollbacks', [] );
 		$idx = null;
 		foreach ( $rollbacks as $i => $r ) { if ( $r['id'] === $rid ) { $idx = $i; break; } }
-		if ( null === $idx ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'wp-command-center' ) );
-		if ( ! empty( $rollbacks[ $idx ]['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
+		if ( null === $idx ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'ai-command-center' ) );
+		if ( ! empty( $rollbacks[ $idx ]['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'ai-command-center' ) );
 
 		$rec = $rollbacks[ $idx ];
 		$eid = (int) $rec['entity_id'];

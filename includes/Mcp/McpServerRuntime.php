@@ -143,7 +143,7 @@ final class McpServerRuntime {
 	public static function timeout_response( $id = null ): array {
 		$message = sprintf(
 			/* translators: %d: seconds */
-			__( 'Operation exceeded the %ds synchronous execution budget. Queue long-running work instead of calling it synchronously.', 'wp-command-center' ),
+			__( 'Operation exceeded the %ds synchronous execution budget. Queue long-running work instead of calling it synchronously.', 'ai-command-center' ),
 			self::time_budget()
 		);
 		return [
@@ -472,7 +472,7 @@ final class McpServerRuntime {
 			// the customer could not find in their own UI.
 			return $this->tool_error(
 				'wpcc_token_read_only',
-				__( 'This token is read-only and cannot perform this action. A read-only token is limited to search, file and history lookups. To let the assistant do more, create a full access token in WP Command Center → Settings → Connections; changes will still wait for your approval.', 'wp-command-center' )
+				__( 'This token is read-only and cannot perform this action. A read-only token is limited to search, file and history lookups. To let the assistant do more, create a full access token in WP Command Center → Settings → Connections; changes will still wait for your approval.', 'ai-command-center' )
 			);
 		}
 
@@ -484,7 +484,7 @@ final class McpServerRuntime {
 				$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'missing_capability', 'required' => $validation['required_capability'] ], $context );
 				return $this->tool_error( 'wpcc_capability_denied', sprintf(
 					/* translators: %s: capability name */
-					__( 'Operation denied: missing capability %s', 'wp-command-center' ),
+					__( 'Operation denied: missing capability %s', 'ai-command-center' ),
 					(string) $validation['required_capability']
 				) );
 			}
@@ -505,7 +505,7 @@ final class McpServerRuntime {
 			}
 			if ( 'in_progress' === $claim['claim'] ) {
 				$this->audit( 'mcp.idempotent.in_progress', [ 'tool' => $tool_name ], $context );
-				return $this->tool_error( 'wpcc_idempotent_in_progress', __( 'This request is already being processed (same idempotency key). It was not run again — check History for the outcome.', 'wp-command-center' ) );
+				return $this->tool_error( 'wpcc_idempotent_in_progress', __( 'This request is already being processed (same idempotency key). It was not run again — check History for the outcome.', 'ai-command-center' ) );
 			}
 		}
 

@@ -71,8 +71,8 @@ final class OperationRegistry {
 		$operations = [
 			[
 				'id'                => 'system_info',
-				'title'             => __( 'System Info', 'wp-command-center' ),
-				'description'       => __( 'Returns site URL, WordPress version, PHP version, MySQL version, active theme, active plugin count, multisite status, memory limit, debug mode, environment type, locale, and timezone. Pure PHP — no WP-CLI or shell access required.', 'wp-command-center' ),
+				'title'             => __( 'System Info', 'ai-command-center' ),
+				'description'       => __( 'Returns site URL, WordPress version, PHP version, MySQL version, active theme, active plugin count, multisite status, memory limit, debug mode, environment type, locale, and timezone. Pure PHP — no WP-CLI or shell access required.', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [],
 				'requires_approval' => false,
@@ -81,8 +81,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'content_seed',
-				'title'             => __( 'Content Seeding', 'wp-command-center' ),
-				'description'       => __( 'Generate and insert sample posts, pages, or custom post types.', 'wp-command-center' ),
+				'title'             => __( 'Content Seeding', 'ai-command-center' ),
+				'description'       => __( 'Generate and insert sample posts, pages, or custom post types.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -97,8 +97,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'acf_seed',
-				'title'             => __( 'Seed ACF Fields', 'wp-command-center' ),
-				'description'       => __( 'Populate existing ACF fields on WordPress content using native ACF APIs.', 'wp-command-center' ),
+				'title'             => __( 'Seed ACF Fields', 'ai-command-center' ),
+				'description'       => __( 'Populate existing ACF fields on WordPress content using native ACF APIs.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -110,8 +110,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'cf7_seed',
-				'title'             => __( 'Contact Form 7 Seeding', 'wp-command-center' ),
-				'description'       => __( 'Generate sample forms and mail configurations for Contact Form 7.', 'wp-command-center' ),
+				'title'             => __( 'Contact Form 7 Seeding', 'ai-command-center' ),
+				'description'       => __( 'Generate sample forms and mail configurations for Contact Form 7.', 'ai-command-center' ),
 				/*
 				 * Was 'low', which runs free under Standard protection — so an
 				 * assistant could create contact forms on a protected site with no
@@ -132,8 +132,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'woo_product_seed',
-				'title'             => __( 'WooCommerce Product Seeder', 'wp-command-center' ),
-				'description'       => __( 'Generate and insert simple WooCommerce products using native APIs.', 'wp-command-center' ),
+				'title'             => __( 'WooCommerce Product Seeder', 'ai-command-center' ),
+				'description'       => __( 'Generate and insert simple WooCommerce products using native APIs.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -151,8 +151,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'safe_search_replace',
-				'title'             => __( 'Safe Search & Replace', 'wp-command-center' ),
-				'description'       => __( 'Perform a dry-run or live search and replace in the database with rollback support. dry_run (default true) returns matches_found/rows_affected as counts only unless return_matches is set — pass return_matches:true to also get a capped list (default 25, max_matches) of {table, primary_key_column, primary_key_value, column, excerpt} so you can see WHICH rows matched before running live.', 'wp-command-center' ),
+				'title'             => __( 'Safe Search & Replace', 'ai-command-center' ),
+				'description'       => __( 'Perform a dry-run or live search and replace in the database with rollback support. dry_run (default true) returns matches_found/rows_affected as counts only unless return_matches is set — pass return_matches:true to also get a capped list (default 25, max_matches) of {table, primary_key_column, primary_key_value, column, excerpt} so you can see WHICH rows matched before running live.', 'ai-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -169,8 +169,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'media_import',
-				'title'             => __( 'Media Library Import', 'wp-command-center' ),
-				'description'       => __( 'Safe Media Library import using native APIs.', 'wp-command-center' ),
+				'title'             => __( 'Media Library Import', 'ai-command-center' ),
+				'description'       => __( 'Safe Media Library import using native APIs.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -186,8 +186,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'safe_updates',
-				'title'             => __( 'Safe WordPress Updates', 'wp-command-center' ),
-				'description'       => __( 'Update WordPress core, plugins, or themes with automatic snapshot and health verification.', 'wp-command-center' ),
+				'title'             => __( 'Safe WordPress Updates', 'ai-command-center' ),
+				'description'       => __( 'Update WordPress core, plugins, or themes with automatic snapshot and health verification.', 'ai-command-center' ),
 				'risk_level'        => 'high',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -200,8 +200,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'capability_manage',
-				'title'             => __( 'Capability Management', 'wp-command-center' ),
-				'description'       => __( 'Manage which agents, tokens, and integrations may access which platform capabilities. Authorization layer.', 'wp-command-center' ),
+				'title'             => __( 'Capability Management', 'ai-command-center' ),
+				'description'       => __( 'Manage which agents, tokens, and integrations may access which platform capabilities. Authorization layer.', 'ai-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [
 					'capability_list'     => 'diagnostic',
@@ -222,8 +222,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'database_inspect',
-				'title'             => __( 'Database Inspection', 'wp-command-center' ),
-				'description'       => __( 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.', 'wp-command-center' ),
+				'title'             => __( 'Database Inspection', 'ai-command-center' ),
+				'description'       => __( 'Read-only database health and structure inspection. No INSERT/UPDATE/DELETE/DROP. No arbitrary SQL.', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [],
 				'requires_approval' => false,
@@ -235,8 +235,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'content_manage',
-				'title'             => __( 'Content Management', 'wp-command-center' ),
-				'description'       => __( 'Safely inspect and manage WordPress content. Operations: list, get, create, update, delete, publish, unpublish, schedule, taxonomy, featured image. WordPress API-based.', 'wp-command-center' ),
+				'title'             => __( 'Content Management', 'ai-command-center' ),
+				'description'       => __( 'Safely inspect and manage WordPress content. Operations: list, get, create, update, delete, publish, unpublish, schedule, taxonomy, featured image. WordPress API-based.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'content_list'          => 'low',
@@ -263,8 +263,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'snapshot_manage',
-				'title'             => __( 'Snapshot Management', 'wp-command-center' ),
-				'description'       => __( 'Create, list, inspect, verify, and restore file snapshots. Wraps the existing Snapshot and Rollback Engines.', 'wp-command-center' ),
+				'title'             => __( 'Snapshot Management', 'ai-command-center' ),
+				'description'       => __( 'Create, list, inspect, verify, and restore file snapshots. Wraps the existing Snapshot and Rollback Engines.', 'ai-command-center' ),
 				'risk_level'        => 'high',
 				'action_risks'      => [
 					'snapshot_list'    => 'diagnostic',
@@ -284,8 +284,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'theme_manage',
-				'title'             => __( 'Theme Management', 'wp-command-center' ),
-				'description'       => __( 'Safely inspect and manage WordPress themes. Operations: list, install, activate, update, delete. Registry-driven, approval-aware, health-verified. theme_delete is a CRITICAL destructive action: it requires confirm=true, confirmation_phrase="DELETE_THEME", and a reason; only inactive themes can be deleted.', 'wp-command-center' ),
+				'title'             => __( 'Theme Management', 'ai-command-center' ),
+				'description'       => __( 'Safely inspect and manage WordPress themes. Operations: list, install, activate, update, delete. Registry-driven, approval-aware, health-verified. theme_delete is a CRITICAL destructive action: it requires confirm=true, confirmation_phrase="DELETE_THEME", and a reason; only inactive themes can be deleted.', 'ai-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [
 					'theme_list'     => 'diagnostic',
@@ -307,8 +307,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'plugin_manage',
-				'title'             => __( 'Plugin Management', 'wp-command-center' ),
-				'description'       => __( 'Safely inspect and manage WordPress plugins. Operations: list, install, activate, deactivate, update, delete. Registry-driven, approval-aware, health-verified. plugin_delete is a CRITICAL destructive action: it requires confirm=true, confirmation_phrase="DELETE_PLUGIN", and a reason; only inactive plugins can be deleted and the plugin folder is backed up first.', 'wp-command-center' ),
+				'title'             => __( 'Plugin Management', 'ai-command-center' ),
+				'description'       => __( 'Safely inspect and manage WordPress plugins. Operations: list, install, activate, deactivate, update, delete. Registry-driven, approval-aware, health-verified. plugin_delete is a CRITICAL destructive action: it requires confirm=true, confirmation_phrase="DELETE_PLUGIN", and a reason; only inactive plugins can be deleted and the plugin folder is backed up first.', 'ai-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [
 					'plugin_list'       => 'diagnostic',
@@ -331,8 +331,8 @@ final class OperationRegistry {
 			],
 			[
 				'id'                => 'option_manage',
-				'title'             => __( 'Option Management', 'wp-command-center' ),
-				'description'       => __( 'Safely inspect and update approved WordPress options through the operations framework. Registry-driven, risk-scored, approval-aware.', 'wp-command-center' ),
+				'title'             => __( 'Option Management', 'ai-command-center' ),
+				'description'       => __( 'Safely inspect and update approved WordPress options through the operations framework. Registry-driven, risk-scored, approval-aware.', 'ai-command-center' ),
 				'risk_level'        => 'high',
 				'action_risks'      => [
 					'option_get'      => 'diagnostic',
@@ -351,8 +351,8 @@ final class OperationRegistry {
 			[
 				'id'                => 'wp_cli_bridge',
 				'agent_note'        => 'Needs host process execution (proc_open) and a WP-CLI binary; reports operation_not_available where the host forbids it.',
-				'title'             => __( 'WP-CLI Bridge', 'wp-command-center' ),
-				'description'       => __( 'Execute structured WP-CLI commands with risk-based approval workflow. Accepts command_id + args or legacy bare command. REQUIRES the host to allow PHP process execution (proc_open) AND a reachable WP-CLI binary. Many shared hosts disable this; where they do, the operation reports operation_not_available and every other operation continues to work — check system_info or the Advanced -> Diagnostics screen before relying on it.', 'wp-command-center' ),
+				'title'             => __( 'WP-CLI Bridge', 'ai-command-center' ),
+				'description'       => __( 'Execute structured WP-CLI commands with risk-based approval workflow. Accepts command_id + args or legacy bare command. REQUIRES the host to allow PHP process execution (proc_open) AND a reachable WP-CLI binary. Many shared hosts disable this; where they do, the operation reports operation_not_available and every other operation continues to work — check system_info or the Advanced -> Diagnostics screen before relying on it.', 'ai-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [],
 				'requires_approval' => true,
@@ -365,8 +365,8 @@ final class OperationRegistry {
 			],
 			'user_manage' => [
 				'id'                => 'user_manage',
-				'title'             => __( 'User Management', 'wp-command-center' ),
-				'description'       => __( 'Safely manage WordPress users: list, get, search, create, update, delete, suspend, reset password, assign role, remove role. WordPress API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'             => __( 'User Management', 'ai-command-center' ),
+				'description'       => __( 'Safely manage WordPress users: list, get, search, create, update, delete, suspend, reset password, assign role, remove role. WordPress API-based, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [
 					'user_list'           => 'diagnostic',
@@ -388,8 +388,8 @@ final class OperationRegistry {
 			],
 			'media_manage' => [
 				'id'                => 'media_manage',
-				'title'             => __( 'Media Management', 'wp-command-center' ),
-				'description'       => __( 'Safely manage WordPress media: list, get, search, upload, update (title/alt/caption/description), replace, delete, restore, set/remove featured image, regenerate metadata. File-level snapshots (media_snapshot_create/restore/verify/list) capture an attachment\'s bytes + sizes + metadata for byte-for-byte restoration. WordPress API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'             => __( 'Media Management', 'ai-command-center' ),
+				'description'       => __( 'Safely manage WordPress media: list, get, search, upload, update (title/alt/caption/description), replace, delete, restore, set/remove featured image, regenerate metadata. File-level snapshots (media_snapshot_create/restore/verify/list) capture an attachment\'s bytes + sizes + metadata for byte-for-byte restoration. WordPress API-based, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'media_list'                => 'diagnostic',
@@ -429,8 +429,8 @@ final class OperationRegistry {
 			],
 			'woocommerce_manage' => [
 				'id'                => 'woocommerce_manage',
-				'title'             => __( 'WooCommerce Management', 'wp-command-center' ),
-				'description'       => __( 'Safely manage WooCommerce. Products: create/update (simple or variable; name, description, short_description, sku, pricing, status, manage_stock/stock_quantity, categories, tags, image_id, gallery_image_ids, attributes:[{name,options,visible,variation}]), delete, duplicate, publish, unpublish. Plus inventory, pricing, categories, attributes, variations, orders, coupons. WooCommerce API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'             => __( 'WooCommerce Management', 'ai-command-center' ),
+				'description'       => __( 'Safely manage WooCommerce. Products: create/update (simple or variable; name, description, short_description, sku, pricing, status, manage_stock/stock_quantity, categories, tags, image_id, gallery_image_ids, attributes:[{name,options,visible,variation}]), delete, duplicate, publish, unpublish. Plus inventory, pricing, categories, attributes, variations, orders, coupons. WooCommerce API-based, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'woo_describe'           => 'diagnostic',
@@ -484,8 +484,8 @@ final class OperationRegistry {
 			],
 			'acf_manage' => [
 				'id'          => 'acf_manage',
-				'title'       => __( 'ACF Management', 'wp-command-center' ),
-				'description' => __( 'Manage Advanced Custom Fields: field groups, fields (all types incl. repeater, flexible content, group, clone, image, gallery, relationship, select), flexible-content layouts, locations, JSON sync, field values, and inventory. ACF API-based, approval-aware, rollback-capable. Nested fields: repeater/group sub-fields use parent=<field_key>; flexible layout fields use parent=<flexible_field_key> + parent_layout=<layout_key>.', 'wp-command-center' ),
+				'title'       => __( 'ACF Management', 'ai-command-center' ),
+				'description' => __( 'Manage Advanced Custom Fields: field groups, fields (all types incl. repeater, flexible content, group, clone, image, gallery, relationship, select), flexible-content layouts, locations, JSON sync, field values, and inventory. ACF API-based, approval-aware, rollback-capable. Nested fields: repeater/group sub-fields use parent=<field_key>; flexible layout fields use parent=<flexible_field_key> + parent_layout=<layout_key>.', 'ai-command-center' ),
 				'risk_level'  => 'medium',
 				'action_risks' => [
 					'acf_group_list'     => 'diagnostic',
@@ -546,8 +546,8 @@ final class OperationRegistry {
 			],
 			'term_manage' => [
 				'id'                => 'term_manage',
-				'title'             => __( 'Term Lookup', 'wp-command-center' ),
-				'description'       => __( 'Read-only taxonomy term discovery. Actions: term_list (by taxonomy + filters), term_get (by term_id, or taxonomy + slug/name), term_search (keyword across term name/slug), term_describe. Returns term_id, slug, name, taxonomy, parent, count — the identity needed to then target termmeta (e.g. acf_value_set object_type=term).', 'wp-command-center' ),
+				'title'             => __( 'Term Lookup', 'ai-command-center' ),
+				'description'       => __( 'Read-only taxonomy term discovery. Actions: term_list (by taxonomy + filters), term_get (by term_id, or taxonomy + slug/name), term_search (keyword across term name/slug), term_describe. Returns term_id, slug, name, taxonomy, parent, count — the identity needed to then target termmeta (e.g. acf_value_set object_type=term).', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'term_list'     => 'diagnostic',
@@ -572,8 +572,8 @@ final class OperationRegistry {
 			],
 			'cache_manage' => [
 				'id'                => 'cache_manage',
-				'title'             => __( 'Cache Purge', 'wp-command-center' ),
-				'description'       => __( 'Purge page/object caches WITHOUT shell (unlike wp_cli_bridge cache_flush). Detects and calls the PHP purge APIs of LiteSpeed, WP Rocket, W3 Total Cache, WP Super Cache, Cache Enabler, plus the persistent object cache. Actions: cache_status (detect only), cache_purge_all, cache_purge_url, cache_describe. Returns which layers were detected and purged.', 'wp-command-center' ),
+				'title'             => __( 'Cache Purge', 'ai-command-center' ),
+				'description'       => __( 'Purge page/object caches WITHOUT shell (unlike wp_cli_bridge cache_flush). Detects and calls the PHP purge APIs of LiteSpeed, WP Rocket, W3 Total Cache, WP Super Cache, Cache Enabler, plus the persistent object cache. Actions: cache_status (detect only), cache_purge_all, cache_purge_url, cache_describe. Returns which layers were detected and purged.', 'ai-command-center' ),
 				'risk_level'        => 'low',
 				'action_risks'      => [
 					'cache_status'    => 'diagnostic',
@@ -590,8 +590,8 @@ final class OperationRegistry {
 			],
 			'forms_manage' => [
 				'id'          => 'forms_manage',
-				'title'       => __( 'Forms Management', 'wp-command-center' ),
-				'description' => __( 'Manage WordPress forms across multiple providers (CF7, FluentForms, WPForms, GravityForms): list, get, search, create, update, delete, entries, notifications, analysis. Provider-abstracted, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'       => __( 'Forms Management', 'ai-command-center' ),
+				'description' => __( 'Manage WordPress forms across multiple providers (CF7, FluentForms, WPForms, GravityForms): list, get, search, create, update, delete, entries, notifications, analysis. Provider-abstracted, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'  => 'medium',
 				'action_risks' => [
 					'form_list'     => 'diagnostic',
@@ -616,8 +616,8 @@ final class OperationRegistry {
 			],
 			'menu_manage' => [
 				'id'          => 'menu_manage',
-				'title'       => __( 'Menu Management', 'wp-command-center' ),
-				'description' => __( 'Manage WordPress navigation menus: create, update, delete, duplicate, export, import menus; add, update, remove, move, reorder items; assign locations; tree inspection and repair; menu analysis. WordPress API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'       => __( 'Menu Management', 'ai-command-center' ),
+				'description' => __( 'Manage WordPress navigation menus: create, update, delete, duplicate, export, import menus; add, update, remove, move, reorder items; assign locations; tree inspection and repair; menu analysis. WordPress API-based, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'  => 'medium',
 				'action_risks' => [
 					'menu_list'          => 'diagnostic',
@@ -648,8 +648,8 @@ final class OperationRegistry {
 			],
 			'settings_manage' => [
 				'id'          => 'settings_manage',
-				'title'       => __( 'Site Settings', 'wp-command-center' ),
-				'description' => __( 'Manage WordPress core settings: general, reading, discussion, media, permalink, privacy. Read, update, analyze, inventory. WordPress API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'       => __( 'Site Settings', 'ai-command-center' ),
+				'description' => __( 'Manage WordPress core settings: general, reading, discussion, media, permalink, privacy. Read, update, analyze, inventory. WordPress API-based, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'  => 'high',
 				'action_risks' => [
 					'settings_general_get'    => 'diagnostic',
@@ -673,8 +673,8 @@ final class OperationRegistry {
 			],
 			'approval_manage' => [
 				'id'          => 'approval_manage',
-				'title'       => __( 'Approval Runtime', 'wp-command-center' ),
-				'description' => __( 'Create, inspect, approve, reject, cancel, and execute operation requests through the request/approval/queue pipeline (Agent -> Request -> Approval -> Execute -> Verify -> Audit -> Rollback), without direct database, SSH, or WP Admin access. Control-plane operation; diagnostic risk and never itself requires approval.', 'wp-command-center' ),
+				'title'       => __( 'Approval Runtime', 'ai-command-center' ),
+				'description' => __( 'Create, inspect, approve, reject, cancel, and execute operation requests through the request/approval/queue pipeline (Agent -> Request -> Approval -> Execute -> Verify -> Audit -> Rollback), without direct database, SSH, or WP Admin access. Control-plane operation; diagnostic risk and never itself requires approval.', 'ai-command-center' ),
 				'risk_level'  => 'diagnostic',
 				'action_risks' => [],
 				'requires_approval' => false,
@@ -693,8 +693,8 @@ final class OperationRegistry {
 			],
 			'search_manage' => [
 				'id'          => 'search_manage',
-				'title'       => __( 'Search & Reports', 'wp-command-center' ),
-				'description' => __( 'Universal search across content, media, users, WooCommerce, forms, ACF, menus. Site-wide reports: orphans, unused media, content/woo inventory, site summary. Read-only, no approval required.', 'wp-command-center' ),
+				'title'       => __( 'Search & Reports', 'ai-command-center' ),
+				'description' => __( 'Universal search across content, media, users, WooCommerce, forms, ACF, menus. Site-wide reports: orphans, unused media, content/woo inventory, site summary. Read-only, no approval required.', 'ai-command-center' ),
 				'risk_level'  => 'diagnostic',
 				'action_risks' => [],
 				'requires_approval' => false,
@@ -703,8 +703,8 @@ final class OperationRegistry {
 			],
 			'bulk_manage' => [
 				'id'          => 'bulk_manage',
-				'title'       => __( 'Bulk Operations', 'wp-command-center' ),
-				'description' => __( 'Execute bulk operations across content, media, WooCommerce, ACF, and batch execution. Supports bulk content update, bulk publish/unpublish, bulk media, bulk WooCommerce, bulk ACF, batch execute, and rollback. Approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'       => __( 'Bulk Operations', 'ai-command-center' ),
+				'description' => __( 'Execute bulk operations across content, media, WooCommerce, ACF, and batch execution. Supports bulk content update, bulk publish/unpublish, bulk media, bulk WooCommerce, bulk ACF, batch execute, and rollback. Approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'  => 'high',
 				'action_risks' => [
 					'bulk_publish'    => 'medium',
@@ -729,8 +729,8 @@ final class OperationRegistry {
 			],
 			'workflow_manage' => [
 				'id'          => 'workflow_manage',
-				'title'       => __( 'Workflow Runtime', 'wp-command-center' ),
-				'description' => __( 'Create, list, get, update, delete, execute, import, export, and roll back multi-step operation workflows. A single workflow_execute approval covers every step (single approval); each step records an execution timeline (start/finish/duration) and its rollback_id (rollback awareness). The on_failure policy controls recovery — stop (default), continue, or rollback (auto-reverse completed steps). workflow_rollback reverses a past execution by execution_id. Supports executing any registered operation within steps.', 'wp-command-center' ),
+				'title'       => __( 'Workflow Runtime', 'ai-command-center' ),
+				'description' => __( 'Create, list, get, update, delete, execute, import, export, and roll back multi-step operation workflows. A single workflow_execute approval covers every step (single approval); each step records an execution timeline (start/finish/duration) and its rollback_id (rollback awareness). The on_failure policy controls recovery — stop (default), continue, or rollback (auto-reverse completed steps). workflow_rollback reverses a past execution by execution_id. Supports executing any registered operation within steps.', 'ai-command-center' ),
 				'risk_level'  => 'high',
 				'action_risks' => [
 					'workflow_list'    => 'diagnostic',
@@ -760,8 +760,8 @@ final class OperationRegistry {
 			],
 			'comments_manage' => [
 				'id'          => 'comments_manage',
-				'title'       => __( 'Comments Management', 'wp-command-center' ),
-				'description' => __( 'Safely manage WordPress comments: list, get, approve, unapprove, spam, trash, delete, reply. WordPress comment API-based, approval-aware, rollback-capable for trash/delete.', 'wp-command-center' ),
+				'title'       => __( 'Comments Management', 'ai-command-center' ),
+				'description' => __( 'Safely manage WordPress comments: list, get, approve, unapprove, spam, trash, delete, reply. WordPress comment API-based, approval-aware, rollback-capable for trash/delete.', 'ai-command-center' ),
 				'risk_level'  => 'medium',
 				'action_risks' => [
 					'comment_list'     => 'diagnostic',
@@ -782,8 +782,8 @@ final class OperationRegistry {
 			],
 			'widgets_manage' => [
 				'id'          => 'widgets_manage',
-				'title'       => __( 'Widgets & Sidebars', 'wp-command-center' ),
-				'description' => __( 'Manage WordPress widgets and sidebar assignments: list, get, add, update, remove widgets; assign/remove sidebar placements. WordPress widget API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'       => __( 'Widgets & Sidebars', 'ai-command-center' ),
+				'description' => __( 'Manage WordPress widgets and sidebar assignments: list, get, add, update, remove widgets; assign/remove sidebar placements. WordPress widget API-based, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'  => 'medium',
 				'action_risks' => [
 					'widget_list'      => 'diagnostic',
@@ -806,8 +806,8 @@ final class OperationRegistry {
 			],
 			'cpt_manage' => [
 				'id'          => 'cpt_manage',
-				'title'       => __( 'Custom Post Types', 'wp-command-center' ),
-				'description' => __( 'Manage WordPress custom post types and taxonomies: list, get, create, update, disable post types; list, create, update taxonomies. WordPress register/unregister API-based, approval-aware, rollback-capable.', 'wp-command-center' ),
+				'title'       => __( 'Custom Post Types', 'ai-command-center' ),
+				'description' => __( 'Manage WordPress custom post types and taxonomies: list, get, create, update, disable post types; list, create, update taxonomies. WordPress register/unregister API-based, approval-aware, rollback-capable.', 'ai-command-center' ),
 				'risk_level'  => 'high',
 				'action_risks' => [
 					'cpt_list'         => 'diagnostic',
@@ -833,8 +833,8 @@ final class OperationRegistry {
 			'file_manage' => [
 				'id'                => 'file_manage',
 				'agent_note'        => 'Read-only — use patch_manage to change an existing file.',
-				'title'             => __( 'File Access', 'wp-command-center' ),
-				'description'       => __( 'Read files and browse the file tree under themes, plugins, and mu-plugins. Read-only: it cannot create, modify or delete a file. Use patch_manage to change an existing file. Paths are relative to wp-content, e.g. "themes/my-theme/functions.php" or "plugins/my-plugin/file.php" (a leading "wp-content/" or an absolute path is also accepted). Blocked paths (.env, wp-config.php, vendor/, keys, etc.) are denied and secrets are redacted. file_read supports PAGINATED reads of large files: pass line_start+line_count (1-based lines) or byte_offset+byte_limit, with optional context_before/context_after; the response returns total_bytes, total_lines (when known), returned_lines, truncated, and next_line_start / next_byte_offset cursors to fetch the next chunk. Actions: file_read, file_tree, file_metadata.', 'wp-command-center' ),
+				'title'             => __( 'File Access', 'ai-command-center' ),
+				'description'       => __( 'Read files and browse the file tree under themes, plugins, and mu-plugins. Read-only: it cannot create, modify or delete a file. Use patch_manage to change an existing file. Paths are relative to wp-content, e.g. "themes/my-theme/functions.php" or "plugins/my-plugin/file.php" (a leading "wp-content/" or an absolute path is also accepted). Blocked paths (.env, wp-config.php, vendor/, keys, etc.) are denied and secrets are redacted. file_read supports PAGINATED reads of large files: pass line_start+line_count (1-based lines) or byte_offset+byte_limit, with optional context_before/context_after; the response returns total_bytes, total_lines (when known), returned_lines, truncated, and next_line_start / next_byte_offset cursors to fetch the next chunk. Actions: file_read, file_tree, file_metadata.', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'file_read'     => 'diagnostic',
@@ -856,8 +856,8 @@ final class OperationRegistry {
 			],
 			'code_search' => [
 				'id'                => 'code_search',
-				'title'             => __( 'Code Search', 'wp-command-center' ),
-				'description'       => __( 'Search code under themes, plugins, and mu-plugins. Read-only. "path" may be a SINGLE FILE (e.g. "themes/my-theme/style.css") to search just that file without scanning a directory, OR a directory, OR omitted to search all roots. Searches large text files (CSS/JS/PHP up to 8 MB). A skip is NEVER silent: the response reports files_searched, files_skipped, and a skipped[] list with a structured reason (too_large, binary, unreadable) and size_bytes, plus complete=true only when results are exhaustive — so an empty result is trustworthy. Use the top-level match_count for the true total. Each match includes line_number, the line text, file_size_bytes, and a read_hint { path, line_start, line_count } you can pass straight to file_manage/file_read to inspect the match with context. In compact context_mode a long list is returned as a self-describing envelope { truncated, has_more, total_count, returned, items[] } — read total_count for the real size; switch to context_mode "standard" for the full list. Secrets in matches are redacted. Actions: search_text, search_symbol (function/class/hook), search_file (by name).', 'wp-command-center' ),
+				'title'             => __( 'Code Search', 'ai-command-center' ),
+				'description'       => __( 'Search code under themes, plugins, and mu-plugins. Read-only. "path" may be a SINGLE FILE (e.g. "themes/my-theme/style.css") to search just that file without scanning a directory, OR a directory, OR omitted to search all roots. Searches large text files (CSS/JS/PHP up to 8 MB). A skip is NEVER silent: the response reports files_searched, files_skipped, and a skipped[] list with a structured reason (too_large, binary, unreadable) and size_bytes, plus complete=true only when results are exhaustive — so an empty result is trustworthy. Use the top-level match_count for the true total. Each match includes line_number, the line text, file_size_bytes, and a read_hint { path, line_start, line_count } you can pass straight to file_manage/file_read to inspect the match with context. In compact context_mode a long list is returned as a self-describing envelope { truncated, has_more, total_count, returned, items[] } — read total_count for the real size; switch to context_mode "standard" for the full list. Secrets in matches are redacted. Actions: search_text, search_symbol (function/class/hook), search_file (by name).', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'search_text'   => 'diagnostic',
@@ -876,8 +876,8 @@ final class OperationRegistry {
 			'patch_manage' => [
 				'id'                => 'patch_manage',
 				'agent_note'        => 'Edits existing files only — it cannot create or delete a file.',
-				'title'             => __( 'Patch Engine', 'wp-command-center' ),
-				'description'       => __( 'Edit files that already exist. A patch cannot create a new file or delete one — every files[] path must already be present, or the call is refused with wpcc_patch_target_missing. A single call can change ONE file or MANY: multiple files[] entries form one atomic change set — one proposal, one preview, one approval, all-or-nothing apply (if any file fails, every file is restored — no partial state), and one combined rollback_id that reverts every file. patch_preview and patch_create return a change_set summary (file_count, affected_paths, modes, total_lines_added/removed, risk_level, is_change_set). Every apply snapshots each file first, verifies PHP syntax (php -l or tokenizer fallback), and auto-reverts on failure. Each files[] entry chooses how the edit is expressed via "mode" — you do NOT have to resend the whole file for a small change: whole_file (field: modified — the full new file), append (field: content), prepend (field: content), replace_text (fields: find, replace, count?), replace_range (fields: start_line, end_line, content — 1-based inclusive), unified_diff (field: diff). Omitting "mode" defaults to whole_file and then requires "modified". Unknown fields are rejected with a clear error rather than ignored. Patches touching high-risk files (theme functions.php, active theme templates, plugin main files) require confirm=true and confirmation_phrase="APPLY_PATCH". SAFEST FLOW for editing live files: (1) code_search to locate the change and get a read_hint, (2) file_manage/file_read around that line to confirm the live content, (3) patch_create with a precise mode (append/prepend/replace_text/replace_range/unified_diff — no need to resend the whole file), (4) patch_preview to verify the diff and syntax, (5) patch_apply (snapshot + verify + auto-revert; reversible via rollback_manage). There is intentionally no raw file_write — all writes go through this reversible, approval-aware engine. Actions: patch_preview, patch_create, patch_apply, patch_verify, patch_status.', 'wp-command-center' ),
+				'title'             => __( 'Patch Engine', 'ai-command-center' ),
+				'description'       => __( 'Edit files that already exist. A patch cannot create a new file or delete one — every files[] path must already be present, or the call is refused with wpcc_patch_target_missing. A single call can change ONE file or MANY: multiple files[] entries form one atomic change set — one proposal, one preview, one approval, all-or-nothing apply (if any file fails, every file is restored — no partial state), and one combined rollback_id that reverts every file. patch_preview and patch_create return a change_set summary (file_count, affected_paths, modes, total_lines_added/removed, risk_level, is_change_set). Every apply snapshots each file first, verifies PHP syntax (php -l or tokenizer fallback), and auto-reverts on failure. Each files[] entry chooses how the edit is expressed via "mode" — you do NOT have to resend the whole file for a small change: whole_file (field: modified — the full new file), append (field: content), prepend (field: content), replace_text (fields: find, replace, count?), replace_range (fields: start_line, end_line, content — 1-based inclusive), unified_diff (field: diff). Omitting "mode" defaults to whole_file and then requires "modified". Unknown fields are rejected with a clear error rather than ignored. Patches touching high-risk files (theme functions.php, active theme templates, plugin main files) require confirm=true and confirmation_phrase="APPLY_PATCH". SAFEST FLOW for editing live files: (1) code_search to locate the change and get a read_hint, (2) file_manage/file_read around that line to confirm the live content, (3) patch_create with a precise mode (append/prepend/replace_text/replace_range/unified_diff — no need to resend the whole file), (4) patch_preview to verify the diff and syntax, (5) patch_apply (snapshot + verify + auto-revert; reversible via rollback_manage). There is intentionally no raw file_write — all writes go through this reversible, approval-aware engine. Actions: patch_preview, patch_create, patch_apply, patch_verify, patch_status.', 'ai-command-center' ),
 				'risk_level'        => 'high',
 				'action_risks'      => [
 					'patch_preview' => 'diagnostic',
@@ -948,8 +948,8 @@ final class OperationRegistry {
 			],
 			'rollback_manage' => [
 				'id'                => 'rollback_manage',
-				'title'             => __( 'Rollback Engine', 'wp-command-center' ),
-				'description'       => __( 'List, inspect, verify, and apply patch rollbacks. rollback_apply restores every affected file from the pre-apply snapshot with hash verification. Actions: rollback_list, rollback_get, rollback_apply, rollback_verify.', 'wp-command-center' ),
+				'title'             => __( 'Rollback Engine', 'ai-command-center' ),
+				'description'       => __( 'List, inspect, verify, and apply patch rollbacks. rollback_apply restores every affected file from the pre-apply snapshot with hash verification. Actions: rollback_list, rollback_get, rollback_apply, rollback_verify.', 'ai-command-center' ),
 				'risk_level'        => 'high',
 				'action_risks'      => [
 					'rollback_list'   => 'diagnostic',
@@ -967,8 +967,8 @@ final class OperationRegistry {
 			// ── STEP 91 — Unified SEO runtime (Rank Math / Yoast) ──
 			'seo_manage' => [
 				'id'                => 'seo_manage',
-				'title'             => __( 'SEO Management', 'wp-command-center' ),
-				'description'       => __( 'Unified SEO management for the active SEO plugin (Rank Math or Yoast). Read, update, validate, and analyze SEO metadata (title, meta description, focus keyword, canonical, Open Graph, Twitter cards, robots). Rollback-capable, approval-aware. Actions: seo_get, seo_update, seo_validate, seo_analyze, seo_restore.', 'wp-command-center' ),
+				'title'             => __( 'SEO Management', 'ai-command-center' ),
+				'description'       => __( 'Unified SEO management for the active SEO plugin (Rank Math or Yoast). Read, update, validate, and analyze SEO metadata (title, meta description, focus keyword, canonical, Open Graph, Twitter cards, robots). Rollback-capable, approval-aware. Actions: seo_get, seo_update, seo_validate, seo_analyze, seo_restore.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'seo_get'      => 'diagnostic',
@@ -989,8 +989,8 @@ final class OperationRegistry {
 			// ── STEP 95 — Site Builder runtime ──
 			'site_builder_manage' => [
 				'id'                => 'site_builder_manage',
-				'title'             => __( 'Site Builder', 'wp-command-center' ),
-				'description'       => __( 'Construct WordPress sites: pages (create/update/delete with parent, order, status, template), page templates, block patterns (reusable blocks), block-theme navigation, and menus (delegated to menu_manage). Rollback-capable, approval-aware. Actions: page_list, page_get, page_create, page_update, page_delete, template_list, template_assign, pattern_create, pattern_list, navigation_manage, menu_create, menu_update, menu_assign.', 'wp-command-center' ),
+				'title'             => __( 'Site Builder', 'ai-command-center' ),
+				'description'       => __( 'Construct WordPress sites: pages (create/update/delete with parent, order, status, template), page templates, block patterns (reusable blocks), block-theme navigation, and menus (delegated to menu_manage). Rollback-capable, approval-aware. Actions: page_list, page_get, page_create, page_update, page_delete, template_list, template_assign, pattern_create, pattern_list, navigation_manage, menu_create, menu_update, menu_assign.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'page_list'         => 'diagnostic',
@@ -1025,8 +1025,8 @@ final class OperationRegistry {
 			// ── STEP 96 — Elementor runtime ──
 			'elementor_manage' => [
 				'id'                => 'elementor_manage',
-				'title'             => __( 'Elementor', 'wp-command-center' ),
-				'description'       => __( 'Read and edit Elementor pages: export the page structure, list widgets, and update a widget\'s text, image, or button by widget id. Operates on the page\'s _elementor_data element tree, clears Elementor cache after edits. Rollback-capable, approval-aware. Actions: elementor_get_page, elementor_export_structure, elementor_list_widgets, elementor_update_text, elementor_update_image, elementor_update_button.', 'wp-command-center' ),
+				'title'             => __( 'Elementor', 'ai-command-center' ),
+				'description'       => __( 'Read and edit Elementor pages: export the page structure, list widgets, and update a widget\'s text, image, or button by widget id. Operates on the page\'s _elementor_data element tree, clears Elementor cache after edits. Rollback-capable, approval-aware. Actions: elementor_get_page, elementor_export_structure, elementor_list_widgets, elementor_update_text, elementor_update_image, elementor_update_button.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
 					'elementor_get_page'         => 'diagnostic',
@@ -1056,8 +1056,8 @@ final class OperationRegistry {
 			// ── STEP 98 — Reporting runtime ──
 			'report_manage' => [
 				'id'                => 'report_manage',
-				'title'             => __( 'Reporting Runtime', 'wp-command-center' ),
-				'description'       => __( 'Generate read-only operational reports: report_site_health, report_plugin_health, report_security, report_content, report_woocommerce, report_agent_activity, report_approval_activity, report_patch_activity (and report_list to enumerate them). Inventory reports read WordPress/plugin data; activity reports aggregate the audit log. No writes, no rollback.', 'wp-command-center' ),
+				'title'             => __( 'Reporting Runtime', 'ai-command-center' ),
+				'description'       => __( 'Generate read-only operational reports: report_site_health, report_plugin_health, report_security, report_content, report_woocommerce, report_agent_activity, report_approval_activity, report_patch_activity (and report_list to enumerate them). Inventory reports read WordPress/plugin data; activity reports aggregate the audit log. No writes, no rollback.', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'report_list'              => 'diagnostic',
@@ -1080,8 +1080,8 @@ final class OperationRegistry {
 			// ── STEP 100.3 — Media Enhancement runtime (foundation, read-only) ──
 			'media_enhance' => [
 				'id'                => 'media_enhance',
-				'title'             => __( 'Media Enhancement Runtime', 'wp-command-center' ),
-				'description'       => __( 'Read-only media-enhancement diagnostics. Foundation (100.3): media_enhance_capabilities (GD/Imagick + WebP/AVIF encode probe), image_sizes_list (registered sizes incl. theme add_image_size), image_size_usage_audit (per-size on-disk coverage), image_size_recommendations (unused/oversized sizes), image_size_verify (sizes present/missing/not_applicable for one attachment). Responsive audit (100.4): srcset_verify (WordPress srcset/sizes metadata for one attachment), responsive_image_audit (per-attachment responsive readiness with media_id, else a library-wide aggregate), missing_sizes_audit (attachments missing applicable sizes), image_size_context_audit (oversized/undersized original vs registered display sizes). Thumbnail regeneration (100.5, reversible writes): thumbnail_regenerate / thumbnail_regenerate_attachment (snapshot-backed; mode missing|all), thumbnail_regenerate_batch (cursor), thumbnail_verify (read). Regeneration captures a byte-for-byte snapshot before any write, verifies the result, and is reversible via the /media_enhance/rollback route. WebP (100.6, additive reversible writes): webp_audit / webp_verify (read coverage + capability), webp_generate / webp_generate_batch (create .webp sidecars beside originals — capability-gated, snapshot-backed, skips existing, never modifies/deletes originals; rollback deletes the generated .webp). Optimization (100.7, reversible re-encode): image_optimize_audit / image_optimize_verify (read coverage + estimate), image_optimize / image_optimize_batch (re-encode JPEG/PNG/WebP at a quality target to cut bytes without changing dimensions — capability-gated, snapshot-backed, skips insignificant savings; rollback restores original bytes via the /media_enhance/rollback route). Usage analysis (100.8, read-only cleanup intelligence): media_usage_scan (where one item is used across core content/blocks/WooCommerce/ACF/ACF-options/Elementor/theme_mods/options + classify active|indirect|unused|orphaned|cleanup_candidate), media_usage_report (library aggregate), unused_media_find, orphaned_media_find. Cleanup (100.9, guarded + reversible): unused_media_cleanup — re-verifies usage at execution time, hard-excludes WooCommerce/theme/draft/revision/unknown references, snapshots then TRASHES (never permanently deletes; DestructiveGuard CLEANUP_MEDIA required), reversible via /media_enhance/rollback.', 'wp-command-center' ),
+				'title'             => __( 'Media Enhancement Runtime', 'ai-command-center' ),
+				'description'       => __( 'Read-only media-enhancement diagnostics. Foundation (100.3): media_enhance_capabilities (GD/Imagick + WebP/AVIF encode probe), image_sizes_list (registered sizes incl. theme add_image_size), image_size_usage_audit (per-size on-disk coverage), image_size_recommendations (unused/oversized sizes), image_size_verify (sizes present/missing/not_applicable for one attachment). Responsive audit (100.4): srcset_verify (WordPress srcset/sizes metadata for one attachment), responsive_image_audit (per-attachment responsive readiness with media_id, else a library-wide aggregate), missing_sizes_audit (attachments missing applicable sizes), image_size_context_audit (oversized/undersized original vs registered display sizes). Thumbnail regeneration (100.5, reversible writes): thumbnail_regenerate / thumbnail_regenerate_attachment (snapshot-backed; mode missing|all), thumbnail_regenerate_batch (cursor), thumbnail_verify (read). Regeneration captures a byte-for-byte snapshot before any write, verifies the result, and is reversible via the /media_enhance/rollback route. WebP (100.6, additive reversible writes): webp_audit / webp_verify (read coverage + capability), webp_generate / webp_generate_batch (create .webp sidecars beside originals — capability-gated, snapshot-backed, skips existing, never modifies/deletes originals; rollback deletes the generated .webp). Optimization (100.7, reversible re-encode): image_optimize_audit / image_optimize_verify (read coverage + estimate), image_optimize / image_optimize_batch (re-encode JPEG/PNG/WebP at a quality target to cut bytes without changing dimensions — capability-gated, snapshot-backed, skips insignificant savings; rollback restores original bytes via the /media_enhance/rollback route). Usage analysis (100.8, read-only cleanup intelligence): media_usage_scan (where one item is used across core content/blocks/WooCommerce/ACF/ACF-options/Elementor/theme_mods/options + classify active|indirect|unused|orphaned|cleanup_candidate), media_usage_report (library aggregate), unused_media_find, orphaned_media_find. Cleanup (100.9, guarded + reversible): unused_media_cleanup — re-verifies usage at execution time, hard-excludes WooCommerce/theme/draft/revision/unknown references, snapshots then TRASHES (never permanently deletes; DestructiveGuard CLEANUP_MEDIA required), reversible via /media_enhance/rollback.', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'media_enhance_capabilities'  => 'diagnostic',
@@ -1133,8 +1133,8 @@ final class OperationRegistry {
 				// diagnostic: no approval, no destructive confirmation, no rollback
 				// routing. rollback_target arrives in 104.3.
 				'id'                => 'change_history',
-				'title'             => __( 'Change History Runtime', 'wp-command-center' ),
-				'description'       => __( 'Change history over the wpcc_change_log system of record (every executed mutating operation, with rollback linkage). Read (diagnostic): history_list (filter by runtime/operation_id/status/target/change_set_id/session_id/task_id/plan_id/reversible_only/since/until, cursor-paginated), history_get (full record for one change_id incl. rollback linkage, change-set, actor, result metadata), history_timeline (chronological, table-backed — replaces audit-log tailing), rollback_discover (reversible changes for a target/change_set_id/change_id, each with the exact rollback_target params to call). Write (high, approval-aware): rollback_target (reverse a recorded change by change_id — routes to the existing patch or runtime rollback engine, records a rolled_back row, stamps the original). Returns the STEP 103.2 compact envelope (total_count/has_more/next_cursor). rollback_target requires write scope.', 'wp-command-center' ),
+				'title'             => __( 'Change History Runtime', 'ai-command-center' ),
+				'description'       => __( 'Change history over the wpcc_change_log system of record (every executed mutating operation, with rollback linkage). Read (diagnostic): history_list (filter by runtime/operation_id/status/target/change_set_id/session_id/task_id/plan_id/reversible_only/since/until, cursor-paginated), history_get (full record for one change_id incl. rollback linkage, change-set, actor, result metadata), history_timeline (chronological, table-backed — replaces audit-log tailing), rollback_discover (reversible changes for a target/change_set_id/change_id, each with the exact rollback_target params to call). Write (high, approval-aware): rollback_target (reverse a recorded change by change_id — routes to the existing patch or runtime rollback engine, records a rolled_back row, stamps the original). Returns the STEP 103.2 compact envelope (total_count/has_more/next_cursor). rollback_target requires write scope.', 'ai-command-center' ),
 				'risk_level'        => 'diagnostic',
 				'action_risks'      => [
 					'history_list'      => 'diagnostic',

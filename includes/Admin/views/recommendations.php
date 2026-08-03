@@ -40,7 +40,7 @@ if ( isset( $_POST['wpcc_rec_action'] ) && check_admin_referer( 'wpcc_recommenda
 		if ( is_wp_error( $scan ) ) {
 			$wpcc_rec_error = $scan->get_error_message();
 		} else {
-			$wpcc_rec_notice = __( 'Scan complete. Findings are listed below.', 'wp-command-center' );
+			$wpcc_rec_notice = __( 'Scan complete. Findings are listed below.', 'ai-command-center' );
 		}
 	} elseif ( ( 'dismiss' === $wpcc_rec_act || 'resolve' === $wpcc_rec_act ) && '' !== $wpcc_rec_id ) {
 		$status = 'dismiss' === $wpcc_rec_act ? 'dismissed' : 'resolved';
@@ -49,8 +49,8 @@ if ( isset( $_POST['wpcc_rec_action'] ) && check_admin_referer( 'wpcc_recommenda
 			$wpcc_rec_error = $res->get_error_message();
 		} else {
 			$wpcc_rec_notice = 'dismissed' === $status
-				? __( 'Recommendation dismissed.', 'wp-command-center' )
-				: __( 'Recommendation marked resolved.', 'wp-command-center' );
+				? __( 'Recommendation dismissed.', 'ai-command-center' )
+				: __( 'Recommendation marked resolved.', 'ai-command-center' );
 		}
 	} elseif ( ( 'approve_plan' === $wpcc_rec_act || 'reject_plan' === $wpcc_rec_act ) && '' !== $wpcc_rec_id ) {
 		// Relocated verbatim from the Runtime dashboard: update plan status, audit,
@@ -62,8 +62,8 @@ if ( isset( $_POST['wpcc_rec_action'] ) && check_admin_referer( 'wpcc_recommenda
 			$wpcc_rec_engine->sync_plan_status( $wpcc_rec_id, 'approved', $wpcc_rec_actor );
 		}
 		$wpcc_rec_notice = 'approved' === $new
-			? __( 'Suggested fix approved.', 'wp-command-center' )
-			: __( 'Suggested fix rejected.', 'wp-command-center' );
+			? __( 'Suggested fix approved.', 'ai-command-center' )
+			: __( 'Suggested fix rejected.', 'ai-command-center' );
 	}
 }
 
@@ -102,9 +102,9 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 </style>
 
 <div class="wpcc-rec-wrap">
-	<h1><?php esc_html_e( 'Recommendations', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Recommendations', 'ai-command-center' ); ?></h1>
 	<p class="description" style="max-width:720px;">
-		<?php esc_html_e( 'Things worth your attention on this site — detected by deterministic checks, never invented. Review a finding, dismiss it, or mark it resolved. Suggested fixes that need your sign-off appear at the bottom.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'Things worth your attention on this site — detected by deterministic checks, never invented. Review a finding, dismiss it, or mark it resolved. Suggested fixes that need your sign-off appear at the bottom.', 'ai-command-center' ); ?>
 	</p>
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
@@ -112,29 +112,29 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 	<?php if ( $wpcc_rec_error ) : ?><div class="notice inline notice-error is-dismissible"><p><?php echo esc_html( $wpcc_rec_error ); ?></p></div><?php endif; ?>
 
 	<div class="wpcc-rec-cards">
-		<div class="wpcc-rec-card"><div class="v"><?php echo esc_html( (string) $wpcc_c_open ); ?></div><div class="l"><?php esc_html_e( 'Open', 'wp-command-center' ); ?></div></div>
-		<div class="wpcc-rec-card is-critical"><div class="v"><?php echo esc_html( (string) $wpcc_c_critical ); ?></div><div class="l"><?php esc_html_e( 'Critical', 'wp-command-center' ); ?></div></div>
-		<div class="wpcc-rec-card"><div class="v"><?php echo esc_html( (string) $wpcc_c_resolved ); ?></div><div class="l"><?php esc_html_e( 'Resolved', 'wp-command-center' ); ?></div></div>
+		<div class="wpcc-rec-card"><div class="v"><?php echo esc_html( (string) $wpcc_c_open ); ?></div><div class="l"><?php esc_html_e( 'Open', 'ai-command-center' ); ?></div></div>
+		<div class="wpcc-rec-card is-critical"><div class="v"><?php echo esc_html( (string) $wpcc_c_critical ); ?></div><div class="l"><?php esc_html_e( 'Critical', 'ai-command-center' ); ?></div></div>
+		<div class="wpcc-rec-card"><div class="v"><?php echo esc_html( (string) $wpcc_c_resolved ); ?></div><div class="l"><?php esc_html_e( 'Resolved', 'ai-command-center' ); ?></div></div>
 	</div>
 
 	<form method="post" style="margin:0 0 18px;">
 		<?php wp_nonce_field( 'wpcc_recommendations' ); ?>
-		<button type="submit" name="wpcc_rec_action" value="scan" class="button"><?php esc_html_e( 'Run a scan', 'wp-command-center' ); ?></button>
-		<span class="description" style="margin-left:8px;"><?php esc_html_e( 'Re-checks this site for issues. Generates findings only — it never changes your site.', 'wp-command-center' ); ?></span>
+		<button type="submit" name="wpcc_rec_action" value="scan" class="button"><?php esc_html_e( 'Run a scan', 'ai-command-center' ); ?></button>
+		<span class="description" style="margin-left:8px;"><?php esc_html_e( 'Re-checks this site for issues. Generates findings only — it never changes your site.', 'ai-command-center' ); ?></span>
 	</form>
 
 	<?php if ( empty( $wpcc_rec_list ) ) : ?>
 		<div class="wpcc-rec-empty">
-			<p style="margin:0 0 4px;font-size:14px;"><strong><?php esc_html_e( 'No recommendations yet.', 'wp-command-center' ); ?></strong></p>
-			<p style="margin:0;"><?php esc_html_e( 'When a check finds something worth your attention, it appears here. Run a scan to check this site now.', 'wp-command-center' ); ?></p>
+			<p style="margin:0 0 4px;font-size:14px;"><strong><?php esc_html_e( 'No recommendations yet.', 'ai-command-center' ); ?></strong></p>
+			<p style="margin:0;"><?php esc_html_e( 'When a check finds something worth your attention, it appears here. Run a scan to check this site now.', 'ai-command-center' ); ?></p>
 		</div>
 	<?php else : ?>
 		<table class="wp-list-table widefat fixed striped">
 			<thead><tr>
-				<th><?php esc_html_e( 'Recommendation', 'wp-command-center' ); ?></th>
-				<th style="width:90px;"><?php esc_html_e( 'Severity', 'wp-command-center' ); ?></th>
-				<th style="width:120px;"><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th>
-				<th style="width:180px;"><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th>
+				<th><?php esc_html_e( 'Recommendation', 'ai-command-center' ); ?></th>
+				<th style="width:90px;"><?php esc_html_e( 'Severity', 'ai-command-center' ); ?></th>
+				<th style="width:120px;"><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th>
+				<th style="width:180px;"><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></th>
 			</tr></thead>
 			<tbody>
 			<?php foreach ( $wpcc_rec_list as $rec ) :
@@ -158,10 +158,10 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 								<?php wp_nonce_field( 'wpcc_recommendations' ); ?>
 								<input type="hidden" name="id" value="<?php echo esc_attr( $rid ); ?>">
 								<?php if ( $wpcc_can_resolve( $status ) ) : ?>
-									<button type="submit" name="wpcc_rec_action" value="resolve" class="button button-small"><?php esc_html_e( 'Resolve', 'wp-command-center' ); ?></button>
+									<button type="submit" name="wpcc_rec_action" value="resolve" class="button button-small"><?php esc_html_e( 'Resolve', 'ai-command-center' ); ?></button>
 								<?php endif; ?>
 								<?php if ( $wpcc_can_dismiss( $status ) ) : ?>
-									<button type="submit" name="wpcc_rec_action" value="dismiss" class="button button-small"><?php esc_html_e( 'Dismiss', 'wp-command-center' ); ?></button>
+									<button type="submit" name="wpcc_rec_action" value="dismiss" class="button button-small"><?php esc_html_e( 'Dismiss', 'ai-command-center' ); ?></button>
 								<?php endif; ?>
 							</form>
 						<?php else : ?>
@@ -174,14 +174,14 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 		</table>
 	<?php endif; ?>
 
-	<h2 style="margin-top:26px;"><?php esc_html_e( 'Suggested fixes awaiting your approval', 'wp-command-center' ); ?></h2>
+	<h2 style="margin-top:26px;"><?php esc_html_e( 'Suggested fixes awaiting your approval', 'ai-command-center' ); ?></h2>
 	<?php if ( empty( $wpcc_pending_plans ) ) : ?>
 		<div class="wpcc-rec-empty">
-			<p style="margin:0;"><?php esc_html_e( 'Nothing waiting. When a recommendation produces a fix that needs your sign-off, it appears here.', 'wp-command-center' ); ?></p>
+			<p style="margin:0;"><?php esc_html_e( 'Nothing waiting. When a recommendation produces a fix that needs your sign-off, it appears here.', 'ai-command-center' ); ?></p>
 		</div>
 	<?php else : ?>
 		<table class="wp-list-table widefat fixed striped">
-			<thead><tr><th><?php esc_html_e( 'Title', 'wp-command-center' ); ?></th><th><?php esc_html_e( 'Objective', 'wp-command-center' ); ?></th><th style="width:180px;"><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th></tr></thead>
+			<thead><tr><th><?php esc_html_e( 'Title', 'ai-command-center' ); ?></th><th><?php esc_html_e( 'Objective', 'ai-command-center' ); ?></th><th style="width:180px;"><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></th></tr></thead>
 			<tbody>
 			<?php foreach ( $wpcc_pending_plans as $plan ) : ?>
 				<tr>
@@ -191,8 +191,8 @@ $wpcc_can_resolve = static fn ( string $s ): bool => in_array( $s, [ 'open', 'co
 						<form method="post" style="display:inline;">
 							<?php wp_nonce_field( 'wpcc_recommendations' ); ?>
 							<input type="hidden" name="id" value="<?php echo esc_attr( (string) $plan['plan_id'] ); ?>">
-							<button type="submit" name="wpcc_rec_action" value="approve_plan" class="button button-primary button-small"><?php esc_html_e( 'Approve', 'wp-command-center' ); ?></button>
-							<button type="submit" name="wpcc_rec_action" value="reject_plan" class="button button-small"><?php esc_html_e( 'Reject', 'wp-command-center' ); ?></button>
+							<button type="submit" name="wpcc_rec_action" value="approve_plan" class="button button-primary button-small"><?php esc_html_e( 'Approve', 'ai-command-center' ); ?></button>
+							<button type="submit" name="wpcc_rec_action" value="reject_plan" class="button button-small"><?php esc_html_e( 'Reject', 'ai-command-center' ); ?></button>
 						</form>
 					</td>
 				</tr>

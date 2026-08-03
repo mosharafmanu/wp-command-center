@@ -23,7 +23,7 @@ migration where applicable.
 
 Four places must agree:
 
-1. `wp-command-center.php` header `Version:`
+1. `ai-command-center.php` header `Version:`
 2. `WPCC_VERSION` constant
 3. `readme.txt` `Stable tag:`
 4. the changelog entry
@@ -41,12 +41,12 @@ The build is an **allowlist**, not a blocklist — anything not explicitly inclu
 out. It asserts `sdk/javascript/wpcc-mcp-relay.mjs` is present and **exits 1** if it is
 not; without the relay every generated client configuration would point at a 404.
 
-Output: `build/wp-command-center-<version>.zip`.
+Output: `build/ai-command-center-<version>.zip`.
 
 Verify no development files leaked:
 
 ```bash
-unzip -l build/wp-command-center-1.0.0.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
+unzip -l build/ai-command-center-1.0.0.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
 ```
 
 Expect no matches. `docs/` and `tests/` do not ship.
@@ -72,8 +72,8 @@ Plugin Check must be run against the **built artifact**, not the checkout — th
 contains `build/`, `tests/`, `.git` and `.DS_Store`, none of which ship:
 
 ```bash
-unzip -q build/wp-command-center-1.0.0.zip -d /tmp/pkg
-wp plugin check /tmp/pkg/wp-command-center --format=csv --fields=type,code,file,line
+unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
+wp plugin check /tmp/pkg/ai-command-center --format=csv --fields=type,code,file,line
 ```
 
 Required: **0 errors**.

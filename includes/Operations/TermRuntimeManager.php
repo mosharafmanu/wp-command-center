@@ -46,13 +46,13 @@ final class TermRuntimeManager {
 			case 'term_search':
 				return $this->term_search( $payload );
 			case 'term_describe':
-				return [ 'action' => 'term_describe', 'runtime' => 'term_manage', 'actions' => self::ACTIONS, 'notes' => __( 'Read-only. term_get accepts term_id OR (slug + taxonomy). term_list/term_search accept taxonomy + filters. Returns term_id, slug, name, taxonomy, parent, count.', 'wp-command-center' ) ];
+				return [ 'action' => 'term_describe', 'runtime' => 'term_manage', 'actions' => self::ACTIONS, 'notes' => __( 'Read-only. term_get accepts term_id OR (slug + taxonomy). term_list/term_search accept taxonomy + filters. Returns term_id, slug, name, taxonomy, parent, count.', 'ai-command-center' ) ];
 			default:
 				return $this->error(
 					'wpcc_invalid_term_action',
 					sprintf(
 						/* translators: 1: invalid action, 2: valid actions */
-						__( 'Invalid term action "%1$s". Valid actions: %2$s.', 'wp-command-center' ),
+						__( 'Invalid term action "%1$s". Valid actions: %2$s.', 'ai-command-center' ),
 						$action,
 						implode( ', ', self::ACTIONS )
 					),
@@ -65,7 +65,7 @@ final class TermRuntimeManager {
 	private function term_list( array $p ): array {
 		$taxonomy = sanitize_key( (string) ( $p['taxonomy'] ?? '' ) );
 		if ( '' !== $taxonomy && ! taxonomy_exists( $taxonomy ) ) {
-			return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ), [ 'valid_taxonomies' => get_taxonomies( [], 'names' ) ] );
+			return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'ai-command-center' ), $taxonomy ), [ 'valid_taxonomies' => get_taxonomies( [], 'names' ) ] );
 		}
 
 		$args = [
@@ -100,16 +100,16 @@ final class TermRuntimeManager {
 			$name     = (string) ( $p['name'] ?? '' );
 			$taxonomy = sanitize_key( (string) ( $p['taxonomy'] ?? '' ) );
 			if ( '' === $taxonomy || ( '' === $slug && '' === $name ) ) {
-				return $this->error( 'wpcc_missing_term_selector', __( 'Provide term_id, or (taxonomy + slug), or (taxonomy + name).', 'wp-command-center' ) );
+				return $this->error( 'wpcc_missing_term_selector', __( 'Provide term_id, or (taxonomy + slug), or (taxonomy + name).', 'ai-command-center' ) );
 			}
 			if ( ! taxonomy_exists( $taxonomy ) ) {
-				return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ) );
+				return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'ai-command-center' ), $taxonomy ) );
 			}
 			$term = '' !== $slug ? get_term_by( 'slug', $slug, $taxonomy ) : get_term_by( 'name', $name, $taxonomy );
 		}
 
 		if ( ! $term || is_wp_error( $term ) ) {
-			return $this->error( 'wpcc_term_not_found', __( 'Term not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_term_not_found', __( 'Term not found.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'term.get', [ 'term_id' => $term->term_id ] );
@@ -120,11 +120,11 @@ final class TermRuntimeManager {
 	private function term_search( array $p ): array {
 		$search = sanitize_text_field( (string) ( $p['search'] ?? $p['query'] ?? $p['name'] ?? '' ) );
 		if ( '' === $search ) {
-			return $this->error( 'wpcc_missing_search', __( "term_search requires a 'search' parameter (matches term name/slug).", 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_search', __( "term_search requires a 'search' parameter (matches term name/slug).", 'ai-command-center' ) );
 		}
 		$taxonomy = sanitize_key( (string) ( $p['taxonomy'] ?? '' ) );
 		if ( '' !== $taxonomy && ! taxonomy_exists( $taxonomy ) ) {
-			return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'wp-command-center' ), $taxonomy ) );
+			return $this->error( 'wpcc_invalid_taxonomy', sprintf( /* translators: %s: value */ __( 'Taxonomy "%s" does not exist.', 'ai-command-center' ), $taxonomy ) );
 		}
 
 		$terms = get_terms( [

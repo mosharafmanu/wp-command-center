@@ -54,7 +54,7 @@ final class AnthropicSeoProvider implements SeoMetaProvider {
 		$model = $this->runtime->model( self::DEFAULT_MODEL );
 
 		if ( ! $this->runtime->is_configured() ) {
-			return SeoMetaResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $this->id(), $model );
+			return SeoMetaResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		$request = new GenerationRequest(
@@ -71,7 +71,7 @@ final class AnthropicSeoProvider implements SeoMetaProvider {
 
 		$parsed = self::extract_meta( $result->text() );
 		if ( null === $parsed ) {
-			return SeoMetaResult::error( 'invalid_response', __( 'The provider did not return valid SEO meta JSON.', 'wp-command-center' ), $this->id(), $model );
+			return SeoMetaResult::error( 'invalid_response', __( 'The provider did not return valid SEO meta JSON.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		return SeoMetaResult::ok( $parsed['meta_title'], $parsed['meta_description'], $this->id(), $model );

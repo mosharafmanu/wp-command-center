@@ -41,7 +41,7 @@ final class OperationManager {
 		$operation = $registry->get_operation( $operation_id );
 
 		if ( ! $operation ) {
-			return new \WP_Error( 'wpcc_operation_not_found', __( 'Operation not found in registry.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_operation_not_found', __( 'Operation not found in registry.', 'ai-command-center' ) );
 		}
 
 		$request_id = wp_generate_uuid4();
@@ -65,7 +65,7 @@ final class OperationManager {
 		);
 
 		if ( false === $inserted ) {
-			return new \WP_Error( 'wpcc_request_create_failed', __( 'Failed to create operation request.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_create_failed', __( 'Failed to create operation request.', 'ai-command-center' ) );
 		}
 
 		return $this->get_request( $request_id );
@@ -178,11 +178,11 @@ final class OperationManager {
 
 		$request = $this->get_request( $request_id );
 		if ( ! $request ) {
-			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'ai-command-center' ) );
 		}
 
 		if ( self::STATUS_APPROVED !== $request['status'] ) {
-			return new \WP_Error( 'wpcc_request_not_approved', __( 'Only approved requests can be executed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_not_approved', __( 'Only approved requests can be executed.', 'ai-command-center' ) );
 		}
 
 		// B2-2 execute-once (synchronous path). The status check above blocks a
@@ -197,7 +197,7 @@ final class OperationManager {
 				'path'         => 'synchronous',
 				'reason'       => 'already_executed',
 			] );
-			return new \WP_Error( 'wpcc_request_already_executed', __( 'This request has already been executed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_already_executed', __( 'This request has already been executed.', 'ai-command-center' ) );
 		}
 
 		$payload = json_decode( $request['payload'], true ) ?: [];
@@ -397,12 +397,12 @@ final class OperationManager {
 			// Check if it already has the status or if it wasn't pending
 			$request = $this->get_request( $request_id );
 			if ( ! $request ) {
-				return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'ai-command-center' ) );
 			}
 			if ( $request['status'] === $status ) {
 				return true;
 			}
-			return new \WP_Error( 'wpcc_invalid_transition', sprintf( /* translators: 1: current status, 2: requested status */ __( 'Cannot transition request from %1$s to %2$s.', 'wp-command-center' ), $request['status'], $status ) );
+			return new \WP_Error( 'wpcc_invalid_transition', sprintf( /* translators: 1: current status, 2: requested status */ __( 'Cannot transition request from %1$s to %2$s.', 'ai-command-center' ), $request['status'], $status ) );
 		}
 
 		return true;

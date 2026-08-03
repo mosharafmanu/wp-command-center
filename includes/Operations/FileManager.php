@@ -42,7 +42,7 @@ final class FileManager {
 
 	private function file_read( FileAccessApi $api, string $path, array $context, array $params = [] ): array|\WP_Error {
 		if ( '' === $path ) {
-			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'ai-command-center' ) );
 		}
 
 		// STEP 103.0A — paginated reads so large live files can be inspected in
@@ -89,7 +89,7 @@ final class FileManager {
 
 	private function file_metadata( FileAccessApi $api, string $path, array $context ): array|\WP_Error {
 		if ( '' === $path ) {
-			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'ai-command-center' ) );
 		}
 
 		$result = $api->meta( $path );

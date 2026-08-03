@@ -1,7 +1,7 @@
 # WordPress.org compliance — every Plugin Check finding accounted for
 
 **Plugin:** WP Command Center 1.0.0
-**Measured against:** the built release artifact (`build/wp-command-center-1.0.0.zip`),
+**Measured against:** the built release artifact (`build/ai-command-center-1.0.0.zip`),
 extracted and checked as an installed plugin — **not** the development checkout.
 
 ```

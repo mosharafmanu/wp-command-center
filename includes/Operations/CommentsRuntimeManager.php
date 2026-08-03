@@ -31,7 +31,7 @@ final class CommentsRuntimeManager {
 			CommentsRegistry::ACTION_TRASH     => $this->trash_comment( $payload, $context ),
 			CommentsRegistry::ACTION_DELETE    => $this->delete_comment( $payload, $context ),
 			CommentsRegistry::ACTION_REPLY     => $this->reply_comment( $payload, $context ),
-			default => $this->error( 'wpcc_unknown_comment_action', __( 'Unknown comment action.', 'wp-command-center' ) ),
+			default => $this->error( 'wpcc_unknown_comment_action', __( 'Unknown comment action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -74,7 +74,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'comment.get', [ 'comment_id' => $comment_id ] );
@@ -87,7 +87,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'ai-command-center' ) );
 		}
 
 		// PROGRAM-4 / P4.4 — capture the prior moderation status BEFORE the change so it is
@@ -97,7 +97,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_set_comment_status( $comment_id, 'approve' );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_approve_failed', __( 'Failed to approve comment.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_approve_failed', __( 'Failed to approve comment.', 'ai-command-center' ) );
 		}
 
 		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
@@ -112,7 +112,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'ai-command-center' ) );
 		}
 
 		$accessor = new CommentFieldAccessor();
@@ -120,7 +120,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_set_comment_status( $comment_id, 'hold' );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_unapprove_failed', __( 'Failed to unapprove comment.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_unapprove_failed', __( 'Failed to unapprove comment.', 'ai-command-center' ) );
 		}
 
 		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
@@ -135,7 +135,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'ai-command-center' ) );
 		}
 
 		$accessor = new CommentFieldAccessor();
@@ -143,7 +143,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_spam_comment( $comment_id );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_spam_failed', __( 'Failed to mark comment as spam.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_spam_failed', __( 'Failed to mark comment as spam.', 'ai-command-center' ) );
 		}
 
 		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
@@ -158,7 +158,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'ai-command-center' ) );
 		}
 
 		$before = $this->format_comment( $comment );
@@ -166,7 +166,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_trash_comment( $comment_id );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_trash_failed', __( 'Failed to trash comment.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_trash_failed', __( 'Failed to trash comment.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'comment.trashed', [ 'comment_id' => $comment_id ] );
@@ -179,7 +179,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'ai-command-center' ) );
 		}
 
 		$before = $this->format_comment( $comment );
@@ -187,7 +187,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_delete_comment( $comment_id, true );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_delete_failed', __( 'Failed to delete comment.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_delete_failed', __( 'Failed to delete comment.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'comment.deleted', [ 'comment_id' => $comment_id ] );
@@ -200,12 +200,12 @@ final class CommentsRuntimeManager {
 		$parent_comment = get_comment( $comment_id );
 
 		if ( ! $parent_comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Parent comment not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Parent comment not found.', 'ai-command-center' ) );
 		}
 
 		$content = sanitize_textarea_field( (string) ( $payload['content'] ?? '' ) );
 		if ( '' === $content ) {
-			return $this->error( 'wpcc_missing_reply_content', __( 'Reply content is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_reply_content', __( 'Reply content is required.', 'ai-command-center' ) );
 		}
 
 		$user_id  = (int) ( $payload['user_id'] ?? 0 );
@@ -227,7 +227,7 @@ final class CommentsRuntimeManager {
 
 		$reply_id = wp_insert_comment( $reply_data );
 		if ( ! $reply_id || is_wp_error( $reply_id ) ) {
-			return $this->error( 'wpcc_comment_reply_failed', is_wp_error( $reply_id ) ? $reply_id->get_error_message() : __( 'Failed to create reply.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_comment_reply_failed', is_wp_error( $reply_id ) ? $reply_id->get_error_message() : __( 'Failed to create reply.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'comment.replied', [ 'comment_id' => $comment_id, 'reply_id' => $reply_id ] );
@@ -238,7 +238,7 @@ final class CommentsRuntimeManager {
 	public function rollback( array $payload, array $context = [] ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'ai-command-center' ) );
 		}
 
 		$rollbacks = get_option( 'wpcc_comments_rollbacks', [] );
@@ -254,10 +254,10 @@ final class CommentsRuntimeManager {
 		}
 
 		if ( null === $record ) {
-			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 		}
 		if ( $record['rollback_applied'] ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 		}
 
 		$comment_id = $record['comment_id'];
@@ -280,7 +280,7 @@ final class CommentsRuntimeManager {
 				wp_untrash_comment( $comment_id );
 				break;
 			case 'delete':
-				return $this->error( 'wpcc_rollback_unsupported', __( 'This comment was permanently deleted and cannot be restored.', 'wp-command-center' ) );
+				return $this->error( 'wpcc_rollback_unsupported', __( 'This comment was permanently deleted and cannot be restored.', 'ai-command-center' ) );
 		}
 
 		$rollbacks[ $idx ]['rollback_applied'] = true;

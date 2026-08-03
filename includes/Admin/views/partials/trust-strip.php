@@ -11,10 +11,10 @@
 
 defined( 'ABSPATH' ) || exit;
 ?>
-<div class="wpcc-bai-trust" role="note" aria-label="<?php esc_attr_e( 'How WP Command Center keeps changes safe', 'wp-command-center' ); ?>">
-	<span class="wpcc-bai-trust__label"><?php esc_html_e( 'Every change is', 'wp-command-center' ); ?></span>
-	<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Reviewed by you', 'wp-command-center' ); ?></span>
-	<span class="wpcc-cds-chip wpcc-cds-chip--scoped"><?php esc_html_e( 'Requires approval', 'wp-command-center' ); ?></span>
-	<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'wp-command-center' ); ?></span>
-	<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible', 'wp-command-center' ); ?></span>
+<div class="wpcc-bai-trust" role="note" aria-label="<?php esc_attr_e( 'How WP Command Center keeps changes safe', 'ai-command-center' ); ?>">
+	<span class="wpcc-bai-trust__label"><?php esc_html_e( 'Every change is', 'ai-command-center' ); ?></span>
+	<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Reviewed by you', 'ai-command-center' ); ?></span>
+	<span class="wpcc-cds-chip wpcc-cds-chip--scoped"><?php esc_html_e( 'Requires approval', 'ai-command-center' ); ?></span>
+	<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'ai-command-center' ); ?></span>
+	<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible', 'ai-command-center' ); ?></span>
 </div>

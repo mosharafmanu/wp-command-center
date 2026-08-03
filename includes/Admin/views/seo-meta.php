@@ -36,16 +36,16 @@ $ai_url    = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane
 $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 ?>
 <div class="wrap wpcc-wrap wpcc-seo">
-	<h1><?php esc_html_e( 'SEO', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'SEO', 'ai-command-center' ); ?></h1>
 	<p class="description" style="max-width:720px;">
-		<?php esc_html_e( 'Generate clear SEO titles and descriptions for posts and pages that need them. Review each suggestion, then approve to apply — nothing changes until you say so.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'Generate clear SEO titles and descriptions for posts and pages that need them. Review each suggestion, then approve to apply — nothing changes until you say so.', 'ai-command-center' ); ?>
 	</p>
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="#" class="nav-tab nav-tab-active" id="wpcc-seo-tab-review"><?php esc_html_e( 'Review', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-review"></span></a>
-		<a href="#" class="nav-tab" id="wpcc-seo-tab-suggestions"><?php esc_html_e( 'Suggestions', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-suggestions"></span></a>
-		<a href="#" class="nav-tab" id="wpcc-seo-tab-applied"><?php esc_html_e( 'Applied', 'wp-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-applied"></span></a>
+		<a href="#" class="nav-tab nav-tab-active" id="wpcc-seo-tab-review"><?php esc_html_e( 'Review', 'ai-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-review"></span></a>
+		<a href="#" class="nav-tab" id="wpcc-seo-tab-suggestions"><?php esc_html_e( 'Suggestions', 'ai-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-suggestions"></span></a>
+		<a href="#" class="nav-tab" id="wpcc-seo-tab-applied"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?><span class="wpcc-seo-tabcount" id="wpcc-seo-tabcount-applied"></span></a>
 	</h2>
 
 	<?php // Result of a contextual "Generate SEO Suggestion" row action (set via the
@@ -57,19 +57,19 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<div id="wpcc-seo-readiness" class="wpcc-seo-readiness" role="status" aria-live="polite"></div>
 
 	<div class="wpcc-seo-filters" id="wpcc-seo-controls" style="display:none;">
-		<label for="wpcc-seo-filter"><?php esc_html_e( 'Show:', 'wp-command-center' ); ?></label>
+		<label for="wpcc-seo-filter"><?php esc_html_e( 'Show:', 'ai-command-center' ); ?></label>
 		<select id="wpcc-seo-filter">
-			<option value="missing"><?php esc_html_e( 'Missing', 'wp-command-center' ); ?></option>
-			<option value="weak"><?php esc_html_e( 'Weak', 'wp-command-center' ); ?></option>
-			<option value="all"><?php esc_html_e( 'All content', 'wp-command-center' ); ?></option>
+			<option value="missing"><?php esc_html_e( 'Missing', 'ai-command-center' ); ?></option>
+			<option value="weak"><?php esc_html_e( 'Weak', 'ai-command-center' ); ?></option>
+			<option value="all"><?php esc_html_e( 'All content', 'ai-command-center' ); ?></option>
 		</select>
 		<span id="wpcc-seo-count" class="wpcc-seo-count" role="status" aria-live="polite"></span>
 		<?php // GA#2 Slice 2b — minimal generate control. Creates governed DRAFTS only; nothing is applied here. ?>
-		<label><input type="checkbox" id="wpcc-seo-selectall"> <?php esc_html_e( 'Select all on this page', 'wp-command-center' ); ?></label>
-		<button type="button" class="button button-primary" id="wpcc-seo-generate" disabled><?php esc_html_e( 'Generate suggestions', 'wp-command-center' ); ?></button>
+		<label><input type="checkbox" id="wpcc-seo-selectall"> <?php esc_html_e( 'Select all on this page', 'ai-command-center' ); ?></label>
+		<button type="button" class="button button-primary" id="wpcc-seo-generate" disabled><?php esc_html_e( 'Generate suggestions', 'ai-command-center' ); ?></button>
 		<span class="description"><?php
 			/* translators: %d: max per generation */
-			printf( esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'wp-command-center' ), 25 );
+			printf( esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'ai-command-center' ), 25 );
 		?></span>
 		<span id="wpcc-seo-gen-status" role="status" aria-live="polite" style="margin-left:auto;color:#646970;"></span>
 	</div>
@@ -78,7 +78,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<div id="wpcc-seo-gen-notice" class="notice notice-warning inline" role="status" aria-live="polite" style="display:none;margin:8px 0;"></div>
 
 	<div id="wpcc-seo-panel">
-		<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></p>
+		<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
 	</div>
 
 	<div id="wpcc-seo-pager" class="wpcc-seo-pager"></div>
@@ -87,30 +87,30 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<!-- ============ SUGGESTIONS TAB ============ -->
 	<div id="wpcc-seo-panel-suggestions" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or description, dismiss a suggestion, or apply individually or in bulk. Nothing is applied to your site until you choose to.', 'wp-command-center' ); ?></span>
+			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or description, dismiss a suggestion, or apply individually or in bulk. Nothing is applied to your site until you choose to.', 'ai-command-center' ); ?></span>
 			<span id="wpcc-seo-sg-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
 		<?php // Slice 5a — page-scoped bulk action bar. Operates only on checked rows of the
 		// currently rendered page; Apply/Dismiss are sequential loops over the existing
 		// per-proposal routes (no batch object, no cross-page selection). ?>
 		<div class="wpcc-seo-bulkbar" id="wpcc-seo-sg-bulkbar">
-			<label><input type="checkbox" id="wpcc-seo-sg-selectall"> <?php esc_html_e( 'Select all on this page', 'wp-command-center' ); ?></label>
-			<button type="button" class="button button-primary" id="wpcc-seo-sg-apply" disabled><?php esc_html_e( 'Apply selected', 'wp-command-center' ); ?></button>
-			<button type="button" class="button" id="wpcc-seo-sg-dismiss" disabled><?php esc_html_e( 'Dismiss selected', 'wp-command-center' ); ?></button>
+			<label><input type="checkbox" id="wpcc-seo-sg-selectall"> <?php esc_html_e( 'Select all on this page', 'ai-command-center' ); ?></label>
+			<button type="button" class="button button-primary" id="wpcc-seo-sg-apply" disabled><?php esc_html_e( 'Apply selected', 'ai-command-center' ); ?></button>
+			<button type="button" class="button" id="wpcc-seo-sg-dismiss" disabled><?php esc_html_e( 'Dismiss selected', 'ai-command-center' ); ?></button>
 		</div>
 		<div id="wpcc-seo-sg-progress" role="status" aria-live="polite" style="display:none;"></div>
 		<table class="widefat striped wpcc-seo-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:28px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'wp-command-center' ); ?></span></th>
-					<th scope="col" style="width:22%;"><?php esc_html_e( 'Content', 'wp-command-center' ); ?></th>
-					<th scope="col" style="width:26%;"><?php esc_html_e( 'Current', 'wp-command-center' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Suggested (editable)', 'wp-command-center' ); ?></th>
-					<th scope="col" style="width:130px;"><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:28px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'ai-command-center' ); ?></span></th>
+					<th scope="col" style="width:22%;"><?php esc_html_e( 'Content', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Current', 'ai-command-center' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Suggested (editable)', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:130px;"><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-seo-sg-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-seo-sg-pager" class="wpcc-seo-pager"></div>
@@ -119,27 +119,27 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<!-- ============ APPLIED TAB (Slice 4a — read-only status) ============ -->
 	<div id="wpcc-seo-panel-applied" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'Applied SEO descriptions and items awaiting approval.', 'wp-command-center' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Applied SEO descriptions and items awaiting approval.', 'ai-command-center' ); ?></span>
 			<span id="wpcc-seo-ap-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
 		<?php // Segmented, single-status pagination — each segment is one paginated
 		// /admin/proposals read; default = Applied. ?>
-		<div class="wpcc-seo-segbar" id="wpcc-seo-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'wp-command-center' ); ?>">
-			<button type="button" class="button button-primary wpcc-seo-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'wp-command-center' ); ?></button>
-			<button type="button" class="button wpcc-seo-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'wp-command-center' ); ?></button>
-			<button type="button" class="button wpcc-seo-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'wp-command-center' ); ?></button>
+		<div class="wpcc-seo-segbar" id="wpcc-seo-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'ai-command-center' ); ?>">
+			<button type="button" class="button button-primary wpcc-seo-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?></button>
+			<button type="button" class="button wpcc-seo-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'ai-command-center' ); ?></button>
+			<button type="button" class="button wpcc-seo-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'ai-command-center' ); ?></button>
 		</div>
 		<table class="widefat striped wpcc-seo-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:26%;"><?php esc_html_e( 'Content', 'wp-command-center' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Applied SEO meta', 'wp-command-center' ); ?></th>
-					<th scope="col" style="width:160px;"><?php esc_html_e( 'Status', 'wp-command-center' ); ?></th>
-					<th scope="col" style="width:120px;"><?php esc_html_e( 'Actions', 'wp-command-center' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Content', 'ai-command-center' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Applied SEO meta', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:160px;"><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:120px;"><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-seo-ap-rows">
-				<tr><td colspan="4"><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></td></tr>
+				<tr><td colspan="4"><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-seo-ap-pager" class="wpcc-seo-pager"></div>
@@ -219,120 +219,120 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 	const LIMIT = 20;
 	const TITLE_MAX = 60, DESC_MIN = 120, DESC_MAX = 160;
 	const STR = {
-		loading:  <?php echo wp_json_encode( esc_html__( 'Loading…', 'wp-command-center' ) ); ?>,
-		error:    <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'wp-command-center' ) ); ?>,
-		empty:    <?php echo wp_json_encode( esc_html__( 'No content in this view. 🎉', 'wp-command-center' ) ); ?>,
-		noPlugin: <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active. Activate one to audit SEO meta.', 'wp-command-center' ) ); ?>,
-		none:     <?php echo wp_json_encode( esc_html__( '(not set)', 'wp-command-center' ) ); ?>,
-		missing:  <?php echo wp_json_encode( esc_html__( 'Missing', 'wp-command-center' ) ); ?>,
-		weak:     <?php echo wp_json_encode( esc_html__( 'Weak', 'wp-command-center' ) ); ?>,
-		ok:       <?php echo wp_json_encode( esc_html__( 'OK', 'wp-command-center' ) ); ?>,
-		colPost:  <?php echo wp_json_encode( esc_html__( 'Content', 'wp-command-center' ) ); ?>,
-		colTitle: <?php echo wp_json_encode( esc_html__( 'SEO title', 'wp-command-center' ) ); ?>,
-		colDesc:  <?php echo wp_json_encode( esc_html__( 'Meta description', 'wp-command-center' ) ); ?>,
-		colState: <?php echo wp_json_encode( esc_html__( 'State', 'wp-command-center' ) ); ?>,
-		colScore: <?php echo wp_json_encode( esc_html__( 'Score', 'wp-command-center' ) ); ?>,
-		edit:     <?php echo wp_json_encode( esc_html__( 'Edit', 'wp-command-center' ) ); ?>,
-		optimized:<?php echo wp_json_encode( esc_html__( 'Optimized', 'wp-command-center' ) ); ?>,
-		missingN: <?php echo wp_json_encode( esc_html__( 'Missing meta', 'wp-command-center' ) ); ?>,
-		weakN:    <?php echo wp_json_encode( esc_html__( 'Weak meta', 'wp-command-center' ) ); ?>,
-		totalN:   <?php echo wp_json_encode( esc_html__( 'Total content', 'wp-command-center' ) ); ?>,
+		loading:  <?php echo wp_json_encode( esc_html__( 'Loading…', 'ai-command-center' ) ); ?>,
+		error:    <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'ai-command-center' ) ); ?>,
+		empty:    <?php echo wp_json_encode( esc_html__( 'No content in this view. 🎉', 'ai-command-center' ) ); ?>,
+		noPlugin: <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active. Activate one to audit SEO meta.', 'ai-command-center' ) ); ?>,
+		none:     <?php echo wp_json_encode( esc_html__( '(not set)', 'ai-command-center' ) ); ?>,
+		missing:  <?php echo wp_json_encode( esc_html__( 'Missing', 'ai-command-center' ) ); ?>,
+		weak:     <?php echo wp_json_encode( esc_html__( 'Weak', 'ai-command-center' ) ); ?>,
+		ok:       <?php echo wp_json_encode( esc_html__( 'OK', 'ai-command-center' ) ); ?>,
+		colPost:  <?php echo wp_json_encode( esc_html__( 'Content', 'ai-command-center' ) ); ?>,
+		colTitle: <?php echo wp_json_encode( esc_html__( 'SEO title', 'ai-command-center' ) ); ?>,
+		colDesc:  <?php echo wp_json_encode( esc_html__( 'Meta description', 'ai-command-center' ) ); ?>,
+		colState: <?php echo wp_json_encode( esc_html__( 'State', 'ai-command-center' ) ); ?>,
+		colScore: <?php echo wp_json_encode( esc_html__( 'Score', 'ai-command-center' ) ); ?>,
+		edit:     <?php echo wp_json_encode( esc_html__( 'Edit', 'ai-command-center' ) ); ?>,
+		optimized:<?php echo wp_json_encode( esc_html__( 'Optimized', 'ai-command-center' ) ); ?>,
+		missingN: <?php echo wp_json_encode( esc_html__( 'Missing meta', 'ai-command-center' ) ); ?>,
+		weakN:    <?php echo wp_json_encode( esc_html__( 'Weak meta', 'ai-command-center' ) ); ?>,
+		totalN:   <?php echo wp_json_encode( esc_html__( 'Total content', 'ai-command-center' ) ); ?>,
 		// U3 — action-first dashboard.
-		dashNeedsYou:  <?php echo wp_json_encode( esc_html__( 'Needs you', 'wp-command-center' ) ); ?>,
-		dashHealthy:   <?php echo wp_json_encode( esc_html__( 'Healthy', 'wp-command-center' ) ); ?>,
-		stMissing:     <?php echo wp_json_encode( esc_html__( 'Missing', 'wp-command-center' ) ); ?>,
-		stNeedsWork:   <?php echo wp_json_encode( esc_html__( 'Needs work', 'wp-command-center' ) ); ?>,
-		stOptimized:   <?php echo wp_json_encode( esc_html__( 'Optimized', 'wp-command-center' ) ); ?>,
-		dashSugReady:  <?php echo wp_json_encode( esc_html__( 'suggestions ready', 'wp-command-center' ) ); ?>,
-		dashApplied:   <?php echo wp_json_encode( esc_html__( 'applied (reversible)', 'wp-command-center' ) ); ?>,
+		dashNeedsYou:  <?php echo wp_json_encode( esc_html__( 'Needs you', 'ai-command-center' ) ); ?>,
+		dashHealthy:   <?php echo wp_json_encode( esc_html__( 'Healthy', 'ai-command-center' ) ); ?>,
+		stMissing:     <?php echo wp_json_encode( esc_html__( 'Missing', 'ai-command-center' ) ); ?>,
+		stNeedsWork:   <?php echo wp_json_encode( esc_html__( 'Needs work', 'ai-command-center' ) ); ?>,
+		stOptimized:   <?php echo wp_json_encode( esc_html__( 'Optimized', 'ai-command-center' ) ); ?>,
+		dashSugReady:  <?php echo wp_json_encode( esc_html__( 'suggestions ready', 'ai-command-center' ) ); ?>,
+		dashApplied:   <?php echo wp_json_encode( esc_html__( 'applied (reversible)', 'ai-command-center' ) ); ?>,
 		/* translators: %d: optimized percentage (literal percent sign follows) */
-		dashPct:       <?php echo wp_json_encode( /* translators: %d: number */ __( '%d% optimized', 'wp-command-center' ) ); ?>,
+		dashPct:       <?php echo wp_json_encode( /* translators: %d: number */ __( '%d% optimized', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of published items */
-		dashPublished: <?php echo wp_json_encode( /* translators: %d: number */ __( '%d published', 'wp-command-center' ) ); ?>,
+		dashPublished: <?php echo wp_json_encode( /* translators: %d: number */ __( '%d published', 'ai-command-center' ) ); ?>,
 		// U1.2 — Generate → Suggestions handoff.
 		/* translators: %d: suggestions created */
-		viewSug:       <?php echo wp_json_encode( /* translators: %d: number */ __( 'Review %d suggestions →', 'wp-command-center' ) ); ?>,
+		viewSug:       <?php echo wp_json_encode( /* translators: %d: number */ __( 'Review %d suggestions →', 'ai-command-center' ) ); ?>,
 		// U1.4 — no AI provider connected.
-		noKey:         <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so no suggestions were generated. Add an Anthropic API key, then try again.', 'wp-command-center' ) ); ?>,
-		aiIntegrations:<?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'wp-command-center' ) ); ?>,
+		noKey:         <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so no suggestions were generated. Add an Anthropic API key, then try again.', 'ai-command-center' ) ); ?>,
+		aiIntegrations:<?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'ai-command-center' ) ); ?>,
 		// Contextual row-action result notices (wpcc_seo_gen redirect codes).
-		genCreated:    <?php echo wp_json_encode( esc_html__( 'SEO suggestion created. Review it below and apply when you’re ready.', 'wp-command-center' ) ); ?>,
-		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'wp-command-center' ) ); ?>,
-		genNoProvider: <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so nothing was generated. Add an Anthropic API key in AI Integrations.', 'wp-command-center' ) ); ?>,
-		genNoPlugin:   <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'wp-command-center' ) ); ?>,
-		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive SEO suggestions (e.g. trashed or auto-draft) and were skipped. Draft, pending, scheduled, private, and published content are all supported.', 'wp-command-center' ) ); ?>,
-		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'wp-command-center' ) ); ?>,
+		genCreated:    <?php echo wp_json_encode( esc_html__( 'SEO suggestion created. Review it below and apply when you’re ready.', 'ai-command-center' ) ); ?>,
+		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'ai-command-center' ) ); ?>,
+		genNoProvider: <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so nothing was generated. Add an Anthropic API key in AI Integrations.', 'ai-command-center' ) ); ?>,
+		genNoPlugin:   <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'ai-command-center' ) ); ?>,
+		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive SEO suggestions (e.g. trashed or auto-draft) and were skipped. Draft, pending, scheduled, private, and published content are all supported.', 'ai-command-center' ) ); ?>,
+		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'ai-command-center' ) ); ?>,
 		// Bulk-action result summary (wpcc_seo_bulk redirect).
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'wp-command-center' ) ); ?>,
-		bulkAllExist:  <?php echo wp_json_encode( esc_html__( 'All selected items already have open suggestions — review them below.', 'wp-command-center' ) ); ?>,
-		bulkNone:      <?php echo wp_json_encode( esc_html__( 'No suggestions were created for the selected items.', 'wp-command-center' ) ); ?>,
-		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'wp-command-center' ) ); ?>,
-		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'wp-command-center' ) ); ?>,
+		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'ai-command-center' ) ); ?>,
+		bulkAllExist:  <?php echo wp_json_encode( esc_html__( 'All selected items already have open suggestions — review them below.', 'ai-command-center' ) ); ?>,
+		bulkNone:      <?php echo wp_json_encode( esc_html__( 'No suggestions were created for the selected items.', 'ai-command-center' ) ); ?>,
+		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'ai-command-center' ) ); ?>,
+		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
-		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>,
+		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'ai-command-center' ) ); ?>,
 		// GA#2 Slice 2b — generation (drafts only).
-		colSel:    <?php echo wp_json_encode( esc_html__( 'Select', 'wp-command-center' ) ); ?>,
-		gen:       <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'wp-command-center' ) ); ?>,
-		generating:<?php echo wp_json_encode( esc_html__( 'Generating…', 'wp-command-center' ) ); ?>,
+		colSel:    <?php echo wp_json_encode( esc_html__( 'Select', 'ai-command-center' ) ); ?>,
+		gen:       <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'ai-command-center' ) ); ?>,
+		generating:<?php echo wp_json_encode( esc_html__( 'Generating…', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		genDone:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d drafts created, %2$d skipped, %3$d failed.', 'wp-command-center' ) ); ?>,
-		genCap:    <?php echo wp_json_encode( esc_html__( 'Up to 25 at a time; only the first 25 are used.', 'wp-command-center' ) ); ?>,
-		genErr:    <?php echo wp_json_encode( esc_html__( 'Generation failed. Please retry.', 'wp-command-center' ) ); ?>,
+		genDone:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d drafts created, %2$d skipped, %3$d failed.', 'ai-command-center' ) ); ?>,
+		genCap:    <?php echo wp_json_encode( esc_html__( 'Up to 25 at a time; only the first 25 are used.', 'ai-command-center' ) ); ?>,
+		genErr:    <?php echo wp_json_encode( esc_html__( 'Generation failed. Please retry.', 'ai-command-center' ) ); ?>,
 		// Slice 3 — Suggestions tab.
-		noSug:     <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from the Review tab.', 'wp-command-center' ) ); ?>,
-		sgCurTitle: <?php echo wp_json_encode( esc_html__( 'Title', 'wp-command-center' ) ); ?>,
-		sgCurDesc:  <?php echo wp_json_encode( esc_html__( 'Description', 'wp-command-center' ) ); ?>,
-		byAI:      <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'wp-command-center' ) ); ?>,
-		edited:    <?php echo wp_json_encode( esc_html__( 'Edited', 'wp-command-center' ) ); ?>,
-		save:      <?php echo wp_json_encode( esc_html__( 'Save', 'wp-command-center' ) ); ?>,
-		saved:     <?php echo wp_json_encode( esc_html__( 'Saved', 'wp-command-center' ) ); ?>,
-		dismiss:   <?php echo wp_json_encode( esc_html__( 'Dismiss', 'wp-command-center' ) ); ?>,
+		noSug:     <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from the Review tab.', 'ai-command-center' ) ); ?>,
+		sgCurTitle: <?php echo wp_json_encode( esc_html__( 'Title', 'ai-command-center' ) ); ?>,
+		sgCurDesc:  <?php echo wp_json_encode( esc_html__( 'Description', 'ai-command-center' ) ); ?>,
+		byAI:      <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'ai-command-center' ) ); ?>,
+		edited:    <?php echo wp_json_encode( esc_html__( 'Edited', 'ai-command-center' ) ); ?>,
+		save:      <?php echo wp_json_encode( esc_html__( 'Save', 'ai-command-center' ) ); ?>,
+		saved:     <?php echo wp_json_encode( esc_html__( 'Saved', 'ai-command-center' ) ); ?>,
+		dismiss:   <?php echo wp_json_encode( esc_html__( 'Dismiss', 'ai-command-center' ) ); ?>,
 		// Slice 5a — page-scoped bulk apply/dismiss (Suggestions tab).
-		selectSug:   <?php echo wp_json_encode( esc_html__( 'Select suggestion', 'wp-command-center' ) ); ?>,
-		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'wp-command-center' ) ); ?>,
-		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'wp-command-center' ) ); ?>,
-		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'wp-command-center' ) ); ?>,
-		bulkDone:    <?php echo wp_json_encode( esc_html__( 'processed', 'wp-command-center' ) ); ?>,
-		lblApplied:  <?php echo wp_json_encode( esc_html__( 'applied', 'wp-command-center' ) ); ?>,
-		lblPending:  <?php echo wp_json_encode( esc_html__( 'submitted', 'wp-command-center' ) ); ?>,
-		lblDismissed:<?php echo wp_json_encode( esc_html__( 'dismissed', 'wp-command-center' ) ); ?>,
-		lblFailed:   <?php echo wp_json_encode( esc_html__( 'failed', 'wp-command-center' ) ); ?>,
+		selectSug:   <?php echo wp_json_encode( esc_html__( 'Select suggestion', 'ai-command-center' ) ); ?>,
+		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'ai-command-center' ) ); ?>,
+		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'ai-command-center' ) ); ?>,
+		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'ai-command-center' ) ); ?>,
+		bulkDone:    <?php echo wp_json_encode( esc_html__( 'processed', 'ai-command-center' ) ); ?>,
+		lblApplied:  <?php echo wp_json_encode( esc_html__( 'applied', 'ai-command-center' ) ); ?>,
+		lblPending:  <?php echo wp_json_encode( esc_html__( 'submitted', 'ai-command-center' ) ); ?>,
+		lblDismissed:<?php echo wp_json_encode( esc_html__( 'dismissed', 'ai-command-center' ) ); ?>,
+		lblFailed:   <?php echo wp_json_encode( esc_html__( 'failed', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of selected suggestions */
-		confirmBulkApplyDev:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Apply the %d selected suggestions now? Each is applied individually and can be undone.', 'wp-command-center' ) ); ?>,
+		confirmBulkApplyDev:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Apply the %d selected suggestions now? Each is applied individually and can be undone.', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of selected suggestions */
-		confirmBulkApplyGate: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Submit the %d selected suggestions for approval? Each becomes its own approval request.', 'wp-command-center' ) ); ?>,
+		confirmBulkApplyGate: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Submit the %d selected suggestions for approval? Each becomes its own approval request.', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of selected suggestions */
-		confirmBulkDismiss:   <?php echo wp_json_encode( /* translators: %d: number */ __( 'Dismiss the %d selected suggestions? This discards the drafts.', 'wp-command-center' ) ); ?>,
-		edit:      <?php echo wp_json_encode( esc_html__( 'Edit', 'wp-command-center' ) ); ?>,
-		none:      <?php echo wp_json_encode( esc_html__( '(not set)', 'wp-command-center' ) ); ?>,
+		confirmBulkDismiss:   <?php echo wp_json_encode( /* translators: %d: number */ __( 'Dismiss the %d selected suggestions? This discards the drafts.', 'ai-command-center' ) ); ?>,
+		edit:      <?php echo wp_json_encode( esc_html__( 'Edit', 'ai-command-center' ) ); ?>,
+		none:      <?php echo wp_json_encode( esc_html__( '(not set)', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
-		ccTitle:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'wp-command-center' ) ); ?>,
+		ccTitle:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d min, %3$d max */
-		ccDesc:    <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d (target %2$d–%3$d)', 'wp-command-center' ) ); ?>,
+		ccDesc:    <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d (target %2$d–%3$d)', 'ai-command-center' ) ); ?>,
 		// Slice 4a — apply + Applied tab.
-		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'wp-command-center' ) ); ?>,
-		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'wp-command-center' ) ); ?>,
-		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'wp-command-center' ) ); ?>,
-		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'wp-command-center' ) ); ?>,
-		stAwaiting:<?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'wp-command-center' ) ); ?>,
-		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'wp-command-center' ) ); ?>,
-		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'wp-command-center' ) ); ?>,
-		colStatus2:<?php echo wp_json_encode( esc_html__( 'Status', 'wp-command-center' ) ); ?>,
-		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'wp-command-center' ) ); ?>,
+		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'ai-command-center' ) ); ?>,
+		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'ai-command-center' ) ); ?>,
+		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'ai-command-center' ) ); ?>,
+		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'ai-command-center' ) ); ?>,
+		stAwaiting:<?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'ai-command-center' ) ); ?>,
+		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'ai-command-center' ) ); ?>,
+		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'ai-command-center' ) ); ?>,
+		colStatus2:<?php echo wp_json_encode( esc_html__( 'Status', 'ai-command-center' ) ); ?>,
+		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'ai-command-center' ) ); ?>,
 		// Slice 4b — per-item Undo (reuses the governed change-history rollback).
-		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'wp-command-center' ) ); ?>,
-		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'wp-command-center' ) ); ?>,
-		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'wp-command-center' ) ); ?>,
-		colActions:<?php echo wp_json_encode( esc_html__( 'Actions', 'wp-command-center' ) ); ?>,
+		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'ai-command-center' ) ); ?>,
+		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'ai-command-center' ) ); ?>,
+		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'ai-command-center' ) ); ?>,
+		colActions:<?php echo wp_json_encode( esc_html__( 'Actions', 'ai-command-center' ) ); ?>,
 		// Trust polish — post-apply confirmation toast (reversibility + audit affordances).
-		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'wp-command-center' ) ); ?>,
-		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'wp-command-center' ) ); ?>,
-		chipReversible: <?php echo wp_json_encode( esc_html__( 'Reversible', 'wp-command-center' ) ); ?>,
-		chipAudited:    <?php echo wp_json_encode( esc_html__( 'Audited', 'wp-command-center' ) ); ?>,
-		toastView:      <?php echo wp_json_encode( esc_html__( 'View in Applied', 'wp-command-center' ) ); ?>,
-		toastUndone:    <?php echo wp_json_encode( esc_html__( 'Reverted', 'wp-command-center' ) ); ?>,
-		toastClose:     <?php echo wp_json_encode( esc_html__( 'Dismiss notification', 'wp-command-center' ) ); ?>
+		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'ai-command-center' ) ); ?>,
+		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'ai-command-center' ) ); ?>,
+		chipReversible: <?php echo wp_json_encode( esc_html__( 'Reversible', 'ai-command-center' ) ); ?>,
+		chipAudited:    <?php echo wp_json_encode( esc_html__( 'Audited', 'ai-command-center' ) ); ?>,
+		toastView:      <?php echo wp_json_encode( esc_html__( 'View in Applied', 'ai-command-center' ) ); ?>,
+		toastUndone:    <?php echo wp_json_encode( esc_html__( 'Reverted', 'ai-command-center' ) ); ?>,
+		toastClose:     <?php echo wp_json_encode( esc_html__( 'Dismiss notification', 'ai-command-center' ) ); ?>
 	};
 	const MAX_BATCH = 25;
 

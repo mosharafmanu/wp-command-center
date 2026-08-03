@@ -30,7 +30,7 @@ final class ConnectionTester {
 	public function test( array $conn, string $key ): array {
 		$dialect = (string) ( $conn['dialect'] ?? '' );
 		if ( ! Dialect::test_supported( $dialect ) ) {
-			return $this->res( false, 'test_unsupported', __( 'A connection test is not available for this dialect.', 'wp-command-center' ) );
+			return $this->res( false, 'test_unsupported', __( 'A connection test is not available for this dialect.', 'ai-command-center' ) );
 		}
 		switch ( $dialect ) {
 			case Dialect::ANTHROPIC:
@@ -40,14 +40,14 @@ final class ConnectionTester {
 			case Dialect::GEMINI:
 				return $this->test_gemini( $conn, $key );
 			default:
-				return $this->res( false, 'test_unsupported', __( 'Unsupported dialect.', 'wp-command-center' ) );
+				return $this->res( false, 'test_unsupported', __( 'Unsupported dialect.', 'ai-command-center' ) );
 		}
 	}
 
 	private function test_anthropic( string $model ): array {
 		$client = new AnthropicClient();
 		if ( ! $client->is_configured() ) {
-			return $this->res( false, 'not_configured', __( 'No API key configured.', 'wp-command-center' ) );
+			return $this->res( false, 'not_configured', __( 'No API key configured.', 'ai-command-center' ) );
 		}
 		$m   = $client->model( '' !== $model ? $model : 'claude-sonnet-4-6' );
 		$r   = $client->send( [ [ 'role' => 'user', 'content' => 'ping' ] ], 1, $m, [ 'timeout' => self::TIMEOUT ] );
@@ -58,12 +58,12 @@ final class ConnectionTester {
 	private function test_openai_compatible( array $conn, string $key ): array {
 		$base = rtrim( (string) $conn['endpoint'], '/' );
 		if ( '' === $base ) {
-			return $this->res( false, 'no_endpoint', __( 'Set a base URL for this connection first.', 'wp-command-center' ) );
+			return $this->res( false, 'no_endpoint', __( 'Set a base URL for this connection first.', 'ai-command-center' ) );
 		}
 		$def      = ProviderCatalog::get( (string) $conn['provider'] ) ?? [];
 		$optional = (bool) ( $def['key_optional'] ?? false );
 		if ( '' === $key && ! $optional ) {
-			return $this->res( false, 'not_configured', __( 'No API key configured.', 'wp-command-center' ) );
+			return $this->res( false, 'not_configured', __( 'No API key configured.', 'ai-command-center' ) );
 		}
 		$headers = [];
 		if ( '' !== $key ) {
@@ -75,7 +75,7 @@ final class ConnectionTester {
 
 	private function test_gemini( array $conn, string $key ): array {
 		if ( '' === $key ) {
-			return $this->res( false, 'not_configured', __( 'No API key configured.', 'wp-command-center' ) );
+			return $this->res( false, 'not_configured', __( 'No API key configured.', 'ai-command-center' ) );
 		}
 		$base = rtrim( (string) $conn['endpoint'], '/' );
 		$url  = add_query_arg( 'key', rawurlencode( $key ), $base . '/models' ); // key never logged.

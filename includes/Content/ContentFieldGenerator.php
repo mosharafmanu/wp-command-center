@@ -72,7 +72,7 @@ final class ContentFieldGenerator {
 
 		// Validate the requested field kind.
 		if ( ! in_array( $kind, self::KINDS, true ) ) {
-			$failed[] = [ 'post_id' => $post_id, 'code' => 'invalid_kind', 'message' => __( 'Unknown content field kind.', 'wp-command-center' ) ];
+			$failed[] = [ 'post_id' => $post_id, 'code' => 'invalid_kind', 'message' => __( 'Unknown content field kind.', 'ai-command-center' ) ];
 			return $this->envelope( $kind, $batch_id, '', '', $created, $skipped, $failed );
 		}
 

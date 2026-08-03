@@ -45,13 +45,13 @@ final class CacheRuntimeManager {
 			case 'cache_purge_url':
 				return $this->purge_url( $payload, $context );
 			case 'cache_describe':
-				return [ 'action' => 'cache_describe', 'runtime' => 'cache_manage', 'actions' => self::ACTIONS, 'notes' => __( 'cache_purge_all clears every detected layer + object cache. cache_purge_url purges one URL where the layer supports it. cache_status only detects. No shell required.', 'wp-command-center' ) ];
+				return [ 'action' => 'cache_describe', 'runtime' => 'cache_manage', 'actions' => self::ACTIONS, 'notes' => __( 'cache_purge_all clears every detected layer + object cache. cache_purge_url purges one URL where the layer supports it. cache_status only detects. No shell required.', 'ai-command-center' ) ];
 			default:
 				return $this->error(
 					'wpcc_invalid_cache_action',
 					sprintf(
 						/* translators: 1: invalid action, 2: valid actions */
-						__( 'Invalid cache action "%1$s". Valid actions: %2$s.', 'wp-command-center' ),
+						__( 'Invalid cache action "%1$s". Valid actions: %2$s.', 'ai-command-center' ),
 						$action,
 						implode( ', ', self::ACTIONS )
 					),
@@ -130,7 +130,7 @@ final class CacheRuntimeManager {
 	private function purge_url( array $p, array $context ): array {
 		$url = esc_url_raw( (string) ( $p['url'] ?? '' ) );
 		if ( '' === $url ) {
-			return $this->error( 'wpcc_missing_url', __( "cache_purge_url requires a 'url' parameter (the page URL to purge).", 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_url', __( "cache_purge_url requires a 'url' parameter (the page URL to purge).", 'ai-command-center' ) );
 		}
 
 		$detected = $this->detect();
