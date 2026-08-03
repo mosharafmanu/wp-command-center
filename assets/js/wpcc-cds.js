@@ -222,9 +222,24 @@
 			return '<div class="wpcc-cds-kpi"><span class="wpcc-cds-kpi__value">' + WPCC.escHtml( value )
 				+ '</span><span class="wpcc-cds-kpi__label">' + WPCC.escHtml( label ) + '</span></div>';
 		},
+		/**
+		 * Empty state.
+		 *
+		 * `icon` stays a dashicons class name, exactly as before, so every existing
+		 * caller is untouched. It may ALSO be a `.svg` URL, which renders the brand
+		 * mark instead - used where the empty state is the product's own "nothing has
+		 * happened here yet" rather than a state carrying its own meaning. Decorative
+		 * either way: the title directly below already says what is empty.
+		 */
 		empty: function ( title, detail, icon ) {
+			var art = '';
+			if ( icon ) {
+				art = /\.svg($|\?)/.test( icon )
+					? '<img src="' + WPCC.escHtml( icon ) + '" alt="" class="wpcc-cds-empty__mark" width="32" height="32" decoding="async" />'
+					: '<span class="dashicons ' + WPCC.escHtml( icon ) + ' wpcc-cds-empty__icon" aria-hidden="true"></span>';
+			}
 			return '<div class="wpcc-cds-empty">'
-				+ ( icon ? '<span class="dashicons ' + WPCC.escHtml( icon ) + ' wpcc-cds-empty__icon" aria-hidden="true"></span>' : '' )
+				+ art
 				+ '<div class="wpcc-cds-empty__title">' + WPCC.escHtml( title ) + '</div>'
 				+ ( detail ? '<p>' + WPCC.escHtml( detail ) + '</p>' : '' )
 				+ '</div>';

@@ -498,7 +498,30 @@ final class AppShell {
 				?>
 				<div class="wpcc-shell__identity">
 					<h1 class="wpcc-shell__brand">
-						<span class="wpcc-shell__brand-mark" aria-hidden="true">&#9783;</span>
+						<?php
+						/*
+						 * The mark is the real artwork, not a typographic stand-in. This
+						 * was a Unicode trigram glyph (&#9783;) inside a filled blue
+						 * square, which the identity standard rules out twice over: the
+						 * mark may never be reconstructed from font glyphs, and it may
+						 * never sit inside another badge or container. The 26 px box is
+						 * kept exactly, because .wpcc-shell__desc aligns itself under the
+						 * wordmark with a hard 34px offset (26 + the 8px flex gap).
+						 * Decorative: the product name is the very next thing in the
+						 * heading, so announcing the mark too would just repeat it.
+						 */
+						echo wp_kses(
+							Brand::picture(
+								Brand::mark(),
+								Brand::mark_dark(),
+								'',
+								'wpcc-shell__brand-mark',
+								26,
+								26
+							),
+							Brand::allowed_html()
+						);
+						?>
 						<?php esc_html_e( 'Command Center', 'ai-command-center' ); ?>
 						<?php if ( ! $is_home ) : ?>
 							<span class="wpcc-shell__brand-section"><?php echo esc_html( $section['label'] ); ?></span>

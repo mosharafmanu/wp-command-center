@@ -105,16 +105,34 @@
 	line-height: 1.2;
 }
 
+/*
+ * The mark is real SVG artwork, so this box only reserves space for it — no fill, no
+ * radius, no container. The identity standard forbids placing the mark inside another
+ * badge, and the previous blue rounded square was exactly that. The 26px footprint is
+ * unchanged so .wpcc-shell__desc's 34px alignment (26 + the 8px flex gap) still lands
+ * under the wordmark. flex-shrink:0 keeps the mark from being squeezed when a long
+ * section label wraps in the heading.
+ */
+.wpcc-shell__brand > picture {
+	display: flex;
+	flex: 0 0 auto;
+}
+
 .wpcc-shell__brand-mark {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
+	display: block;
 	width: 26px;
 	height: 26px;
-	border-radius: var( --wpcc-radius-sm );
-	background: var( --wpcc-brand-accent );
-	color: var( --wpcc-white );
-	font-size: 15px;
+	flex: 0 0 auto;
+	/*
+	 * Stated, not merely omitted. This class previously painted a filled blue tile with
+	 * a rounded corner and a glyph inside it. On a site upgrading in place, an admin
+	 * whose browser still holds the previous stylesheet at the same `?ver=` keeps that
+	 * old rule in the CSSOM, and a rule cannot be undone by leaving a property out —
+	 * the tile would survive behind the new artwork until the cache expired. Declaring
+	 * both properties overrides it outright, so the mark is never boxed.
+	 */
+	background: none;
+	border-radius: 0;
 }
 
 .wpcc-shell__brand-section {
@@ -689,6 +707,21 @@
 .wpcc-cds-empty__icon {
 	font-size: 28px;
 	color: var( --wpcc-border-strong );
+}
+
+/*
+ * The brand mark variant of the empty state. Sized to sit on the same optical line
+ * as the 28px dashicon it replaces, and held back with opacity so it reads as a quiet
+ * watermark rather than competing with the title. Opacity is used rather than a
+ * recoloured copy of the artwork because the identity may not be redrawn in arbitrary
+ * colours — dimming the real mark keeps it the real mark.
+ */
+.wpcc-cds-empty__mark {
+	display: block;
+	width: 32px;
+	height: 32px;
+	margin: 0 auto;
+	opacity: 0.45;
 }
 
 .wpcc-cds-empty__title {

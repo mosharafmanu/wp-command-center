@@ -66,7 +66,7 @@ final class AdminMenu {
 			self::CAPABILITY,
 			AppShell::HOME_SLUG,
 			[ $this, 'render_overview' ],
-			'dashicons-shield-alt',
+			Brand::menu_icon(),
 			65
 		);
 
@@ -177,8 +177,12 @@ final class AdminMenu {
 
 		$wp_admin_bar->add_node( [
 			'id'    => 'wpcc-pending-approvals',
+			// The 16 px monochrome master ships in the platform's own icon gray
+			// (#a7aaad), so the admin bar's existing hover treatment lights it with the
+			// label instead of leaving a mismatched full-colour mark in the toolbar.
 			'title' => sprintf(
-				'%s <span style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
+				'<img src="%s" alt="" width="16" height="16" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:6px;" decoding="async" />%s <span style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
+				esc_url( Brand::admin_16() ),
 				esc_html__( 'AI Requests', 'ai-command-center' ),
 				$count
 			),

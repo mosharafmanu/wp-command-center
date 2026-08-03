@@ -29,6 +29,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use WPCommandCenter\Admin\AdoptionStatus;
+use WPCommandCenter\Admin\Brand;
 use WPCommandCenter\Admin\ConnectionStatus;
 use WPCommandCenter\Operations\SecurityModeManager;
 
@@ -157,6 +158,27 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 */
 	?>
 	<section class="wpcc-setup" aria-labelledby="wpcc-setup-h">
+		<?php
+		/*
+		 * First run is the one screen that introduces the product, so it gets the full
+		 * lockup rather than the standalone mark — the identity standard reserves the
+		 * lockup for exactly this. It carries a real accessible name here (unlike the
+		 * shell header's decorative mark) because on this screen the lockup IS the
+		 * product's first statement of who it is; the headline below is a promise, not
+		 * a name.
+		 */
+		echo wp_kses(
+			Brand::picture(
+				Brand::logo(),
+				Brand::logo_dark(),
+				esc_attr__( 'WP Command Center', 'ai-command-center' ),
+				'wpcc-setup__logo',
+				456,
+				72
+			),
+			Brand::allowed_html()
+		);
+		?>
 		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Let an AI assistant work on this site — safely', 'ai-command-center' ); ?></h2>
 		<p class="wpcc-setup__lede">
 			<?php esc_html_e( 'Ask Claude, Cursor or ChatGPT to change your site, in your own words and your own language. You approve anything that matters, everything is recorded, and supported changes can be undone.', 'ai-command-center' ); ?>
@@ -386,6 +408,12 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 .wpcc-setup__prompt-label { color: #646970; margin-right: 6px; }
 .wpcc-setup__prompt code { background: #f0f0f1; padding: 3px 8px; border-radius: 4px; font-size: 13px; }
 .wpcc-setup__note { margin: 6px 0 0; font-size: 12px; color: #646970; }
+/* The first-run lockup. width:auto + max-width keeps the intrinsic 456x72 ratio
+   (height:auto) so it stays sharp on retina and scales down on narrow screens
+   instead of overflowing. The 20px clear space below is the standard's minimum
+   1x vertical clear space at this rendered size, so the headline never crowds it. */
+.wpcc-setup__logo { display:block; width:auto; height:auto; max-width:248px; margin:0 0 20px; }
+@media (max-width: 480px) { .wpcc-setup__logo { max-width:200px; } }
 /* First-run is the one screen that earns a real headline. The CDS type scale
    caps h2 at 16px for dense operator screens, which is right everywhere else
    and wrong here — this is the product introducing itself. Scoped override. */
@@ -464,6 +492,8 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	var apiBase  = <?php echo wp_json_encode( $api_base ); ?>;
 	var links    = <?php echo wp_json_encode( $links ); ?>;
 	var sessBase = <?php echo wp_json_encode( $session_base ); ?>;
+	/* Brand mark for the product's own empty state (see WPCC.cds.empty). */
+	var brandMark = <?php echo wp_json_encode( Brand::mark() ); ?>;
 
 	var i18n = {
 		loadFail:    <?php echo wp_json_encode( __( 'Could not load. Your admin session may have expired — refresh and try again.', 'ai-command-center' ) ); ?>,
@@ -688,7 +718,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 
 	function renderActivity( rows ) {
 		if ( ! rows || ! rows.length ) {
-			set( 'wpcc-home-activity', WPCC.cds.empty( i18n.actEmptyTitle, i18n.actEmptyDetail, 'dashicons-backup' ) );
+			set( 'wpcc-home-activity', WPCC.cds.empty( i18n.actEmptyTitle, i18n.actEmptyDetail, brandMark ) );
 			return;
 		}
 		var html = '<ul class="wpcc-cds-timeline">';
