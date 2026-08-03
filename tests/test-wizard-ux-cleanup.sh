@@ -45,7 +45,15 @@ done
 
 echo "== 6. GENERATION/security/runtime byte-identical to main (no runtime change) =="
 for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php includes/Ai/Platform/CredentialStore.php; do
-  if git -C "$ROOT" diff --quiet main -- "$f" 2>/dev/null; then pass "unchanged vs main: $(basename "$f")"; else fail "CHANGED vs main: $(basename "$f")"; fi
+  # Ignore the text domain: a slug rename touches every file at once and says nothing
+  # about whether this layer's behaviour changed, which is what this guards.
+  if git -C "$ROOT" diff main -- "$f" 2>/dev/null \
+       | grep "^[+-]" | grep -v "^[+-][+-]" \
+       | grep -vq "['\"]\(wp\|ai\)-command-center['\"]"; then
+    fail "CHANGED vs main: $(basename "$f")"
+  else
+    pass "unchanged vs main (text domain aside): $(basename "$f")"
+  fi
 done
 # ProviderCatalog gains metadata() but ADDITIVELY — no existing line removed/changed.
 if [ -z "$(git -C "$ROOT" diff main -- includes/Ai/Platform/ProviderCatalog.php | rg '^-' | rg -v '^---')" ]; then pass "ProviderCatalog change is additive-only (no execution change)"; else fail "ProviderCatalog has non-additive edits"; fi

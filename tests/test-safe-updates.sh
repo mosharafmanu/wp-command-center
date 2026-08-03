@@ -70,8 +70,10 @@ assert_eq "validation: invalid theme blocked" "wpcc_theme_not_found" "$(echo "$I
 echo
 echo "== 2. Dry Run Updates =="
 
-# Dry run plugin (assuming akismet or wp-command-center exists, let's use wp-command-center itself for dry run)
-DRY_PL=$(api POST /operations/safe_updates/run '{"type":"plugin","slug":"wp-command-center","dry_run":true}')
+# Dry-run against THIS plugin: it is guaranteed installed and guaranteed up to date.
+# Derived from the directory rather than named, so a slug rename cannot break it.
+WPCC_OWN_SLUG=$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)")
+DRY_PL=$(api POST /operations/safe_updates/run "{\"type\":\"plugin\",\"slug\":\"$WPCC_OWN_SLUG\",\"dry_run\":true}")
 
 # If there's no update available, we expect wpcc_no_update_available.
 # Since we are just testing the endpoint structure, getting the correct error is also fine.
