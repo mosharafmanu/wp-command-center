@@ -1528,7 +1528,20 @@ final class ACFRuntimeManager {
 			foreach ( $g['location'] ?? [] as $loc ) { $loc_str = wp_json_encode( $loc ); $location_counts[ $loc_str ] = ( $location_counts[ $loc_str ] ?? 0 ) + 1; }
 		}
 		$json_path = acf_get_setting( 'save_json' );
-		$synced = count( array_filter( $groups, fn( $g ) => ! empty( $g['local'] ) && 'json' === $g['local'] ) );
+		/*
+		 * Compare CONTENT, exactly as json_status() does. The previous count here filtered on
+		 * $g['local'] === 'json', which is where a group was LOADED FROM, not whether the file
+		 * agrees with the database — the very heuristic json_status() was fixed to stop using.
+		 * Keeping it here meant acf_inventory reported "unsynced: 0" (a false all-clear) on the
+		 * same site where acf_json_status correctly reported every group out of sync.
+		 */
+		$synced = 0;
+		foreach ( $groups as $g ) {
+			$key = (string) ( $g['key'] ?? '' );
+			if ( '' !== $key && AcfLocalJson::status( $key )['in_sync'] ) {
+				$synced++;
+			}
+		}
 		return [ 'action' => 'acf_inventory', 'groups' => count( $groups ), 'total_fields' => $total_fields, 'synced' => $synced, 'unsynced' => count( $groups ) - $synced, 'field_types' => $type_counts, 'json_path' => $json_path ];
 	}
 

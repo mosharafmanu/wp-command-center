@@ -239,8 +239,14 @@ final class OperationRegistry {
 				'description'       => __( 'Safely inspect and manage WordPress content. Operations: list, get, create, update, delete, publish, unpublish, schedule, taxonomy, featured image. WordPress API-based.', 'ai-command-center' ),
 				'risk_level'        => 'medium',
 				'action_risks'      => [
-					'content_list'          => 'low',
-					'content_get'           => 'low',
+					// Diagnostic, not low: both are pure reads (WP_Query / get_post projection,
+					// plus an audit entry) and write nothing. Every other read action in the
+					// catalogue — theme_list, plugin_list, snapshot_list, media_list, user_list,
+					// cpt_list — is 'diagnostic'. As 'low' these two were the only reads in the
+					// product that stopped for human approval in Enterprise (Strict) mode, so an
+					// assistant could not list or open a post without a human approving each read.
+					'content_list'          => 'diagnostic',
+					'content_get'           => 'diagnostic',
 					'content_create'        => 'medium',
 					'content_update'        => 'medium',
 					'content_delete'        => 'medium',
