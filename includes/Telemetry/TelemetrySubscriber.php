@@ -84,19 +84,37 @@ final class TelemetrySubscriber {
 		return count( $parts ) >= 2 ? $parts[1] : ( $parts[0] ?? '' );
 	}
 
+	/**
+	 * The `result` context value as a scalar string, or '' when it is not scalar.
+	 *
+	 * Operation-completion events carry the STRUCTURED operation result (an array) under
+	 * `result`, while AI/connection events carry a short scalar verdict ('ok', 'api_error…').
+	 * Casting an array with (string) raises "Array to string conversion" and yields the
+	 * literal "Array", which error_code() then stored as the error code of every successful
+	 * operation. Non-scalar means "no scalar verdict was supplied" — not a failure.
+	 * Mirrors the is_array() guard already used by actor().
+	 */
+	private function result_scalar( array $ctx ): string {
+		if ( ! isset( $ctx['result'] ) || ! is_scalar( $ctx['result'] ) ) { return ''; }
+		return (string) $ctx['result'];
+	}
+
 	private function status( string $a, array $ctx ): string {
 		$a = strtolower( $a );
 		if ( str_ends_with( $a, '.failed' ) || str_contains( $a, 'exception' ) ) { return 'failed'; }
-		if ( isset( $ctx['result'] ) && in_array( strtolower( (string) $ctx['result'] ), [ 'fail', 'failed', 'error' ], true ) ) { return 'failed'; }
-		if ( isset( $ctx['result'] ) && str_starts_with( strtolower( (string) $ctx['result'] ), 'api_error' ) ) { return 'failed'; }
+		$result = strtolower( $this->result_scalar( $ctx ) );
+		if ( '' === $result ) { return 'completed'; }
+		if ( in_array( $result, [ 'fail', 'failed', 'error' ], true ) ) { return 'failed'; }
+		if ( str_starts_with( $result, 'api_error' ) ) { return 'failed'; }
 		return 'completed';
 	}
 
 	private function error_code( string $a, array $ctx ): string {
-		if ( isset( $ctx['result'] ) && 'ok' !== strtolower( (string) $ctx['result'] ) && '' !== (string) $ctx['result'] ) {
-			return (string) $ctx['result'];
+		$result = $this->result_scalar( $ctx );
+		if ( '' !== $result && 'ok' !== strtolower( $result ) ) {
+			return $result;
 		}
-		if ( isset( $ctx['code'] ) ) { return (string) $ctx['code']; }
+		if ( isset( $ctx['code'] ) && is_scalar( $ctx['code'] ) ) { return (string) $ctx['code']; }
 		if ( str_ends_with( strtolower( $a ), '.failed' ) || str_contains( strtolower( $a ), 'exception' ) ) { return 'error'; }
 		return '';
 	}
