@@ -81,10 +81,12 @@ final class MediaFieldAccessor implements FieldAccessor {
 	 */
 	public function key_set( $entity_id, string $key, $value ): void {
 		if ( isset( self::COLUMNS[ $key ] ) ) {
-			wp_update_post( [ 'ID' => (int) $entity_id, $key => $value ] );
+			// wp_update_post() also wp_unslash()es its input.
+			wp_update_post( wp_slash( [ 'ID' => (int) $entity_id, $key => $value ] ) );
 			return;
 		}
-		update_post_meta( (int) $entity_id, $key, $value );
+		// wp_slash(): see PostMetaAccessor::key_set().
+		update_post_meta( (int) $entity_id, $key, wp_slash( $value ) );
 	}
 
 	/**

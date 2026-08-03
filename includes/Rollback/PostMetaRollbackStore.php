@@ -52,7 +52,15 @@ final class PostMetaRollbackStore implements RollbackStore {
 		}
 		// unique=true → exactly one row per (post, rollback_id); a UUID collision is rejected
 		// rather than duplicated, leaving the original intact.
-		add_post_meta( $post_id, $this->meta_key( $rollback_id ), $record, true );
+		//
+		// wp_slash() is REQUIRED: add_metadata()/update_metadata() run wp_unslash()
+		// (stripslashes_deep) recursively over the value. A rollback record holds the
+		// pre-edit document verbatim — Elementor `_elementor_data`, ACF values — and those
+		// documents legitimately contain backslashes (`\"` inside HTML attributes, `\/`,
+		// escaped unicode, Windows paths). Without this, every captured snapshot loses one
+		// level of backslashes AT CAPTURE TIME and the restore faithfully writes back a
+		// corrupted document — turning an Elementor page into unparseable JSON.
+		add_post_meta( $post_id, $this->meta_key( $rollback_id ), wp_slash( $record ), true );
 	}
 
 	/**
@@ -91,7 +99,8 @@ final class PostMetaRollbackStore implements RollbackStore {
 		if ( $post_id <= 0 || '' === $rollback_id ) {
 			return;
 		}
-		update_post_meta( $post_id, $this->meta_key( $rollback_id ), $record );
+		// wp_slash() for the same reason as persist() — see the note there.
+		update_post_meta( $post_id, $this->meta_key( $rollback_id ), wp_slash( $record ) );
 	}
 
 	private function meta_key( string $rollback_id ): string {
