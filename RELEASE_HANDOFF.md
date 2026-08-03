@@ -52,8 +52,28 @@ Size    964,440 bytes (944 KB)
 Entries 318 (284 files)
 SHA256  4449222140b441c2c5d2374fdeba9cc69fac04c451eb130d3c2dd6cf115e268d
 MD5     a1a268dbec2abeb12ae95e58ba4ac0d2
-Built   2026-08-03 18:2x from b6c46ec
+Built   2026-08-03 from b6c46ec
 ```
+
+**Content identity (build-independent):**
+
+```
+dffb14139e2768c4b40cf6b50c43ad59724b0ffcd5654b2d2fa70d8e512bbab9
+```
+
+This is the SHA256 of the sorted per-file SHA256 manifest of the extracted package. Unlike
+the archive checksum it does **not** change between builds, so it is the reliable way to
+prove that a rebuild produced the same package. Reproduce with:
+
+```bash
+unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
+( cd /tmp/pkg && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
+```
+
+Verified at release time: a rebuild from the clean tree at `10145b4` produced a different
+archive checksum (`d755467c…`) but the **same** content identity `dffb1413…`, and `diff -r`
+of the two extracted trees reported no difference. The shipped file is the `b6c46ec` build;
+`10145b4` adds only `tests/` and `RELEASE_HANDOFF.md`, both excluded from the package.
 
 > **The previous artifact (`022e994a…`, built from `7a404df`) MUST NOT be uploaded.**
 > It contains the rollback-corruption blocker described in §5.5.
