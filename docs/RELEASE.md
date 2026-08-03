@@ -19,6 +19,31 @@ These must hold in every release. They are asserted by the suite and verified fr
 Changing any of them is a deliberate act that needs a documented reason and a schema
 migration where applicable.
 
+## Slug and product name
+
+They are deliberately different, and neither is an accident.
+
+| | Value | Why |
+|---|---|---|
+| WordPress.org slug | `ai-command-center` | The slug is derived from the plugin at submission and **cannot be changed after approval**. A `wp-` prefixed slug is flagged by WordPress.org's automated checks — not because "WP" is trademarked (it is not) but to close a rename loophole. Spending a rename before submission was cheaper than discovering it in review. |
+| Product / display name | **WP Command Center** | Unchanged. It is the brand, and it appears in the plugin header, `readme.txt`, and every customer-facing surface. |
+| Text domain | `ai-command-center` | Must equal the slug, or wordpress.org language packs will not load. |
+
+Two `trademarked_term` warnings remain, both on the display name and both
+warnings rather than errors. Aligning the display name would clear them; keeping the
+brand is the deliberate trade.
+
+**Never change with the slug** — these are contracts, not branding:
+
+- REST namespace `wp-command-center/v1` — changing it breaks every client config in use.
+- MCP server key `wp-command-center` — user-facing, and matches the retained product name.
+- Admin menu slug `HOME_SLUG` — an existing admin URL.
+- PHP namespaces `WPCommandCenter\` and DB prefix `wpcc_` — internal; renaming them would
+  force a data migration for no gain.
+
+Tests must **derive** the slug, text domain and main-file name rather than hardcode them.
+A rename previously broke 27 assertions across 11 suites, every one a hardcoded literal.
+
 ## Version numbers
 
 Four places must agree:
