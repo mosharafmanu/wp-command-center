@@ -151,7 +151,8 @@ and add setup/teardown guards to the suites that mutate the global protection mo
 **Before upload**
 - [ ] `shasum -a 256 build/ai-command-center-1.0.0.zip` → `4449222140b4…`
 - [ ] Confirm the file is **not** `022e994a…`
-- [ ] Confirm branch pushed (`10145b4`), `main` not merged
+- [ ] Confirm branch pushed and `main` not merged:
+      `git status -sb` shows no divergence, and `git rev-parse main` is still `13549c2`
 
 **Upload**
 - [ ] Go to <https://wordpress.org/plugins/developers/add/>
@@ -170,7 +171,8 @@ and add setup/teardown guards to the suites that mutate the global protection mo
 - [ ] Confirm `readme.txt` renders on the public page
 - [ ] Confirm the page shows **WP Command Center** at `wordpress.org/plugins/ai-command-center/`
 - [ ] Upload screenshots + banner to SVN `/assets/`
-- [ ] `git tag v1.0.0 10145b4 && git push origin v1.0.0`
+- [ ] Tag the head of the release branch (never a hardcoded hash — docs commits move it):
+      `git tag v1.0.0 release/v1-finalization && git push origin v1.0.0`
 - [ ] Merge `release/v1-finalization` → `main` (triggers production deploy)
 - [ ] Verify production: 42 tools, invariants, health check
 - [ ] Confirm generated client configs reference `plugins/ai-command-center/` for the relay
