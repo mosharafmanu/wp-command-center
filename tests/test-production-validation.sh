@@ -206,7 +206,12 @@ assert_true "security: MCP no token blocked (4xx/5xx)" "$( [ "$HTTP_MCP_NO_TOKEN
 echo "== 14. AI Client Registry Validation =="
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
 assert_eq "ai: total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
-assert_eq "ai: active clients" "2" "$(echo "$CLIENTS" | jq -r '.counts.active')"
+# `active` counts clients certified at Active or above. It was 2 while Claude
+# Desktop and Cursor carried unearned Gold; both markers were withdrawn, so 0 is
+# the honest answer and pinning 2 required the product to keep overstating.
+# The count must still be a real subset of the roster.
+assert_eq "ai: active count matches the clients marked active-or-above" "$(echo "$CLIENTS" | jq -r '.counts.active')" \
+	"$(echo "$CLIENTS" | jq -r '[ .clients[] | select(.status == "active" or .status == "bronze" or .status == "silver" or .status == "gold") ] | length')"
 # Not pinned to "gold": certification is awarded only from an executed run.
 assert_true "ai: claude status is a defined level" \
 	"$(echo "$CLIENTS" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if (.clients.claude.status | IN($v[])) then "true" else "false" end')"

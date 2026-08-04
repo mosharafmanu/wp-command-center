@@ -21,7 +21,15 @@ assert_true "ai-clients: note present" "$(echo "$CLIENTS" | jq -r 'if .note then
 
 echo "== 2. Client count accuracy =="
 assert_eq "counts: total 11" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
-assert_eq "counts: active 2" "2" "$(echo "$CLIENTS" | jq -r '.counts.active')"
+# `active` counts clients at certification level Active or above. It was 2 while
+# Claude Desktop and Cursor carried unearned Gold; both were withdrawn, so 0 is
+# now the honest answer and pinning 2 asserted the overstatement. What must stay
+# true is that the count is derivable and never exceeds the roster.
+ACTIVE_N="$(echo "$CLIENTS" | jq -r '.counts.active')"
+assert_true "counts: active is within the roster" \
+	"$(if [ "$ACTIVE_N" -ge 0 ] && [ "$ACTIVE_N" -le "$(echo "$CLIENTS" | jq -r '.counts.total')" ]; then echo true; else echo false; fi)"
+assert_eq "counts: active matches the clients reporting an active-or-above status" "$ACTIVE_N" \
+	"$(echo "$CLIENTS" | jq -r '[ .clients[] | select(.status == "active" or .status == "bronze" or .status == "silver" or .status == "gold") ] | length')"
 assert_eq "counts: configured 11" "11" "$(echo "$CLIENTS" | jq -r '.counts.configured')"
 assert_eq "counts: connected 11" "11" "$(echo "$CLIENTS" | jq -r '.counts.connected')"
 assert_eq "counts: planned 0" "0" "$(echo "$CLIENTS" | jq -r '.counts.planned')"
@@ -90,7 +98,15 @@ CODEX_CODE=$(echo "$CODEX_CFG" | tail -1)
 CODEX_BODY=$(echo "$CODEX_CFG" | sed '$d')
 assert_eq "codex: config returns 200" "200" "$CODEX_CODE"
 assert_eq "codex: config client=codex" "codex" "$(echo "$CODEX_BODY" | jq -r '.client')"
-assert_true "codex: config has mcpServers" "$(echo "$CODEX_BODY" | jq -r 'if .config.mcpServers then "true" else "false" end')"
+# Codex reads TOML from ~/.codex/config.toml keyed [mcp_servers.<name>] — it is the
+# one client in the registry that does not take JSON at all. Asserting `mcpServers`
+# here demanded the very shape that could never have worked for it. The contract is
+# that the endpoint returns a config Codex can actually use.
+assert_eq "codex: config is TOML" "toml" "$(echo "$CODEX_BODY" | jq -r '.config.__format // "json"')"
+assert_contains "codex: config keys the TOML mcp_servers table" \
+	"$(echo "$CODEX_BODY" | jq -r '.config.__raw // ""')" "[mcp_servers.wp-command-center]"
+assert_contains "codex: config carries the MCP endpoint" \
+	"$(echo "$CODEX_BODY" | jq -r '.config.__raw // ""')" "/mcp"
 
 echo "== 10. Manifest has ai_clients section =="
 MANIFEST=$(api "$WPCC_BASE/agent/manifest")

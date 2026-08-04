@@ -100,7 +100,26 @@ assert_eq "exec: queue context -> System (Queue)"    "system|System (Queue)"    
 assert_eq "exec: workflow context -> System (Workflow)" "system|System (Workflow)"      "$(run_case "['system_via'=>'workflow']")"
 assert_eq "exec: request context -> System (Headless Request)" "system|System (Headless Request)" "$(run_case "['system_via'=>'request']")"
 assert_eq "exec: no actor, no hint -> System (never unknown)" "system|System"           "$(run_case "[]")"
-assert_eq "exec: token actor preserved"              "token|My Token"                   "$(run_case "['actor'=>['type'=>'token','id'=>'t1','label'=>'My Token']]")"
+# A token actor is ALWAYS capability-checked, whatever wpcc_enforce_capabilities
+# says for other actors — that is the point of scoping a token. The fabricated id
+# 't1' owns no capabilities, so option_manage was denied, no change row was written,
+# and the assertion silently read the PREVIOUS case's row ("system|System"). It only
+# ever passed when it inherited wpcc_enforce_capabilities=false from whichever suite
+# ran before it, which is not something this suite should depend on.
+#
+# Mint a real full-scope token so the operation is genuinely permitted, and the
+# assertion tests the invariant it was written for: a token actor's identity
+# survives into the change log. Revoked immediately afterwards.
+TOKEN_FIXTURE="$(wpe '
+  $t = new \WPCommandCenter\Security\AuthTokens();
+  $r = $t->create( "actor-attribution-fixture", "full", null, 1 );
+  echo $r["id"];
+')"
+assert_eq "exec: token actor preserved"              "token|My Token"                   "$(run_case "['actor'=>['type'=>'token','id'=>'$TOKEN_FIXTURE','label'=>'My Token']]")"
+wpe "
+  \$t = new \WPCommandCenter\Security\AuthTokens();
+  \$t->revoke( '$TOKEN_FIXTURE' );
+" >/dev/null 2>&1
 assert_eq "exec: admin actor preserved"              "admin|admin"                      "$(run_case "['actor'=>['type'=>'admin','user_id'=>1]]")"
 
 echo

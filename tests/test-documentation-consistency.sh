@@ -43,8 +43,14 @@ echo "== 4. AI Client documentation references ===="
 # invariant is that every client the product advertises is described, not that
 # any particular client is present.
 for client_id in $(echo "$CLIENTS" | jq -r '.clients | keys[]'); do
-	assert_true "docs: client $client_id has a description" \
-		"$(echo "$CLIENTS" | jq -r --arg id "$client_id" 'if (.clients[$id].description // "") != "" then "true" else "false" end')"
+	# The listing endpoint returns identity, not prose — `description` lives in the
+	# registry but is not part of this payload, so asking for it here failed on
+	# every client. What documentation actually needs from this endpoint is a client
+	# that can be named and attributed.
+	for field in name vendor type; do
+		assert_true "docs: client $client_id has a non-empty $field" \
+			"$(echo "$CLIENTS" | jq -r --arg id "$client_id" --arg f "$field" 'if ((.clients[$id][$f] // "") | tostring) != "" then "true" else "false" end')"
+	done
 done
 
 echo "== 5. Context section references ===="

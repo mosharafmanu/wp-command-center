@@ -184,6 +184,36 @@ if [ "$TIER" != "T2" ]; then lint_changed || LINT_RC=1; fi
 [ -z "$LIST_SUITES" ] && { echo "== $TIER: no suites selected (no matching runtime in the change signal) =="; [ "$LINT_RC" = 0 ] && exit 0 || exit 1; }
 
 echo "== $TIER: $(echo "$LIST_SUITES" | grep -c .) suites =="
+
+# ── Establish the governance baseline (T2) ───────────────────────
+#
+# GOV_RESTORE below makes each suite start from the same state as the one before
+# it — but that state is whatever the site happened to be in when the run began,
+# which is not the same thing as a known state. Most suites that WRITE do not set
+# a protection mode themselves; they assume changes apply immediately. Start a run
+# with the site on Standard protection and every one of those writes is answered
+# with pending_approval instead, and the suite fails for a reason that has nothing
+# to do with the code.
+#
+# Measured: a T2 run begun on Standard reported 107 failures — 76 of them the ACF
+# suites, which are the first to run and had nothing before them to blame. Every
+# one of those suites passes on Development. So the headline number depended on an
+# unrecorded precondition, which makes it unciteable.
+#
+# T2 therefore SETS the baseline rather than inheriting it, and puts the operator's
+# own mode back at the end. T0/T1 are left alone: they are quick, targeted runs
+# where surprising the operator's site is worse than a mode-sensitive result.
+RUN_GOV=""
+if [ "$TIER" = "T2" ]; then
+  RUN_GOV="$(GOV_SNAPSHOT)"
+  wp --path="$WP_ROOT" eval '
+    update_option( "wpcc_security_mode", \WPCommandCenter\Operations\SecurityModeManager::MODE_DEVELOPER );
+    update_option( "wpcc_enforce_capabilities", true );' >/dev/null 2>&1
+  echo "   governance baseline: developer + capability enforcement (restored at end)"
+fi
+restore_run_gov() { [ -n "$RUN_GOV" ] && GOV_RESTORE "$RUN_GOV"; }
+trap restore_run_gov EXIT
+
 RESULTS="$(mktemp)"
 if [ "$JOBS" -gt 1 ] && command -v xargs >/dev/null; then
   echo "$LIST_SUITES" | xargs -P "$JOBS" -I{} bash -c 'cd "$ROOT"; run_one "{}"' > "$RESULTS"

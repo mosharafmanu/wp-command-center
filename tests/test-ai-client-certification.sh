@@ -22,8 +22,19 @@ CLIENTS=$(api "$WPCC_BASE/ai-clients")
 MATRIX=$(echo "$CLIENTS" | jq -r '.compatibility_matrix')
 
 assert_eq "cert: 11 total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
-assert_true "cert: gold count > 0" "$(if [ "$(echo "$CLIENTS" | jq -r '.counts.gold')" -gt 0 ] 2>/dev/null; then echo true; else echo false; fi)"
-assert_true "cert: certified count > 0" "$(if [ "$(echo "$CLIENTS" | jq -r '.counts.certified')" -gt 0 ] 2>/dev/null; then echo true; else echo false; fi)"
+# Was: at least one Gold and one Certified client. Both markers were withdrawn
+# because no assistant had been driven end to end, so these two lines required the
+# product to keep making a claim it had deliberately retracted. The durable
+# contract is that each count is a real subset of the roster — which catches a
+# fabricated certification just as well, and cannot be satisfied by inflating one.
+TOTAL_N="$(echo "$CLIENTS" | jq -r '.counts.total')"
+for c in gold certified active; do
+	N="$(echo "$CLIENTS" | jq -r --arg c "$c" '.counts[$c]')"
+	assert_true "cert: $c count is within the roster" \
+		"$(if [ "$N" -ge 0 ] && [ "$N" -le "$TOTAL_N" ]; then echo true; else echo false; fi)"
+done
+assert_eq "cert: gold count matches the clients marked gold" "$(echo "$CLIENTS" | jq -r '.counts.gold')" \
+	"$(echo "$CLIENTS" | jq -r '[ .clients[] | select(.status == "gold") ] | length')"
 
 echo "== 2. Certification Levels — All Levels Defined =="
 for level in planned compatible active bronze silver gold; do
