@@ -43,7 +43,7 @@ echo "== 3. Honest stale-copy fixes (P0) =="
 hasnt "Changes no longer claims restore is unreleased" "restore controls arrive in a later release" "$CHANGES"
 has "Changes describes working Undo" "Undo button" "$CHANGES"
 hasnt "Tokens no longer claims create/revoke is unreleased" "token create/revoke arrives in a later release" "$TOKENS"
-has "Tokens describes working create" "Create access tokens" "$TOKENS"
+has "Tokens describes working create" "Create a token" "$TOKENS"
 
 echo "== 4. Provider catalogue — connection-centric (PROGRAM-6R: dialect-classified) =="
 has "catalogue lists anthropic" "'anthropic' =>" "$CATALOG"

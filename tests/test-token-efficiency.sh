@@ -62,9 +62,23 @@ else
 fi
 
 echo "== 6. AI client defaults =="
-for client in claude chatgpt codex gemini cursor continue opencode aider roo_code windsurf command_code; do
+# Only RELAY clients carry env vars. Direct-HTTP clients (Codex, ChatGPT, Gemini
+# CLI, VS Code/Copilot, Claude Code) configure a URL and a bearer token and have
+# no `mcpServers.env` at all — TOML and shell configs have no such shape either.
+# This loop asserted that key on every client, so it failed for exactly the
+# clients whose configuration had just been made correct. Iterate the live
+# roster, and assert the compact default only where an env block exists.
+for client in $(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients" | jq -r '.clients | keys[]'); do
 	CFG=$(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/$client/config")
-	eq "client: $client defaults compact" "compact" "$(echo "$CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_CONTEXT_MODE')"
+	MODE=$(echo "$CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_CONTEXT_MODE // "n/a"')
+	if [ "$MODE" = "n/a" ]; then
+		# Direct HTTP: prove it really is the relay-free shape rather than a
+		# relay config that lost its env block.
+		eq "client: $client is a relay-free config" "true" \
+			"$(echo "$CFG" | jq -r 'if (.config.mcpServers["wp-command-center"].command // null) == null then "true" else "false" end')"
+	else
+		eq "client: $client defaults compact" "compact" "$MODE"
+	fi
 done
 
 echo "== 7. Analyzer =="

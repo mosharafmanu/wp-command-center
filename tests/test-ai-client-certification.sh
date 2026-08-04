@@ -30,10 +30,18 @@ for level in planned compatible active bronze silver gold; do
 	assert_true "cert: level $level exists in constants" "true"
 done
 
-echo "== 3. Claude Desktop — Gold Certification =="
+echo "== 3. Claude Desktop — certification is reported, not assumed =="
+# Was: assert Claude Desktop is Gold. Certification is awarded only from an
+# executed end-to-end run recorded in docs/ASSISTANT-CERTIFICATION.md, and the
+# unearned Gold markers were withdrawn — so pinning "gold" here made the suite
+# enforce the overstatement it should have caught. The durable contract is that
+# the matrix reports a level the registry defines, with a matching label and a
+# validation date, whatever that level currently is.
 CLAUDE_CERT=$(echo "$MATRIX" | jq -r '.[] | select(.id == "claude") | .certification_level')
-assert_eq "cert: claude is gold" "gold" "$CLAUDE_CERT"
-assert_contains "cert: claude label" "$(echo "$MATRIX" | jq -r '.[] | select(.id == "claude") | .certification_label')" "Gold"
+assert_true "cert: claude level is a defined level" \
+	"$(echo "$MATRIX" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if ([ .[] | select(.id == "claude") | .certification_level ][0] | IN($v[])) then "true" else "false" end')"
+assert_true "cert: claude has a certification label" \
+	"$(echo "$MATRIX" | jq -r 'if ([ .[] | select(.id == "claude") | .certification_label ][0] // "") != "" then "true" else "false" end')"
 assert_true "cert: claude has validated_at" "$(echo "$MATRIX" | jq -r '.[] | select(.id == "claude") | if .last_validated_at then "true" else "false" end')"
 
 echo "== 4. New Clients — ChatGPT + Command Code =="
@@ -44,7 +52,9 @@ assert_eq "cert: command_code compatible" "compatible" "$(echo "$CLIENTS" | jq -
 
 echo "== 5. Certification Matrix — All 11 Clients =="
 assert_eq "cert: matrix 11 entries" "11" "$(echo "$MATRIX" | jq -r 'length')"
-for client_id in claude chatgpt codex gemini cursor continue opencode aider roo_code windsurf command_code; do
+# Every registered client appears in the matrix — checked against the registry
+# itself rather than a copy of it that outlived two removed clients.
+for client_id in $(echo "$CLIENTS" | jq -r '.clients | keys[]'); do
 	assert_true "cert: $client_id in matrix" "$(echo "$MATRIX" | jq -r --arg id "$client_id" 'any(.[]; .id == $id)')"
 done
 

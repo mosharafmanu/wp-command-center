@@ -139,7 +139,8 @@ lacks "redirect NOT on admin_init"          "add_action\( 'admin_init', \[ \\\$t
 
 echo
 echo "== 5. Door terminology + honest API landing + first-run fork =="
-has "AI Clients H1"            "esc_html_e\( 'AI Clients'" "$CLIENTS_VIEW"
+# Named for the door the customer sees in the tab bar, not the internal term.
+has "Assistants H1"           "esc_html_e\( 'Assistants'" "$CLIENTS_VIEW"
 # The hero now names the actual assistants instead of defining the category —
 # "Connect Claude, Cursor, Codex…" explains it faster than a definition does.
 # What still matters: no MCP jargon in the lead, and real product names.

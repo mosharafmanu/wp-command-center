@@ -38,8 +38,13 @@ for op in content_manage plugin_manage theme_manage option_manage snapshot_manag
 done
 
 echo "== 4. AI Client documentation references ===="
-for client_id in claude codex gemini cursor continue opencode aider roo_code windsurf; do
-	assert_true "docs: client $client_id exists" "$(echo "$CLIENTS" | jq -r --arg id "$client_id" 'if .clients[$id] then "true" else "false" end')"
+# Derived from the endpoint. The literal roster here still named `aider` and
+# `roo_code`, which the registry deliberately dropped. The documentation
+# invariant is that every client the product advertises is described, not that
+# any particular client is present.
+for client_id in $(echo "$CLIENTS" | jq -r '.clients | keys[]'); do
+	assert_true "docs: client $client_id has a description" \
+		"$(echo "$CLIENTS" | jq -r --arg id "$client_id" 'if (.clients[$id].description // "") != "" then "true" else "false" end')"
 done
 
 echo "== 5. Context section references ===="

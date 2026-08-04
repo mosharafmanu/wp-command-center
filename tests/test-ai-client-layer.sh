@@ -26,23 +26,41 @@ assert_eq "counts: configured 11" "11" "$(echo "$CLIENTS" | jq -r '.counts.confi
 assert_eq "counts: connected 11" "11" "$(echo "$CLIENTS" | jq -r '.counts.connected')"
 assert_eq "counts: planned 0" "0" "$(echo "$CLIENTS" | jq -r '.counts.planned')"
 
-echo "== 3. All registered clients present =="
-for client_id in claude chatgpt codex gemini cursor continue opencode aider roo_code windsurf command_code; do
-	assert_true "client: $client_id exists" "$(echo "$CLIENTS" | jq -r --arg id "$client_id" 'if .clients[$id] then "true" else "false" end')"
+echo "== 3. Every registered client is complete =="
+# Derived from the endpoint, not from a copy of the roster. The hardcoded list
+# still named `aider` and `roo_code` months after both were removed, so the suite
+# failed on the registry being CORRECT. What this exists to protect is that every
+# client the registry advertises carries the fields the UI and the config
+# generator need — a property that holds however the roster changes.
+for client_id in $(echo "$CLIENTS" | jq -r '.clients | keys[]'); do
+	for field in name vendor type status compatible mcp_support; do
+		assert_true "client $client_id: has $field" \
+			"$(echo "$CLIENTS" | jq -r --arg id "$client_id" --arg f "$field" 'if .clients[$id][$f] != null then "true" else "false" end')"
+	done
 done
+# The roster is closed: its size is pinned above (counts.total 11), so an
+# accidental addition or removal still fails, without naming any single client.
+assert_eq "clients: roster size matches counts.total" \
+	"$(echo "$CLIENTS" | jq -r '.counts.total')" "$(echo "$CLIENTS" | jq -r '.clients | length')"
 
 echo "== 4. Active client metadata =="
 assert_eq "claude: name" "Claude Desktop" "$(echo "$CLIENTS" | jq -r '.clients.claude.name')"
 assert_eq "claude: vendor" "Anthropic" "$(echo "$CLIENTS" | jq -r '.clients.claude.vendor')"
 assert_eq "claude: type desktop" "desktop" "$(echo "$CLIENTS" | jq -r '.clients.claude.type')"
-assert_eq "claude: status gold" "gold" "$(echo "$CLIENTS" | jq -r '.clients.claude.status')"
+# Certification is awarded only from an executed end-to-end run
+# (docs/ASSISTANT-CERTIFICATION.md). Pinning "gold" here asserted a claim no run
+# had earned, so the suite defended the overstatement instead of catching it.
+# The invariant is that the status is a value the registry actually defines.
+assert_true "claude: status is a known certification value" \
+	"$(echo "$CLIENTS" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if (.clients.claude.status | IN($v[])) then "true" else "false" end')"
 assert_eq "claude: compatible true" "true" "$(echo "$CLIENTS" | jq -r '.clients.claude.compatible')"
 assert_eq "claude: mcp_support true" "true" "$(echo "$CLIENTS" | jq -r '.clients.claude.mcp_support')"
 
 echo "== 5. Other client certification metadata =="
 assert_eq "codex: status compatible" "compatible" "$(echo "$CLIENTS" | jq -r '.clients.codex.status')"
 assert_eq "gemini: status compatible" "compatible" "$(echo "$CLIENTS" | jq -r '.clients.gemini.status')"
-assert_eq "cursor: status gold" "gold" "$(echo "$CLIENTS" | jq -r '.clients.cursor.status')"
+assert_true "cursor: status is a known certification value" \
+	"$(echo "$CLIENTS" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if (.clients.cursor.status | IN($v[])) then "true" else "false" end')"
 assert_eq "windsurf: vendor Codeium" "Codeium" "$(echo "$CLIENTS" | jq -r '.clients.windsurf.vendor')"
 
 echo "== 6. Compatibility matrix =="
@@ -136,8 +154,12 @@ assert_eq "gemini: vendor" "Google" "$(echo "$CLIENTS" | jq -r '.clients.gemini.
 assert_eq "cursor: type ide" "ide" "$(echo "$CLIENTS" | jq -r '.clients.cursor.type')"
 assert_eq "continue: type ide_plugin" "ide_plugin" "$(echo "$CLIENTS" | jq -r '.clients.continue.type')"
 assert_eq "opencode: vendor Anomaly" "Anomaly" "$(echo "$CLIENTS" | jq -r '.clients.opencode.vendor')"
-assert_eq "aider: type cli" "cli" "$(echo "$CLIENTS" | jq -r '.clients.aider.type')"
-assert_eq "roo_code: name" "Roo Code" "$(echo "$CLIENTS" | jq -r '.clients.roo_code.name')"
+# Was: aider (type) and roo_code (name). Both clients were removed — Roo Code's
+# repository was archived and Aider's native MCP support is disputed — so these
+# two lines asserted the presence of software the product deliberately no longer
+# offers. Replaced with the same two shape checks against clients that ship.
+assert_eq "claude_code: type cli" "cli" "$(echo "$CLIENTS" | jq -r '.clients.claude_code.type')"
+assert_eq "vscode: name" "GitHub Copilot / VS Code" "$(echo "$CLIENTS" | jq -r '.clients.vscode.name')"
 assert_true "codex/gemini/cursor/continue compatible" "$(echo "$CLIENTS" | jq -r '[.clients.codex.compatible, .clients.gemini.compatible, .clients.cursor.compatible, .clients.continue.compatible] | all')"
 assert_true "codex/gemini/cursor/continue mcp_support" "$(echo "$CLIENTS" | jq -r '[.clients.codex.mcp_support, .clients.gemini.mcp_support, .clients.cursor.mcp_support, .clients.continue.mcp_support] | all')"
 

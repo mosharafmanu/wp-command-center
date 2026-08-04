@@ -30,7 +30,12 @@ has "explainer answers what-does-token-do" "What does the access token do" "$EXP
 has "explainer answers what-talks-to-what" "What talks to what" "$EXPL"
 has "explainer has a jargon-free flow line" "function flow_line" "$EXPL"
 has "Connect screen renders the explainer" "AgentExplainer::faq\(\)" "$CONNECT"
-has "Connect screen H1 is plain language" "esc_html_e\( 'AI Clients'" "$CONNECT"
+# The invariant is that this screen's H1 is the SAME plain word the navigation
+# uses for it, not any one particular word. It was pinned to the literal "AI
+# Clients" while the tab leading here said "Assistants", so the test defended the
+# disagreement it should have caught.
+has "Connect screen H1 matches its navigation label" "esc_html_e\( 'Assistants'" "$CONNECT"
+hasnt "Connect screen H1 drops the old jargon term" "esc_html_e\( 'AI Clients'" "$CONNECT"
 has "Connect screen names assistants in plain words" "Connect Claude, Cursor, Codex" "$CONNECT"
 hasnt "Connect screen no longer leads with MCP-protocol jargon" "via the MCP protocol. All clients share" "$CONNECT"
 
@@ -50,7 +55,10 @@ has "changes/undo link in how-it-works" "Changes →" "$HOME_F"
 echo "== 5. Honest after-key guidance (Phase A/D) =="
 has "after-key next steps present" "What happens next" "$AISETUP"
 has "honest: key alone does not enable AI" "does not turn AI features on by itself" "$AISETUP"
-has "after-key points to AI Clients" "AI Clients" "$AISETUP"
+# What matters is that the after-key guidance sends the reader to the screen
+# where assistants are connected — identified by its link, which cannot drift
+# with wording the way the label can.
+has "after-key points at the assistants screen" "cpane=assistants" "$AISETUP"
 
 echo "== 6. STOP-condition guard — no architecture edits =="
 hasnt "no schema edit marker" "PROGRAM-5C" "$ROOT/includes/Core/Schema.php"

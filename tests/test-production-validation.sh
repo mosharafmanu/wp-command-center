@@ -207,7 +207,9 @@ echo "== 14. AI Client Registry Validation =="
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
 assert_eq "ai: total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
 assert_eq "ai: active clients" "2" "$(echo "$CLIENTS" | jq -r '.counts.active')"
-assert_eq "ai: claude gold" "gold" "$(echo "$CLIENTS" | jq -r '.clients.claude.status')"
+# Not pinned to "gold": certification is awarded only from an executed run.
+assert_true "ai: claude status is a defined level" \
+	"$(echo "$CLIENTS" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if (.clients.claude.status | IN($v[])) then "true" else "false" end')"
 assert_eq "ai: planned count" "0" "$(echo "$CLIENTS" | jq -r '.counts.planned')"
 
 CLAUDE_CFG=$(api "$WPCC_BASE/ai-clients/claude/config")

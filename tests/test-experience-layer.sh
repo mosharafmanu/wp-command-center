@@ -214,8 +214,8 @@ has "enqueues CDS runtime"         "wpcc-cds.js"     "$ASSETS"
 has "localizes nav map for palette" "AppShell::nav_map" "$ASSETS"
 # The runtime + CDS load in the HEAD (in_footer = false), so body-embedded view
 # scripts (the Home) can use window.WPCC at parse time and never hang on Loading.
-has "runtime loads in HEAD (not footer)" "wpcc-admin-runtime.js', \[\], WPCC_VERSION, false" "$ASSETS"
-has "CDS loads in HEAD (not footer)"     "wpcc-cds.js', \[ 'wpcc-admin-runtime' \], WPCC_VERSION, false" "$ASSETS"
+has "runtime loads in HEAD (not footer)" "wpcc-admin-runtime\.js', \[\], [^)]*\), false" "$ASSETS"
+has "CDS loads in HEAD (not footer)"     "wpcc-cds\.js', \[ 'wpcc-admin-runtime' \], [^)]*\), false" "$ASSETS"
 # The Home re-resolves window.WPCC at run time (defensive against load-order).
 has "home re-resolves WPCC at run time"  "WPCC = window.WPCC || WPCC" "$HOME_VIEW"
 

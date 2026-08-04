@@ -92,5 +92,61 @@ assert_eq "no dashicons-shield-alt left on the menu" "0" \
   "$( grep -c "dashicons-shield-alt" includes/Admin/AdminMenu.php | tr -d ' ' )"
 
 echo
+echo "== 6. UI lockups are symbol + wordmark only =="
+
+# The lockup used to carry "AI-POWERED WORDPRESS OPERATIONS PLATFORM" set at 10.5px
+# inside a 456x72 viewBox. The tagline was what made the artwork 456 wide, so every
+# surface that rendered the lockup at a sane size scaled the whole thing down and the
+# tagline arrived at ~5.7px — illegible at any real viewing size — while dragging the
+# product name down to 12px, smaller than the body text beneath it. It is not coming
+# back into a UI lockup: a tagline that only works at 456px does not work.
+for f in wpcc-logo.svg wpcc-logo-dark.svg; do
+  TAG="$( grep -c 'AI-POWERED\|AI-powered' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
+  assert_eq "$f carries no tagline" "0" "$TAG"
+  # The wordmark itself must still be there — this is a lockup, not a bare mark.
+  WORD="$( grep -c 'WP Command Center' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
+  [ "$WORD" -ge 1 ] && pass "$f still carries the wordmark" || fail "$f lost the wordmark"
+done
+
+# The approved symbol is untouched by that edit: the lockups must still use the exact
+# command-block path and the Execute Blue core from the master mark.
+BLOCK_PATH='M4 2h5.25c.41 0 .75.34.75.75v1.5c0 .41-.34.75-.75.75H5v4.25c0 .41-.34.75-.75.75h-1.5A.75.75 0 0 1 2 9.25V4a2 2 0 0 1 2-2Z'
+for f in wpcc-mark.svg wpcc-logo.svg wpcc-mark-dark.svg wpcc-logo-dark.svg; do
+  HAS="$( grep -cF "$BLOCK_PATH" "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
+  [ "$HAS" -ge 1 ] && pass "$f uses the approved command-block geometry" \
+    || fail "$f no longer uses the approved command-block geometry"
+done
+
+echo
+echo "== 7. Brand asset URLs are cache-keyed to the artwork, not to the release =="
+
+# Assets::ver() does this for CSS/JS; the SVGs were emitted as bare URLs, so a browser
+# holding the old artwork kept it forever and an artwork revision reached nobody who
+# had already loaded the admin. Brand::url() now appends the file mtime.
+VER_URL="$( "$PHP_BIN" -r '
+	define( "ABSPATH", "/" );
+	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/ai-command-center/" );
+	define( "WPCC_PLUGIN_DIR", getcwd() . "/" );
+	define( "WPCC_VERSION", "9.9.9" );
+	require "includes/Admin/Brand.php";
+	echo WPCommandCenter\Admin\Brand::logo();
+' 2>/dev/null )"
+case "$VER_URL" in
+  *"assets/brand/wpcc-logo.svg?ver=9.9.9."*) pass "Brand::url() cache-keys the asset to its own mtime" ;;
+  *) fail "Brand::url() emitted an unversioned URL ($VER_URL)" ;;
+esac
+
+# Loadable standalone with only ABSPATH + WPCC_PLUGIN_URL (section 3 depends on this):
+# a missing WPCC_PLUGIN_DIR/WPCC_VERSION must degrade to the bare URL, never fatal.
+BARE_URL="$( "$PHP_BIN" -r '
+	define( "ABSPATH", "/" );
+	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/ai-command-center/" );
+	require "includes/Admin/Brand.php";
+	echo WPCommandCenter\Admin\Brand::logo();
+' 2>/dev/null )"
+assert_eq "falls back to a bare URL when the plugin dir is unknown" \
+  "https://example.test/wp-content/plugins/ai-command-center/assets/brand/wpcc-logo.svg" "$BARE_URL"
+
+echo
 echo "RESULT: ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
