@@ -1,6 +1,6 @@
 <?php
 /**
- * Settings › Security & Approvals.
+ * Settings › Protection.
  *
  * V1 refinement: this screen answers exactly ONE question — "How much can an AI
  * change on this site without asking me first?" Everything that used to share the

@@ -11,7 +11,7 @@
  * what is meaningless without the plugin (scheduled jobs and caches).
  *
  * A site that wants everything gone opts in first, under
- * Settings › Security & Approvals, which sets `wpcc_delete_data_on_uninstall`.
+ * Settings › Protection, which sets `wpcc_delete_data_on_uninstall`.
  * When set, this file removes every table, option, user meta key, and upload
  * directory the plugin created.
  *
