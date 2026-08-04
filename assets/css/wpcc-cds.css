@@ -135,18 +135,6 @@
 	border-radius: 0;
 }
 
-.wpcc-shell__brand-section {
-	font-size: var( --wpcc-fs-small );
-	font-weight: 400;
-	color: var( --wpcc-text-secondary );
-}
-
-.wpcc-shell__brand-section::before {
-	content: "/";
-	margin: 0 var( --wpcc-space-3 ) 0 var( --wpcc-space-2 );
-	color: var( --wpcc-border-strong );
-}
-
 .wpcc-shell__tools {
 	display: flex;
 	align-items: center;

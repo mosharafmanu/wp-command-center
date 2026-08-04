@@ -62,7 +62,10 @@ final class AdminMenu {
 	public function register_menu(): void {
 		add_menu_page(
 			__( 'WP Command Center', 'ai-command-center' ),
-			__( 'Command Center', 'ai-command-center' ),
+			// The sidebar is where the product is identified globally, among every
+			// other plugin's menu, so it carries the full name. The shell header no
+			// longer repeats it — it names the area you are on instead.
+			__( 'WP Command Center', 'ai-command-center' ),
 			self::CAPABILITY,
 			AppShell::HOME_SLUG,
 			[ $this, 'render_overview' ],
@@ -183,7 +186,7 @@ final class AdminMenu {
 			'title' => sprintf(
 				'<img src="%s" alt="" width="16" height="16" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:6px;" decoding="async" />%s <span style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
 				esc_url( Brand::admin_16() ),
-				esc_html__( 'AI Requests', 'ai-command-center' ),
+				esc_html__( 'Approvals', 'ai-command-center' ),
 				$count
 			),
 			'href'  => admin_url( 'admin.php?page=' . AppShell::ACTIVITY_SLUG . '&wpcc_tab=approvals' ),

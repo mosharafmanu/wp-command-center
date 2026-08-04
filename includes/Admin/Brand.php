@@ -27,12 +27,39 @@ final class Brand {
 	private const DIR = 'assets/brand/';
 
 	/**
-	 * Public URL for a brand asset.
+	 * Public URL for a brand asset, cache-keyed to the artwork's own content.
+	 *
+	 * Assets::ver() already does this for the stylesheets and scripts, and its docblock
+	 * names the artwork as the case that motivated it — but the SVGs themselves were
+	 * still emitted as bare URLs with no version at all. So the *rule* that paints the
+	 * mark could be refreshed while the mark itself could not: a browser holding
+	 * `wpcc-logo.svg` kept serving the old artwork forever, because nothing about the
+	 * URL ever changed. Revising a brand asset was invisible to every admin who had
+	 * loaded the page before, which is precisely the failure the CSS/JS fix was for.
+	 *
+	 * Appending the file's modification time makes the cache key follow the file: an
+	 * edited asset is refetched, an unedited one still comes from cache.
+	 *
+	 * Both constants are checked before use because this class is deliberately loadable
+	 * standalone — tests/test-branding-assets.sh requires it with only ABSPATH and
+	 * WPCC_PLUGIN_URL defined to assert the menu icon. An un-stat-able file falls back
+	 * to the bare URL, which is the previous behaviour: a missing mtime must never stop
+	 * the artwork being rendered.
 	 *
 	 * @param string $file File name inside assets/brand/.
 	 */
 	public static function url( string $file ): string {
-		return WPCC_PLUGIN_URL . self::DIR . $file;
+		$url = WPCC_PLUGIN_URL . self::DIR . $file;
+
+		$path  = defined( 'WPCC_PLUGIN_DIR' ) ? WPCC_PLUGIN_DIR . self::DIR . $file : '';
+		$mtime = ( '' !== $path && is_readable( $path ) ) ? filemtime( $path ) : false;
+		if ( false === $mtime ) {
+			return $url;
+		}
+
+		$version = defined( 'WPCC_VERSION' ) ? WPCC_VERSION . '.' . $mtime : (string) $mtime;
+
+		return $url . '?ver=' . rawurlencode( $version );
 	}
 
 	/** The 24x24 master mark for light surfaces (navy blocks, Execute Blue core). */
@@ -45,12 +72,22 @@ final class Brand {
 		return self::url( 'wpcc-mark-dark.svg' );
 	}
 
-	/** The full horizontal lockup for hero use, light surfaces. */
+	/**
+	 * The horizontal lockup for hero use — mark + "WP Command Center" — light surfaces.
+	 *
+	 * Symbol and wordmark only. The lockup used to carry the tagline "AI-POWERED
+	 * WORDPRESS OPERATIONS PLATFORM" set at 10.5px inside a 456x72 viewBox; because
+	 * the tagline is what made the artwork 456 wide, any surface rendering the lockup
+	 * at a sane size scaled the whole thing down and the tagline arrived at ~5.7px —
+	 * a grey smudge, unreadable at any real viewing size, that also dragged the
+	 * product name down to 12px. Removing it lets the viewBox tighten to 244x32, so
+	 * the wordmark renders at its intended size. The symbol itself is untouched.
+	 */
 	public static function logo(): string {
 		return self::url( 'wpcc-logo.svg' );
 	}
 
-	/** The full horizontal lockup for hero use, dark surfaces. */
+	/** The horizontal lockup for hero use, dark surfaces. See logo(). */
 	public static function logo_dark(): string {
 		return self::url( 'wpcc-logo-dark.svg' );
 	}

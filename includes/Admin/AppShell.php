@@ -327,7 +327,7 @@ final class AppShell {
 			// changes, and comes here to see or undo one.
 			self::HISTORY_SLUG => [
 				'label' => __( 'Changes', 'ai-command-center' ),
-				'desc'  => __( 'Everything that has changed on this site, and an undo for the changes that support it.', 'ai-command-center' ),
+				'desc'  => __( 'Everything that has changed on this site. Supported changes can be undone from here.', 'ai-command-center' ),
 				'tabs'  => [
 					'changes' => [ 'label' => __( 'Changes', 'ai-command-center' ), 'view' => 'change-history', 'feature' => 'change_history' ],
 				],
@@ -506,15 +506,17 @@ final class AppShell {
 						 * mark may never be reconstructed from font glyphs, and it may
 						 * never sit inside another badge or container. The 26 px box is
 						 * kept exactly, because .wpcc-shell__desc aligns itself under the
-						 * wordmark with a hard 34px offset (26 + the 8px flex gap).
-						 * Decorative: the product name is the very next thing in the
-						 * heading, so announcing the mark too would just repeat it.
+						 * heading text with a hard 34px offset (26 + the 8px flex gap).
+						 *
+						 * It carries a real accessible name rather than being decorative: the
+						 * heading beside it names the area, so the mark is now the only thing
+						 * in the header that says which product this is.
 						 */
 						echo wp_kses(
 							Brand::picture(
 								Brand::mark(),
 								Brand::mark_dark(),
-								'',
+								esc_attr__( 'WP Command Center', 'ai-command-center' ),
 								'wpcc-shell__brand-mark',
 								26,
 								26
@@ -522,10 +524,24 @@ final class AppShell {
 							Brand::allowed_html()
 						);
 						?>
-						<?php esc_html_e( 'Command Center', 'ai-command-center' ); ?>
-						<?php if ( ! $is_home ) : ?>
-							<span class="wpcc-shell__brand-section"><?php echo esc_html( $section['label'] ); ?></span>
-						<?php endif; ?>
+						<?php
+						/*
+						 * NAMING HIERARCHY — each surface names one thing, once.
+						 *
+						 *   admin menu       -> "WP Command Center"  (which product, globally)
+						 *   shell header     -> the current area     (where you are, now)
+						 *   first-run lockup -> "WP Command Center"  (the introduction)
+						 *
+						 * This heading used to read "Command Center / Approvals": a third spelling
+						 * of the product name, repeated on every screen at 18px, with the one word
+						 * that actually changes between screens set small and grey beside it. That
+						 * inverts the hierarchy — the constant shouted, the variable whispered —
+						 * while the sidebar had already said which product this is. The area name
+						 * is the heading now; the mark beside it keeps the brand present without
+						 * spelling it a third way.
+						 */
+						echo esc_html( $section['label'] );
+						?>
 					</h1>
 					<?php
 					/*
