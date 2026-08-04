@@ -120,9 +120,9 @@ final class AIClientRegistry {
 	 *
 	 * The certification badge is driven entirely by `status`, so awarding certification
 	 * after a real end-to-end run is a one-field change in the registry rather than an
-	 * edit to any view. Today every client sits at CERT_COMPATIBLE, which renders as
-	 * "Awaiting certification" — deliberately NOT "Certified". Nothing here may claim
-	 * more than has actually been executed.
+	 * edit to any view. Only CERT_GOLD renders "Certified", and only one client holds it:
+	 * Claude Code, whose twelve-step run was executed against a live site. Nothing here
+	 * may claim more than has actually been executed.
 	 *
 	 * @return array<int,array{label:string,tone:string,title:string}>
 	 */
@@ -173,21 +173,32 @@ final class AIClientRegistry {
 		}
 
 		/*
-		 * Certification state — shown ONLY when it changes what the user should do.
+		 * Certification state — a claim is made only where one has been earned.
 		 *
-		 * Every assistant that ships in a release has been certified before shipping, so
-		 * "certified" is the baseline rather than news. Printing it on all eleven cards
-		 * would be eleven copies of one word that never varies, competing with the two
-		 * badges that actually differ per card — and an earlier "not yet certified"
-		 * placeholder was release-state messaging that has no place in a shipped product.
+		 * This block used to stay silent for the default status and reason that "absence
+		 * means certified, which is true of everything shipped". It was not true of
+		 * anything shipped: every client sat at CERT_COMPATIBLE and no assistant had been
+		 * driven end to end at all, so silence quietly asserted eleven certifications that
+		 * did not exist. The convention also cannot survive its first real result — the
+		 * moment one client is certified and another is not, "no badge" has to mean two
+		 * opposite things at once.
 		 *
-		 * So the default state is silent. Only the states that should change a decision
-		 * speak: Experimental (works, but the full approval and undo chain is unproven)
-		 * and Not supported (do not rely on this). Absence therefore means "certified",
-		 * which is true of everything shipped, and nothing has to claim it.
+		 * So the claim is positive now. `Certified` appears only on a client whose full
+		 * twelve-step run has actually been executed and recorded in
+		 * docs/ASSISTANT-CERTIFICATION.md §7. A client with no badge is making no claim,
+		 * which is the honest description of a client nobody has run the checklist
+		 * against — and the Recommended and transport badges still carry the information
+		 * that actually helps someone choose.
 		 */
 		$status = $client['status'] ?? self::CERT_COMPATIBLE;
-		if ( in_array( $status, [ self::CERT_BRONZE, self::CERT_SILVER, self::CERT_ACTIVE ], true ) ) {
+		if ( self::CERT_GOLD === $status ) {
+			$badges[] = [
+				'label' => __( 'Certified', 'ai-command-center' ),
+				'tone'  => 'ok',
+				'rank'  => 'secondary',
+				'title' => __( 'Connecting, reading, proposing, approving, undoing and reconnecting have all been run end to end in this assistant against a live site.', 'ai-command-center' ),
+			];
+		} elseif ( in_array( $status, [ self::CERT_BRONZE, self::CERT_SILVER, self::CERT_ACTIVE ], true ) ) {
 			$badges[] = [
 				'label' => __( 'Experimental', 'ai-command-center' ),
 				'tone'  => 'warn',
@@ -437,10 +448,10 @@ final class AIClientRegistry {
 				'name'               => 'Claude Code',
 				'type'               => 'cli',
 				'vendor'             => 'Anthropic',
-				'status'             => self::CERT_COMPATIBLE,
-				'certification_level' => self::CERT_COMPATIBLE,
+				'status'             => self::CERT_GOLD,
+				'certification_level' => self::CERT_GOLD,
 				'last_validated_at'  => '2026-08-04',
-				'validation_notes'   => 'Server-side transport verified 2026-08-04 (handshake, 42 tools, 7 resources, governance chain). NOT individually certified: no end-to-end run has been executed in this client. Certification is awarded only from docs/ASSISTANT-CERTIFICATION.md §7 results. Registered with `claude mcp add`, not a hand-edited config file.',
+				'validation_notes'   => 'CERTIFIED 2026-08-04 — the full twelve-step checklist (docs/ASSISTANT-CERTIFICATION.md §7) was executed in this client against a live HTTPS site (WordPress 6.9.5, PHP 8.3.30): connect, 42 tools, 7 resources, read, proposal, nothing applied, self-approval refused (wpcc_approval_requires_human), human approval, audit attribution, undo (itself gated, then applied and restored exactly), double-undo refused (wpcc_already_rolled_back), reconnect. Registered with `claude mcp add`, not a hand-edited config file.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,

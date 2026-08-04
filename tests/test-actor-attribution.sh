@@ -113,12 +113,18 @@ assert_eq "exec: no actor, no hint -> System (never unknown)" "system|System"   
 TOKEN_FIXTURE="$(wpe '
   $t = new \WPCommandCenter\Security\AuthTokens();
   $r = $t->create( "actor-attribution-fixture", "full", null, 1 );
-  echo $r["id"];
+  // create() returns [ token, record ] — the id lives on the record. Reading
+  // $r["id"] yields "", and an empty id makes the executor skip the capability
+  // check entirely, so the assertion would pass without ever exercising a real
+  // scoped token. That is the accidental pass this fixture exists to avoid.
+  echo $r["record"]["id"];
 ')"
 assert_eq "exec: token actor preserved"              "token|My Token"                   "$(run_case "['actor'=>['type'=>'token','id'=>'$TOKEN_FIXTURE','label'=>'My Token']]")"
+# Deleted, not revoked: a revoked fixture stays in the operator's token list for
+# ever, and a suite must not leave litter on the site it ran against.
 wpe "
   \$t = new \WPCommandCenter\Security\AuthTokens();
-  \$t->revoke( '$TOKEN_FIXTURE' );
+  \$t->delete( '$TOKEN_FIXTURE' );
 " >/dev/null 2>&1
 assert_eq "exec: admin actor preserved"              "admin|admin"                      "$(run_case "['actor'=>['type'=>'admin','user_id'=>1]]")"
 

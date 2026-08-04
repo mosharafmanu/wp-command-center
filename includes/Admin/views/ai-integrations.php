@@ -281,6 +281,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	/* SECONDARY — outlined, no fill. Present, clearly subordinate. */
 	.wpcc-ai-badge--secondary { padding: 1px 8px; font-weight: 600; background: #fff; border: 1px solid #dcdfe6; color: #50575e; }
 	.wpcc-ai-badge--secondary.wpcc-ai-badge--info { border-color: #cbdcef; color: #1d5b96; }
+	/* Earned certification. Outlined like its siblings so it stays subordinate to the
+	   recommendation, but green — it is the only positive claim on the card. */
+	.wpcc-ai-badge--secondary.wpcc-ai-badge--ok   { border-color: #aadfb6; color: #04620f; }
 	.wpcc-ai-badge--secondary.wpcc-ai-badge--warn { border-color: #ecd6a6; color: #8a5700; }
 	.wpcc-ai-badge--secondary.wpcc-ai-badge--bad  { border-color: #eebfc1; color: #a02226; }
 
