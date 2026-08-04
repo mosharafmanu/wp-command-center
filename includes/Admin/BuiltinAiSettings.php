@@ -92,6 +92,31 @@ final class BuiltinAiSettings {
 	}
 
 	/**
+	 * The canonical build-flag precedence, by constant + filter name.
+	 *
+	 * Three places decide whether a Built-in AI surface is on: AppShell (the tabs),
+	 * AiActionRegistry (the row action on posts and media) and the RowActions classes
+	 * (the fallback handlers). Each had written the rule out separately, and two of the
+	 * three stopped at "constant OR filter" — they never learned about the in-admin
+	 * toggle Phase 4 added. Turning a tool on from the UI therefore produced a tab and
+	 * no entry point, and for Content that left the feature unusable: its tab has no
+	 * generator and says "Generate some from a post or page", while the post rows it
+	 * points at had nothing on them.
+	 *
+	 * One rule, one place. A DEFINED constant is site configuration and wins either
+	 * way; then a truthy filter; then the per-tool option.
+	 */
+	public static function flag( string $const, string $filter ): bool {
+		if ( defined( $const ) ) {
+			return (bool) constant( $const );
+		}
+		if ( (bool) apply_filters( $filter, false ) ) {
+			return true;
+		}
+		return self::enabled_by_option( $const );
+	}
+
+	/**
 	 * Whether the tool's surface is "on" at all (constant OR filter OR option) — the
 	 * same precedence AppShell::flag() applies.
 	 */

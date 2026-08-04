@@ -19,6 +19,18 @@ defined( 'ABSPATH' ) || exit;
 
 use WPCommandCenter\Admin\AppShell;
 
+/*
+ * Handle the tool toggle BEFORE the pane list is built.
+ *
+ * The toggle used to be processed inside partials/builtin-ai-tools.php, which is
+ * included further down — so builtin_tabs() had already run against the old option.
+ * Turning Content on answered "Content is on" while no Content tab appeared, and the
+ * tab only showed up on the next page load. Being told a feature is on and not being
+ * shown where to use it is a poor moment to hand someone who has just switched on
+ * their first one.
+ */
+$wpcc_bai_handled = \WPCommandCenter\Admin\BuiltinAiSettings::handle_post();
+
 $wpcc_ai_panes = AppShell::builtin_tabs();
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pane selection, no state change.

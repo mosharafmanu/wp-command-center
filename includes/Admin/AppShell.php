@@ -368,13 +368,7 @@ final class AppShell {
 	 *      built-in AI tools are option-backed — other flags resolve to false here).
 	 */
 	private static function flag( string $const, string $filter ): bool {
-		if ( defined( $const ) ) {
-			return (bool) constant( $const );
-		}
-		if ( (bool) apply_filters( $filter, false ) ) {
-			return true;
-		}
-		return BuiltinAiSettings::enabled_by_option( $const );
+		return BuiltinAiSettings::flag( $const, $filter );
 	}
 
 	/**

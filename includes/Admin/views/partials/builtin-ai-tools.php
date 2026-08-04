@@ -13,7 +13,14 @@ defined( 'ABSPATH' ) || exit;
 
 use WPCommandCenter\Admin\BuiltinAiSettings;
 
-$wpcc_bai_notice = BuiltinAiSettings::handle_post();
+/*
+ * The toggle POST is normally handled by the hosting view BEFORE it builds the pane
+ * list, because a tool turned on in this request must appear as a tab in the SAME
+ * response. `$wpcc_bai_handled` says so. Kept as a fallback so this partial still
+ * works if included somewhere that has not done that — but never run twice, which
+ * would process one toggle as two.
+ */
+$wpcc_bai_notice = $wpcc_bai_handled ?? BuiltinAiSettings::handle_post();
 
 $wpcc_bai_status_text = static function ( string $status ): string {
 	switch ( $status ) {

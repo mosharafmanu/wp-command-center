@@ -311,7 +311,14 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		/* translators: %1$d current length, %2$d min, %3$d max */
 		ccDesc:    <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d (target %2$d–%3$d)', 'ai-command-center' ) ); ?>,
 		// Slice 4a — apply + Applied tab.
-		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'ai-command-center' ) ); ?>,
+		/*
+		 * __() not esc_html__(): every STR value is escaped again by the JS `esc()`
+		 * helper at the moment it is inserted, so escaping here as well runs the
+		 * string through twice. Ampersand is the only character in this block that
+		 * shows it — the button rendered literally as "Approve &amp; Apply" on the
+		 * suggestions table. Anything added here must stay insert-time escaped.
+		 */
+		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'ai-command-center' ) ); ?>,
 		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'ai-command-center' ) ); ?>,
 		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'ai-command-center' ) ); ?>,
 		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'ai-command-center' ) ); ?>,

@@ -51,11 +51,24 @@ class MediaRowActions {
 		];
 	}
 
+	/**
+	 * Uses the SAME precedence as every other Built-in AI surface: a defined constant
+	 * wins either way, then a truthy filter, then the in-admin per-tool option.
+	 *
+	 * This used to check the constant and filter only. Phase 4 added the in-admin
+	 * toggle and wired it into AppShell::flag(), which decides the Built-in AI TABS —
+	 * but not into here, which decides the per-post and per-image entry points. So
+	 * turning a tool on from the UI produced a tab and no row action, and for Content
+	 * that left the feature entirely unreachable: its tab has no generator of its own
+	 * and says "Generate some from a post or page", while the post rows it points at
+	 * had nothing on them. A tool the product reports as On with no way to use it.
+	 *
+	 * BuiltinAiSettings::is_on() is that precedence, already written and already used
+	 * to render the status text beside the toggle — so the switch and the entry point
+	 * now read the same answer from the same place.
+	 */
 	private function ui_enabled(): bool {
-		if ( defined( 'WPCC_ALT_TEXT_UI' ) && WPCC_ALT_TEXT_UI ) {
-			return true;
-		}
-		return (bool) apply_filters( 'wpcc_alt_text_ui', false );
+		return BuiltinAiSettings::is_on( 'alt_text' );
 	}
 
 	private function allowed(): bool {

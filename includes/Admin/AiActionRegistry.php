@@ -215,11 +215,12 @@ final class AiActionRegistry {
 		];
 	}
 
-	/** Build-flag check: constant OR filter (mirrors the per-surface UI flags). */
+	/**
+	 * Build-flag check. Delegates to BuiltinAiSettings::flag(), which is the one place
+	 * the precedence is stated — this used to check constant OR filter only, so a tool
+	 * switched on from the admin UI never grew its row action.
+	 */
 	private function flag( string $const, string $filter ): bool {
-		if ( defined( $const ) && constant( $const ) ) {
-			return true;
-		}
-		return (bool) apply_filters( $filter, false );
+		return BuiltinAiSettings::flag( $const, $filter );
 	}
 }

@@ -195,7 +195,14 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 		dismiss: <?php echo wp_json_encode( esc_html__( 'Dismiss', 'ai-command-center' ) ); ?>,
 		dismissed: <?php echo wp_json_encode( esc_html__( 'Dismissed', 'ai-command-center' ) ); ?>,
 		noSug:   <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from the Review tab.', 'ai-command-center' ) ); ?>,
-		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'ai-command-center' ) ); ?>,
+		/*
+		 * __() not esc_html__(): every STR value is escaped again by the JS `esc()`
+		 * helper at the moment it is inserted, so escaping here as well runs the
+		 * string through twice. Ampersand is the only character in this block that
+		 * shows it — the button rendered literally as "Approve &amp; Apply" on the
+		 * suggestions table. Anything added here must stay insert-time escaped.
+		 */
+		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'ai-command-center' ) ); ?>,
 		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'ai-command-center' ) ); ?>,
 		applied:   <?php echo wp_json_encode( esc_html__( 'Applied', 'ai-command-center' ) ); ?>,
 		awaiting:  <?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'ai-command-center' ) ); ?>,

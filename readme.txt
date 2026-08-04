@@ -17,7 +17,7 @@ WP Command Center lets you connect an AI assistant — Claude, Cursor, Codex, Ch
 The point of the plugin is not the AI. It is the control around it:
 
 * **You approve.** On the default Standard protection, anything that could affect your visitors waits for your explicit approval before it runs; low-risk edits go straight through. Choose Strict approval and every single change waits, including low-risk ones. Reading and diagnostics are never gated in any mode.
-* **Everything is recorded.** Every change is written to an audit trail with who made it, when, and what it touched.
+* **Everything is recorded.** Every change is written to an audit trail with who made it, when, what it did, and whether it can be undone. Before you approve anything, the request spells out exactly what it will change.
 * **Supported changes can be undone.** Posts and pages, SEO details, media metadata, settings, comments, users, categories and several other areas record a reversible change you can restore. An undo runs through the same approval as any other change.
 * **Access is scoped.** An assistant connects with an access token you create and can revoke at any time. Tokens are limited to what you allow, and can be read-only.
 

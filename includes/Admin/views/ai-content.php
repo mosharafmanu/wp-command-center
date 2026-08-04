@@ -185,7 +185,14 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		/* translators: %1$d current length */
 		ccExcerpt: <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d characters', 'ai-command-center' ) ); ?>,
 		// Apply + Applied tab (mode-aware label; outcome from response).
-		applyDev:  <?php echo wp_json_encode( esc_html__( 'Approve & Apply', 'ai-command-center' ) ); ?>,
+		/*
+		 * __() not esc_html__(): every STR value is escaped again by the JS `esc()`
+		 * helper at the moment it is inserted, so escaping here as well runs the
+		 * string through twice. Ampersand is the only character in this block that
+		 * shows it — the button rendered literally as "Approve &amp; Apply" on the
+		 * suggestions table. Anything added here must stay insert-time escaped.
+		 */
+		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'ai-command-center' ) ); ?>,
 		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'ai-command-center' ) ); ?>,
 		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'ai-command-center' ) ); ?>,
 		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'ai-command-center' ) ); ?>,
