@@ -24,7 +24,7 @@ The point of the plugin is not the AI. It is the control around it:
 = How it works =
 
 1. Install and activate. The site starts in **Standard protection** — changes need your approval.
-2. Go to **Command Center → Settings → Connections**, pick your assistant, and create an access token.
+2. Go to **WP Command Center → Settings → Connections**, pick your assistant, and create an access token.
 3. Copy the generated setup into your assistant.
 4. Ask your assistant to do something on the site.
 5. Approve it under **Approvals**, then review or undo it under **Changes**.
@@ -53,7 +53,7 @@ The assistant is software you already run and have your own agreement with (for 
 
 = 2. Optional AI providers (Built-in AI only) =
 
-If — and only if — you add a provider API key under **Settings → Built-in AI** and use a built-in generation tool, this plugin sends the relevant content (for example a post title, an excerpt, or an image) to the provider you chose, in order to generate a suggestion. Nothing is sent until you both add a key and run a tool.
+If — and only if — you add a provider API key under **Settings → Advanced → Built-in AI** and use a built-in generation tool, this plugin sends the relevant content (for example a post title, an excerpt, or an image) to the provider you chose, in order to generate a suggestion. Nothing is sent until you both add a key and run a tool.
 
 Supported providers, each used only when selected and configured by you:
 
@@ -99,7 +99,7 @@ If you add an AI provider key, it is stored in the WordPress options table on yo
 
 = When you delete the plugin =
 
-By default your data is **kept**, so an audit trail is not destroyed just because the plugin was removed. If you want everything erased instead, tick *"Also delete all WP Command Center data when the plugin is deleted"* under **Settings → Security & Approvals** before deleting. With that set, uninstalling removes all of the plugin's tables, options, user settings, and upload directories. Scheduled jobs are always removed.
+By default your data is **kept**, so an audit trail is not destroyed just because the plugin was removed. If you want everything erased instead, tick *"Also delete all WP Command Center data when the plugin is deleted"* under **Settings → Protection** before deleting. With that set, uninstalling removes all of the plugin's tables, options, user settings, and upload directories. Scheduled jobs are always removed.
 
 == Frequently Asked Questions ==
 
@@ -109,9 +109,12 @@ No. Connecting an AI assistant over MCP uses your assistant's own AI. A provider
 
 = Which assistants work with it? =
 
-Any MCP-compatible client. Setup instructions are provided for Claude, Cursor, Codex, ChatGPT, Gemini, and others, plus a generic option.
+Any MCP-compatible client. Ready-made setup is provided for Claude Desktop, Claude Code, GitHub Copilot / VS Code, Cursor, Codex CLI, ChatGPT, Gemini CLI, Continue, OpenCode, Windsurf and Command Code, plus a generic option.
 
-The setup the plugin generates runs a small connector (shipped inside the plugin, served from your own site — nothing is downloaded from npm). **Node.js must be installed on the computer running your assistant**, not on your web host. If your assistant connects but shows no tools, a missing Node is the usual cause.
+There are two ways an assistant can connect, and the setup screen tells you which one yours uses:
+
+* **Direct HTTP** — the assistant talks straight to your site. Nothing is installed or run on your computer. Used by GitHub Copilot / VS Code, Claude Code, Codex CLI, ChatGPT and Gemini CLI. Your site needs to be reachable over HTTPS from the computer running the assistant.
+* **Connector** — the assistant runs a small connector script (shipped inside the plugin and served from your own site — nothing is downloaded from npm). **This path needs Node.js on the computer running your assistant**, not on your web host. Used by Claude Desktop, Cursor, Continue, OpenCode, Windsurf and Command Code. If one of these connects but shows no tools, a missing Node is the usual cause.
 
 = Can the AI change my site without asking? =
 
