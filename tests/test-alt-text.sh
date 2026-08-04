@@ -25,7 +25,7 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 echo "STEP 110 Task 7A — AI Alt Text read-only scan"
 
 # ── Dynamic battery (dispatched through the REST server) ─────────────────────
-BATT="$(mktemp /tmp/wpcc-altscan-XXXXXX.php)"
+BATT="$(mktemp -d)/wpcc-altscan.php"
 cat > "$BATT" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PStore;
@@ -144,7 +144,7 @@ assert_eq "invariant: DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter
 # ─────────────────────────────────────────────────────────────────────────────
 # Task 7B — Provider abstraction (interface / result / Anthropic / resolver)
 # ─────────────────────────────────────────────────────────────────────────────
-PBATT="$(mktemp /tmp/wpcc-prov-batt-XXXXXX.php)"
+PBATT="$(mktemp -d)/wpcc-prov-batt.php"
 cat > "$PBATT" <<'PHP'
 <?php
 use WPCommandCenter\AltText\ProviderResult;
@@ -276,7 +276,7 @@ rm -f "$ALT_TMP"
 # ─────────────────────────────────────────────────────────────────────────────
 # Task 7C — AltTextGenerator (provider suggestion → ProposalStore draft)
 # ─────────────────────────────────────────────────────────────────────────────
-GBATT="$(mktemp /tmp/wpcc-gen-batt-XXXXXX.php)"
+GBATT="$(mktemp -d)/wpcc-gen-batt.php"
 cat > "$GBATT" <<'PHP'
 <?php
 use WPCommandCenter\AltText\AltTextGenerator;

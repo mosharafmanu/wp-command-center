@@ -42,7 +42,7 @@ rest() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type
 wpe()  { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 # Safe, prepared change-log query helper (reads params from env, prints JSON).
-QHELPER="$(mktemp /tmp/wpcc-cl-query-XXXXXX.php)"
+QHELPER="$(mktemp -d)/wpcc-cl-query.php"
 cat > "$QHELPER" <<'PHP'
 <?php
 global $wpdb;

@@ -187,7 +187,7 @@ echo "== 6. Context redaction =="
 CONTEXT=$(api GET "/context")
 assert_true "context: endpoint still returns wordpress info" "$(echo "$CONTEXT" | jq -r '(.wordpress.version // "") | length > 0')"
 
-REDACTOR_TEST_PHP="$(mktemp /tmp/wpcc-redactor-test-XXXXXX.php)"
+REDACTOR_TEST_PHP="$(mktemp -d)/wpcc-redactor-test.php"
 cat > "$REDACTOR_TEST_PHP" <<'PHP'
 <?php
 $redactor = new \WPCommandCenter\Security\Redactor();

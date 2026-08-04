@@ -59,7 +59,7 @@ done
 if [ -z "$(git -C "$ROOT" diff main -- includes/Ai/Platform/ProviderCatalog.php | rg '^-' | rg -v '^---')" ]; then pass "ProviderCatalog change is additive-only (no execution change)"; else fail "ProviderCatalog has non-additive edits"; fi
 
 echo "== 7. Functional: provider-meta correctness (the data the wizard renders) =="
-PHPF="$(mktemp -t wizux.XXXXXX.php)"
+PHPF="$(mktemp -d)/wizux.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\ProviderCatalog as PC;

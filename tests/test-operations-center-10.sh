@@ -61,7 +61,7 @@ has "legacy slug still redirects to it" "'wpcc-operations-center'" "$SHELL_F"
 has "legacy slug mapped" "'wpcc-operations-center'" "$SHELL_F"
 
 echo "== 7. Functional (wp eval-file) =="
-PHPF="$(mktemp -t wpcc10.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc10.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Admin\OperationsCenterQuery as OC;

@@ -100,7 +100,7 @@ case "$AI_OFF" in
 esac
 
 echo "== 9. Functional (wp eval-file) — health derivation =="
-PHPF="$(mktemp -t wpcc6s.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc6s.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WpCommandCenter\Ai\Platform\Health as H;

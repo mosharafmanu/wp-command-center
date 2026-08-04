@@ -67,7 +67,7 @@ for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php includ
 done
 
 echo "== 8. Functional: capture→persist→select→accept + routing eligibility =="
-PHPF="$(mktemp -t discr.XXXXXX.php)"
+PHPF="$(mktemp -d)/discr.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\ConnectionStore as CS;

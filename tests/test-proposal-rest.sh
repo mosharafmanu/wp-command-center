@@ -26,7 +26,7 @@ assert_eq() { local d="$1" e="$2" a="$3"; [ "$e" = "$a" ] && pass "$d" || fail "
 echo "STEP 110 Task 5 — Proposal REST contract"
 
 # ── Dynamic contract battery (dispatched through the REST server) ────────────
-BATT="$(mktemp /tmp/wpcc-rest-batt-XXXXXX.php)"
+BATT="$(mktemp -d)/wpcc-rest-batt.php"
 cat > "$BATT" <<'PHP'
 <?php
 $admin = get_users( [ 'role' => 'administrator', 'number' => 1 ] );

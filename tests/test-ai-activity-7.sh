@@ -38,7 +38,7 @@ hasnt "no fabricated cost figure (no \$ amounts)" 'cost.*\$[0-9]' "$VIEW"
 has "empty state teaches" "When AI or an agent acts" "$VIEW"
 
 echo "== 4. Functional (wp eval-file) — classifier honesty =="
-PHPF="$(mktemp -t wpcc7.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc7.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\AiActivity as A;

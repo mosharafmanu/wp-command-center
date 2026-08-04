@@ -182,8 +182,24 @@ echo "== 39. Context database_size_mb check =="
 assert_true "context: db size numeric" "$(echo "$CONTEXT" | jq -r 'if (.database_size_mb | type) == "number" then "true" else "false" end')"
 
 echo "== 22. Sensitive redaction in autoload =="
-HAS_REDACTED=$(echo "$AUTO" | jq -r '[.largest_autoloaded[] | .option_name] | join(" ")')
-assert_true "redaction: has redacted names" "$(if echo "$HAS_REDACTED" | grep -q 'REDACTED'; then echo true; elif [ -z "$HAS_REDACTED" ]; then echo true; else echo false; fi)"
+# Was: "at least one of the twenty largest autoloaded options has a REDACTED name,
+# OR the list is empty". Whether a sensitive option happens to be among the twenty
+# largest is a property of the SITE'"'"'s data, not of the code — and the empty-list
+# escape hatch is what made this pass for as long as the autoload query was broken
+# and returned nothing at all. It asserted the bug.
+#
+# The actual contract is the redactor'"'"'s: an option the runtime marks sensitive must
+# never have its real name returned, and no obviously secret-looking name may appear
+# unredacted. Both hold whatever this site happens to store.
+SENSITIVE_UNREDACTED=$(echo "$AUTO" | jq -r '[ .largest_autoloaded[]? | select(.is_sensitive == true) | select((.option_name // "") | test("REDACTED") | not) ] | length')
+assert_eq "redaction: no sensitive option name returned in the clear" "0" "${SENSITIVE_UNREDACTED:-0}"
+
+LEAKED=$(echo "$AUTO" | jq -r '[ .largest_autoloaded[]? | .option_name // "" | select(test("(api_?key|secret|password|_token)"; "i")) | select(test("REDACTED") | not) ] | length')
+assert_eq "redaction: no secret-looking name leaks" "0" "${LEAKED:-0}"
+
+# And the list is genuinely populated — every WordPress site autoloads options, so an
+# empty answer here means the query is broken, which is exactly what shipped before.
+assert_true "autoload: the list is not empty" "$(echo "$AUTO" | jq -r 'if ((.largest_autoloaded | length) > 0) then "true" else "false" end')"
 
 echo "== 23. All 11 core tables listed =="
 assert_true "manifest: core tables 11" "$(echo "$MANIFEST" | jq -r 'if (.database_inspection.allowed_tables | length) == 11 then "true" else "false" end')"

@@ -45,7 +45,7 @@ has "indexed for dashboards" "KEY provider" "$STORE"
 has "prune for growth control" "function prune" "$STORE"
 
 echo "== 5. Functional (wp eval-file) =="
-PHPF="$(mktemp -t wpcc8.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc8.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Telemetry\TelemetryStore as S;

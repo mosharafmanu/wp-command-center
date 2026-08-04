@@ -22,7 +22,7 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 echo "STEP 110 Task 8.1 — AI Alt Text surface (Review tab)"
 
-BATT="$(mktemp /tmp/wpcc-atui-XXXXXX.php)"
+BATT="$(mktemp -d)/wpcc-atui.php"
 cat > "$BATT" <<'PHP'
 <?php
 $a=get_users(['role'=>'administrator','number'=>1]); wp_set_current_user($a?$a[0]->ID:1);

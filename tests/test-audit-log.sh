@@ -66,7 +66,7 @@ BACKUP_DIR=""
 # Run a PHP snippet (read from stdin) against the live WordPress install.
 run_php() {
 	local php_file
-	php_file="$(mktemp /tmp/wpcc-audit-test-XXXXXX.php)"
+	php_file="$(mktemp -d)/wpcc-audit-test.php"
 	cat > "$php_file"
 	wp --path="$WP_ROOT" eval-file "$php_file" 2>/dev/null
 	local rc=$?

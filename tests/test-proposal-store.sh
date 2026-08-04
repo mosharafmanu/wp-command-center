@@ -115,7 +115,7 @@ assert_eq "invariant: catalogue == 42" "42" "$(wpe 'echo count((new \WPCommandCe
 # that exercises ProposalStore and emits "desc<TAB>PASS|FAIL<TAB>detail" lines;
 # bash reports them through the same counters. All rows are tagged with a unique
 # batch_id and deleted at the end so the suite is self-contained.
-BATTERY="$(mktemp /tmp/wpcc-proposal-battery-XXXXXX.php)"
+BATTERY="$(mktemp -d)/wpcc-proposal-battery.php"
 cat > "$BATTERY" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PS;
@@ -247,7 +247,7 @@ done
 # ─────────────────────────────────────────────────────────────────────────────
 # Dynamic battery exercises the crossing point against a real attachment through
 # OperationExecutor and asserts audit/rollback/attribution. Self-cleaning.
-APPLY="$(mktemp /tmp/wpcc-apply-battery-XXXXXX.php)"
+APPLY="$(mktemp -d)/wpcc-apply-battery.php"
 cat > "$APPLY" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PStore;
@@ -344,7 +344,7 @@ assert_eq "ApplyService performs no write to change_log/requests" "" "$CL_WRITES
 # ─────────────────────────────────────────────────────────────────────────────
 # Task 4 — ProposalOutcome + ProposalSync + ProposalReconciler + gated apply
 # ─────────────────────────────────────────────────────────────────────────────
-SYNC="$(mktemp /tmp/wpcc-sync-battery-XXXXXX.php)"
+SYNC="$(mktemp -d)/wpcc-sync-battery.php"
 cat > "$SYNC" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PStore;
