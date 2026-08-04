@@ -8,7 +8,7 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Connect an AI assistant to your WordPress site. You approve every change, everything is recorded, and supported changes can be undone.
+Connect an AI assistant to your site. Changes that matter wait for your approval, everything is recorded, and supported changes can be undone.
 
 == Description ==
 
