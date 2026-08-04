@@ -164,10 +164,13 @@ final class DatabaseInspector {
 		// See OptionsAutoload. Asking for autoload='yes' answered 0 on every
 		// WordPress 6.6+ site, so this operation told a connected assistant that
 		// no option autoloads — on a site where hundreds do.
-		$autoload = OptionsAutoload::sql_condition();
-		$total = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE {$autoload}" );
-		$size  = $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload}" );
-		$large = $wpdb->get_results( "SELECT option_name, LENGTH(option_value) AS size_bytes, autoload FROM {$wpdb->options} WHERE {$autoload} ORDER BY LENGTH(option_value) DESC LIMIT 20", ARRAY_A );
+		$ph  = OptionsAutoload::placeholders();
+		$val = OptionsAutoload::values();
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $ph is a placeholder list; values are bound by prepare().
+		$total = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE autoload IN ({$ph})", $val ) );
+		$size  = $wpdb->get_var( $wpdb->prepare( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload IN ({$ph})", $val ) );
+		$large = $wpdb->get_results( $wpdb->prepare( "SELECT option_name, LENGTH(option_value) AS size_bytes, autoload FROM {$wpdb->options} WHERE autoload IN ({$ph}) ORDER BY LENGTH(option_value) DESC LIMIT 20", $val ), ARRAY_A );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$items = [];
 		$redactor = new Redactor();
@@ -194,9 +197,12 @@ final class DatabaseInspector {
 	private function options_health(): array {
 		global $wpdb;
 		$total_options   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options}" );
-		$autoload_cond   = OptionsAutoload::sql_condition();
-		$autoloaded      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE {$autoload_cond}" );
-		$autoload_size   = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload_cond}" );
+		$ph_oh           = OptionsAutoload::placeholders();
+		$val_oh          = OptionsAutoload::values();
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholder list only; values bound by prepare().
+		$autoloaded      = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->options} WHERE autoload IN ({$ph_oh})", $val_oh ) );
+		$autoload_size   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload IN ({$ph_oh})", $val_oh ) );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$transients      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '%_transient_%'" );
 		$expired_est     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_%' AND option_value < UNIX_TIMESTAMP()" );
 
@@ -260,8 +266,9 @@ final class DatabaseInspector {
 	private function health_summary(): array {
 		global $wpdb;
 		$db_size     = (float) $wpdb->get_var( "SELECT ROUND(SUM(DATA_LENGTH+INDEX_LENGTH)/1024/1024,2) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()" );
-		$autoload_c  = OptionsAutoload::sql_condition();
-		$autoload_sz = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload_c}" );
+		$ph_hs       = OptionsAutoload::placeholders();
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- placeholder list only; values bound by prepare().
+		$autoload_sz = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload IN ({$ph_hs})", OptionsAutoload::values() ) );
 		$orphan_pm   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} pm LEFT JOIN {$wpdb->posts} p ON pm.post_id=p.ID WHERE p.ID IS NULL" );
 		$largest     = $wpdb->get_row( "SELECT TABLE_NAME, ROUND((DATA_LENGTH+INDEX_LENGTH)/1024/1024,2) AS size_mb FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE '{$wpdb->prefix}%' ORDER BY (DATA_LENGTH+INDEX_LENGTH) DESC LIMIT 1", ARRAY_A );
 		$expired_tr  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_%' AND option_value < UNIX_TIMESTAMP()" );

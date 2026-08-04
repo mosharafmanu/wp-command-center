@@ -121,8 +121,9 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		// See OptionsAutoload: `autoload = 'yes'` matches nothing on WordPress 6.6+,
 		// so this check reported 0 B and a confident "Good" on every modern site.
-		$autoload = OptionsAutoload::sql_condition();
-		$bytes    = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload}" );
+		$ph = OptionsAutoload::placeholders();
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $ph is a placeholder list; values are bound by prepare().
+		$bytes = (int) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload IN ({$ph})", OptionsAutoload::values() ) );
 
 		if ( $bytes > 2 * MB_IN_BYTES ) {
 			$status = self::STATUS_CRITICAL;
