@@ -7,6 +7,7 @@
 
 namespace WPCommandCenter\Diagnostics;
 
+use WPCommandCenter\Core\OptionsAutoload;
 use WPCommandCenter\SiteIntelligence\SiteScanner;
 
 defined( 'ABSPATH' ) || exit;
@@ -118,7 +119,10 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 	private function check_autoloaded_options(): array {
 		global $wpdb;
 
-		$bytes = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload = 'yes'" );
+		// See OptionsAutoload: `autoload = 'yes'` matches nothing on WordPress 6.6+,
+		// so this check reported 0 B and a confident "Good" on every modern site.
+		$autoload = OptionsAutoload::sql_condition();
+		$bytes    = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload}" );
 
 		if ( $bytes > 2 * MB_IN_BYTES ) {
 			$status = self::STATUS_CRITICAL;

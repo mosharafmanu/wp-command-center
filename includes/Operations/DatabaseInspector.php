@@ -7,6 +7,7 @@
 
 namespace WPCommandCenter\Operations;
 
+use WPCommandCenter\Core\OptionsAutoload;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Security\Redactor;
 
@@ -160,9 +161,13 @@ final class DatabaseInspector {
 
 	private function autoload_analysis(): array {
 		global $wpdb;
-		$total = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE autoload='yes'" );
-		$size  = $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload='yes'" );
-		$large = $wpdb->get_results( "SELECT option_name, LENGTH(option_value) AS size_bytes, autoload FROM {$wpdb->options} WHERE autoload='yes' ORDER BY LENGTH(option_value) DESC LIMIT 20", ARRAY_A );
+		// See OptionsAutoload. Asking for autoload='yes' answered 0 on every
+		// WordPress 6.6+ site, so this operation told a connected assistant that
+		// no option autoloads — on a site where hundreds do.
+		$autoload = OptionsAutoload::sql_condition();
+		$total = $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE {$autoload}" );
+		$size  = $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload}" );
+		$large = $wpdb->get_results( "SELECT option_name, LENGTH(option_value) AS size_bytes, autoload FROM {$wpdb->options} WHERE {$autoload} ORDER BY LENGTH(option_value) DESC LIMIT 20", ARRAY_A );
 
 		$items = [];
 		$redactor = new Redactor();
@@ -189,8 +194,9 @@ final class DatabaseInspector {
 	private function options_health(): array {
 		global $wpdb;
 		$total_options   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options}" );
-		$autoloaded      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE autoload='yes'" );
-		$autoload_size   = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload='yes'" );
+		$autoload_cond   = OptionsAutoload::sql_condition();
+		$autoloaded      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE {$autoload_cond}" );
+		$autoload_size   = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload_cond}" );
 		$transients      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '%_transient_%'" );
 		$expired_est     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_%' AND option_value < UNIX_TIMESTAMP()" );
 
@@ -254,7 +260,8 @@ final class DatabaseInspector {
 	private function health_summary(): array {
 		global $wpdb;
 		$db_size     = (float) $wpdb->get_var( "SELECT ROUND(SUM(DATA_LENGTH+INDEX_LENGTH)/1024/1024,2) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()" );
-		$autoload_sz = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE autoload='yes'" );
+		$autoload_c  = OptionsAutoload::sql_condition();
+		$autoload_sz = (int) $wpdb->get_var( "SELECT SUM(LENGTH(option_value)) FROM {$wpdb->options} WHERE {$autoload_c}" );
 		$orphan_pm   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} pm LEFT JOIN {$wpdb->posts} p ON pm.post_id=p.ID WHERE p.ID IS NULL" );
 		$largest     = $wpdb->get_row( "SELECT TABLE_NAME, ROUND((DATA_LENGTH+INDEX_LENGTH)/1024/1024,2) AS size_mb FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME LIKE '{$wpdb->prefix}%' ORDER BY (DATA_LENGTH+INDEX_LENGTH) DESC LIMIT 1", ARRAY_A );
 		$expired_tr  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '_transient_timeout_%' AND option_value < UNIX_TIMESTAMP()" );
