@@ -23,6 +23,13 @@ $wpcc_tokens  = ( new AuthTokens() )->list();
 $wpcc_active  = array_filter( $wpcc_tokens, static fn ( $t ) => ( $t['status'] ?? '' ) === 'active' );
 $wpcc_have_tok = count( $wpcc_active ) > 0;
 
+/*
+ * All three links on this screen go to the SAME place — the Access tokens tab, one
+ * across from this one. They used to be labelled three different ways, and two of them
+ * ("… in Settings → Connections") named the location the reader was already standing in,
+ * so the primary call to action read as "go elsewhere" when it meant "switch tab". A
+ * reader could not tell the three were one destination. They now all name the tab.
+ */
 $wpcc_access_url = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=tokens' );
 $wpcc_clients_url = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' );
 
@@ -38,7 +45,7 @@ $wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \
 		<div class="wpcc-cds-empty" role="status" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #2271b1;border-radius:6px;padding:18px 20px;margin:16px 0;">
 			<p style="margin:0 0 4px;font-size:15px;"><strong><?php esc_html_e( 'Create an access token to connect an app.', 'ai-command-center' ); ?></strong></p>
 			<p class="description" style="margin:0 0 12px;"><?php esc_html_e( 'Apps authenticate with a Base URL and a token. Reads stay instant; changes stay governed.', 'ai-command-center' ); ?></p>
-			<a class="button button-primary" href="<?php echo esc_url( $wpcc_access_url ); ?>"><?php esc_html_e( 'Create a token in Settings → Connections', 'ai-command-center' ); ?></a>
+			<a class="button button-primary" href="<?php echo esc_url( $wpcc_access_url ); ?>"><?php esc_html_e( 'Go to Access tokens', 'ai-command-center' ); ?></a>
 		</div>
 	<?php else : ?>
 		<p style="margin:14px 0;">
@@ -50,7 +57,7 @@ $wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \
 				(int) count( $wpcc_active )
 			);
 			?>
-			<a href="<?php echo esc_url( $wpcc_access_url ); ?>"><?php esc_html_e( 'Manage access →', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $wpcc_access_url ); ?>"><?php esc_html_e( 'Access tokens →', 'ai-command-center' ); ?></a>
 		</p>
 	<?php endif; ?>
 
@@ -67,7 +74,7 @@ $wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \
 			</tr>
 			<tr>
 				<th scope="row"><?php esc_html_e( 'Token', 'ai-command-center' ); ?></th>
-				<td><a href="<?php echo esc_url( $wpcc_access_url ); ?>"><?php esc_html_e( 'Created & managed in Settings → Connections', 'ai-command-center' ); ?></a></td>
+				<td><a href="<?php echo esc_url( $wpcc_access_url ); ?>"><?php esc_html_e( 'Created and managed under Access tokens', 'ai-command-center' ); ?></a></td>
 			</tr>
 		</tbody>
 	</table>
@@ -89,7 +96,7 @@ $wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \
 		<?php
 		printf(
 			/* translators: %1$s, %2$s: opening/closing link tags */
-			esc_html__( 'Connecting a desktop AI assistant (Claude, Cursor, Codex…) instead? Use %1$sAI Clients%2$s.', 'ai-command-center' ),
+			esc_html__( 'Connecting a desktop AI assistant (Claude, Cursor, Codex…) instead? Use %1$sAssistants%2$s.', 'ai-command-center' ),
 			'<a href="' . esc_url( $wpcc_clients_url ) . '">',
 			'</a>'
 		);

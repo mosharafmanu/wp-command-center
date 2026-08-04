@@ -177,6 +177,25 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	<!-- ===== Built-in AI tools enablement (Phase 4) ===== -->
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/builtin-ai-tools.php'; ?>
 
+	<?php
+	/*
+	 * Recent AI activity — only once there is AI to have activity from.
+	 *
+	 * This feed is not scoped to built-in AI: it reports governed engine events, and the
+	 * queue worker ticks on a schedule on every install. So a site where nobody has
+	 * configured anything opened this setup screen to a wall of "Operation worker
+	 * started / completed", a "100 recent events" counter, and a heading calling all of
+	 * it AI activity — on the very screen whose job is to explain that built-in AI is
+	 * off until you turn it on. It contradicted the page's own message and read as
+	 * machine output leaking into a product surface.
+	 *
+	 * The events are still recorded and still visible under Settings > Advanced > System,
+	 * which is where engine detail belongs. Here the section simply waits until a
+	 * connection exists, so the first thing a new customer sees on this screen is the
+	 * setup path rather than a log of things they did not do.
+	 */
+	?>
+	<?php if ( ! empty( $wpcc_conns ) ) : ?>
 	<!-- ===== Recent AI activity ===== -->
 	<h2><?php esc_html_e( 'Recent AI activity', 'ai-command-center' ); ?></h2>
 	<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start;">
@@ -220,7 +239,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 			<p style="margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap;">
 				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ) ); ?>"><?php esc_html_e( 'Review changes & undo', 'ai-command-center' ); ?></a>
 				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>"><?php esc_html_e( 'Approvals', 'ai-command-center' ); ?></a>
-				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ); ?>"><?php esc_html_e( 'Connect an AI client', 'ai-command-center' ); ?></a>
+				<a class="button button-small" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ); ?>"><?php esc_html_e( 'Connect an assistant', 'ai-command-center' ); ?></a>
 			</p>
 		</div>
 		<div style="display:grid;gap:10px;">
@@ -230,6 +249,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		</div>
 	</div>
 
+	<?php endif; ?>
 	<!-- ===== Quick action ===== -->
 	<p style="margin:18px 0;"><button type="button" class="button button-primary button-hero" id="wpcc-aip-new" aria-expanded="false" aria-controls="wpcc-aip-wizard">+ <?php esc_html_e( 'New connection', 'ai-command-center' ); ?></button></p>
 
@@ -498,7 +518,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 			<strong style="font-size:13px;"><?php esc_html_e( 'Key added. What happens next?', 'ai-command-center' ); ?></strong>
 			<ol style="margin:8px 0 0;padding-left:20px;color:#50575e;font-size:13px;line-height:1.6;">
 				<li><?php esc_html_e( 'Use “Test” on a connection to confirm the key works.', 'ai-command-center' ); ?></li>
-				<li><?php printf( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Connect an AI assistant so it can do the work — see %1$sAI Clients%2$s.', 'ai-command-center' ), '<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) . '">', '</a>' ); ?></li>
+				<li><?php printf( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Connect an AI assistant so it can do the work — see %1$sAssistants%2$s.', 'ai-command-center' ), '<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) . '">', '</a>' ); ?></li>
 				<li><?php esc_html_e( 'Adding a key does not turn AI features on by itself. Built-in AI screens are enabled per site; ask your developer to switch them on if you do not see them.', 'ai-command-center' ); ?></li>
 			</ol>
 		</div>

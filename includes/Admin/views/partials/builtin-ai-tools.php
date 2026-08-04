@@ -19,8 +19,8 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 	switch ( $status ) {
 		case 'enabled':           return __( 'On', 'ai-command-center' );
 		case 'requires_provider': return __( 'On — connect a provider to generate', 'ai-command-center' );
-		case 'enabled_by_config': return __( 'On — set in your site configuration', 'ai-command-center' );
-		case 'disabled_by_config':return __( 'Off — set in your site configuration', 'ai-command-center' );
+		case 'enabled_by_config': return __( 'On — turned on in your site’s code', 'ai-command-center' );
+		case 'disabled_by_config':return __( 'Off — turned off in your site’s code', 'ai-command-center' );
 		default:                  return __( 'Off', 'ai-command-center' );
 	}
 };
@@ -53,7 +53,15 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 					</span>
 				</span>
 				<?php if ( $wpcc_locked ) : ?>
-					<span class="description" style="white-space:nowrap;"><span class="dashicons dashicons-lock" aria-hidden="true"></span> <?php esc_html_e( 'Locked', 'ai-command-center' ); ?></span>
+					<?php
+					/*
+					 * "Locked" read as a permission refusal — as though the plugin were
+					 * withholding something. The truth is duller and more useful: a
+					 * developer set this in wp-config or a filter, so this particular
+					 * switch is not the thing that controls it. Say that instead.
+					 */
+					?>
+					<span class="description" style="white-space:nowrap;" title="<?php esc_attr_e( 'A constant or filter in your site’s code controls this tool, so it cannot be changed from here.', 'ai-command-center' ); ?>"><span class="dashicons dashicons-lock" aria-hidden="true"></span> <?php esc_html_e( 'Set in code', 'ai-command-center' ); ?></span>
 				<?php else : ?>
 					<form method="post" style="margin:0;">
 						<?php wp_nonce_field( BuiltinAiSettings::NONCE ); ?>

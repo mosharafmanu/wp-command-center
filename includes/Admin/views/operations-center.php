@@ -100,6 +100,22 @@ $wpcc_dur = static function ( $ms ): string {
 		<!-- 2. OPERATIONS TIMELINE -->
 		<div>
 			<h2 style="margin-top:18px;"><?php esc_html_e( 'Operations timeline', 'ai-command-center' ); ?></h2>
+			<?php
+			/*
+			 * Say what this list is before showing it.
+			 *
+			 * The rows carry the engine's own internal names — "worker", "execution",
+			 * "result" — because that is what was recorded. The background queue runs on
+			 * a schedule on every install, so even a site nobody has touched fills this
+			 * with "Completed worker" within minutes. A first-time reader meets a column
+			 * of unexplained machine words and has no way to tell whether any of it needs
+			 * them. One line answers both questions: what it is, and that it is not a
+			 * to-do list. The names themselves are engine data and are left untouched.
+			 */
+			?>
+			<p class="muted" style="font-size:12px;margin:0 0 10px;">
+				<?php esc_html_e( 'A technical record of work the plugin has run, newest first. Nothing here needs your attention — anything that does appears under Approvals.', 'ai-command-center' ); ?>
+			</p>
 			<?php if ( empty( $wpcc_tl['rows'] ) ) : ?>
 				<div class="wpcc-oc-empty"><strong><?php esc_html_e( 'No operations recorded yet.', 'ai-command-center' ); ?></strong><br><span class="muted"><?php esc_html_e( 'When AI or an agent performs governed work, each operation appears here — newest first.', 'ai-command-center' ); ?></span></div>
 			<?php else : ?>

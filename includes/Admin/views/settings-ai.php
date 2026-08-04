@@ -43,6 +43,40 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 		?>
 	</p>
 
+	<?php
+	/*
+	 * The two-paths block.
+	 *
+	 * Everything on this screen assumed the reader already knew that "AI assistant" and
+	 * "AI provider" are different things. They are the most confusable pair of words in
+	 * the product: both contain "AI", both involve a key-like value, and only one of
+	 * them is needed to use WP Command Center at all. Someone who conflates them
+	 * concludes they must buy an API key before they can connect Claude — which is the
+	 * exact opposite of true, and an expensive misunderstanding to leave in place.
+	 *
+	 * Stating both paths side by side answers "do I need this?" before any of the
+	 * provider machinery below is reached. It is deliberately two short columns rather
+	 * than a diagram: the relationship is genuinely simple once named.
+	 */
+	?>
+	<div class="wpcc-ai-paths">
+		<div class="wpcc-ai-path">
+			<span class="wpcc-ai-path__tag"><?php esc_html_e( 'Path 1 — the main way', 'ai-command-center' ); ?></span>
+			<strong><?php esc_html_e( 'Your own AI assistant', 'ai-command-center' ); ?></strong>
+			<p><?php esc_html_e( 'You work in Claude, Cursor or ChatGPT and ask it to change this site. It brings its own AI, so no key is needed here. Everything it wants to change waits for your approval, is recorded, and can be undone.', 'ai-command-center' ); ?></p>
+			<span class="wpcc-ai-path__note"><?php esc_html_e( 'No provider key required', 'ai-command-center' ); ?></span>
+		</div>
+		<div class="wpcc-ai-path">
+			<span class="wpcc-ai-path__tag"><?php esc_html_e( 'Path 2 — optional extra', 'ai-command-center' ); ?></span>
+			<strong><?php esc_html_e( 'Built-in AI (this screen)', 'ai-command-center' ); ?></strong>
+			<p><?php esc_html_e( 'The plugin generates text itself — SEO descriptions, image alt text, draft content — without you opening an assistant. This is the part that needs your own provider key, and only for the tools you switch on.', 'ai-command-center' ); ?></p>
+			<span class="wpcc-ai-path__note"><?php esc_html_e( 'Needs a provider key', 'ai-command-center' ); ?></span>
+		</div>
+	</div>
+	<p class="description" style="max-width:680px;margin:0 0 18px;">
+		<?php esc_html_e( 'Both paths obey the same rules: anything that changes your site still needs your approval, and is still recorded.', 'ai-command-center' ); ?>
+	</p>
+
 	<?php if ( $wpcc_ai_tools_off ) : ?>
 		<p class="wpcc-builtin-note" role="note" style="margin:14px 0;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:680px;font-size:13px;color:#1d2327;">
 			<?php esc_html_e( 'The SEO, Alt Text, and Content tools are not switched on for this site. They appear here once enabled — adding a provider key on its own does not turn them on.', 'ai-command-center' ); ?>
@@ -70,3 +104,14 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 		?>
 	</div>
 </div>
+
+<style>
+/* Two-paths explainer (Built-in AI). Presentation only — scoped to this view. */
+.wpcc-ai-paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; max-width: 760px; margin: 18px 0 12px; }
+.wpcc-ai-path { padding: 14px 16px; background: #fff; border: 1px solid #e3e5ec; border-radius: 10px; box-shadow: 0 1px 2px rgba(16,24,40,.03); }
+.wpcc-ai-path__tag { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #8c92a0; margin-bottom: 5px; }
+.wpcc-ai-path strong { display: block; font-size: 14px; color: #1d2327; margin-bottom: 5px; }
+.wpcc-ai-path p { margin: 0 0 9px; font-size: 13px; line-height: 1.55; color: #50575e; }
+.wpcc-ai-path__note { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: #f6f7f7; border: 1px solid #dcdfe6; color: #50575e; }
+.wpcc-ai-path:first-child .wpcc-ai-path__note { background: #e6f6ea; border-color: #aadfb6; color: #04620f; }
+</style>

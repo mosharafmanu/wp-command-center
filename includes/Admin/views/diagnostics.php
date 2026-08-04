@@ -154,7 +154,28 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 				?>
 			</p>
 
-			<?php if ( empty( $result['lines'] ) ) : ?>
+			<?php
+			/*
+			 * A 0-byte debug log is EMPTY, not "one blank line".
+			 *
+			 * Splitting an empty file on newlines yields a single empty string, so
+			 * `$result['lines']` came back with one entry whose text was '' — enough for
+			 * `empty()` to be false. The empty state below was therefore skipped and the
+			 * viewer rendered instead: a bare 24px black strip containing one empty
+			 * <span>, directly under a line reading "Size: 0 B". It looked like the page
+			 * had failed to load rather than like a log with nothing in it.
+			 *
+			 * Judge emptiness by content, not by array count.
+			 */
+			$wpcc_log_has_content = false;
+			foreach ( (array) $result['lines'] as $wpcc_log_line ) {
+				if ( '' !== trim( (string) ( $wpcc_log_line['text'] ?? '' ) ) ) {
+					$wpcc_log_has_content = true;
+					break;
+				}
+			}
+			?>
+			<?php if ( ! $wpcc_log_has_content ) : ?>
 				<div class="wpcc-cds-empty"><div class="wpcc-cds-empty__title"><?php esc_html_e( 'The debug log is empty.', 'ai-command-center' ); ?></div></div>
 			<?php else : ?>
 				<pre class="wpcc-debug-log"><?php foreach ( $result['lines'] as $line ) : ?><span class="wpcc-log-line wpcc-log-line--<?php echo esc_attr( $line['level'] ); ?>"><?php echo esc_html( $line['text'] ); ?>

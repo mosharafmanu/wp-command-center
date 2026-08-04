@@ -42,7 +42,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 <div class="wrap wpcc-wrap wpcc-tokens">
 	<h1><?php esc_html_e( 'Access', 'ai-command-center' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'Create access tokens for your AI agents and see exactly what each one can do, based on its scope and capabilities. The token secret is shown once at creation; revoke any token instantly. Capabilities are assigned through the same audited engine as the agent API.', 'ai-command-center' ); ?>
+		<?php esc_html_e( 'A token is how an assistant reaches this site. Create one for each assistant you connect, and see exactly what it is allowed to do. The token is shown once when you create it — copy it then. You can revoke any token instantly.', 'ai-command-center' ); ?>
 	</p>
 
 	<?php if ( '' !== $view_id ) : ?>
@@ -124,7 +124,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	};
 	var i18n = {
 		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'ai-command-center' ) ); ?>,
-		emptyTokens: <?php echo wp_json_encode( __( 'No API tokens yet. Use the form above to create one and connect an AI agent.', 'ai-command-center' ) ); ?>,
+		emptyTokens: <?php echo wp_json_encode( __( 'No access tokens yet. Create one above, then paste it into your assistant to connect it.', 'ai-command-center' ) ); ?>,
 		emptyActive: <?php echo wp_json_encode( __( 'No active tokens. Create one above, or show revoked tokens to review past access.', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d and %2$d are both the number of revoked or expired tokens */
 		showRevoked: <?php echo wp_json_encode( /* translators: %1$d: number */ __( 'Show %1$d revoked or expired token(s)', 'ai-command-center' ) ); ?>,
@@ -193,7 +193,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'ai-command-center' ) ); ?>,
 		genericFail: <?php echo wp_json_encode( __( 'The change could not be completed.', 'ai-command-center' ) ); ?>,
 		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'ai-command-center' ) ); ?>,
-		createHelp:  <?php echo wp_json_encode( __( 'AI agents authenticate to the REST API with a bearer token. The secret is shown once on creation.', 'ai-command-center' ) ); ?>,
+		createHelp:  <?php echo wp_json_encode( __( 'Give the token a name you will recognise later. It is shown once when you create it, so copy it straight away.', 'ai-command-center' ) ); ?>,
 		fLabel:      <?php echo wp_json_encode( __( 'Label', 'ai-command-center' ) ); ?>,
 		fScope:      <?php echo wp_json_encode( __( 'Scope', 'ai-command-center' ) ); ?>,
 		fExpires:    <?php echo wp_json_encode( __( 'Expires', 'ai-command-center' ) ); ?>,
@@ -210,7 +210,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'ai-command-center' ) ); ?>,
 		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'ai-command-center' ) ); ?>,
 		/* translators: %s: token label */
-		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any AI agent using it loses access immediately.', 'ai-command-center' ) ); ?>,
+		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any assistant using it loses access immediately.', 'ai-command-center' ) ); ?>,
 		/* translators: %s: token label */
 		confirmDelete: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Permanently delete the token "%s"? This cannot be undone.', 'ai-command-center' ) ); ?>,
 		tokenCreated:  <?php echo wp_json_encode( __( 'Token created.', 'ai-command-center' ) ); ?>,
