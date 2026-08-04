@@ -167,7 +167,6 @@ Real adoption, config prepared, but lower confidence or unverified vendor specif
 
 | Assistant | Reason |
 |---|---|
-| Cline | 5M+ installs; settings path is version-sensitive |
 | Windsurf | Path corrected but unverified against current build |
 | ChatGPT (desktop) | Works only via the shared Codex config; web is remote-only + needs public HTTPS |
 | Continue | YAML schema differs; lower adoption |
@@ -182,6 +181,7 @@ Real adoption, config prepared, but lower confidence or unverified vendor specif
 | Trae (ByteDance) | Growing; unverified |
 | Qwen Code | Ecosystem large; client MCP support unverified |
 | Kilo Code | Roo's successor; natural migration target |
+| Cline | 5M+ installs, and the research below stands — but it is **not in the shipped registry**, and adding a client at release candidate that nobody can run the checklist against would ship an untested claim. §6.7 keeps the prepared config for 1.1. |
 
 ### Remove from 1.0 — do not present as supported
 | Assistant | Reason |
@@ -261,7 +261,7 @@ Or `codex mcp add`. ChatGPT desktop reads this same file.
 }
 ```
 
-### 6.7 Cline — transport A
+### 6.7 Cline — transport A *(prepared for 1.1; not in the 1.0 registry)*
 `~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`
 — same `mcpServers` block as 6.1.
 
@@ -297,17 +297,22 @@ protection before starting** (Settings → Protection).
 
 ### Record results here
 
+The eleven clients the registry actually ships — no more, so a blank row always means
+"not yet run" rather than "not offered".
+
 | Assistant | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Claude Desktop | | | | | | | | | | | | | |
 | Claude Code | | | | | | | | | | | | | |
+| Claude Desktop | | | | | | | | | | | | | |
 | Cursor | | | | | | | | | | | | | |
 | GitHub Copilot / VS Code | | | | | | | | | | | | | |
 | Codex CLI | | | | | | | | | | | | | |
 | Gemini CLI | | | | | | | | | | | | | |
-| Cline | | | | | | | | | | | | | |
+| ChatGPT (Desktop) | | | | | | | | | | | | | |
 | Windsurf | | | | | | | | | | | | | |
-| ChatGPT (desktop) | | | | | | | | | | | | | |
+| Continue | | | | | | | | | | | | | |
+| OpenCode | | | | | | | | | | | | | |
+| Command Code | | | | | | | | | | | | | |
 
 ---
 
@@ -326,7 +331,7 @@ Claude-verified only. **Nothing is Certified until section 7 is executed.**
 | Gemini CLI | ⚠️ was broken | ⏳ Awaiting checklist | Wrong config path |
 | Windsurf | ⚠️ was broken | ⏳ Awaiting checklist | Wrong config path |
 | ChatGPT | ⚠️ was broken | ⏳ Awaiting checklist | Path fictional; desktop shares Codex config |
-| Cline | ✅ config prepared | ⏳ Awaiting checklist | 5M+ installs; not previously offered |
+| Cline | — | ➖ **Not in 1.0** | Config prepared for 1.1; not in the shipped registry |
 | Continue | ⚠️ was broken | ⏳ Experimental | Needs YAML |
 | OpenCode | ⚠️ was broken | ⏳ Experimental | Distinct schema |
 | Command Code | ⚠️ unverified | ⏳ Experimental | Niche |
