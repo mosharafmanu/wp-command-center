@@ -674,7 +674,31 @@ final class OperationRegistry {
 					'settings_privacy_update'    => 'high',
 				],
 				'requires_approval' => true,
-				'parameters'        => [[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => SettingsRegistry::ACTIONS ]],
+				/*
+				 * The value fields, derived from SettingsRegistry::field_map() — the same
+				 * map the write itself uses.
+				 *
+				 * `action` alone was declared, so the generated MCP schema offered an
+				 * assistant no way to say WHAT to set. Observed with Claude Code against a
+				 * live site: asked to change the tagline, it sent only `action` and put the
+				 * value in the free-text `reason`, because that was the only field the
+				 * schema gave it. The request queued, cost a human approval, executed,
+				 * reported success — and changed nothing.
+				 *
+				 * Built from the map rather than typed out, so a field added to one is
+				 * never missing from the other.
+				 */
+				'parameters'        => array_merge(
+					[[ 'name' => 'action', 'type' => 'string', 'required' => true, 'enum' => SettingsRegistry::ACTIONS ]],
+					array_map(
+						static fn( string $field ): array => [
+							'name'     => $field,
+							'type'     => 'string',
+							'required' => false,
+						],
+						SettingsRegistry::payload_fields()
+					)
+				),
 				'available'         => true,
 			],
 			'approval_manage' => [
