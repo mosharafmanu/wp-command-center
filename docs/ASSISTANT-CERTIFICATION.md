@@ -6,10 +6,12 @@ Claude prepares setup, configuration and the verification checklist.
 The owner executes each checklist in their own authenticated accounts.
 Claude records the results and assigns the final status.
 
-> **No assistant in this document is "Officially Certified" yet.** Every status below is
-> either `Server-verified` (proven by Claude against the MCP server), `Config-prepared`
-> (configuration corrected and ready for you to execute), or `Not supported`. Certification
-> is awarded only from executed checklist results.
+> **One assistant is Officially Certified: Claude Code, 12/12, executed 2026-08-04**
+> against a live HTTPS site — see §7. Every other status below is either
+> `Server-verified` (proven against the MCP server, which every client shares),
+> `Config-prepared` (configuration corrected and ready to execute), or `Not supported`.
+> Certification is awarded only from executed checklist results, never inferred from the
+> shared endpoint working.
 
 ---
 
@@ -297,12 +299,41 @@ protection before starting** (Settings → Protection).
 
 ### Record results here
 
+**Executed 2026-08-04 — Claude Code, 12/12.** Run in the client itself, over HTTPS,
+against a live site (WordPress 6.9.5, PHP 8.3.30, Standard protection), not simulated:
+
+| # | Step | Observed |
+|---|---|---|
+| 1 | Connect | `claude mcp list` → `wp-command-center … ✔ Connected`, using the command this plugin generates, verbatim |
+| 2 | Tool discovery | 42 tools, listed by name |
+| 3 | Resource discovery | 7 resources |
+| 4 | Read | Full 15-plugin list returned, no approval prompt |
+| 5 | Proposal | `pending_approval`, request `d3b27123-…`, risk `high` |
+| 6 | Nothing applied | Tagline read back as `""` — unchanged |
+| 7 | Self-approve refused | `wpcc_approval_requires_human` |
+| 8 | Approve | Admin approved → worker executed → tagline became "Certified via Claude Code" |
+| 9 | Audit | Change recorded, attributed, timestamped, `reversible: true` |
+| 10 | Rollback | Undo itself returned `pending_approval` (risk `high`); once approved, tagline restored to `""` exactly |
+| 11 | Double undo refused | `wpcc_already_rolled_back` — "This change has already been rolled back." Site untouched |
+| 12 | Reconnect | Reconnected; `system_info` answered WP 6.9.5 / PHP 8.3.30 |
+
+Step 5 failed on the first attempt and is the reason `settings_manage` was fixed:
+the schema declared no value parameters, so Claude Code sent the tagline inside the
+free-text `reason` — the only field available to it — and produced a request that
+consumed a human approval and changed nothing. Both the schema gap and the silent
+no-op are fixed; the run above is the re-test after the fix.
+
+The remaining ten clients require third-party accounts or applications that were
+not available to run against. Their rows stay blank, which means "not yet run" —
+not "failed", and not "certified".
+
+
 The eleven clients the registry actually ships — no more, so a blank row always means
 "not yet run" rather than "not offered".
 
 | Assistant | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | Status |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Claude Code | | | | | | | | | | | | | |
+| Claude Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | **Officially Certified** |
 | Claude Desktop | | | | | | | | | | | | | |
 | Cursor | | | | | | | | | | | | | |
 | GitHub Copilot / VS Code | | | | | | | | | | | | | |
@@ -325,7 +356,7 @@ Claude-verified only. **Nothing is Certified until section 7 is executed.**
 | *(MCP server itself)* | ✅ | ✅ **Server-verified** | 42 tools, 7 resources, full governance chain — §1 |
 | Claude Desktop | ✅ config correct | ⏳ Awaiting checklist | Only client whose shipped config was already right |
 | Cursor | ✅ config correct | ⏳ Awaiting checklist | Shipped config correct |
-| Claude Code | ✅ config prepared | ⏳ Awaiting checklist | Transport B; not previously offered |
+| Claude Code | ✅ certified | ✅ **Officially Certified 12/12** | Transport B; executed against a live HTTPS site 2026-08-04 |
 | GitHub Copilot / VS Code | ✅ config prepared | ⏳ Awaiting checklist | **#1 adoption; not previously offered** |
 | Codex CLI | ⚠️ was broken | ⏳ Awaiting checklist | Shipped JSON; needs TOML — could not have worked |
 | Gemini CLI | ⚠️ was broken | ⏳ Awaiting checklist | Wrong config path |
