@@ -173,15 +173,15 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 				Brand::logo_dark(),
 				esc_attr__( 'WP Command Center', 'ai-command-center' ),
 				'wpcc-setup__logo',
-				456,
-				72
+				244,
+				32
 			),
 			Brand::allowed_html()
 		);
 		?>
 		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Let an AI assistant work on this site — safely', 'ai-command-center' ); ?></h2>
 		<p class="wpcc-setup__lede">
-			<?php esc_html_e( 'Ask Claude, Cursor or ChatGPT to change your site, in your own words and your own language. You approve anything that matters, everything is recorded, and supported changes can be undone.', 'ai-command-center' ); ?>
+			<?php esc_html_e( 'You work in your AI assistant — Claude, Cursor or ChatGPT — and ask for changes to this site in your own words and your own language. Anything that matters waits here for your approval, every change is recorded, and supported changes can be undone.', 'ai-command-center' ); ?>
 		</p>
 
 		<?php
@@ -380,6 +380,42 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		</form>
 	<?php endif; ?>
 
+	<?php
+	/*
+	 * WHAT ELSE IS INCLUDED — the discoverability fix.
+	 *
+	 * Built-in AI sits five levels down (Settings > Advanced > Built-in AI > Providers >
+	 * the tool), so in practice almost nobody found it. Everything below exists and is
+	 * paid for; none of it was visible from the one screen people actually open.
+	 *
+	 * The wording is deliberately conditional. On a stock install the SEO, Alt Text and
+	 * Content tools are switched OFF — build-flagged and option-gated — so this must read
+	 * as "the plugin can also do this, here is where to switch it on", never as a list of
+	 * things already running. Advertising a capability the site cannot currently perform
+	 * is the exact defect this release already fixed once in the operation catalogue; it
+	 * is not being reintroduced in the UI.
+	 */
+	?>
+	<h2><?php esc_html_e( 'Also included', 'ai-command-center' ); ?></h2>
+	<p class="wpcc-home__also-lede"><?php esc_html_e( 'Optional extras that are part of the plugin. Nothing here is switched on unless you choose it.', 'ai-command-center' ); ?></p>
+	<div class="wpcc-home__also">
+		<a class="wpcc-home__also-card" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai' ) ); ?>">
+			<strong><?php esc_html_e( 'Built-in AI', 'ai-command-center' ); ?></strong>
+			<span><?php esc_html_e( 'Let the plugin write SEO descriptions, image alt text and draft content by itself, without opening an assistant. Needs your own AI provider key, and only for the tools you switch on.', 'ai-command-center' ); ?></span>
+			<em><?php esc_html_e( 'Set up Built-in AI →', 'ai-command-center' ); ?></em>
+		</a>
+		<a class="wpcc-home__also-card" href="<?php echo esc_url( $links['change_history'] ); ?>">
+			<strong><?php esc_html_e( 'Undo any change', 'ai-command-center' ); ?></strong>
+			<span><?php esc_html_e( 'Every change is recorded with who made it and when. Supported changes can be put back exactly as they were, and the undo follows the same approval rules.', 'ai-command-center' ); ?></span>
+			<em><?php esc_html_e( 'See what changed →', 'ai-command-center' ); ?></em>
+		</a>
+		<a class="wpcc-home__also-card" href="<?php echo esc_url( $links['access'] ); ?>">
+			<strong><?php esc_html_e( 'Read-only access', 'ai-command-center' ); ?></strong>
+			<span><?php esc_html_e( 'Give an assistant a token that can answer questions about the site but can never change anything — useful for trying one out safely.', 'ai-command-center' ); ?></span>
+			<em><?php esc_html_e( 'Manage access tokens →', 'ai-command-center' ); ?></em>
+		</a>
+	</div>
+
 	<!-- Engineering detail: present, never in the way. -->
 	<div class="wpcc-engineer-only">
 		<h2><?php esc_html_e( 'Platform invariants', 'ai-command-center' ); ?></h2>
@@ -408,12 +444,16 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 .wpcc-setup__prompt-label { color: #646970; margin-right: 6px; }
 .wpcc-setup__prompt code { background: #f0f0f1; padding: 3px 8px; border-radius: 4px; font-size: 13px; }
 .wpcc-setup__note { margin: 6px 0 0; font-size: 12px; color: #646970; }
-/* The first-run lockup. width:auto + max-width keeps the intrinsic 456x72 ratio
-   (height:auto) so it stays sharp on retina and scales down on narrow screens
-   instead of overflowing. The 20px clear space below is the standard's minimum
-   1x vertical clear space at this rendered size, so the headline never crowds it. */
-.wpcc-setup__logo { display:block; width:auto; height:auto; max-width:248px; margin:0 0 20px; }
-@media (max-width: 480px) { .wpcc-setup__logo { max-width:200px; } }
+/* The first-run lockup, sized by HEIGHT so the wordmark lands at a known size.
+   It used to be capped by width (max-width:248px) against an artwork whose 456px
+   viewBox was sized by a tagline, not by the name — so the whole lockup rendered
+   at 0.54x and "WP Command Center" came out at 12px: smaller than the 13px body
+   text beneath it, and the smallest type on the screen that introduces the
+   product. The tagline is gone from the artwork and the viewBox is retightened to
+   244x32, so height:32px now renders the wordmark at its intended 20px with the
+   mark at 24px. max-width keeps it inside very narrow columns. */
+.wpcc-setup__logo { display:block; width:auto; height:32px; max-width:100%; margin:0 0 18px; }
+@media (max-width: 480px) { .wpcc-setup__logo { height:28px; } }
 /* First-run is the one screen that earns a real headline. The CDS type scale
    caps h2 at 16px for dense operator screens, which is right everywhere else
    and wrong here — this is the product introducing itself. Scoped override. */
@@ -472,6 +512,14 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 .wpcc-home__ready-link { font-size: var( --wpcc-fs-body, 13px ); }
 .wpcc-home__ready-ok { font-size: var( --wpcc-fs-small, 12px ); font-weight: 600; color: var( --wpcc-state-success-fg, #00a32a ); }
 .wpcc-home__ready-ok[hidden] { display: none; }
+.wpcc-home__also-lede { font-size: 13px; color: #50575e; margin: 0 0 12px; }
+.wpcc-home__also { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 0 0 26px; }
+.wpcc-home__also-card { display: block; padding: 15px 17px; background: #fff; border: 1px solid #dcdcde; border-radius: 10px; text-decoration: none; box-shadow: 0 1px 2px rgba(16,24,40,.03); transition: border-color .13s ease, box-shadow .13s ease, transform .13s ease; }
+.wpcc-home__also-card:hover { border-color: #c8ccd4; transform: translateY(-1px); box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(16,24,40,.06); }
+.wpcc-home__also-card:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+.wpcc-home__also-card strong { display: block; font-size: 14px; color: #1d2327; margin-bottom: 5px; }
+.wpcc-home__also-card span { display: block; font-size: 12.5px; line-height: 1.55; color: #50575e; margin-bottom: 9px; }
+.wpcc-home__also-card em { font-style: normal; font-size: 12.5px; font-weight: 600; color: #2271b1; }
 .wpcc-home__more { font-size: 13px; margin: 10px 0 26px; }
 .wpcc-home__guide { padding: 20px 22px; background: #fff; border: 1px solid #dcdcde; border-radius: 8px; margin: 8px 0 24px; }
 .wpcc-home__guide h2 { margin: 0 0 14px; } /* size comes from the type scale */
@@ -494,6 +542,9 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	var sessBase = <?php echo wp_json_encode( $session_base ); ?>;
 	/* Brand mark for the product's own empty state (see WPCC.cds.empty). */
 	var brandMark = <?php echo wp_json_encode( Brand::mark() ); ?>;
+	/* Whether approvals are on, so the attention banner can explain a queue that
+	   outlived them being switched off. See i18n.attnQueuedBefore. */
+	var isProtected = <?php echo wp_json_encode( (bool) $wpcc_protected ); ?>;
 
 	var i18n = {
 		loadFail:    <?php echo wp_json_encode( __( 'Could not load. Your admin session may have expired — refresh and try again.', 'ai-command-center' ) ); ?>,
@@ -512,6 +563,16 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		/* translators: %d: number of failed queue items */
 		attnFailed:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d requests failed to run.', 'ai-command-center' ) ); ?>,
 		attnFailed1: <?php echo wp_json_encode( __( '1 request failed to run.', 'ai-command-center' ) ); ?>,
+		/*
+		 * Shown only when approvals are OFF and a queue still exists — the one
+		 * combination on this screen that reads as a contradiction. "Approvals are
+		 * turned off" and "50 changes need your decision" are both true and sit two
+		 * inches apart, and nothing said why. Turning approvals off governs what
+		 * happens NEXT; it does not release what was already queued, and it is not
+		 * obvious that a setting is not retroactive. One sentence, only in the state
+		 * that needs it.
+		 */
+		attnQueuedBefore: <?php echo wp_json_encode( __( 'These were queued while approvals were still on. Turning approvals off does not release them — they wait for you either way.', 'ai-command-center' ) ); ?>,
 		attnReview:  <?php echo wp_json_encode( __( 'Review now', 'ai-command-center' ) ); ?>,
 		attnSeeFailed: <?php echo wp_json_encode( __( 'See what failed', 'ai-command-center' ) ); ?>,
 		pendingNone: <?php echo wp_json_encode( __( 'Nothing', 'ai-command-center' ) ); ?>,
@@ -599,11 +660,18 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		 * that did not exist. A failure is news, not a request.
 		 */
 		var attnTitle = pending > 0 ? i18n.attnTitle : i18n.attnTitleFailed;
+		/*
+		 * Only when approvals are off AND something is still pending. In every other
+		 * state this line would be answering a question nobody asked.
+		 */
+		var queuedNote = ( ! isProtected && pending > 0 )
+			? '<p class="wpcc-cds-attn__detail">' + esc( i18n.attnQueuedBefore ) + '</p>'
+			: '';
 		set( 'wpcc-home-attn',
 			'<div class="wpcc-cds-attn is-action">'
 			+ '<span class="wpcc-cds-attn__icon" aria-hidden="true">&#9888;</span>'
 			+ '<div class="wpcc-cds-attn__body"><p class="wpcc-cds-attn__title">' + esc( attnTitle ) + '</p>'
-			+ '<p class="wpcc-cds-attn__detail">' + bits.join( ' &middot; ' ) + '</p></div>'
+			+ '<p class="wpcc-cds-attn__detail">' + bits.join( ' &middot; ' ) + '</p>' + queuedNote + '</div>'
 			// Secondary. The page already has one primary action (the next step);
 			// two blue buttons competing on a dashboard means neither is the answer.
 			+ '<div class="wpcc-cds-attn__actions"><a class="button" href="' + esc( pending > 0 ? links.approvals : links.approvalsQueue ) + '">'

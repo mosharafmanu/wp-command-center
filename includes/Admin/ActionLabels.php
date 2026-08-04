@@ -688,7 +688,27 @@ final class ActionLabels {
 	 * Anything unrecognised is returned untouched.
 	 */
 	private static function friendly_option( string $value ): string {
-		$known = [
+		return self::option_labels()[ $value ] ?? $value;
+	}
+
+	/**
+	 * The setting-key → human-label map, exposed so a single list serves every
+	 * surface that has to name a setting.
+	 *
+	 * The approval detail screen carried its OWN copy of this map in JavaScript,
+	 * and the two had drifted: the PHP list learned the registry ids the settings
+	 * operation actually emits (`site_title`, `tagline`, `timezone`) while the JS
+	 * copy still knew only the raw WordPress option names (`blogname`,
+	 * `blogdescription`). The result was that the most common approval in the
+	 * product — a settings change — rendered its heading as "Site title" from this
+	 * map and then, four lines below, labelled the same field `site_title` from
+	 * the other one. Two lists describing one thing will always drift; there is
+	 * one list now.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function option_labels(): array {
+		return [
 			// Registry IDs (option_manage speaks these) …
 			'site_title'       => __( 'Site title', 'ai-command-center' ),
 			'tagline'          => __( 'Tagline', 'ai-command-center' ),
@@ -710,8 +730,11 @@ final class ActionLabels {
 			'show_on_front'    => __( 'Homepage display', 'ai-command-center' ),
 			'page_on_front'    => __( 'Homepage', 'ai-command-center' ),
 			'page_for_posts'   => __( 'Posts page', 'ai-command-center' ),
+			// The remaining keys settings_general_get/update speaks, which the
+			// approval card previously printed raw.
+			'language'         => __( 'Site language', 'ai-command-center' ),
+			'week_start'       => __( 'Week starts on', 'ai-command-center' ),
 		];
-		return $known[ $value ] ?? $value;
 	}
 
 	/** Trim a value to something that fits on a card without wrapping. */

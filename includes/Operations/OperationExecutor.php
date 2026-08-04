@@ -887,7 +887,18 @@ final class OperationExecutor {
 		$result['message'] = sprintf(
 			/* translators: 1: security mode label, 2: request ID, 3: approval URL */
 			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'ai-command-center' ),
-			$mode,
+			/*
+			 * The LABEL, not the raw mode id — as this format string's own translator
+			 * note has always asked for. Passing `$mode` put the internal enum into the
+			 * one sentence a customer is most likely to read: an assistant relays this
+			 * verbatim on the very first governed change, so the product's first words
+			 * about its own protection were "Approval required (client)". "client" is
+			 * a database value that means nothing to the person reading it, and it is
+			 * the opposite of the mode's actual name. `security_mode` directly above
+			 * still carries the raw id for machine consumers, so nothing that parses
+			 * the envelope loses the precise value.
+			 */
+			SecurityModeManager::label_for( $mode ),
 			$request['request_id'],
 			admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' )
 		);

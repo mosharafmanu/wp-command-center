@@ -381,10 +381,18 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		yes:         <?php echo wp_json_encode( __( 'Yes', 'ai-command-center' ) ); ?>,
 		no:          <?php echo wp_json_encode( __( 'No', 'ai-command-center' ) ); ?>,
 		emptyValue:  <?php echo wp_json_encode( __( '(empty)', 'ai-command-center' ) ); ?>,
-		/* Field names a site owner recognises, for the "What will change" table. */
-		fieldNames:  <?php echo wp_json_encode( [
-			'blogname'        => __( 'Site title', 'ai-command-center' ),
-			'blogdescription' => __( 'Tagline', 'ai-command-center' ),
+		/*
+		 * Field names a site owner recognises, for the "What will change" table.
+		 *
+		 * The setting keys come from ActionLabels::option_labels(), which is the same
+		 * map that names the setting in this request's own heading. They used to be
+		 * duplicated here and had drifted, so a settings approval said "Site title"
+		 * at the top of the page and `site_title` in the table below it. The rows
+		 * added afterwards are fields only this table renders (post, user, comment
+		 * and media fields), so they stay local; anything a heading also has to name
+		 * belongs in the shared map.
+		 */
+		fieldNames:  <?php echo wp_json_encode( array_merge( \WPCommandCenter\Admin\ActionLabels::option_labels(), [
 			'post_title'      => __( 'Title', 'ai-command-center' ),
 			'post_content'    => __( 'Content', 'ai-command-center' ),
 			'post_status'     => __( 'Status', 'ai-command-center' ),
@@ -402,7 +410,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			'alt_text'        => __( 'Alt text', 'ai-command-center' ),
 			'caption'         => __( 'Caption', 'ai-command-center' ),
 			'start_url'       => __( 'Site address', 'ai-command-center' ),
-		] ); ?>,
+		] ) ); ?>,
 		/* Audit events, in words. Unknown ids fall back to their tidied last segment. */
 		auditNames:  <?php echo wp_json_encode( [
 			'operation.approval.auto_requested' => __( 'Sent for your approval', 'ai-command-center' ),
@@ -1099,6 +1107,20 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		return '' === s.trim() ? i18n.emptyValue : s;
 	}
 
+	/*
+	 * Keys whose VALUE is itself the name of a setting, not a value a user typed.
+	 * `option_manage` sends {option_id: "site_title", value: "…"}, so the row read
+	 * "Setting: site_title" — the raw registry id — directly beneath a heading that
+	 * had already called the very same thing "Site title". The name is known; the
+	 * table just was not asking for it.
+	 */
+	var NAMES_A_SETTING = { option_id: 1, setting: 1, option: 1, option_name: 1 };
+
+	function settingName( v ) {
+		var s = String( v );
+		return ( i18n.fieldNames && i18n.fieldNames[ s ] ) ? i18n.fieldNames[ s ] : displayValue( v );
+	}
+
 	function summarisePayload( payload ) {
 		var rows = [];
 		Object.keys( payload || {} ).forEach( function ( key ) {
@@ -1111,7 +1133,10 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 				} );
 				return;
 			}
-			rows.push( { label: fieldLabel( key ), value: displayValue( val ) } );
+			rows.push( {
+				label: fieldLabel( key ),
+				value: NAMES_A_SETTING[ key ] ? settingName( val ) : displayValue( val ),
+			} );
 		} );
 		return rows;
 	}
