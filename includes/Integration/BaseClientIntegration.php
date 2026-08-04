@@ -54,6 +54,55 @@ abstract class BaseClientIntegration {
 		];
 	}
 
+	/**
+	 * Direct-HTTP MCP configuration — no relay, no Node.js, no local process.
+	 *
+	 * The WPCC MCP endpoint is a plain JSON-RPC-over-HTTP MCP server: POST a JSON-RPC
+	 * envelope with a Bearer token and it answers. That was verified with nothing but
+	 * curl — `initialize` returned protocol 2024-11-05 and `tools/list` returned all 42
+	 * tools with no relay in the picture at all.
+	 *
+	 * This matters because the relay was the only path the product offered, and it made
+	 * Node.js a hard client-side requirement (documented as a limitation in readme.txt).
+	 * Every client that speaks remote/HTTP MCP — Codex, ChatGPT, VS Code/Copilot, Gemini
+	 * CLI, Claude Code, Cursor — can skip the relay entirely.
+	 *
+	 * Requires the site to be reachable over HTTPS from the client machine, so it is not
+	 * a replacement for the relay on localhost development sites.
+	 *
+	 * @return array{url:string,headers:array<string,string>}
+	 */
+	protected static function http_endpoint(): array {
+		return [
+			'url'     => rest_url( McpServerRuntime::NAMESPACE . '/mcp' ),
+			'headers' => [ 'Authorization' => 'Bearer ${WPCC_TOKEN}' ],
+		];
+	}
+
+	/**
+	 * How this client should be configured. Overridden per client.
+	 *
+	 * `stdio` = relay via BaseClientIntegration::generate_mcp_config().
+	 * `http`  = direct HTTP, no Node.
+	 */
+	public static function transport(): string {
+		return 'stdio';
+	}
+
+	/**
+	 * The config file's root key. NOT universal: VS Code and GitHub Copilot use
+	 * `servers`, everyone else in this registry uses `mcpServers`. Getting this wrong
+	 * produces a config the client silently ignores.
+	 */
+	public static function root_key(): string {
+		return 'mcpServers';
+	}
+
+	/** The server key the client will show the user. */
+	public static function server_key(): string {
+		return 'wp-command-center';
+	}
+
 	public static function get_discovery_metadata(): array {
 		return ClaudeIntegration::get_discovery_metadata();
 	}
