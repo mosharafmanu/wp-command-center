@@ -30,7 +30,17 @@ if ( ! $wpcc_current_client || \WPCommandCenter\Integration\AIClientRegistry::CE
 }
 
 $wpcc_config      = AIClientRegistry::generate_config( $wpcc_selected_client );
-$wpcc_config_json = $wpcc_config ? wp_json_encode( $wpcc_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES ) : '';
+$wpcc_config_json = $wpcc_config ? AIClientRegistry::render_config( $wpcc_config ) : '';
+
+/*
+ * Does the selected assistant connect directly over HTTP, or through the connector?
+ *
+ * Three places on this screen need the answer — the summary row, the "what this does"
+ * explanation, and which checks the connection test runs — and each had been asking
+ * separately. One lookup, resolved before anything renders, so the page cannot end up
+ * describing one transport while testing the other.
+ */
+$wpcc_sel_http = 'http' === AIClientRegistry::transport_for( $wpcc_selected_client );
 
 // All AI client activity from audit log
 $wpcc_audit         = new \WPCommandCenter\Security\AuditLog();
@@ -70,8 +80,10 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 
 			// Inject token into config
 			if ( $wpcc_config ) {
-				$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN'] = $wpcc_new_token;
-				$wpcc_config_json = wp_json_encode( $wpcc_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
+				// Substituted on the rendered text, so it works whether this client takes
+				// JSON, TOML or a shell command — the old fixed array path only ever
+				// reached clients shaped like Claude Desktop.
+				$wpcc_config_json = AIClientRegistry::render_config( $wpcc_config, $wpcc_new_token );
 			}
 			$wpcc_all_tokens = $wpcc_tokens->list();
 		}
@@ -107,10 +119,10 @@ if ( $wpcc_selected_token_id ) {
 	$selected            = array_filter( $wpcc_all_tokens, fn( $t ) => $t['id'] === $wpcc_selected_token_id );
 	$wpcc_selected_token = ! empty( $selected ) ? reset( $selected ) : null;
 }
-if ( $wpcc_selected_token && $wpcc_config ) {
-	$wpcc_config['mcpServers']['wp-command-center']['env']['WPCC_TOKEN'] = 'wpcc_YOUR_TOKEN_HERE';
-	$wpcc_config_json = wp_json_encode( $wpcc_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES );
-}
+// Nothing to substitute: the generator's own placeholder is already what the note
+// below, the token-fill field and the copy button all refer to. This branch used to
+// re-render with a SECOND placeholder string, which is what broke the token-fill
+// field — it left the two halves of the screen looking for different text.
 
 // Active tab
 $wpcc_tab = sanitize_key( (string) ( $_GET['tab'] ?? 'clients' ) );
@@ -151,10 +163,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 	/* Hero / explainer */
 	/* Assistant picker: a selected chip reads as chosen, not as the page's CTA. */
-	.wpcc-ai-pick { border-color: #dcdfe6 !important; color: #3c434a !important; background: #fff; font-weight: 500; transition: border-color .12s ease, background-color .12s ease; }
-	.wpcc-ai-pick:hover { border-color: #b9bec7 !important; background: #fbfbfc; }
-	.wpcc-ai-pick.is-selected { border-color: #2271b1 !important; box-shadow: inset 0 0 0 1px #2271b1; color: #1d2327 !important; font-weight: 650; background: #f0f6fc; }
-	.wpcc-ai-pick.is-selected::before { content: "\2713"; margin-right: 7px; color: #2271b1; font-weight: 700; }
+	/* Superseded by the assistant picker block below — the flat button treatment
+	   could not express selection, hierarchy or rank. */
 	.wpcc-ai-hero { background: #fff; border: 1px solid #e3e5ec; border-radius: 14px; padding: 24px 26px; margin: 14px 0 24px; box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.05); }
 	.wpcc-ai-hero .wpcc-ai-lead { font-size: 16px; line-height: 1.55; color: #1d2327; max-width: 70ch; margin: 0 0 10px; font-weight: 600; }
 	.wpcc-ai-hero p { font-size: 14.5px; line-height: 1.6; color: #4b5161; max-width: 72ch; margin: 0; }
@@ -219,6 +229,85 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-ai-copied--visible { opacity: 1; }
 
 	/* Active client cards */
+	/* ── Assistant picker ──────────────────────────────────────────────────────
+	 * Presentation only. Every value still comes from AIClientRegistry::ui_badges();
+	 * this decides how loudly each one speaks, not what any of them say.
+	 * ──────────────────────────────────────────────────────────────────────── */
+
+	/* An even grid rather than flex-wrap. Flex sized each card to its own label, so
+	   eleven cards came out eleven different widths with a ragged right edge — the
+	   single strongest "unfinished" signal on the screen. Equal columns also mean the
+	   badge rows line up across cards, so the page can be scanned down a column. */
+	.wpcc-ai-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; margin-top: 4px; }
+
+	.wpcc-ai-pick { position: relative; height: auto !important; display: flex !important; flex-direction: column;
+		align-items: flex-start !important; gap: 9px; padding: 13px 15px 14px !important; line-height: 1.45 !important;
+		border: 1px solid #e3e5ec !important; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.03);
+		text-decoration: none; transition: border-color .13s ease, box-shadow .13s ease, transform .13s ease, background-color .13s ease; }
+	.wpcc-ai-pick__name { font-size: 13.5px; font-weight: 600; color: #1d2327; letter-spacing: -.01em; }
+
+	.wpcc-ai-pick:hover { border-color: #c8ccd4 !important; background: #fff; transform: translateY(-1px);
+		box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(16,24,40,.06); }
+	/* Keyboard focus must be at least as visible as hover — these are links. */
+	.wpcc-ai-pick:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+
+	/* Selected: a quiet raised panel, not a filled blue button. Weight comes from an
+	   inset accent rule, a slightly stronger border and real elevation — the same way
+	   an enterprise settings list marks the active row. The old treatment flooded the
+	   card with #f0f6fc, which shouted louder than the assistant's own name. */
+	.wpcc-ai-pick.is-selected { border-color: #c4c9d2 !important; background: #fff; padding-left: 18px !important;
+		box-shadow: 0 0 0 1px #c4c9d2, 0 2px 4px rgba(16,24,40,.05), 0 10px 24px rgba(16,24,40,.08); }
+	/* One accent, and it is the only colour on the card. An earlier pass drew this rule
+	   in the same blue as the selected border, so a 3px sliver sat against a blue edge
+	   and read as nothing at all. The border is neutral now and the rule carries the
+	   selection on its own — the way an active row is marked in a settings panel. */
+	.wpcc-ai-pick.is-selected::after { content: ""; position: absolute; left: -1px; top: 9px; bottom: 9px;
+		width: 3px; border-radius: 3px; background: #2271b1; }
+	.wpcc-ai-pick.is-selected .wpcc-ai-pick__name { color: #0f1c2e; font-weight: 650; }
+	/* The tick reads as confirmation of the current choice; it replaces the ::before
+	   glyph that used to push the label off its own baseline. */
+	.wpcc-ai-pick.is-selected .wpcc-ai-pick__name::after { content: "\2713"; margin-left: 7px; color: #2271b1; font-weight: 700; font-size: 12px; }
+
+	/* Badges: three ranks, three deliberately different weights. */
+	.wpcc-ai-badges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+	.wpcc-ai-badge { display: inline-flex; align-items: center; font-size: 10.5px; line-height: 1.6;
+		border-radius: 999px; white-space: nowrap; }
+
+	/* PRIMARY — filled, the only badge with real colour weight. */
+	.wpcc-ai-badge--primary { padding: 1px 8px; font-weight: 650; letter-spacing: .01em; border: 1px solid transparent; }
+	.wpcc-ai-badge--primary.wpcc-ai-badge--rec { background: #eeeafb; color: #4c33a0; border-color: #d5cbf2; }
+	.wpcc-ai-badge--primary.wpcc-ai-badge--ok  { background: #e6f6ea; color: #04620f; border-color: #aadfb6; }
+
+	/* SECONDARY — outlined, no fill. Present, clearly subordinate. */
+	.wpcc-ai-badge--secondary { padding: 1px 8px; font-weight: 600; background: #fff; border: 1px solid #dcdfe6; color: #50575e; }
+	.wpcc-ai-badge--secondary.wpcc-ai-badge--info { border-color: #cbdcef; color: #1d5b96; }
+	.wpcc-ai-badge--secondary.wpcc-ai-badge--warn { border-color: #ecd6a6; color: #8a5700; }
+	.wpcc-ai-badge--secondary.wpcc-ai-badge--bad  { border-color: #eebfc1; color: #a02226; }
+
+	/* TERTIARY — no pill at all. A dot and muted text, so eleven identical copies of
+	   the same status stop competing with the badges that actually differ per card. */
+	/* Always starts its own line. Cards carrying two badges kept it inline while cards
+	   carrying one wrapped it, so no two cards in a row shared a baseline and the grid
+	   looked accidental. A forced break gives every card the same two-line rhythm. */
+	.wpcc-ai-badge--tertiary { flex: 0 0 100%; margin-top: 1px; padding: 0; border: 0; background: none; color: #7c8290; font-weight: 500; font-size: 10.5px; }
+	.wpcc-ai-badge--tertiary::before { content: ""; width: 4px; height: 4px; border-radius: 50%;
+		background: #c3c4c7; margin-right: 5px; flex: 0 0 auto; }
+
+	.wpcc-ai-pick .wpcc-ai-badges { pointer-events: none; }
+
+	/* Transport legend under the picker — defines the two badges once, in place. */
+	.wpcc-ai-legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 12px 0 0; padding: 0; list-style: none; }
+	.wpcc-ai-legend li { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #646970; }
+
+	/* Selected-assistant summary in the configuration panel. One compact row, so the
+	   four facts a user needs before pasting sit together instead of as prose. */
+	.wpcc-ai-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+		margin: 0 0 12px; padding: 10px 13px; background: #fbfbfc; border: 1px solid #e9eaee; border-radius: 8px; }
+	.wpcc-ai-summary__item { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: #50575e; }
+	.wpcc-ai-summary__k { font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #8c92a0; }
+	.wpcc-ai-summary__v { font-weight: 600; color: #1d2327; }
+	.wpcc-ai-summary__v--muted { font-weight: 500; color: #646970; }
+
 	.wpcc-ai-client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
 	.wpcc-ai-client-card { background: #fff; border: 1px solid #e3e5ec; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 2px rgba(16,24,40,.04); transition: transform .12s ease, box-shadow .12s ease; }
 	.wpcc-ai-client-card:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 10px 26px rgba(16,24,40,.07); }
@@ -273,7 +362,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 </style>
 
 <div class="wrap wpcc-ai-wrap">
-	<h1><?php esc_html_e( 'AI Clients', 'ai-command-center' ); ?></h1>
+	<?php // The tab that leads here is called "Assistants"; a heading naming the same
+	// screen "AI Clients" made the navigation label and the page disagree. ?>
+	<h1><?php esc_html_e( 'Assistants', 'ai-command-center' ); ?></h1>
 
 	<?php
 	// Two paragraphs said the same thing in sequence: name the assistants, then
@@ -398,15 +489,49 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Choose your assistant', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
 				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'Pick the assistant you’re connecting — the configuration below updates to match.', 'ai-command-center' ); ?></p>
-				<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+				<div class="wpcc-ai-picks">
 					<?php foreach ( $wpcc_active_clients as $id => $client ) : ?>
 						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) ); ?>"
 						   class="button wpcc-ai-pick<?php echo $id === $wpcc_selected_client ? ' is-selected' : ''; ?>"
 					   <?php echo $id === $wpcc_selected_client ? 'aria-current="true"' : ''; ?>>
-							<?php echo esc_html( $client['name'] ); ?>
+							<span class="wpcc-ai-pick__name"><?php echo esc_html( $client['name'] ); ?></span>
+							<?php
+							/*
+							 * The picker used to show eleven identical-looking names, so a
+							 * customer could not tell a widely-used, config-confirmed client
+							 * from a niche unverified one, nor which choices need Node.js
+							 * installed. Both facts now travel with the name, ranked so the
+							 * recommendation leads and the repeated status recedes.
+							 */
+							$wpcc_pick_badges = AIClientRegistry::ui_badges( $id );
+							if ( $wpcc_pick_badges ) :
+								?>
+								<span class="wpcc-ai-badges">
+									<?php foreach ( $wpcc_pick_badges as $wpcc_b ) : ?>
+										<span class="wpcc-ai-badge wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['rank'] ); ?> wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['tone'] ); ?>" title="<?php echo esc_attr( $wpcc_b['title'] ); ?>"><?php echo esc_html( $wpcc_b['label'] ); ?></span>
+									<?php endforeach; ?>
+								</span>
+							<?php endif; ?>
 						</a>
 					<?php endforeach; ?>
 				</div>
+				<?php
+				/*
+				 * Transport legend.
+				 *
+				 * The badges answer "how does this one connect?" — but only for someone who
+				 * already knows what the two words mean. On a fresh install the panel that
+				 * explains them does not exist yet: it renders only once a token has been
+				 * created, so the first-time reader meets "Direct HTTP" and "Relay" with no
+				 * definition anywhere on the screen, and the practical question behind them
+				 * (do I have to install Node.js?) goes unanswered at the exact moment they
+				 * are choosing. Two lines, stated once, below the grid.
+				 */
+				?>
+				<ul class="wpcc-ai-legend">
+					<li><span class="wpcc-ai-badge wpcc-ai-badge--secondary wpcc-ai-badge--info"><?php esc_html_e( 'Direct HTTP', 'ai-command-center' ); ?></span> <?php esc_html_e( 'Connects straight to this site. Nothing to install.', 'ai-command-center' ); ?></li>
+					<li><span class="wpcc-ai-badge wpcc-ai-badge--secondary"><?php esc_html_e( 'Relay', 'ai-command-center' ); ?></span> <?php esc_html_e( 'Runs a small connector on your computer. Needs Node.js.', 'ai-command-center' ); ?></li>
+				</ul>
 			</div>
 		</div>
 
@@ -535,6 +660,37 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'ai-command-center' ); ?></span>
 				</div>
 				<div class="wpcc-ai-panel__body">
+					<?php
+					/*
+					 * State the selected assistant's standing at the point of copying, not
+					 * only back up in the picker. This is where someone commits to a client,
+					 * and it is the honest place to say whether the pairing has actually been
+					 * run end to end — "Awaiting certification" is a real answer, and a more
+					 * useful one than silence.
+					 */
+					$wpcc_sel_badges = AIClientRegistry::ui_badges( $wpcc_selected_client );
+					if ( $wpcc_sel_badges ) :
+						?>
+						<div class="wpcc-ai-summary">
+							<span class="wpcc-ai-summary__item">
+								<span class="wpcc-ai-summary__k"><?php esc_html_e( 'Connects via', 'ai-command-center' ); ?></span>
+								<span class="wpcc-ai-summary__v"><?php echo $wpcc_sel_http ? esc_html__( 'Direct HTTP', 'ai-command-center' ) : esc_html__( 'Connector script', 'ai-command-center' ); ?></span>
+							</span>
+							<span class="wpcc-ai-summary__item">
+								<span class="wpcc-ai-summary__k"><?php esc_html_e( 'Node.js', 'ai-command-center' ); ?></span>
+								<span class="wpcc-ai-summary__v<?php echo $wpcc_sel_http ? '' : ' wpcc-ai-summary__v--muted'; ?>"><?php echo $wpcc_sel_http ? esc_html__( 'Not required', 'ai-command-center' ) : esc_html__( 'Required', 'ai-command-center' ); ?></span>
+							</span>
+							<?php foreach ( $wpcc_sel_badges as $wpcc_b ) : ?>
+								<?php if ( 'secondary' === $wpcc_b['rank'] && ( 'info' === $wpcc_b['tone'] || 'neutral' === $wpcc_b['tone'] ) ) { continue; } // transport is already spelled out above ?>
+								<span class="wpcc-ai-summary__item">
+									<span class="wpcc-ai-summary__k"><?php echo 'primary' === $wpcc_b['rank'] && 'rec' === $wpcc_b['tone'] ? esc_html__( 'Status', 'ai-command-center' ) : esc_html__( 'Certification', 'ai-command-center' ); ?></span>
+									<span class="wpcc-ai-badge wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['rank'] ); ?> wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['tone'] ); ?>" title="<?php echo esc_attr( $wpcc_b['title'] ); ?>"><?php echo esc_html( $wpcc_b['label'] ); ?></span>
+								</span>
+							<?php endforeach; ?>
+						</div>
+						<?php
+					endif;
+					?>
 					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php
 						/*
 						 * Two sentences on the same card were contradicting each other:
@@ -545,7 +701,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						 */
 						echo $wpcc_new_token
 							? sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s. It is complete — your connection address and your access token are both in it.', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) )
-							: sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s to connect it to this site. It includes your connection address — add your access token where it says wpcc_YOUR_TOKEN_HERE.', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) );
+							/* translators: 1: assistant name, 2: the literal token placeholder shown in the configuration */
+							: sprintf( esc_html__( 'Copy this and paste it into %1$s to connect it to this site. It includes your connection address — put your access token in place of %2$s, or paste it in the field below and it will be filled in for you.', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ), esc_html( AIClientRegistry::TOKEN_PLACEHOLDER ) );
 					?></p>
 					<?php if ( ! empty( $wpcc_selected_token ) ) : ?>
 						<div class="notice inline notice-info" style="margin:0 0 12px;padding:10px 12px;">
@@ -593,8 +750,23 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						// silence — a user who does not understand what they are
 						// pasting cannot meaningfully consent to it.
 						?>
+						<?php
+						/*
+						 * The explanation has to match the transport this client actually uses.
+						 * Clients that speak HTTP MCP directly (VS Code/Copilot, Codex, ChatGPT,
+						 * Gemini CLI, Claude Code) run NO connector and need no Node.js — telling
+						 * those users a script executes on their machine is both wrong and a
+						 * scarier claim than the truth, which defeats the point of explaining it.
+						 */
+						?>
 						<p class="wpcc-ai-field__hint" style="padding:0 22px 14px;margin:8px 0 0;">
-							<?php esc_html_e( 'What this does: your assistant runs a small connector script on your computer, downloaded from this site, which passes requests to WordPress. It runs locally under your own account, sends nothing anywhere except to this site, and can be removed by deleting the configuration. The connector is part of this plugin and is served from your own domain.', 'ai-command-center' ); ?>
+							<?php
+							if ( $wpcc_sel_http ) {
+								esc_html_e( 'What this does: your assistant connects straight to this site over the web using the address and token above. Nothing is installed or run on your computer, and no other service is involved. Remove the configuration and the connection is gone.', 'ai-command-center' );
+							} else {
+								esc_html_e( 'What this does: your assistant runs a small connector script on your computer, downloaded from this site, which passes requests to WordPress. It runs locally under your own account, sends nothing anywhere except to this site, and can be removed by deleting the configuration. The connector is part of this plugin and is served from your own domain.', 'ai-command-center' );
+							}
+							?>
 						</p>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding-top:14px;">
@@ -685,10 +857,10 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<!-- ===== ACTIVITY TAB ===== -->
 
 		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Last AI Client Activity', 'ai-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Recent assistant activity', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
 				<?php if ( empty( $wpcc_ai_activity ) ) : ?>
-					<p style="color:#646970;"><?php esc_html_e( 'No AI client activity recorded yet. Call the config or discovery endpoints to generate activity.', 'ai-command-center' ); ?></p>
+					<p style="color:#646970;"><?php esc_html_e( 'No assistant activity recorded yet. It appears here once an assistant connects to this site.', 'ai-command-center' ); ?></p>
 				<?php else : ?>
 					<table class="wpcc-ai-token-table">
 						<thead><tr><th><?php esc_html_e( 'Time', 'ai-command-center' ); ?></th><th><?php esc_html_e( 'Event', 'ai-command-center' ); ?></th></tr></thead>
@@ -709,9 +881,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<!-- ===== SECURITY TAB ===== -->
 
 		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'AI Client Security Model', 'ai-command-center' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'How assistant access is controlled', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'All AI clients connect through the same MCP endpoint and share an identical security model. No client receives elevated privileges or bypasses any platform control.', 'ai-command-center' ); ?></p>
+				<p><?php esc_html_e( 'Every assistant connects through the same endpoint and is held to the same rules. No assistant gets extra privileges, and none can skip approval, recording or the limits on its access token.', 'ai-command-center' ); ?></p>
 				<ul class="wpcc-ai-security-list">
 					<li>
 						<strong><?php esc_html_e( 'Capabilities', 'ai-command-center' ); ?></strong>
@@ -740,7 +912,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<div class="wpcc-ai-panel">
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Architecture', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'All AI clients follow the same execution path through the platform:', 'ai-command-center' ); ?></p>
+				<p><?php esc_html_e( 'Every assistant follows the same path through the plugin:', 'ai-command-center' ); ?></p>
 				<pre style="background:#f6f7f7;padding:14px;border-radius:4px;font-size:13px;line-height:1.8;overflow-x:auto;">AI Client &rarr; MCP &rarr; WP Command Center &rarr; Capability Runtime &rarr; Approval Runtime &rarr; Queue Runtime &rarr; OperationExecutor &rarr; Verification &rarr; Audit &rarr; Rollback</pre>
 				<p style="color:#646970;font-size:12px;"><?php esc_html_e( 'There are no per-client runtimes, no special execution paths, and no vendor-specific privileges.', 'ai-command-center' ); ?></p>
 			</div>
@@ -760,7 +932,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	var configBlock = document.getElementById('wpcc-config-block');
 	if (tokenFill && configBlock) {
 		var configTemplate = configBlock.textContent;
-		var PLACEHOLDER = 'wpcc_YOUR_TOKEN_HERE';
+		// The same constant the generators emit and the note above names, so this
+		// field can never again search for a string the configuration does not have.
+		var PLACEHOLDER = <?php echo wp_json_encode( AIClientRegistry::TOKEN_PLACEHOLDER ); ?>;
 		var applyToken = function() {
 			var v = tokenFill.value.trim();
 			configBlock.textContent = v ? configTemplate.split(PLACEHOLDER).join(v) : configTemplate;
@@ -827,60 +1001,85 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			var authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
 			var authHeaderGet = { 'Authorization': 'Bearer ' + token };
 			var baseUrl = <?php echo wp_json_encode( rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE ) ); ?>;
-			// The connector is the first thing a real client touches: the generated
+			// The connector is the first thing a RELAY client touches: the generated
 			// configuration downloads this file from this site and runs it. If it is not
 			// reachable nothing else matters — every other check below can pass while the
 			// assistant is still unable to connect, so it is checked first and by URL.
 			var relayUrl = <?php echo wp_json_encode( WPCC_PLUGIN_URL . 'sdk/javascript/wpcc-mcp-relay.mjs?v=' . WPCC_VERSION ); ?>;
+			/*
+			 * …but ONLY for a relay client. A Direct HTTP assistant never fetches the
+			 * connector, so testing it answers a question that assistant does not ask —
+			 * and gets it wrong in both directions. On the panel directly above, the
+			 * product has just told this user that nothing is installed or run on their
+			 * computer; a check named "Connector script" then reported on one anyway.
+			 * Worse, on a site where the file is genuinely unreachable the check FAILS,
+			 * so a Direct HTTP user whose setup is completely correct is told "Some
+			 * checks failed" and sent hunting for a component they will never use.
+			 */
+			var usesRelay = <?php echo wp_json_encode( ! $wpcc_sel_http ); ?>;
 			var checks = [];
+
+			// Check labels, in the site's language. These were bare English literals
+			// while the connector's label beside them was translated, so a translated
+			// site rendered a half-translated results table.
+			var L = {
+				relay:     <?php echo wp_json_encode( __( 'Connector script', 'ai-command-center' ) ); ?>,
+				health:    <?php echo wp_json_encode( __( 'Health endpoint', 'ai-command-center' ) ); ?>,
+				manifest:  <?php echo wp_json_encode( __( 'Agent manifest', 'ai-command-center' ) ); ?>,
+				initialize:<?php echo wp_json_encode( __( 'MCP handshake', 'ai-command-center' ) ); ?>,
+				resources: <?php echo wp_json_encode( __( 'MCP resources', 'ai-command-center' ) ); ?>,
+				tools:     <?php echo wp_json_encode( __( 'MCP tools', 'ai-command-center' ) ); ?>,
+				relay404:  <?php echo wp_json_encode( __( 'Not found on this site — your assistant cannot start the connector.', 'ai-command-center' ) ); ?>
+			};
 
 			function record(name, pass, detail) {
 				checks.push({ name: name, pass: pass, detail: detail || '' });
 			}
 
-			fetch(relayUrl, { cache: 'no-store' })
-				.then(function(r) { return r.text().then(function(t) { return { ok: r.ok, status: r.status, text: t }; }); })
-				.then(function(r) {
-					var pass = r.ok && r.text.length > 0;
-					var detail = pass ? '' : ( r.status === 404
-						? '<?php echo esc_js( __( 'Not found on this site — your assistant cannot start the connector.', 'ai-command-center' ) ); ?>'
-						: ( 'HTTP ' + r.status ) );
-					record('<?php echo esc_js( __( 'Connector script', 'ai-command-center' ) ); ?>', pass, detail);
-				}, function(err) {
-					record('<?php echo esc_js( __( 'Connector script', 'ai-command-center' ) ); ?>', false, err.message);
-				})
+			( usesRelay
+				? fetch(relayUrl, { cache: 'no-store' })
+					.then(function(r) { return r.text().then(function(t) { return { ok: r.ok, status: r.status, text: t }; }); })
+					.then(function(r) {
+						var pass = r.ok && r.text.length > 0;
+						var detail = pass ? '' : ( r.status === 404 ? L.relay404 : ( 'HTTP ' + r.status ) );
+						record(L.relay, pass, detail);
+					}, function(err) {
+						record(L.relay, false, err.message);
+					})
+				: Promise.resolve()
+			)
 				.then(function() { return fetch(baseUrl + '/health', { headers: authHeaderGet }); })
 				.then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
 				.then(function(r) {
 					var pass = r.ok && r.data.status === 'ok';
 					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + (r.data.message || r.data.code || JSON.stringify(r.data).substring(0, 200)));
-					record('Health endpoint', pass, detail);
+					record(L.health, pass, detail);
 					return fetch(baseUrl + '/agent/manifest', { headers: authHeaderGet }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
 					var pass = r.ok && r.data.plugin;
 					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + (r.data.message || r.data.code || JSON.stringify(r.data).substring(0, 200)));
-					record('Agent manifest', pass, detail);
+					record(L.manifest, pass, detail);
 					return fetch(baseUrl + '/mcp', { method: 'POST', headers: authHeader, body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', params: { protocolVersion: '2024-11-05' }, id: 1 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
 					var pass = r.ok && r.data.result && r.data.result.serverInfo;
 					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + ((r.data.error && r.data.error.message) || (r.data.message) || JSON.stringify(r.data).substring(0, 200)));
-					record('MCP initialize', pass, detail);
+					record(L.initialize, pass, detail);
 					return fetch(baseUrl + '/mcp', { method: 'POST', headers: authHeader, body: JSON.stringify({ jsonrpc: '2.0', method: 'resources/list', id: 2 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
 					var res = r.data.result;
 					var pass = r.ok && res && res.resources && res.resources.length >= 7;
 					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + ((r.data.error && r.data.error.message) || 'got ' + (res && res.resources ? res.resources.length : 0) + ' resources'));
-					record('MCP resources', pass, detail);
+					record(L.resources, pass, detail);
 					return fetch(baseUrl + '/mcp', { method: 'POST', headers: authHeader, body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', id: 3 }) }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); });
 				})
 				.then(function(r) {
 					var res = r.data.result;
 					var pass = r.ok && res && res.tools && res.tools.length > 0;
 					var detail = pass ? '' : ('HTTP ' + r.status + ': ' + ((r.data.error && r.data.error.message) || 'got ' + (res && res.tools ? res.tools.length : 0) + ' tools'));
-					record('MCP tools', pass, detail);
+					record(L.tools, pass, detail);
 
 					var allPass = checks.every(function(c) { return c.pass; });
 					resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--' + (allPass ? 'success' : 'fail');
