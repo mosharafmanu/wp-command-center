@@ -138,6 +138,13 @@ GOV_SNAPSHOT() {
     echo wp_json_encode( [
       "mode" => get_option( "wpcc_security_mode" ),
       "caps" => get_option( "wpcc_enforce_capabilities" ),
+      // Which Built-in AI tools are switched on is governance state too, now that it
+      // gates the row actions as well as the tabs. A suite that flips it and dies
+      // before restoring leaves every later suite testing a different product: the
+      // ✨ WPCC AI action simply is not there. That is exactly how test-ai-assist,
+      // test-alt-text-ui and test-contextual-entry came to fail in a full run while
+      // passing alone.
+      "tools" => get_option( "wpcc_builtin_ai_tools" ),
     ] );' 2>/dev/null
 }
 GOV_RESTORE() {
@@ -151,6 +158,9 @@ GOV_RESTORE() {
     }
     if ( null !== $s["caps"] && get_option( "wpcc_enforce_capabilities" ) != $s["caps"] ) {
       update_option( "wpcc_enforce_capabilities", $s["caps"] );
+    }
+    if ( array_key_exists( "tools", $s ) && get_option( "wpcc_builtin_ai_tools" ) != $s["tools"] ) {
+      update_option( "wpcc_builtin_ai_tools", $s["tools"] );
     }' "$snap" >/dev/null 2>&1
 }
 export -f GOV_SNAPSHOT GOV_RESTORE
@@ -208,8 +218,11 @@ if [ "$TIER" = "T2" ]; then
   RUN_GOV="$(GOV_SNAPSHOT)"
   wp --path="$WP_ROOT" eval '
     update_option( "wpcc_security_mode", \WPCommandCenter\Operations\SecurityModeManager::MODE_DEVELOPER );
-    update_option( "wpcc_enforce_capabilities", true );' >/dev/null 2>&1
-  echo "   governance baseline: developer + capability enforcement (restored at end)"
+    update_option( "wpcc_enforce_capabilities", true );
+    // All three Built-in AI tools on, so the suites that assert the ✨ WPCC AI row
+    // action exists start from a known answer rather than whatever the operator left.
+    update_option( "wpcc_builtin_ai_tools", [ "seo" => true, "alt_text" => true, "content" => true ] );' >/dev/null 2>&1
+  echo "   governance baseline: developer + capabilities + built-in AI tools on (restored at end)"
 fi
 restore_run_gov() { [ -n "$RUN_GOV" ] && GOV_RESTORE "$RUN_GOV"; }
 trap restore_run_gov EXIT
