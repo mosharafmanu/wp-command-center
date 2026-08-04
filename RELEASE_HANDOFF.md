@@ -3,21 +3,8 @@
 **This is the final V1 release handoff, not a development handoff.**
 Engineering is complete. What remains is independent certification and submission.
 
-**Date:** 2026-08-03
+**Date:** 2026-08-04 (release-candidate finalization)
 **Every number below was read from the running plugin or the built artifact, not recalled.**
-
-> ### ⚠️ STATE SECTIONS SUPERSEDED — read `SESSION-HANDOFF.md` first
->
-> This document is **still authoritative for the frozen decisions in §4** (branding, slug,
-> identifiers that must never move, contracts, test discipline). Those stand unchanged.
->
-> Its **state** sections — §1 repository, §2 package checksums, §5 certification counts —
-> describe commit `b6c46ec`. Work has landed since: the branding commits, per-assistant MCP
-> configuration, and a product-experience pass. As of **2026-08-04** the tree is at `f62909b`
-> with 28 uncommitted files, and `build/ai-command-center-1.0.0.zip` matches neither the
-> checksum in §2 nor the current tree.
->
-> Do not read the numbers below as current. `SESSION-HANDOFF.md` has them.
 
 ---
 
@@ -26,52 +13,48 @@ Engineering is complete. What remains is independent certification and submissio
 | | |
 |---|---|
 | Branch | `release/v1-finalization` |
-| Commit | `b6c46ec49ec98f898e849bf016ff532a5bfbc3cd` (`b6c46ec`) |
-| Remote | `origin/release/v1-finalization` is BEHIND — 4 commits unpushed |
+| Commit | `7ae4a32def1adb702881a8d9f0aa377b32a1f427` (`7ae4a32`) |
 | `main` | `13549c2` — **untouched, not merged** |
-| Commits ahead of `main` | 57 |
+| Commits ahead of `main` | 87 |
 | Uncommitted | none |
+| Remote | **23 commits unpushed** — this pass's work is local. Push before submitting. |
 | Plugin directory | `wp-content/plugins/ai-command-center/` |
-
-> **Superseded:** this section previously recorded `7a404df` / 53 commits. That commit
-> shipped four defects found by the independent staging certification of 2026-08-03,
-> including a **release blocker** in the rollback subsystem. See §5.5.
 
 `main` auto-deploys to production. Nothing has been merged. The merge is the owner's
 decision and should happen **after** WordPress.org approval, not before.
 
-### The last ten commits
+### What the release-candidate finalization pass changed
 
-```
-7a404df  docs: WordPress.org submission notes
-8c5704c  docs(release): record the slug decision and what must never move with it
-75eae45  test: derive the slug in the last three suites the rename touched
-714bf40  test: stop hardcoding the plugin slug, text domain and file name
-e23c39c  chore(release): rename the WordPress.org slug to ai-command-center
-96bdc82  docs: V1 closeout certification — zero open items, one verdict
-d01fb0a  fix(discovery): stop advertising an operation as available when its integration is missing
-7dab8c8  test(health): compare non-transient options, not the raw option count
-da96af2  test: empty the regression baseline — nothing is accepted any more
-7b52b58  docs(compliance): account for every Plugin Check finding with evidence
-```
+Twenty-one commits. Everything below was found by using the product, not by reading it.
 
----
+| Area | Change |
+|---|---|
+| Assistants | Eleven clients were served one identical relay config; five cannot read it. Five formats now (JSON `mcpServers`, JSON `servers`, TOML, `httpUrl`, a shell command), plus a second transport — direct HTTP, no Node.js — for six clients. `claude mcp add` emitted `--url`, which that command rejects. |
+| Settings | `settings_general_update` wrote an **empty string** over `date_format` and `time_format` and 0 over `posts_per_page`, because a null key in a duplicated field map made the write read `$p[null]`. `admin_email` could never be set at all. |
+| Settings | A write that recognised no field returned `updated: true`, consumed a human approval and recorded a rollback point for a change that never happened. |
+| Schema | `settings_manage` declared only `action`, so a schema-following assistant could name an action but never a value. Confirmed live: Claude Code put the tagline in the free-text `reason` and produced exactly the no-op above. 30 value fields now declared. |
+| Built-in AI | Turning a tool on from the admin produced a tab but no entry point — three places decided "is this on?" and two never learned about the in-admin toggle. For Content that left the feature completely unreachable. |
+| Diagnostics | `autoload = 'yes'` matches almost nothing on WordPress 6.6+, so the autoloaded-options check reported 0 B and "Good" on every modern site, and told connected assistants the same. |
+| Approvals | The Capabilities screen promised "in the current security mode" and answered with the catalogue's declared flag — "Development — no approval" beside "31 Need approval". |
+| Setup | The access-token field on the setup screen was dead: it searched for a placeholder the configuration no longer contained. The connection test also checked the connector for clients that never fetch it, failing a correct setup. |
+| Compliance | Plugin Check reported 0 errors across every file the package ships. Eight errors introduced earlier in this same pass were found and cleared before the build. |
+| Tests | A macOS `mktemp` bug silently emptied sixteen suites (25 phantom failures in one). The full run now establishes its governance baseline instead of inheriting whatever mode the site happened to be in. |
 
 ## 2. Submission package
 
 ```
 File    build/ai-command-center-1.0.0.zip
-Size    964,440 bytes (944 KB)
-Entries 318 (284 files)
-SHA256  4449222140b441c2c5d2374fdeba9cc69fac04c451eb130d3c2dd6cf115e268d
-MD5     a1a268dbec2abeb12ae95e58ba4ac0d2
-Built   2026-08-03 from b6c46ec
+Size    998,938 bytes (976 KB)
+Entries 327 files
+SHA256  06ac6188d6f7683b3a57e13d6b6fe6b025a1f3d76a826ce4593c79e9373f62e3
+MD5     7aaa1249f86ed955099ab3f2aafa4449
+Built   2026-08-04 from 7ae4a32
 ```
 
 **Content identity (build-independent):**
 
 ```
-dffb14139e2768c4b40cf6b50c43ad59724b0ffcd5654b2d2fa70d8e512bbab9
+7f86aaecec7653beface75d1e692e8f84bcc0e84c572c11f3320dff1880d9a58
 ```
 
 This is the SHA256 of the sorted per-file SHA256 manifest of the extracted package. Unlike
@@ -83,33 +66,31 @@ unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
 ( cd /tmp/pkg && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
 ```
 
-Verified at release time: a rebuild from the clean tree at `10145b4` produced a different
-archive checksum (`d755467c…`) but the **same** content identity `dffb1413…`, and `diff -r`
-of the two extracted trees reported no difference. The shipped file is the `b6c46ec` build;
-`10145b4` adds only `tests/` and `RELEASE_HANDOFF.md`, both excluded from the package.
-
-> **The previous artifact (`022e994a…`, built from `7a404df`) MUST NOT be uploaded.**
-> It contains the rollback-corruption blocker described in §5.5.
+> **Every artifact built before 2026-08-04 MUST NOT be uploaded.** They predate the
+> settings data-corruption fix (§1), the Built-in AI reachability fix, and the eight
+> Plugin Check errors cleared before this build.
 
 **The checksum identifies this one built file — it is not a fingerprint of the commit.**
 The build is *not* byte-reproducible: two builds from the same clean tree at the same
 commit differ in ZIP metadata (per-file mtimes and entry order) while their extracted
-contents are identical (verified with `diff -r`). So:
+contents are identical. So:
 
 - Verify the **exact ZIP you are about to upload** against the SHA256 above.
 - After **any** rebuild, the checksum changes — re-record it; a mismatch after a rebuild
   does **not** mean the tree is dirty.
 - To prove two builds are equivalent, compare **extracted contents**, not archive bytes.
 
-**Verify before uploading** — if the checksum differs, the artifact is not the certified one:
-
 ```bash
 shasum -a 256 build/ai-command-center-1.0.0.zip
 ```
 
-Top-level folder inside the ZIP is `ai-command-center/`. Contains no `tests/`, `docs/`,
-`.git`, `node_modules`, `wpcc-env.sh`, `.DS_Store` or `*.md`. Includes the MCP relay at
-`sdk/javascript/wpcc-mcp-relay.mjs`.
+Top-level folder inside the ZIP is `ai-command-center/`. Verified to contain no `tests/`,
+`docs/`, `.git`, `node_modules`, `wpcc-env.sh`, `.DS_Store`, `*.md`, `*.sh`, `composer.json`
+or `openapi.json`. Includes the MCP relay at `sdk/javascript/wpcc-mcp-relay.mjs` (required —
+the generated connector configuration fetches it) and excludes the unreferenced `sdk/php/`.
+
+**This exact package was installed and exercised on both staging sites** (§5.4) before this
+checksum was recorded.
 
 ---
 
@@ -211,10 +192,39 @@ Changing any of these is a breaking change, not a rename:
 ### 5.1 Local — full regression
 
 ```
-T2: 181 suites — 6,361 passed, 0 failed
+T2: 182 suites — 6,488 passed, 0 failed   (3,763s)
 ```
 
-Run **five times undisturbed** across the programme, identical every time. Baseline empty.
+Baseline empty — nothing is accepted as a known failure.
+
+**The runner now establishes its own governance baseline.** It always restored the
+protection mode around each suite, so every suite started where the previous one did — but
+that is not the same as starting from a *known* state. Most write suites do not set a mode
+themselves and assume changes apply immediately; begin a run on Standard protection and
+every one of those writes is answered with `pending_approval` instead. Measured during this
+pass: a T2 run begun on Standard reported 107 failures, 76 of them the ACF suites, which run
+first and so had nothing before them to blame. All five pass unchanged on Development. Any
+"N passed, 0 failed" from a run that did not record its starting mode is uncitable; T2 now
+sets it and restores the operator's own on exit.
+
+**A macOS `mktemp` bug had been emptying sixteen suites.** BSD `mktemp` does not accept a
+suffix after the `XXXXXX` template, so `mktemp /tmp/name-XXXXXX.php` created a file called
+literally `name-XXXXXX.php`; every later run failed "File exists", left the helper path
+empty, and turned every assertion depending on it into a comparison against `""`.
+`test-change-history` reported 25 failures from this alone, all phantom. Fixed in all
+sixteen.
+
+### 5.1b WordPress Plugin Check
+
+```
+0 errors across every file the package ships
+```
+
+Run against the shipped file set. The remaining errors in the repository are in `sdk/php/`
+and development directories, none of which the build includes. Eight errors introduced
+earlier in this same finalization pass — seven `UnescapedDBParameter` and one
+`wp_function_not_compatible_with_requires_wp` (a WordPress 6.6 function called by a plugin
+declaring 6.4) — were found here and cleared before the package was built.
 
 ### 5.2 Clean install (isolated WordPress 6.9.5, ZIP only)
 
@@ -260,6 +270,50 @@ Plugin Check on build/ai-command-center-1.0.0.zip
 Measured against the **built artifact**, never the checkout. Every warning family is
 resolved to fixed / proven false positive / accepted with evidence in
 `docs/WORDPRESS-ORG-COMPLIANCE-REPORT.md`.
+
+---
+
+### 5.4b Release-candidate validation — 2026-08-04 (this pass)
+
+Driven through the product as a customer, on real sites, with the exact package in §2.
+
+**Assistant certification — Claude Code, 12/12, Officially Certified.** The full checklist
+in `docs/ASSISTANT-CERTIFICATION.md` §7 executed *in the client itself*, over HTTPS, against
+a live WordPress 6.9.5 / PHP 8.3.30 site: connect using the command this plugin generates
+verbatim · 42 tools · 7 resources · read with no approval prompt · proposal returning
+`pending_approval` · nothing applied · self-approval refused (`wpcc_approval_requires_human`)
+· human approval → worker → applied · audit attributed · undo itself gated then applied and
+restored exactly · second undo refused (`wpcc_already_rolled_back`) with the site untouched ·
+reconnect with all 42 tools. **It is the only client marked Certified**; the other ten need
+third-party accounts that were not available, and their rows are blank — meaning not yet
+run, not failed.
+
+Step 5 failed on the first attempt, and that failure is what surfaced the `settings_manage`
+schema gap and the silent no-op in §1.
+
+**Both staging sites, with the §2 package installed.**
+
+| | webo-euro-gv | lsc-group |
+|---|---|---|
+| Install | fresh install + activate | update in place |
+| WordPress | 6.9.5 | 7.0.2 |
+| Tables / DB | 17 / 2.6.0 | 2.6.0 |
+| MCP | 42 tools, 7 resources | 42 tools, 7 resources |
+| Governed write | `pending_approval`, wrote nothing | `pending_approval` |
+| Token self-approval | refused | — |
+| Approve → cron worker | executed first attempt, no error | — |
+| Audit actor | `System (Cron)` recorded correctly | — |
+| Undo | gated, applied, value restored exactly | — |
+| Value-less write | refused, naming the accepted fields | — |
+
+**Built-in AI, against the real Anthropic API.** Provider connection created and tested from
+the admin (`Healthy`, `claude-sonnet-4-6`, 1966 ms). SEO: 20 suggestions generated from live
+content, one applied, reversible. Alt Text: real vision output describing the actual image.
+Content: generated, applied and undone from the ✨ WPCC AI row action — the path that was
+unreachable before this pass.
+
+**Relay transport.** `scripts/relay-smoke.sh` SMOKE PASS through the shipped stdio relay,
+with the correct per-runtime error contract for every runtime.
 
 ---
 
@@ -350,6 +404,27 @@ byte-identical, product meta at baseline, plugin fully purged).
 | MCP server key still says `wp-command-center` | Deliberate — §4.2. |
 | Historical certification reports still say "WP Command Center" and reference old artifacts | They are a record of the programme and carry SUPERSEDED banners. |
 | `wp db query "SHOW TABLES"` returns nothing locally | A wp-cli quirk on this machine. Query through `$wpdb` instead. |
+
+---
+
+### 6.4 Deferred to 1.1 — known, decided, not blocking
+
+Each of these was found by real use during the release-candidate pass, judged, and left.
+None prevents a customer completing any workflow.
+
+| Item | Why it is not a blocker |
+|---|---|
+| **`user_manage`, `menu_manage`, `woocommerce_manage` declare no value parameters** | Same schema gap that was fixed for `settings_manage`, covering 34 more write actions. They do **not** share the null-key corruption, which was specific to the settings maps — a schema-following assistant simply cannot express these writes and will be told so. Fixing them means deriving ~80 parameter names across three runtimes, two of which have no central field map; declaring one wrongly would advertise something that does not work, which is the defect being fixed. Wanted, not rushed. |
+| **A malformed request still consumes a human approval** | Validation runs after the approval gate, so a doomed request costs a decision before it fails. It now fails *loudly* with a message naming what it needed, instead of reporting success — the harmful half is fixed. Moving validation ahead of the gate is engine work. |
+| **84% of change-log rows carry no `target_key`/`target_summary`** | The record is accurate but coarse: the Changes screen can say "Settings · 4 changes" without naming which setting. Undo works and restores exactly, and the approval card spells out what will change *before* you decide, which is where the decision is made. `readme.txt` was corrected to claim only what is true. Populating targets touches ~20 runtimes. |
+| **Continue (YAML) and OpenCode (own schema) still emit generic JSON** | Both are marked neither Recommended nor Certified. Their configuration is the standard `mcpServers` block, which may need hand-adjusting for those two clients. |
+| **Cline is not in the registry** | 5M+ installs and the research stands, but adding a client at release candidate that nobody can run the checklist against would ship an untested claim. Config prepared in `docs/ASSISTANT-CERTIFICATION.md` §6.7. |
+| **Ten of eleven assistants are uncertified** | Each needs a third-party account or application. The product makes no claim for them: `Certified` renders only for a client with a recorded end-to-end run, and the other ten carry no certification badge at all. |
+| **No directory screenshots or banner** | A listing asset, not a functional gap. `readme.txt` has no `== Screenshots ==` section, so nothing is promised that is missing. |
+| **`rollback_available: true` on changes recorded `reversible=0`** | Envelope promises what the change log denies. Engine-level, pre-existing, carried forward from the previous handoff. |
+| **Qoder, Tencent CodeBuddy, Trae, Qwen Code, Kilo Code** | Largest remaining assistant gaps, China ecosystem especially. |
+| **Windows relay bootstrap** | The connector configuration assumes `bash` and `curl`. Direct HTTP is the Windows-safe path today and is what the recommended clients use. |
+| **`test-real-site-validation.sh` rewrites a tracked file** | It regenerates `artifacts/step-36-validation/validation-evidence.json` on every run, so `git status` is dirty after any T2 and "working tree clean" needs a `git checkout -- artifacts/` first. Harmless — `artifacts/` is excluded from the package — but confusing if you do not expect it. |
 
 ---
 
@@ -535,51 +610,48 @@ Rolling back code **never** requires a data migration. The DB prefix `wpcc_` and
 
 ## Next Mission
 
-**The next Claude session is NOT allowed to perform engineering work immediately.**
+The release-candidate finalization pass is complete (§1, §5.4b). Engineering is done and
+the package in §2 was installed and exercised on two real sites before its checksum was
+recorded.
 
-Your first and only responsibility is to **independently certify WP Command Center on one
-completely different production-grade website** — not this machine, not Purple Surgical, not
-the isolated lifecycle install. A different real site, with its own theme, plugins, content
-and hosting.
+**What is left is not engineering.**
 
-### Treat this as independent evidence
+### 1. Submit (owner action)
 
-- **Do not trust any PASS result in this document.** Every number here was produced by a
-  previous session. Your job is to find out whether they are true on a site nobody has
-  tuned them against.
-- **Re-prove everything from first principles.** Install only the ZIP. Do not test the
-  source tree. Do not reuse this session's tokens, scripts or fixtures without reading them
-  first.
-- **A previous certification is a hypothesis, not a fact.** This programme has already
-  produced one certification that was later found to have measured the wrong target
-  entirely, and several "regressions" that turned out to be the harness contending with
-  itself. Assume you can make the same mistakes.
+Follow §7 exactly, in order. The slug is the single highest-risk step: the `Plugin Name:`
+header auto-derives the wrong one, and `docs/SLUG-REPLY.md` is time-critical — it has to go
+back promptly once the review team writes.
+
+Verify the checksum in §2 against the exact ZIP you are about to upload. If it differs, you
+are not uploading the certified artifact.
+
+### 2. Optional before submitting — a third independent site
+
+Two real sites were certified this pass (§5.4b): a fresh install on WordPress 6.9.5 and an
+update in place on 7.0.2. A third, on different hosting with a different theme and plugin
+mix, would add real evidence. It is worth doing if there is time; it is not a blocker, and
+the two that were done were done with the shipped ZIP rather than the source tree.
+
+If you do it, treat this document as a hypothesis rather than a record:
+
+- **Do not trust any PASS result here.** Every number was produced by a previous session.
+- **Install only the ZIP.** Do not test the source tree. Do not reuse this session's tokens
+  or fixtures without reading them first.
+- **This programme has already produced one certification that measured the wrong target
+  entirely**, and several "regressions" that were the harness contending with itself — a
+  macOS `mktemp` bug alone accounted for 25 phantom failures in a single suite (§5.1).
+  Assume you can make the same mistakes.
 - **Verify what you assert.** If you claim something passed, be able to show the command
-  and its output. If you cannot reproduce it, say so plainly rather than inheriting the
-  claim.
+  and its output.
 
-### What to certify
+### 3. After approval
 
-Install the artifact (§2, checksum-verified) on the new site and prove, independently:
+Merge `release/v1-finalization` into `main` — not before. `main` auto-deploys.
 
-1. Clean install, activation, default protection mode, schema, no fatal
-2. MCP connection end to end — handshake, 42 tools, a real read
-3. Governance — a write in Standard protection waits and **writes nothing** until approved
-4. Approve → execute → change recorded → undo → double-undo refused
-5. All three protection modes
-6. Token scopes — a read-only token cannot write
-7. Whichever integrations that site actually has (WooCommerce, ACF, Elementor, CF7, an SEO
-   plugin) — and say honestly which it does not have rather than skipping silently
-8. Upgrade, deactivate, reactivate, uninstall (retain), reinstall, uninstall (purge)
-9. Plugin Check against the artifact
-10. The site is left exactly as you found it
+### 4. Then 1.1
 
-### Then
-
-- **If you find a release-blocking issue:** fix it, re-test it, run the full regression,
-  rebuild, re-certify, and continue until it is closed. Only then report.
-- **If you find none:** produce a final certification verdict for WordPress.org submission —
-  one verdict, with the evidence behind it.
-
-Do not begin engineering before certification is complete. Do not modify the code to make a
-certification pass.
+§6.4 lists what was deliberately deferred, with the reasoning for each. The two worth
+starting with, because they are the same defect class already fixed once for
+`settings_manage`: declared value parameters for `user_manage`, `menu_manage` and
+`woocommerce_manage`, and moving payload validation ahead of the approval gate so a
+malformed request stops costing a human decision.

@@ -10,24 +10,27 @@
 |---|---|
 | **Filename** | `ai-command-center-1.0.0.zip` |
 | **Path** | `build/ai-command-center-1.0.0.zip` |
-| **SHA256** | `4449222140b441c2c5d2374fdeba9cc69fac04c451eb130d3c2dd6cf115e268d` |
-| **MD5** | `a1a268dbec2abeb12ae95e58ba4ac0d2` |
-| **Size** | 964,440 bytes (944 KB) |
-| **Entries** | 318 (284 files) |
-| **Content identity** | `dffb14139e2768c4b40cf6b50c43ad59724b0ffcd5654b2d2fa70d8e512bbab9` |
+| **SHA256** | `06ac6188d6f7683b3a57e13d6b6fe6b025a1f3d76a826ce4593c79e9373f62e3` |
+| **MD5** | `7aaa1249f86ed955099ab3f2aafa4449` |
+| **Size** | 998,938 bytes (976 KB) |
+| **Entries** | 327 files |
+| **Content identity** | `7f86aaecec7653beface75d1e692e8f84bcc0e84c572c11f3320dff1880d9a58` |
+| **Built** | 2026-08-04 from `7ae4a32` |
 
 Verify immediately before uploading:
 
 ```bash
 shasum -a 256 build/ai-command-center-1.0.0.zip
-# must print 4449222140b441c2c5d2374fdeba9cc69fac04c451eb130d3c2dd6cf115e268d
+# must print 06ac6188d6f7683b3a57e13d6b6fe6b025a1f3d76a826ce4593c79e9373f62e3
 ```
 
 > The archive checksum is **not** reproducible across builds — only the *content identity*
 > is. Do not rebuild unless you intend to re-record the checksum. See RELEASE_HANDOFF §2.
 
-**Do not upload `022e994a3428d5…`** — the pre-certification artifact. It shipped the
-rollback-corruption blocker.
+**Do not upload any artifact built before 2026-08-04.** They predate the settings
+data-corruption fix, the Built-in AI reachability fix, and eight Plugin Check errors that
+were cleared before this build. That includes `4449222140b4…`, `cd8d18c0…` and
+`022e994a3428d5…` (the last of which also shipped the rollback-corruption blocker).
 
 ---
 
@@ -36,10 +39,10 @@ rollback-corruption blocker.
 | | |
 |---|---|
 | **Branch** | `release/v1-finalization` |
-| **Branch head** | `06c3c8937d82d9d8f2231437766ac7594f472794` (`06c3c89`) — docs-only commits after `b6c46ec` do not change the package; content identity `dffb1413…` is the stable anchor |
-| **Remote** | pushed; `origin/release/v1-finalization` in sync |
+| **Branch head** | `7ae4a32def1adb702881a8d9f0aa377b32a1f427` (`7ae4a32`) |
+| **Remote** | **23 commits unpushed** — the release-candidate finalization work is local. Push before submitting so the tag and the artifact agree. |
 | **`main`** | `13549c2` — untouched, **not merged** (merge after approval) |
-| **Ahead of `main`** | 60 commits |
+| **Ahead of `main`** | 87 commits |
 | **Working tree** | clean |
 
 Release commits:
