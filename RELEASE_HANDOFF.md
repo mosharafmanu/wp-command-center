@@ -6,6 +6,19 @@ Engineering is complete. What remains is independent certification and submissio
 **Date:** 2026-08-03
 **Every number below was read from the running plugin or the built artifact, not recalled.**
 
+> ### ⚠️ STATE SECTIONS SUPERSEDED — read `SESSION-HANDOFF.md` first
+>
+> This document is **still authoritative for the frozen decisions in §4** (branding, slug,
+> identifiers that must never move, contracts, test discipline). Those stand unchanged.
+>
+> Its **state** sections — §1 repository, §2 package checksums, §5 certification counts —
+> describe commit `b6c46ec`. Work has landed since: the branding commits, per-assistant MCP
+> configuration, and a product-experience pass. As of **2026-08-04** the tree is at `f62909b`
+> with 28 uncommitted files, and `build/ai-command-center-1.0.0.zip` matches neither the
+> checksum in §2 nor the current tree.
+>
+> Do not read the numbers below as current. `SESSION-HANDOFF.md` has them.
+
 ---
 
 ## 1. Repository state
@@ -314,9 +327,9 @@ byte-identical, product meta at baseline, plugin fully purged).
 | **Patches cannot create or delete files** | The engine modifies existing files, snapshotting each first so the change is reversible. The error says so rather than blaming a missing path. |
 | **Uninstall keeps data by default** | An accidental uninstall must be recoverable. |
 | **Undo skips drifted fields** | A field changed since the original write is **skipped, never clobbered**. Reported as `wpcc_rollback_partial` with `restored_fields`, `skipped_fields` and `conflicts`. |
-| **AI features off until a key is added** | No outbound call is made without one. |
+| **AI features off until a key is added AND the tool is switched on** | No outbound call is made without a key, and adding a key alone enables nothing — each of SEO, Alt Text and Content is switched on individually under Settings → Advanced → Built-in AI. |
 | **Builder/proposal dev UI ships off** | Behind `WPCC_PROPOSALS_DEV_UI`. |
-| **Node.js required on the client machine** | The relay is a stdio↔HTTP bridge run by the assistant. Documented in `readme.txt` and `TROUBLESHOOTING.md`. |
+| **Node.js required on the client machine — for connector clients only** | The relay is a stdio↔HTTP bridge run by the assistant, and six clients use it. The other five (GitHub Copilot / VS Code, Claude Code, Codex CLI, ChatGPT, Gemini CLI) connect over direct HTTP and install nothing. The setup screen names which applies; `readme.txt`, `INSTALLATION.md`, `QUICKSTART.md` and `AI-INTEGRATIONS.md` all state both paths. |
 
 ### 6.2 Reviewer risks — real, and accepted
 

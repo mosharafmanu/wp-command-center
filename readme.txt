@@ -185,6 +185,7 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 = 1.0.0 =
 * First public release.
 * Connect any MCP-compatible AI assistant to a single WordPress site.
+* Ready-made setup for eleven assistants, each in its own configuration format, over either a direct HTTPS connection (nothing installed) or a small local connector.
 * Approval workflow with Standard protection and Strict approval settings; safe default that cannot fall back to unapproved execution.
 * Scoped, revocable, hashed access tokens.
 * Full change history with undo for supported changes.
