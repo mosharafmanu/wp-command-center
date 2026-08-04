@@ -28,6 +28,14 @@ configuration removes the connector.
 and the shipped `sdk/javascript/wpcc-mcp-relay.mjs`. The UI states this in plain language
 next to the configuration block, and `readme.txt` discloses it.
 
+**It is also not the only path, and not the default for most recommended clients.** Five of
+the eleven clients — GitHub Copilot / VS Code, Claude Code, Codex CLI, ChatGPT and Gemini
+CLI — are configured with a URL and a bearer token and download nothing at all; there is no
+script and no Node.js involved. The setup screen names which of the two applies to the
+client you picked, and the connector check in its "Test the connection safely" panel is
+skipped entirely for the clients that never fetch it. See
+`AIClientRegistry::transport_for()`.
+
 ---
 
 ## 2. `proc_open()` — two call sites
