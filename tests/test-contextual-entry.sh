@@ -81,6 +81,14 @@ if ! command -v wp >/dev/null 2>&1; then
 	echo "  SKIP: wp-cli not available — static checks only."
 else
 	RES="$(wpe '
+		/*
+		 * The "flag off" probes below drive the FILTER layer. A falsy filter is documented
+		 * as "no opinion" rather than an opt-out, so once the entry points started honouring
+		 * the in-admin per-tool option too, "flag off" stopped meaning off. Clear it for the
+		 * probes and put it back before reporting.
+		 */
+		$bai_ctx_saved = get_option( "wpcc_builtin_ai_tools", [] );
+		update_option( "wpcc_builtin_ai_tools", [] );
 		$aa  = new \WPCommandCenter\Admin\ActionPanelAssets();
 		$admin = get_users(["role"=>"administrator","number"=>1]); $aid = $admin?$admin[0]->ID:1; wp_set_current_user($aid);
 		$enq = function() { return wp_script_is( "wpcc-action-panel", "enqueued" ); };
@@ -117,6 +125,7 @@ else
 		remove_filter("wpcc_alt_text_ui","__return_true");
 		remove_filter("wpcc_feature_allowed",$f2,10);
 
+		update_option( "wpcc_builtin_ai_tools", $bai_ctx_saved );
 		echo wp_json_encode($out);
 	')"
 	gj() { printf '%s' "$RES" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }

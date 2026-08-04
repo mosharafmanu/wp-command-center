@@ -326,7 +326,11 @@ assert_true "ai: claude config has mcpServers" "$(echo "$CLAUDE_CFG" | jq -r 'if
 CODEX_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/codex/config")
 CODEX_CFG=$(api "$WPCC_BASE/ai-clients/codex/config")
 assert_true "ai: codex config accessible" "$( [ "$CODEX_CODE" = "200" ] && echo true || echo false )"
-assert_true "ai: codex config has mcpServers" "$(echo "$CODEX_CFG" | jq -r 'if .config.mcpServers then "true" else "false" end')"
+# Codex reads TOML from ~/.codex/config.toml keyed [mcp_servers.<name>] — it is the one
+# client in the registry that takes no JSON at all. Demanding `mcpServers` here asserted
+# the very shape that could never have worked for it.
+assert_eq "ai: codex config is TOML" "toml" "$(echo "$CODEX_CFG" | jq -r '.config.__format // "json"')"
+assert_contains "ai: codex config keys the TOML mcp_servers table" "$(echo "$CODEX_CFG" | jq -r '.config.__raw // ""')" "[mcp_servers.wp-command-center]"
 
 # Non-existent client
 UNK_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/nonexistent/config")

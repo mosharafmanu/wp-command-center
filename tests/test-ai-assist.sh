@@ -144,6 +144,21 @@ else
 	RES="$(wpe '
 		$a=get_users(["role"=>"administrator","number"=>1]); wp_set_current_user($a?$a[0]->ID:1);
 		$reg = new \WPCommandCenter\Admin\AiActionRegistry();
+
+		/*
+		 * Neutralise the in-admin per-tool option for the whole matrix.
+		 *
+		 * This block probes the FILTER layer, and a falsy filter is documented as "no
+		 * opinion", not an opt-out — only a defined constant can force a tool off. Once
+		 * the row action started honouring the option too (it always should have; that
+		 * is why turning Content on from the admin produced no entry point), $off() on
+		 * a filter stopped meaning "off" and fell through to an option that was on. The
+		 * matrix then read title,excerpt,seo everywhere. Clearing the option restores
+		 * the thing this block is actually testing.
+		 */
+		$bai_matrix_saved = get_option( "wpcc_builtin_ai_tools", [] );
+		update_option( "wpcc_builtin_ai_tools", [] );
+
 		// Priority-99 overrides win over the ambient dev mu-plugin enablers (priority 10).
 		$on  = function($f){ add_filter($f,"__return_true",99); };
 		$off = function($f){ add_filter($f,"__return_false",99); };
@@ -186,6 +201,7 @@ else
 		wp_delete_post($d,true); wp_delete_post($t,true);
 		$clr("wpcc_ai_content_ui"); $clr("wpcc_seo_meta_ui");
 
+		update_option( "wpcc_builtin_ai_tools", $bai_matrix_saved );
 		echo wp_json_encode($out);
 	')"
 	gj() { printf '%s' "$RES" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }

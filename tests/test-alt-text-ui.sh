@@ -32,8 +32,14 @@ $out=[]; $emit=function($d,$ok,$x='')use(&$out){ $out[]=$d."\t".($ok?'PASS':'FAI
 $reg=function(){ $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); return $t["alt_text"] ?? null; };
 
 // 1. hidden by default
+// "Default" is all three inputs unset. The in-admin per-tool option is now one of
+// them — a falsy filter is documented as "no opinion", not an opt-out — so clearing
+// the filters alone no longer describes a default site. Saved and put back below.
+$bai_saved = get_option( 'wpcc_builtin_ai_tools', [] );
+update_option( 'wpcc_builtin_ai_tools', [] );
 remove_all_filters('wpcc_alt_text_ui');
 $emit('tab hidden by default', $reg()===null);
+update_option( 'wpcc_builtin_ai_tools', $bai_saved );
 
 // 2. visible when build flag on AND FeatureGate allows ai_alt_text
 add_filter('wpcc_alt_text_ui','__return_true');
