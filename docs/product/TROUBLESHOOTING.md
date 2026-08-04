@@ -93,7 +93,7 @@ connection test in AI Integrations → Configuration reports failures.
 match any stored token, has been revoked, or has passed its expiration date.
 
 **Solution:**
-1. Go to **Command Center → Settings → API Tokens**.
+1. Go to **WP Command Center → Settings → Connections → Access tokens**.
 2. Check the status of your existing tokens (Active / Expired / Revoked).
 3. If the token is revoked or expired, delete it and create a new one.
 4. Update your AI client configuration with the new token.

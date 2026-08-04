@@ -7,7 +7,7 @@
 | WordPress | 6.4 or newer (tested to 7.0) |
 | PHP | 8.0 or newer |
 | Site type | Single site. Network activation is refused — see [ARCHITECTURE.md](ARCHITECTURE.md#multisite) |
-| For MCP clients | Node.js on the machine running the assistant |
+| For MCP clients | Node.js on the machine running the assistant — **only for connector clients** (Claude Desktop, Cursor, Continue, OpenCode, Windsurf, Command Code). Direct-HTTP clients (GitHub Copilot / VS Code, Claude Code, Codex CLI, ChatGPT, Gemini CLI) need nothing installed. |
 
 Optional integrations, detected automatically when present: WooCommerce, Advanced Custom
 Fields, Elementor, Contact Form 7, Rank Math or Yoast SEO.

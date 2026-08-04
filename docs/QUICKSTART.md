@@ -58,7 +58,10 @@ The relay is a small stdio↔HTTP bridge shipped **inside the plugin**. It is do
 from your own site, not from npm, so nothing external needs to be trusted or installed
 beyond Node.
 
-**Requires Node.js on the machine running the assistant.**
+**Requires Node.js on the machine running the assistant** — but only if your assistant
+uses the connector. GitHub Copilot / VS Code, Claude Code, Codex CLI, ChatGPT and Gemini
+CLI connect straight over HTTP and install nothing; the setup screen states which path
+yours uses. See [AI-INTEGRATIONS.md](AI-INTEGRATIONS.md) for each client's format.
 
 ## 4. Restart your client and check the connection
 
@@ -92,5 +95,5 @@ The two most common issues:
 
 - **"Missing API token"** — some servers do not pass the `Authorization` header to PHP.
   See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#missing-api-token).
-- **The client shows zero tools** — usually Node is missing, or the relay URL is not
+- **The client shows zero tools** — on a connector client, usually Node is missing, or the relay URL is not
   reachable. See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#the-client-connects-but-shows-no-tools).
