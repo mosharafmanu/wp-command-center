@@ -43,6 +43,24 @@ final class Redactor {
 		// Stripe keys (secret/publishable/restricted, live or test).
 		[ '/\b(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/', '[REDACTED_SECRET]' ],
 
+		/*
+		 * This plugin's OWN access tokens.
+		 *
+		 * Every vendor format above was covered while the one credential this
+		 * codebase definitionally knows — and the only one that unlocks this very
+		 * API — was not. A read-only token could therefore read a file or an option
+		 * containing a full-access token and escalate itself.
+		 *
+		 * AuthTokens::create() mints `wpcc_` . wp_generate_password( 64, false ),
+		 * which is alphanumeric, so 40+ is comfortably below a real token and far
+		 * above anything else that starts with this prefix. That threshold is
+		 * deliberate: table names (`wpcc_change_log`), option keys
+		 * (`wpcc_security_mode`) and the 12-character preview the tokens screen
+		 * shows on purpose (`wpcc_yMykgPf...`) are all much shorter and must keep
+		 * rendering normally.
+		 */
+		[ '/\bwpcc_[A-Za-z0-9]{40,}\b/', '[REDACTED_SECRET]' ],
+
 		// Authorization headers (any scheme).
 		[ '/(Authorization\s*:\s*)\S.*/i', '$1[REDACTED_SECRET]' ],
 
@@ -52,10 +70,26 @@ final class Redactor {
 		// Basic-auth credentials embedded in URLs (scheme://user:pass@host).
 		[ '#(://[^/\s:@]+:)[^/\s@]+(@)#', '$1[REDACTED_SECRET]$2' ],
 
-		// Generic password/secret/token/key assignments. Covers SMTP and
-		// database passwords, JWT secrets, PayPal client secrets, and other
-		// "name = value" / "name: value" config-style pairs.
-		[ '/((?:passwd|password|pwd|secret|api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key)\s*[=:]\s*[\'"]?)[^\'"\s,;]{4,}([\'"]?)/i', '$1[REDACTED_SECRET]$2' ],
+		/*
+		 * Generic password/secret/token/key assignments. Covers SMTP and
+		 * database passwords, JWT secrets, PayPal client secrets, and other
+		 * "name = value" / "name: value" config-style pairs.
+		 *
+		 * `token` and `pass` are matched on their own, not only as part of
+		 * `access_token` / `password`. A shell line like `export WPCC_TOKEN=...`
+		 * or a note like `Admin Pass: ...` was previously read straight back to
+		 * the caller because neither key name appeared in this list.
+		 *
+		 * Longest alternatives are listed FIRST so the captured key name is the
+		 * full one; the regex would still redact the value either way, but this
+		 * keeps `$1` readable in the output.
+		 *
+		 * This stays deliberately narrow: a separator (`=` or `:`) is required
+		 * immediately after the key name, so prose such as "your access token is
+		 * shown once" or "the tests all pass now" is left alone. Both are locked
+		 * as non-redaction assertions in tests/test-secret-redaction.sh.
+		 */
+		[ '/((?:password|passwd|pwd|pass|access[_-]?token|auth[_-]?token|api[_-]?key|client[_-]?secret|private[_-]?key|secret|token)\s*[=:]\s*[\'"]?)[^\'"\s,;]{4,}([\'"]?)/i', '$1[REDACTED_SECRET]$2' ],
 	];
 
 	/**
