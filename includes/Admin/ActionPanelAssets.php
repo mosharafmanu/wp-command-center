@@ -24,6 +24,21 @@ defined( 'ABSPATH' ) || exit;
 
 final class ActionPanelAssets {
 
+	/**
+	 * Asset version = plugin version + file mtime, matching Assets::ver().
+	 *
+	 * These four files were versioned with the bare WPCC_VERSION, so a change to
+	 * the panel's JS or CSS inside a released version reached nobody whose browser
+	 * had already cached it — including anyone applying a hotfix. The sibling
+	 * enqueuer has always done this; the two now behave the same way.
+	 */
+	private static function ver( string $relative ): string {
+		$path  = WPCC_PLUGIN_DIR . $relative;
+		$mtime = is_readable( $path ) ? filemtime( $path ) : false;
+
+		return false === $mtime ? WPCC_VERSION : WPCC_VERSION . '.' . $mtime;
+	}
+
 	public function init(): void {
 		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue' ] );
 	}
@@ -39,18 +54,35 @@ final class ActionPanelAssets {
 			return; // no enabled workflow on this screen — enqueue nothing
 		}
 
-		wp_enqueue_style( 'wpcc-tokens', WPCC_PLUGIN_URL . 'assets/css/wpcc-tokens.css', [], WPCC_VERSION );
-		wp_enqueue_style( 'wpcc-action-panel', WPCC_PLUGIN_URL . 'assets/css/wpcc-action-panel.css', [ 'wpcc-tokens' ], WPCC_VERSION );
+		wp_enqueue_style( 'wpcc-tokens', WPCC_PLUGIN_URL . 'assets/css/wpcc-tokens.css', [], self::ver( 'assets/css/wpcc-tokens.css' ) );
+		wp_enqueue_style( 'wpcc-action-panel', WPCC_PLUGIN_URL . 'assets/css/wpcc-action-panel.css', [ 'wpcc-tokens' ], self::ver( 'assets/css/wpcc-action-panel.css' ) );
 
-		wp_enqueue_script( 'wpcc-admin-runtime', WPCC_PLUGIN_URL . 'assets/js/wpcc-admin-runtime.js', [], WPCC_VERSION, true );
-		wp_enqueue_script( 'wpcc-action-panel', WPCC_PLUGIN_URL . 'assets/js/wpcc-action-panel.js', [ 'wpcc-admin-runtime' ], WPCC_VERSION, true );
+		wp_enqueue_script( 'wpcc-admin-runtime', WPCC_PLUGIN_URL . 'assets/js/wpcc-admin-runtime.js', [], self::ver( 'assets/js/wpcc-admin-runtime.js' ), true );
+		wp_enqueue_script( 'wpcc-action-panel', WPCC_PLUGIN_URL . 'assets/js/wpcc-action-panel.js', [ 'wpcc-admin-runtime' ], self::ver( 'assets/js/wpcc-action-panel.js' ), true );
+
+		/*
+		 * Continuity URLs.
+		 *
+		 * The panel used to end its own story: it said "Submitted for approval" and
+		 * stopped, leaving the customer to find the global Approvals screen on their
+		 * own and then identify their item in a queue of a hundred. The apply
+		 * response already carries the request_id (ProposalAdminQuery exposes it), so
+		 * the panel can link to the exact approval — it only lacked the base URL.
+		 */
+		$approval_base = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
 
 		wp_localize_script( 'wpcc-action-panel', 'wpccActionPanel', [
-			'restBase' => esc_url_raw( rest_url( 'wp-command-center/v1' ) ),
-			'nonce'    => wp_create_nonce( 'wp_rest' ),
-			'mode'     => SecurityModeManager::current(),
-			'i18n'     => $this->shared_i18n(),
-			'actions'  => $actions,
+			'restBase'    => esc_url_raw( rest_url( 'wp-command-center/v1' ) ),
+			'nonce'       => wp_create_nonce( 'wp_rest' ),
+			'mode'        => SecurityModeManager::current(),
+			'approvalUrl' => esc_url_raw( $approval_base ),
+			'changesUrl'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ) ),
+			// The model that will actually run, so the loading state can name it
+			// instead of saying nothing. No outbound call; '' when unconfigured, and
+			// the panel simply omits the line rather than inventing one.
+			'model'       => ( new \WPCommandCenter\Ai\AiRuntime() )->model( '' ),
+			'i18n'        => $this->shared_i18n(),
+			'actions'     => $actions,
 		] );
 	}
 
@@ -88,7 +120,14 @@ final class ActionPanelAssets {
 			'title'            => __( 'Generate Suggestion', 'ai-command-center' ),
 			'chooserTitle'     => __( 'WPCC AI', 'ai-command-center' ),
 			'chooserIntro'     => __( 'Choose what to generate for this item.', 'ai-command-center' ),
+			/* translators: %1$s: what is being generated, e.g. "title" or "SEO details". */
+			'generatingFor'    => /* translators: %1$s: value */ __( 'Generating a %1$s…', 'ai-command-center' ),
 			'generating'       => __( 'Generating suggestion…', 'ai-command-center' ),
+			/* translators: %1$s: the AI model being used, e.g. "claude-sonnet-4-6". */
+			'usingModel'       => /* translators: %1$s: value */ __( 'Using %1$s', 'ai-command-center' ),
+			// Said while the customer waits, because waiting is exactly when someone
+			// wonders whether they have already changed something.
+			'nothingYet'       => __( 'Nothing on your site is changing yet.', 'ai-command-center' ),
 			'current'          => __( 'Current', 'ai-command-center' ),
 			'suggested'        => __( 'Suggested', 'ai-command-center' ),
 			'empty'            => __( '(none)', 'ai-command-center' ),
@@ -96,11 +135,30 @@ final class ActionPanelAssets {
 			'close'            => __( 'Close', 'ai-command-center' ),
 			'draftNote'        => __( 'Saved as a draft for review — nothing has been applied to your site.', 'ai-command-center' ),
 			'provBy'           => /* translators: %1$s: value, %2$s: value */ __( 'Suggested by %1$s · %2$s', 'ai-command-center' ),
-			'exists'           => __( 'A suggestion already exists for this item. Open it in Suggestions to review.', 'ai-command-center' ),
-			'noProvider'       => __( 'No AI provider is configured. Add an API key under AI Integrations to generate suggestions.', 'ai-command-center' ),
+			/*
+			 * The duplicate state. "A suggestion already exists" told the customer
+			 * that something was in their way without saying what, why, or what to
+			 * do — so the natural reading is "it failed". It is the opposite: their
+			 * earlier suggestion is safe and waiting.
+			 */
+			'existsTitle'      => __( 'You already have a draft for this', 'ai-command-center' ),
+			'exists'           => __( 'An earlier suggestion for this item is still waiting for your review, so a second one was not generated. Review or dismiss that draft first — generating again would leave you with two.', 'ai-command-center' ),
+			'reviewDraft'      => __( 'Review existing draft', 'ai-command-center' ),
+			// Skips that are NOT failures. Each used to fall through to the generic
+			// failure text, which told the customer something had broken when in
+			// fact there was simply nothing to do.
+			'skNothingTitle'   => __( 'Nothing to generate here', 'ai-command-center' ),
+			'skUnsupported'    => __( 'This item does not support that kind of suggestion, so nothing was generated and nothing on your site changed.', 'ai-command-center' ),
+			'skNotFound'       => __( 'That item could not be found — it may have been deleted since this page loaded. Nothing on your site changed.', 'ai-command-center' ),
+			'skUpToDate'       => __( 'This item is already up to date, so there was nothing to suggest. Nothing on your site changed.', 'ai-command-center' ),
+			'failedTitle'      => __( 'That did not work', 'ai-command-center' ),
+			'nothingChanged'   => __( 'Nothing on your site changed.', 'ai-command-center' ),
+			// Same destination correction as the SEO and Content views: Built-in AI
+			// keys live on Built-in AI > Providers, not on the MCP assistants screen.
+			'noProvider'       => __( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key under Settings › Built-in AI › Providers.', 'ai-command-center' ),
 			'noPlugin'         => __( 'No supported SEO plugin (Rank Math or Yoast) is active.', 'ai-command-center' ),
-			'unsupportedStatus'=> __( 'This content status cannot receive suggestions (e.g. trashed or auto-draft).', 'ai-command-center' ),
-			'failed'           => __( 'Could not generate a suggestion. Please try again.', 'ai-command-center' ),
+			'unsupportedStatus'=> __( 'Suggestions are only generated for published or draft content — this item is trashed or not started yet.', 'ai-command-center' ),
+			'failed'           => __( 'The AI did not return a suggestion this time, so nothing was created and nothing on your site changed. Try again — if it keeps happening, check Settings › Advanced › Diagnostics.', 'ai-command-center' ),
 			'error'            => __( 'Something went wrong. Please try again.', 'ai-command-center' ),
 			'applyDev'         => __( 'Approve & Apply', 'ai-command-center' ),
 			'applyGate'        => __( 'Submit for approval', 'ai-command-center' ),
@@ -109,7 +167,12 @@ final class ActionPanelAssets {
 			'appliedTitle'     => __( 'Applied successfully', 'ai-command-center' ),
 			'submittedTitle'   => __( 'Submitted for approval', 'ai-command-center' ),
 			'appliedNote'      => __( 'The change was applied. It is reversible and recorded in the audit log.', 'ai-command-center' ),
-			'submittedNote'    => __( 'Submitted for approval and recorded in the audit log. Nothing has been applied yet.', 'ai-command-center' ),
+			'submittedNote'    => __( 'Your suggestion is waiting for approval and is recorded in the audit log. Nothing on your site has changed yet.', 'ai-command-center' ),
+			// The continuation. Both states used to end on "Close", which is not a
+			// next step — it is the absence of one.
+			'reviewApproval'   => __( 'Review approval', 'ai-command-center' ),
+			'viewInChanges'    => __( 'View in Changes', 'ai-command-center' ),
+			'done'             => __( 'Done', 'ai-command-center' ),
 			'chipReversible'   => __( 'Reversible', 'ai-command-center' ),
 			'chipAudited'      => __( 'Audited', 'ai-command-center' ),
 			'undo'             => __( 'Undo', 'ai-command-center' ),

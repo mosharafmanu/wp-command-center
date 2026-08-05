@@ -223,21 +223,24 @@
 		}
 	}
 
-	function renderMessage( msg, allowOpen ) {
+	function renderMessage( msg, allowOpen, title, openLabel ) {
 		var body = modal._body;
 		body.innerHTML = '';
+		if ( title ) {
+			body.appendChild( el( 'p', { class: 'wpcc-qp-msgtitle' }, title ) );
+		}
 		body.appendChild( el( 'p', { class: 'wpcc-qp-msg' }, msg ) );
-		setStatus( msg );
-		renderNavFooter( !! allowOpen );
+		setStatus( title || msg );
+		renderNavFooter( !! allowOpen, openLabel );
 	}
 
 	// Footer for non-actionable states (skips / errors): navigate only.
-	function renderNavFooter( showOpen ) {
+	function renderNavFooter( showOpen, openLabel ) {
 		var footer = modal._footer;
 		footer.innerHTML = '';
 		var url = ST.cfg.suggestUrl || ROOT.suggestUrl || '';
 		if ( showOpen && url ) {
-			footer.appendChild( el( 'a', { href: url, class: 'button button-primary wpcc-qp-open' }, t( 'openSuggest' ) ) );
+			footer.appendChild( el( 'a', { href: url, class: 'button button-primary wpcc-qp-open' }, openLabel || t( 'openSuggest' ) ) );
 		}
 		var close = el( 'button', { type: 'button', class: 'button wpcc-qp-close' }, t( 'close' ) );
 		close.addEventListener( 'click', closeModal );
@@ -245,17 +248,36 @@
 		( footer.querySelector( 'a, button' ) || modal ).focus();
 	}
 
+	/*
+	 * Loading is not dead time — it is the moment a customer wonders what they
+	 * have just set in motion on their live site. "Generating suggestion…" left
+	 * that unanswered. This names the work, names the model doing it, and settles
+	 * the anxious question outright.
+	 */
 	function renderLoading() {
 		var body = modal._body;
 		body.innerHTML = '';
-		body.appendChild( el( 'p', { class: 'wpcc-qp-msg' }, t( 'generating' ) ) );
-		setStatus( t( 'generating' ) );
+
+		var box = el( 'div', { class: 'wpcc-qp-loading' } );
+		box.appendChild( el( 'span', { class: 'wpcc-qp-spinner', 'aria-hidden': 'true' } ) );
+
+		var label = ST.cfg && ST.cfg.subject ? fmt( t( 'generatingFor' ), ST.cfg.subject ) : t( 'generating' );
+		var txt = el( 'div', { class: 'wpcc-qp-loading__text' } );
+		txt.appendChild( el( 'strong', null, label ) );
+		if ( ROOT.model ) {
+			txt.appendChild( el( 'span', { class: 'wpcc-qp-loading__model' }, fmt( t( 'usingModel' ), ROOT.model ) ) );
+		}
+		txt.appendChild( el( 'span', { class: 'wpcc-qp-loading__safe' }, t( 'nothingYet' ) ) );
+		box.appendChild( txt );
+
+		body.appendChild( box );
+		setStatus( label );
 		modal._footer.innerHTML = '';
 	}
 
 	// Post-apply outcome — reversibility-as-hero: Applied · Reversible · Audited (+
 	// Undo) for a developer apply; Submitted · Audited for a gated submit.
-	function renderApplied( status, changeId ) {
+	function renderApplied( status, changeId, requestId ) {
 		var applied = ( status === 'applied' );
 		var body = modal._body;
 		body.innerHTML = '';
@@ -272,19 +294,52 @@
 		body.appendChild( el( 'div', { class: 'wpcc-qp-actionmsg', role: 'status', 'aria-live': 'polite' } ) );
 
 		setStatus( applied ? t( 'appliedTitle' ) : t( 'submittedTitle' ) );
-		renderAppliedFooter( applied && !! changeId );
+		renderAppliedFooter( applied, changeId, requestId );
 	}
 
-	function renderAppliedFooter( showUndo ) {
+	/*
+	 * The end of the journey should be a door, not a wall.
+	 *
+	 * Both outcomes used to finish on a primary "Close" — which is not a next
+	 * step, it is the absence of one. A submitted change left the customer to go
+	 * and find the global Approvals screen unaided and then pick their item out
+	 * of a queue of a hundred; an applied change left them holding nothing.
+	 *
+	 * Each state now leads with the one thing the customer actually wants next,
+	 * and Close steps back to being secondary:
+	 *
+	 *   submitted -> Review approval   (the EXACT request, by id)
+	 *   applied   -> View in Changes   (where it can be seen and undone)
+	 *
+	 * The governance model is untouched: submitting still submits, and this adds
+	 * no way to apply anything without the approval it already required.
+	 */
+	function renderAppliedFooter( applied, changeId, requestId ) {
 		var footer = modal._footer;
 		footer.innerHTML = '';
-		if ( showUndo ) {
+
+		if ( ! applied && requestId && ROOT.approvalUrl ) {
+			footer.appendChild( el( 'a', {
+				href: ROOT.approvalUrl + '&view=' + encodeURIComponent( requestId ),
+				class: 'button button-primary wpcc-qp-review'
+			}, t( 'reviewApproval' ) ) );
+		} else if ( applied && ROOT.changesUrl ) {
+			footer.appendChild( el( 'a', {
+				href: ROOT.changesUrl,
+				class: 'button button-primary wpcc-qp-changes'
+			}, t( 'viewInChanges' ) ) );
+		}
+
+		if ( applied && changeId ) {
 			var undo = el( 'button', { type: 'button', class: 'button wpcc-qp-undo' }, t( 'undo' ) );
 			undo.addEventListener( 'click', function () { undoAction( undo ); } );
 			footer.appendChild( undo );
 		}
+
 		appendOpen( footer );
-		var close = el( 'button', { type: 'button', class: 'button button-primary wpcc-qp-close' }, t( 'close' ) );
+
+		// Secondary now: there IS a next step, so Close stops competing with it.
+		var close = el( 'button', { type: 'button', class: 'button wpcc-qp-close' }, t( 'done' ) );
 		close.addEventListener( 'click', closeModal );
 		footer.appendChild( close );
 		( footer.querySelector( 'a, button' ) || modal ).focus();
@@ -299,16 +354,33 @@
 	function skipMessage( reason ) {
 		switch ( reason ) {
 			case 'has_open_proposal':
-				return { msg: t( 'exists' ), allowOpen: true };
+				// Not a failure: their earlier draft is safe and waiting. Say which
+				// state they are in, and make reviewing it the primary action.
+				return { msg: t( 'exists' ), allowOpen: true, title: t( 'existsTitle' ), openLabel: t( 'reviewDraft' ) };
 			case 'no_provider':
 				return { msg: t( 'noProvider' ), allowOpen: false };
 			case 'no_seo_plugin':
 				return { msg: t( 'noPlugin' ), allowOpen: false };
 			case 'unsupported_status':
 				return { msg: t( 'unsupportedStatus' ), allowOpen: false };
+			// These are SKIPS, not failures — they fell through to the generic
+			// failure text, telling the customer something broke when in fact
+			// nothing needed doing or the item was gone.
+			case 'capability_unsupported':
+				return { msg: t( 'skUnsupported' ), allowOpen: false, title: t( 'skNothingTitle' ) };
+			case 'not_found':
+				return { msg: t( 'skNotFound' ), allowOpen: false, title: t( 'skNothingTitle' ) };
+			case 'already_optimized':
+			case 'up_to_date':
+				return { msg: t( 'skUpToDate' ), allowOpen: false, title: t( 'skNothingTitle' ) };
 			default:
 				return { msg: t( 'failed' ), allowOpen: false };
 		}
+	}
+
+	// A skip/error state may carry a heading and its own primary-button label.
+	function renderSkip( s ) {
+		renderMessage( s.msg, s.allowOpen, s.title, s.openLabel );
 	}
 
 	// ── Config-driven payload mapping (declarative; no per-workflow JS) ──────────
@@ -369,12 +441,23 @@
 					fetchProposal( String( env.created[ 0 ] ) );
 					return;
 				}
-				if ( env.skipped && env.skipped.length ) {
-					var s = skipMessage( env.skipped[ 0 ].reason );
-					renderMessage( s.msg, s.allowOpen );
+					if ( env.skipped && env.skipped.length ) {
+					renderSkip( skipMessage( env.skipped[ 0 ].reason ) );
 					return;
 				}
-				renderMessage( t( 'failed' ), false );
+				/*
+				 * A genuine failure. The generators return a real message per failed
+				 * item ("Unknown content field kind.", a provider error…) and the
+				 * panel used to throw all of it away in favour of "Could not generate
+				 * a suggestion. Please try again." — which tells a customer neither
+				 * what went wrong nor whether retrying is pointless.
+				 */
+				if ( env.failed && env.failed.length ) {
+					var fmsg = ( env.failed[ 0 ] && env.failed[ 0 ].message ) || '';
+					renderMessage( fmsg ? fmsg + ' ' + t( 'nothingChanged' ) : t( 'failed' ), false, t( 'failedTitle' ) );
+					return;
+				}
+				renderMessage( t( 'failed' ), false, t( 'failedTitle' ) );
 			} )
 			.catch( function () {
 				renderMessage( t( 'error' ), false );
@@ -425,9 +508,12 @@
 				if ( ! res ) { return; }
 				var st = ( res.data && res.data.status ) || '';
 				var cid = ( res.data && res.data.change_id ) || '';
+				// The shaped proposal already carries request_id — it is what makes
+				// "Review approval" able to open the exact item instead of a queue.
+				var rid = ( res.data && res.data.request_id ) || '';
 				if ( st === 'applied' || st === 'pending_approval' ) {
 					ST.changeId = cid;
-					renderApplied( st, cid );
+					renderApplied( st, cid, rid );
 				} else {
 					btn.disabled = false;
 					actionMsg( ( res.data && res.data.message ) || t( 'cantApply' ) );

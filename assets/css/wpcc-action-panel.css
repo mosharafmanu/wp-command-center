@@ -120,9 +120,83 @@
 .wpcc-qp-coltitle {
 	margin: 0 0 var( --wpcc-space-3 );
 	font-size: var( --wpcc-fs-caption );
+	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	color: var( --wpcc-text-secondary );
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Review clarity, loading confidence, message hierarchy.
+ *
+ * The panel worked; it read like a dialog box rather than like a product
+ * showing you a decision. These changes are presentation only — no state, no
+ * control and no step in the workflow is added, removed or reordered.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+/* The comparison is the whole point of the screen: make "Suggested" clearly
+   the thing being decided on, and "Current" clearly the reference. */
+.wpcc-qp-col { transition: border-color .12s ease; }
+
+.wpcc-qp-col--suggested {
+	box-shadow: 0 1px 3px rgba( 16, 24, 40, .06 );
+}
+
+.wpcc-qp-col--suggested .wpcc-qp-coltitle { color: var( --wpcc-text-accent ); }
+
+/* The suggested value is editable — say so by making it look like a field the
+   customer owns rather than output they must accept. */
+.wpcc-qp-col--suggested .wpcc-qp-input {
+	background: #fff;
+	border-radius: var( --wpcc-radius-sm );
+}
+
+/* Loading. Replaces a bare line of text with something that reads as work in
+   progress AND answers "have I changed anything yet?" while they wait. */
+.wpcc-qp-loading {
+	display: flex;
+	gap: var( --wpcc-space-4 );
+	align-items: flex-start;
+	padding: var( --wpcc-space-6 ) var( --wpcc-space-2 );
+}
+
+.wpcc-qp-loading__text { display: flex; flex-direction: column; gap: var( --wpcc-space-1 ); min-width: 0; }
+.wpcc-qp-loading__text strong { font-size: var( --wpcc-fs-body ); color: var( --wpcc-text-primary ); }
+.wpcc-qp-loading__model { font-size: var( --wpcc-fs-caption ); color: var( --wpcc-text-secondary ); }
+.wpcc-qp-loading__safe { font-size: var( --wpcc-fs-caption ); color: var( --wpcc-text-muted ); margin-top: var( --wpcc-space-1 ); }
+
+.wpcc-qp-spinner {
+	flex: 0 0 auto;
+	width: 18px;
+	height: 18px;
+	margin-top: 2px;
+	border: 2px solid var( --wpcc-border-subtle );
+	border-top-color: var( --wpcc-text-accent );
+	border-radius: 50%;
+	animation: wpcc-qp-spin .8s linear infinite;
+}
+
+@keyframes wpcc-qp-spin { to { transform: rotate( 360deg ); } }
+
+@media ( prefers-reduced-motion: reduce ) {
+	.wpcc-qp-spinner { animation: none; }
+}
+
+/* A skip or error state gets a heading, so the customer reads the situation
+   before the explanation instead of parsing a paragraph to find out which
+   state they are in. */
+.wpcc-qp-msgtitle {
+	margin: 0 0 var( --wpcc-space-2 );
+	font-size: var( --wpcc-fs-body );
+	font-weight: 600;
+	color: var( --wpcc-text-primary );
+}
+
+.wpcc-qp-msgtitle + .wpcc-qp-msg {
+	margin-top: 0;
+	color: var( --wpcc-text-secondary );
+	max-width: 62ch;
+	line-height: 1.6;
 }
 
 .wpcc-qp-field { margin-bottom: var( --wpcc-space-4 ); }

@@ -127,6 +127,10 @@ final class AiActionRegistry {
 				'suggest'     => $def['suggest'],
 				'fields'      => $def['fields'],
 				'suggestUrl'  => $def['suggest_url'],
+				// What is being generated, in the customer's words — so the panel's
+				// loading state can say "Generating a title…" rather than the
+				// workflow-agnostic "Generating suggestion…".
+				'subject'     => $def['subject'],
 			];
 		}
 		return $out;
@@ -146,6 +150,7 @@ final class AiActionRegistry {
 		return [
 			'id'           => $kind,
 			'label'        => $is_title ? __( 'Generate Title', 'ai-command-center' ) : __( 'Generate Excerpt', 'ai-command-center' ),
+			'subject'      => $is_title ? __( 'title', 'ai-command-center' ) : __( 'excerpt', 'ai-command-center' ),
 			'panel_title'  => $is_title ? __( 'Generate Title Suggestion', 'ai-command-center' ) : __( 'Generate Excerpt Suggestion', 'ai-command-center' ),
 			// Distinct icons so the two content actions read differently at a glance:
 			// Title = edit/pencil, Excerpt = lines-of-text.
@@ -173,6 +178,7 @@ final class AiActionRegistry {
 		return [
 			'id'           => 'seo',
 			'label'        => __( 'Generate SEO Meta', 'ai-command-center' ),
+			'subject'      => __( 'SEO title and description', 'ai-command-center' ),
 			'panel_title'  => __( 'Generate SEO Suggestion', 'ai-command-center' ),
 			'icon'         => 'dashicons-search',
 			'object_types' => self::CONTENT_TYPES,
@@ -197,6 +203,7 @@ final class AiActionRegistry {
 		return [
 			'id'           => 'alt_text',
 			'label'        => __( 'Generate Alt Text', 'ai-command-center' ),
+			'subject'      => __( 'description of this image', 'ai-command-center' ),
 			'panel_title'  => __( 'Generate Alt Text', 'ai-command-center' ),
 			'icon'         => 'dashicons-format-image',
 			'object_types' => self::MEDIA_TYPES,
