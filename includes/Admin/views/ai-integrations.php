@@ -11,6 +11,7 @@ use WPCommandCenter\Integration\AIClientRegistry;
 use WPCommandCenter\Integration\ClaudeIntegration;
 use WPCommandCenter\Security\AuthTokens;
 use WPCommandCenter\Operations\OperationRegistry;
+use WPCommandCenter\Operations\SecurityModeManager;
 
 $wpcc_tokens      = new AuthTokens();
 $wpcc_all_tokens   = $wpcc_tokens->list();
@@ -57,25 +58,74 @@ foreach ( $wpcc_entries as $entry ) {
 
 // Handle token generation
 $wpcc_new_token     = null;
+$wpcc_new_record    = null;
 $wpcc_token_message  = '';
 $wpcc_token_error    = '';
 
 if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integrations' ) && current_user_can( 'manage_options' ) ) {
 	$wpcc_token_action = sanitize_key( $_POST['wpcc_token_action'] );
 
-	if ( 'generate_read_only' === $wpcc_token_action || 'generate_full' === $wpcc_token_action ) {
-		$scope = 'generate_read_only' === $wpcc_token_action ? AuthTokens::SCOPE_READ_ONLY : AuthTokens::SCOPE_FULL;
-		$label = sprintf(
-			'%s %s',
-			'generate_read_only' === $wpcc_token_action ? __( 'AI Read-only', 'ai-command-center' ) : __( 'AI Full Access', 'ai-command-center' ),
-			gmdate( 'Y-m-d H:i' )
-		);
-		$result = $wpcc_tokens->create( $label, $scope, null, get_current_user_id() );
+	/*
+	 * Token creation is a DELIBERATE act now, not a side effect of one click.
+	 *
+	 * This used to be a single `<button value="generate_full">` beside the word
+	 * "Create access token". Pressing it — or pressing Enter anywhere in that
+	 * form — minted a full-access, never-expiring key to the whole site, named
+	 * after the clock ("AI Full Access 2026-08-05 03:36"). The customer chose
+	 * nothing, was warned of nothing, and afterwards could not tell one such
+	 * token from the next. That is the single riskiest control in the product.
+	 *
+	 * It is now a dialog the customer has to open, fill in and submit: a label
+	 * they choose (required), an access level they pick, and an expiry. The
+	 * scope arrives from the form instead of being encoded in the button, so a
+	 * stray submit cannot silently mean "full access".
+	 */
+	if ( 'create' === $wpcc_token_action ) {
+		/*
+		 * Full access requires an EXPLICIT selection — enforced here, not just in
+		 * the markup.
+		 *
+		 * This test used to run the other way round ("is it read_only? …else full"),
+		 * so a missing, misspelt or stripped `wpcc_token_scope` produced a
+		 * full-access key. On the one control in the product that hands out access
+		 * to the whole site, the absence of a choice must never BE a choice. Only
+		 * the literal string "full" grants full access; everything else — including
+		 * a request that carries no scope at all — is read-only.
+		 */
+		$scope = AuthTokens::SCOPE_FULL === sanitize_key( (string) ( $_POST['wpcc_token_scope'] ?? '' ) )
+			? AuthTokens::SCOPE_FULL
+			: AuthTokens::SCOPE_READ_ONLY;
 
-		if ( is_wp_error( $result ) ) {
+		$label = sanitize_text_field( wp_unslash( (string) ( $_POST['wpcc_token_label'] ?? '' ) ) );
+
+		// Expiry is validated against the offered set. An unrecognised value used
+		// to fall through to "never" on the manager screen, which turns a typo
+		// into a permanent key — here an unknown value is simply refused.
+		$wpcc_exp_choice = sanitize_key( (string) ( $_POST['wpcc_token_expires'] ?? 'never' ) );
+		$wpcc_exp_map    = [
+			'30d' => 30 * DAY_IN_SECONDS,
+			'90d' => 90 * DAY_IN_SECONDS,
+			'1y'  => YEAR_IN_SECONDS,
+		];
+
+		if ( 'never' !== $wpcc_exp_choice && ! isset( $wpcc_exp_map[ $wpcc_exp_choice ] ) ) {
+			$wpcc_token_error = __( 'Choose when this token should stop working, then try again.', 'ai-command-center' );
+			$result           = null;
+		} else {
+			$expires_at = isset( $wpcc_exp_map[ $wpcc_exp_choice ] ) ? time() + $wpcc_exp_map[ $wpcc_exp_choice ] : null;
+			$result     = $wpcc_tokens->create( $label, $scope, $expires_at, get_current_user_id() );
+		}
+
+		if ( null === $result ) {
+			// Validation already explained itself above; fall through to render.
+			$wpcc_all_tokens = $wpcc_tokens->list();
+		} elseif ( is_wp_error( $result ) ) {
 			$wpcc_token_error = $result->get_error_message();
 		} else {
 			$wpcc_new_token    = $result['token'];
+			// What was created, in the customer's own words, so the reveal card can
+			// say which token this is rather than only that "a token" exists.
+			$wpcc_new_record   = $result['record'];
 			$wpcc_token_message = __( 'Token generated. Copy it now — it will not be shown again.', 'ai-command-center' );
 
 			// Inject token into config
@@ -362,6 +412,43 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-token-reveal__code { margin: 0; }
 	.wpcc-token-reveal__note { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: #50575e; max-width: 72ch; }
 	.wpcc-ai-config { border-radius:0 0 12px 12px; }
+
+	/* Token creation dialog.
+	   Without JS the panel is simply a form on the page and the opener is hidden;
+	   `.wpcc-tokenmake--js` (added by script) inverts that. Nothing about the
+	   form's validation depends on either state. */
+	.wpcc-tokenmake__opener { display:none; margin:0; }
+	.wpcc-tokenmake--js .wpcc-tokenmake__opener { display:block; }
+	.wpcc-tokenmake--js .wpcc-tokenmake__panel { display:none; }
+	.wpcc-tokenmake--js.is-open .wpcc-tokenmake__panel {
+		display:flex; align-items:flex-start; justify-content:center;
+		position:fixed; inset:0; z-index:100000; background:rgba(16,24,40,.55);
+		padding:8vh 16px 16px; overflow:auto;
+	}
+	.wpcc-tokenmake__box { max-width:560px; }
+	.wpcc-tokenmake--js.is-open .wpcc-tokenmake__box {
+		background:#fff; border-radius:12px; padding:24px 26px; width:100%;
+		box-shadow:0 12px 40px rgba(16,24,40,.28);
+	}
+	.wpcc-tokenmake__title { margin:0 0 6px; font-size:16px; font-weight:650; color:#1d2327; }
+	.wpcc-tokenmake__lead { margin:0 0 18px; font-size:13px; line-height:1.6; color:#50575e; max-width:64ch; }
+	.wpcc-tokenmake__field { margin:0 0 18px; border:0; padding:0; }
+	.wpcc-tokenmake__label { display:block; margin:0 0 6px; font-weight:600; font-size:13px; color:#1d2327; }
+	.wpcc-tokenmake__hint { margin:6px 0 0; font-size:12px; line-height:1.6; color:#646970; max-width:64ch; }
+	.wpcc-tokenmake__dupe { margin:8px 0 0; font-size:12px; line-height:1.6; color:#8a6100;
+		background:#fcf9e8; border:1px solid #f0e2a6; border-radius:6px; padding:8px 10px; max-width:64ch; }
+	.wpcc-tokenmake__choice { display:flex; gap:10px; align-items:flex-start; padding:10px 12px; margin:0 0 8px;
+		border:1px solid #dcdcde; border-radius:8px; cursor:pointer; }
+	.wpcc-tokenmake__choice:has(input:checked) { border-color:#2271b1; background:#f6fafd; }
+	.wpcc-tokenmake__choice input { margin-top:3px; flex:0 0 auto; }
+	.wpcc-tokenmake__choice strong { display:inline; font-size:13px; color:#1d2327; }
+	.wpcc-tokenmake__choice em { display:block; margin-top:4px; font-style:normal; font-size:12px; line-height:1.6; color:#646970; }
+	.wpcc-tokenmake__rec { display:inline-block; margin-left:8px; font-size:11px; font-weight:600;
+		color:#0a7c2f; background:#edfaef; border:1px solid #b8e6c3; border-radius:10px; padding:0 7px; vertical-align:1px; }
+	.wpcc-tokenmake__note { margin:0 0 18px; font-size:12px; line-height:1.6; color:#3c434a;
+		background:#f0f6fc; border:1px solid #c5d9ed; border-radius:6px; padding:10px 12px; max-width:64ch; }
+	.wpcc-tokenmake__note--warn { color:#8a2424; background:#fcf0f0; border-color:#eec2c2; }
+	.wpcc-tokenmake__actions { display:flex; gap:10px; align-items:center; margin:0; }
 </style>
 
 <div class="wrap wpcc-ai-wrap">
@@ -446,7 +533,25 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	?>
 	<?php if ( $wpcc_new_token ) : ?>
 		<div class="wpcc-token-reveal" role="status">
-			<p class="wpcc-token-reveal__title"><?php esc_html_e( 'Your access token is ready', 'ai-command-center' ); ?></p>
+			<p class="wpcc-token-reveal__title">
+				<?php
+				// Name the token that was just made. "Your access token is ready" was
+				// true of any token; after a dialog in which the customer chose a name
+				// and an access level, the card should confirm what they actually got.
+				if ( is_array( $wpcc_new_record ) ) {
+					echo esc_html(
+						sprintf(
+							/* translators: 1: token name chosen by the customer, 2: access level, e.g. "Full access". */
+							__( '“%1$s” is ready — %2$s', 'ai-command-center' ),
+							(string) $wpcc_new_record['label'],
+							AuthTokens::scope_label( (string) $wpcc_new_record['scope'] )
+						)
+					);
+				} else {
+					esc_html_e( 'Your access token is ready', 'ai-command-center' );
+				}
+				?>
+			</p>
 			<div class="wpcc-ai-code wpcc-token-reveal__code">
 				<code class="wpcc-ai-code__text" id="wpcc-new-token"><?php echo esc_html( $wpcc_new_token ); ?></code>
 				<button type="button" class="button button-primary wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_new_token ); ?>"><?php esc_html_e( 'Copy', 'ai-command-center' ); ?></button>
@@ -558,27 +663,161 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Access tokens', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
 				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'A token is your assistant’s key to this site. A standard token lets your assistant answer questions about the site and propose changes — it can never change anything on its own, because every change waits for your approval first.', 'ai-command-center' ); ?></p>
-				<form method="post">
+				<?php
+				// Read-only is NOT the recommended starting point here, and that is a
+				// deliberate, unchanged decision: the read-only SCOPE allowlist
+				// (CapabilityRegistry::READ_ONLY_SCOPE_OPERATIONS) covers six
+				// operations, so the ordinary first question — "what plugins are
+				// installed?", "what pages do I have?" — is refused. A customer who
+				// follows that advice connects successfully and then cannot do
+				// anything, which reads as a broken product rather than as a safety
+				// boundary.
+				//
+				// The allowlist is fail-closed and is NOT changed here. What changed
+				// is that the choice is now a CHOICE: both levels are shown, each says
+				// what it means, Standard is pre-selected as the recommendation, and
+				// nothing is created until the customer submits the dialog.
+				$wpcc_protected  = SecurityModeManager::is_protected();
+				$wpcc_mode_label = SecurityModeManager::label();
+				// Suggest the assistant being connected as the name — the thing the
+				// customer will actually want to recognise in the list later. Still
+				// required, still editable: a suggestion, not an auto-generated label.
+				$wpcc_label_hint = (string) ( $wpcc_current_client['name'] ?? '' );
+				?>
+				<form method="post" class="wpcc-tokenmake" id="wpcc-tokenmake">
 					<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
-					<?php
-					// Read-only used to be the recommended starting point. It is not a
-					// good one: the read-only SCOPE allowlist (CapabilityRegistry::
-					// READ_ONLY_SCOPE_OPERATIONS) covers six operations, so the ordinary
-					// first question — "what plugins are installed?", "what pages do I
-					// have?" — is refused. A customer who follows that advice connects
-					// successfully and then cannot do anything, which reads as a broken
-					// product rather than as a safety boundary.
-					//
-					// The allowlist is deliberately fail-closed and is NOT changed here.
-					// What changes is which token we recommend: on the default Standard
-					// protection a full-scope token still cannot alter the site without
-					// an explicit human approval, so it is the safe default AND the one
-					// that works. Restricted stays available for anyone who wants it.
-					?>
-					<div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
-						<button type="submit" name="wpcc_token_action" value="generate_full" class="button button-primary">
+
+					<?php // Shown only once JS has turned the panel below into a dialog. ?>
+					<p class="wpcc-tokenmake__opener">
+						<button type="button" class="button button-primary" id="wpcc-tokenmake-open" aria-haspopup="dialog">
 							<?php esc_html_e( 'Create access token', 'ai-command-center' ); ?>
 						</button>
+					</p>
+
+					<div class="wpcc-tokenmake__panel" id="wpcc-tokenmake-panel" role="dialog" aria-modal="true" aria-labelledby="wpcc-tokenmake-title">
+						<div class="wpcc-tokenmake__box">
+							<h3 class="wpcc-tokenmake__title" id="wpcc-tokenmake-title"><?php esc_html_e( 'Create an access token', 'ai-command-center' ); ?></h3>
+							<p class="wpcc-tokenmake__lead">
+								<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'ai-command-center' ); ?>
+							</p>
+
+							<div class="wpcc-tokenmake__field">
+								<label class="wpcc-tokenmake__label" for="wpcc-tokenmake-label">
+									<?php esc_html_e( 'Name this token', 'ai-command-center' ); ?>
+								</label>
+								<input type="text" id="wpcc-tokenmake-label" name="wpcc_token_label" class="regular-text"
+									required maxlength="120" autocomplete="off" spellcheck="false"
+									value="<?php echo esc_attr( $wpcc_label_hint ); ?>"
+									aria-describedby="wpcc-tokenmake-label-hint" />
+								<p class="wpcc-tokenmake__hint" id="wpcc-tokenmake-label-hint">
+									<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'ai-command-center' ); ?>
+								</p>
+								<p class="wpcc-tokenmake__dupe" id="wpcc-tokenmake-dupe" role="status" hidden></p>
+							</div>
+
+							<?php
+							/*
+							 * Read-only is the default on BOTH token forms. Full access is
+							 * never preselected anywhere in the product, and is reached only
+							 * by the customer choosing it.
+							 *
+							 * This screen previously defaulted to full access, on the
+							 * argument that a restricted token refuses most ordinary
+							 * questions and so reads as a broken product. That trade-off is
+							 * the owner's to make, and it has been made the other way: the
+							 * safe default wins, and the narrowness of read-only is stated
+							 * plainly in the option itself rather than discovered later.
+							 *
+							 * The read-only allowlist (CapabilityRegistry::
+							 * READ_ONLY_SCOPE_OPERATIONS) is deliberately NOT widened here —
+							 * see the note recorded for owner review.
+							 */
+							?>
+							<fieldset class="wpcc-tokenmake__field wpcc-tokenmake__scopes">
+								<legend class="wpcc-tokenmake__label"><?php esc_html_e( 'What this assistant may do', 'ai-command-center' ); ?></legend>
+
+								<label class="wpcc-tokenmake__choice">
+									<input type="radio" name="wpcc_token_scope" value="read_only" checked />
+									<span>
+										<strong><?php esc_html_e( 'Read-only', 'ai-command-center' ); ?></strong>
+										<em><?php esc_html_e( 'Inspect the site without requesting changes. This covers a small set of site details, so many ordinary questions will be refused.', 'ai-command-center' ); ?></em>
+									</span>
+								</label>
+
+								<label class="wpcc-tokenmake__choice">
+									<input type="radio" name="wpcc_token_scope" value="full" />
+									<span>
+										<strong><?php esc_html_e( 'Full access', 'ai-command-center' ); ?></strong>
+										<em><?php esc_html_e( 'May request or perform changes according to the active protection mode. Choose this if you want the assistant to work across the whole site.', 'ai-command-center' ); ?></em>
+									</span>
+								</label>
+							</fieldset>
+
+							<div class="wpcc-tokenmake__field">
+								<label class="wpcc-tokenmake__label" for="wpcc-tokenmake-expires">
+									<?php esc_html_e( 'Stop working after', 'ai-command-center' ); ?>
+								</label>
+								<select id="wpcc-tokenmake-expires" name="wpcc_token_expires">
+									<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'ai-command-center' ); ?></option>
+									<option value="30d"><?php esc_html_e( '30 days', 'ai-command-center' ); ?></option>
+									<option value="90d"><?php esc_html_e( '90 days', 'ai-command-center' ); ?></option>
+									<option value="1y"><?php esc_html_e( '1 year', 'ai-command-center' ); ?></option>
+								</select>
+								<p class="wpcc-tokenmake__hint">
+									<?php esc_html_e( 'An expiring token stops working on its own. Pick one if this is for a temporary job or someone else’s computer.', 'ai-command-center' ); ?>
+								</p>
+							</div>
+
+							<?php
+							/*
+							 * The Full-access consequence note. Two rules:
+							 *
+							 *  - It appears only when Full access is SELECTED. Now that
+							 *    read-only is the default, a warning shown on open would be
+							 *    warning about a scope the customer has not chosen — and a
+							 *    notice that is always on screen is wallpaper by the second
+							 *    time it is seen.
+							 *  - It has to be TRUE rather than reassuring. On Standard and
+							 *    Strict protection a full-access token genuinely cannot
+							 *    alter the site without a human approval. In Developer mode
+							 *    it can, immediately — so that is the one case that gets a
+							 *    warning instead of comfort.
+							 */
+							?>
+							<p class="wpcc-tokenmake__note<?php echo esc_attr( $wpcc_protected ? '' : ' wpcc-tokenmake__note--warn' ); ?>" id="wpcc-tokenmake-note" data-protected="<?php echo esc_attr( $wpcc_protected ? '1' : '0' ); ?>" hidden>
+								<?php if ( $wpcc_protected ) : ?>
+									<?php
+									echo esc_html(
+										sprintf(
+											/* translators: %s: the site's protection mode, e.g. "Standard protection". */
+											__( 'Full access lets this token ask to change anything on the site. This site is on %s, so nothing is actually changed until you approve it in Approvals.', 'ai-command-center' ),
+											$wpcc_mode_label
+										)
+									);
+									?>
+								<?php else : ?>
+									<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'ai-command-center' ); ?>
+								<?php endif; ?>
+							</p>
+
+							<?php
+							// The action travels as a hidden field, not on the button.
+							// A disabled submit button contributes no name/value pair, so
+							// carrying the action on the button and disabling it against
+							// double-clicks would have submitted a form with no action at
+							// all. It also means a stray Enter keypress can only ever mean
+							// "create the token I have filled in", never a scope the
+							// customer did not pick.
+							?>
+							<input type="hidden" name="wpcc_token_action" value="create" />
+
+							<p class="wpcc-tokenmake__actions">
+								<button type="submit" class="button button-primary" id="wpcc-tokenmake-submit">
+									<?php esc_html_e( 'Create token', 'ai-command-center' ); ?>
+								</button>
+								<button type="button" class="button" id="wpcc-tokenmake-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
+							</p>
+						</div>
 					</div>
 				</form>
 				<?php
@@ -927,6 +1166,119 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 <script>
 (function() {
+	/*
+	 * Token creation dialog.
+	 *
+	 * Progressive enhancement, and it matters here: with JavaScript off the form
+	 * renders inline and still works — still requires a label, still carries the
+	 * scope and expiry choices, still needs its own submit. JS only turns it into
+	 * a dialog and reveals the button that opens it. There is no path in which the
+	 * safety of this control depends on a script having loaded.
+	 */
+	var mkForm = document.getElementById('wpcc-tokenmake');
+	if (mkForm) {
+		var mkPanel  = document.getElementById('wpcc-tokenmake-panel');
+		var mkOpen   = document.getElementById('wpcc-tokenmake-open');
+		var mkCancel = document.getElementById('wpcc-tokenmake-cancel');
+		var mkLabel  = document.getElementById('wpcc-tokenmake-label');
+		var mkDupe   = document.getElementById('wpcc-tokenmake-dupe');
+		var mkSubmit = document.getElementById('wpcc-tokenmake-submit');
+		var mkNote   = document.getElementById('wpcc-tokenmake-note');
+		var mkPrev   = null;
+		var mkSent   = false;
+
+		// Active token labels, lowercased — used only to warn about a name that is
+		// already in use. Labels are not secrets; no token value is exposed here.
+		var mkExisting = <?php echo wp_json_encode( array_values( array_map( static fn( $t ) => (string) $t['label'], $wpcc_usable_tokens ?? [] ) ) ); ?>;
+		var mkDupeTpl  = <?php echo wp_json_encode( __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'ai-command-center' ) ); ?>;
+
+		mkForm.classList.add('wpcc-tokenmake--js');
+
+		function mkFocusable() {
+			return [].filter.call(
+				mkPanel.querySelectorAll('button, input, select, textarea, [href]'),
+				function (el) { return !el.disabled && el.offsetParent !== null; }
+			);
+		}
+		function mkScope() {
+			var el = mkForm.querySelector('input[name="wpcc_token_scope"]:checked');
+			return el ? el.value : 'read_only';
+		}
+		function mkSyncScope() {
+			// The full-access consequence note appears only when full access is
+			// actually selected — read-only is the default, so on open there is
+			// nothing to warn about.
+			if (mkNote) { mkNote.hidden = mkScope() !== 'full'; }
+		}
+		function mkShow() {
+			mkPrev = document.activeElement;
+			// Reopening always returns to the safe default: a dialog that remembered
+			// a previous Full access pick would preselect it, which is exactly the
+			// thing "Full access must be an explicit selection" rules out.
+			var ro = mkForm.querySelector('input[name="wpcc_token_scope"][value="read_only"]');
+			if (ro) { ro.checked = true; }
+			mkSyncScope();
+			mkForm.classList.add('is-open');
+			mkLabel.focus();
+			mkLabel.select();
+			mkCheckDupe();
+		}
+		function mkHide() {
+			mkForm.classList.remove('is-open');
+			if (mkPrev && mkPrev.focus) { mkPrev.focus(); }
+		}
+		function mkCheckDupe() {
+			var v = (mkLabel.value || '').trim().toLowerCase();
+			var hit = null;
+			for (var i = 0; i < mkExisting.length; i++) {
+				if (String(mkExisting[i]).trim().toLowerCase() === v && v !== '') { hit = mkExisting[i]; break; }
+			}
+			if (hit) {
+				mkDupe.textContent = mkDupeTpl.replace('%s', hit);
+				mkDupe.hidden = false;
+			} else {
+				mkDupe.hidden = true;
+				mkDupe.textContent = '';
+			}
+		}
+
+		mkOpen.addEventListener('click', mkShow);
+		mkCancel.addEventListener('click', mkHide);
+		mkLabel.addEventListener('input', mkCheckDupe);
+		Array.prototype.forEach.call(
+			mkForm.querySelectorAll('input[name="wpcc_token_scope"]'),
+			function (r) { r.addEventListener('change', mkSyncScope); }
+		);
+		mkSyncScope();
+
+		// Clicking the backdrop cancels; clicking inside the box does not.
+		mkPanel.addEventListener('click', function (e) { if (e.target === mkPanel) { mkHide(); } });
+
+		mkPanel.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') { e.preventDefault(); mkHide(); return; }
+			if (e.key !== 'Tab') { return; }
+			var f = mkFocusable();
+			if (!f.length) { return; }
+			var first = f[0], last = f[f.length - 1];
+			if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+			else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+		});
+
+		/*
+		 * Double-submit protection. A slow save used to leave the primary button
+		 * live, so an impatient second click minted a second full-access token the
+		 * customer never wanted and would not know to revoke. `required` on the
+		 * label field still runs first — the guard only arms once the browser has
+		 * accepted the form.
+		 */
+		mkForm.addEventListener('submit', function (e) {
+			if (mkSent) { e.preventDefault(); return; }
+			mkSent = true;
+			mkSubmit.disabled = true;
+			mkSubmit.textContent = <?php echo wp_json_encode( __( 'Creating…', 'ai-command-center' ) ); ?>;
+		});
+	}
+
 	// Live, browser-only token fill: insert the pasted access token into the
 	// displayed configuration so "Copy configuration" copies a complete, ready
 	// config. The token is substituted in the DOM only — it is never sent back to

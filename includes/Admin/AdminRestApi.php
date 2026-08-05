@@ -1477,12 +1477,33 @@ final class AdminRestApi {
 		$scope   = sanitize_key( (string) $request->get_param( 'scope' ) );
 		$expires = sanitize_key( (string) $request->get_param( 'expires' ) );
 
-		$expires_at = match ( $expires ) {
-			'30d'   => time() + 30 * DAY_IN_SECONDS,
-			'90d'   => time() + 90 * DAY_IN_SECONDS,
-			'1y'    => time() + YEAR_IN_SECONDS,
-			default => null,
-		};
+		/*
+		 * Expiry is validated against the offered set instead of falling through
+		 * to "never".
+		 *
+		 * The `default => null` arm meant every unrecognised value — a typo, a
+		 * stale client, '60d' — silently produced a token that never expires. On
+		 * a control whose whole purpose is to LIMIT how long a key lives, the
+		 * failure mode of a bad input has to be a refusal, not the most permissive
+		 * option available. An omitted value is still an explicit "never".
+		 */
+		$windows = [
+			'30d' => 30 * DAY_IN_SECONDS,
+			'90d' => 90 * DAY_IN_SECONDS,
+			'1y'  => YEAR_IN_SECONDS,
+		];
+
+		if ( '' !== $expires && 'never' !== $expires && ! isset( $windows[ $expires ] ) ) {
+			return new \WP_REST_Response( [
+				'success' => false,
+				'errors'  => [ [
+					'code'    => 'wpcc_invalid_expiry',
+					'message' => __( 'Choose when this token should stop working, then try again.', 'ai-command-center' ),
+				] ],
+			], 400 );
+		}
+
+		$expires_at = isset( $windows[ $expires ] ) ? time() + $windows[ $expires ] : null;
 
 		$result = ( new AuthTokens() )->create( $label, $scope, $expires_at, get_current_user_id() );
 
