@@ -92,9 +92,20 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 		</div>
 	</div>
 	<p class="description" style="max-width:680px;margin:0 0 18px;">
-		<?php echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::is_protected()
-			? __( 'Both paths obey the same rules: anything that changes your site still needs your approval, and is still recorded.', 'ai-command-center' )
-			: __( 'Both paths obey the same rules — and this site is in Development mode, so changes on both apply immediately. Everything is still recorded and can be undone.', 'ai-command-center' ) ); ?>
+		<?php
+		/*
+		 * This was mode-aware but only two-way, so Standard inherited Strict's
+		 * wording — "anything that changes your site still needs your approval",
+		 * which is not true of the low-risk tier. The point of the sentence is that
+		 * BOTH paths obey the same rules, so it should state the rules once, from
+		 * the one place that knows them.
+		 */
+		printf(
+			/* translators: %s: the mode-aware guarantee sentence. */
+			esc_html__( 'Both paths obey the same rules. %s', 'ai-command-center' ),
+			esc_html( \WPCommandCenter\Operations\SecurityModeManager::promise() )
+		);
+		?>
 	</p>
 
 	<?php if ( $wpcc_ai_tools_off ) : ?>

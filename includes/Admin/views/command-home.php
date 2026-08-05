@@ -355,7 +355,8 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			<h2 id="wpcc-home-guide-h"><?php esc_html_e( 'How this keeps you in control', 'ai-command-center' ); ?></h2>
 			<ol class="wpcc-home__steps">
 				<li><strong><?php esc_html_e( 'You ask', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Tell your assistant what you want changed, in your own words.', 'ai-command-center' ); ?></li>
-				<li><strong><?php esc_html_e( 'You approve', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Anything that changes the site waits for your yes.', 'ai-command-center' ); ?> <a href="<?php echo esc_url( $links['approvals'] ); ?>"><?php esc_html_e( 'Approvals →', 'ai-command-center' ); ?></a></li>
+				<?php // Mode-aware: this sat directly under a banner reading "Approvals are turned off". ?>
+				<li><strong><?php esc_html_e( 'You approve', 'ai-command-center' ); ?></strong><?php echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::approval_step() ); ?> <a href="<?php echo esc_url( $links['approvals'] ); ?>"><?php esc_html_e( 'Approvals →', 'ai-command-center' ); ?></a></li>
 				<li><strong><?php esc_html_e( 'It is recorded', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Every change is logged with who made it and when.', 'ai-command-center' ); ?></li>
 				<li><strong><?php esc_html_e( 'You can undo', 'ai-command-center' ); ?></strong><?php esc_html_e( 'Supported changes can be undone. An undo is a change too, so it follows the same approval rules.', 'ai-command-center' ); ?> <a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'Changes →', 'ai-command-center' ); ?></a></li>
 			</ol>

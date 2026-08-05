@@ -241,7 +241,10 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	/* Panels */
 	.wpcc-ai-panel { background: #fff; border: 1px solid #e3e5ec; border-radius: 12px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(16,24,40,.04); overflow: hidden; }
 	.wpcc-ai-panel__header { padding: 15px 22px; border-bottom: 1px solid #eef0f4; font-size: 14.5px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-	.wpcc-ai-panel__body { padding: 22px; }
+	/* overflow-x on the body, not the panel: the panel needs overflow:hidden for its
+	   border-radius, and that clip removed the Revoke control entirely on a phone-
+	   width window — a security action with no way to reach it. */
+	.wpcc-ai-panel__body { padding: 22px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 	.wpcc-ai-panel__hint { margin: 14px 0 0; color: #646970; font-size: 12.5px; }
 
 	/* Config + code blocks (functional — Configuration tab) */
@@ -257,7 +260,16 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-ai-code__text { flex: 1; margin-right: 10px; }
 
 	/* Tables */
-	.wpcc-ai-token-table { width: 100%; border-collapse: collapse; }
+	/*
+	 * min-width: max-content is what actually makes the panel body scroll.
+	 * With width:100% alone the table box stays pinned to the container while its
+	 * nowrap action cell overflows *visually* — the parent's scrollWidth never
+	 * grows, so overflow-x:auto has nothing to scroll and the Revoke button was
+	 * simply unreachable below ~520px. Sizing the table to its content instead
+	 * makes the overflow real, which the body can then scroll. Wide screens are
+	 * unchanged: max-content is narrower than 100% there, so width:100% wins.
+	 */
+	.wpcc-ai-token-table { width: 100%; min-width: max-content; border-collapse: collapse; }
 	.wpcc-ai-token-table th { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e3e5ec; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; color: #646970; }
 	.wpcc-ai-token-table td { padding: 11px 12px; border-bottom: 1px solid #eef0f4; font-size: 13.5px; }
 	.wpcc-ai-token-table tbody tr:hover { background: #fafbfc; }
@@ -473,35 +485,16 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	// who had already clicked Connect. The beginner explainer below stays — it
 	// answers a real question a first-timer has — but collapsed, on the setup
 	// screen, where it is one click away instead of in the way.
-	if ( false ) :
-	?>
-	<section class="wpcc-ai-hero">
-		<?php
-		// The promise follows the mode. On a Development site "waits for your
-		// approval" is simply false, and this is the first sentence a customer
-		// reads on the screen where they hand an assistant the keys.
-		?>
-		<p class="wpcc-ai-lead"><?php
-			printf(
-				/* translators: %s: the mode-aware guarantee sentence. */
-				esc_html__( 'Connect Claude, Cursor, Codex, ChatGPT, Gemini or any other AI assistant to this site. %s', 'ai-command-center' ),
-				esc_html( SecurityModeManager::promise() )
-			);
-		?></p>
-		<div class="wpcc-ai-chips" role="note" aria-label="<?php esc_attr_e( 'How every assistant stays safe', 'ai-command-center' ); ?>">
-			<span class="wpcc-cds-chip wpcc-cds-chip--approval"><?php esc_html_e( 'Needs your approval', 'ai-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Recorded', 'ai-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible', 'ai-command-center' ); ?></span>
-			<span class="wpcc-cds-chip wpcc-cds-chip--scoped"><?php esc_html_e( 'Limited access', 'ai-command-center' ); ?></span>
-		</div>
-	</section>
-
-	<?php
+	//
+	// It was left behind an `if ( false )` rather than deleted. Dead markup still
+	// ships, still gets read as if it were live, and this block in particular
+	// carried a hardcoded "Needs your approval" chip that a mode sweep would keep
+	// flagging forever. Removed; git history has it if the hero is ever wanted back.
+	//
 	// Closed by default. This opened expanded, so the first thing on the page a
 	// customer met was a FAQ — documentation ahead of the action they came for.
 	// It stays one click away for anyone who wants it.
 	?>
-	<?php endif; // hero retired with the Choose tab ?>
 
 	<details class="wpcc-agent-explainer">
 		<summary><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'ai-command-center' ); ?></summary>
@@ -717,7 +710,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 					<div class="wpcc-tokenmake__panel" id="wpcc-tokenmake-panel" role="dialog" aria-modal="true" aria-labelledby="wpcc-tokenmake-title">
 						<div class="wpcc-tokenmake__box">
-							<h3 class="wpcc-tokenmake__title" id="wpcc-tokenmake-title"><?php esc_html_e( 'Create an access token', 'ai-command-center' ); ?></h3>
+							<h2 class="wpcc-tokenmake__title" id="wpcc-tokenmake-title"><?php esc_html_e( 'Create an access token', 'ai-command-center' ); ?></h2>
 							<p class="wpcc-tokenmake__lead">
 								<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'ai-command-center' ); ?>
 							</p>
@@ -885,7 +878,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				) );
 				?>
 				<?php if ( ! empty( $wpcc_usable_tokens ) ) : ?>
-					<h4 style="margin: 18px 0 10px;"><?php esc_html_e( 'Your tokens', 'ai-command-center' ); ?></h4>
+					<h2 style="margin: 18px 0 10px; font-size: 13px; font-weight: 600;"><?php esc_html_e( 'Your tokens', 'ai-command-center' ); ?></h2>
 					<table class="wpcc-ai-token-table">
 						<thead><tr><th><?php esc_html_e( 'Label', 'ai-command-center' ); ?></th><th><?php esc_html_e( 'Scope', 'ai-command-center' ); ?></th><th><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th><th></th></tr></thead>
 						<tbody>
@@ -1057,7 +1050,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<summary><?php esc_html_e( 'Connection address & where to paste', 'ai-command-center' ); ?></summary>
 						<div class="wpcc-ai-advanced__body">
 							<div class="wpcc-ai-field">
-								<label class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'ai-command-center' ); ?></label>
+								<span class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'ai-command-center' ); ?></span>
 								<div class="wpcc-ai-url">
 									<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_cfg_mcp_url ); ?></code>
 									<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'ai-command-center' ); ?></button>
@@ -1065,7 +1058,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							</div>
 							<?php if ( ! empty( $wpcc_current_client['config_paths'] ) ) : ?>
 								<div class="wpcc-ai-field">
-									<label class="wpcc-ai-field__label"><?php esc_html_e( 'Where to paste this', 'ai-command-center' ); ?></label>
+									<span class="wpcc-ai-field__label"><?php esc_html_e( 'Where to paste this', 'ai-command-center' ); ?></span>
 									<table class="widefat" style="border:none;">
 										<?php foreach ( $wpcc_current_client['config_paths'] as $os => $path ) : ?>
 											<tr><td style="padding:6px 0;width:80px;"><strong><?php echo esc_html( ucfirst( $os ) ); ?></strong></td><td style="padding:6px 0;"><code><?php echo esc_html( $path ); ?></code></td></tr>
@@ -1083,7 +1076,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<div class="wpcc-ai-panel__body">
 					<p style="color:#646970;"><?php esc_html_e( 'A ready-made configuration isn’t available for this assistant yet. You can still connect it manually using the connection address and an access token below.', 'ai-command-center' ); ?></p>
 					<div class="wpcc-ai-field" style="margin-top:14px;">
-						<label class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'ai-command-center' ); ?></label>
+						<span class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'ai-command-center' ); ?></span>
 						<div class="wpcc-ai-url">
 							<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_cfg_mcp_url ); ?></code>
 							<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'ai-command-center' ); ?></button>
@@ -1235,7 +1228,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		// Active token labels, lowercased — used only to warn about a name that is
 		// already in use. Labels are not secrets; no token value is exposed here.
 		var mkExisting = <?php echo wp_json_encode( array_values( array_map( static fn( $t ) => (string) $t['label'], $wpcc_usable_tokens ?? [] ) ) ); ?>;
-		var mkDupeTpl  = <?php echo wp_json_encode( __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'ai-command-center' ) ); ?>;
+		var mkDupeTpl  = <?php echo wp_json_encode( /* translators: %s: the name of an access token that already exists. */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'ai-command-center' ) ); ?>;
 
 		mkForm.classList.add('wpcc-tokenmake--js');
 

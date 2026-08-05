@@ -360,6 +360,24 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		doneUndo:    <?php echo wp_json_encode( __( 'It is recorded and can be undone from Changes.', 'ai-command-center' ) ); ?>,
 		doneBackAi:  <?php echo wp_json_encode( __( 'Back to Built-in AI', 'ai-command-center' ) ); ?>,
 		builtinUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai' ) ); ?>,
+		<?php
+		/*
+		 * Offer the Built-in AI route only when Built-in AI actually exists here.
+		 *
+		 * This button rendered on every executed request. Most requests do not come
+		 * from Built-in AI at all — an assistant's write over MCP and an Undo
+		 * started from the Changes screen both landed on "Back to Built-in AI" —
+		 * and on a stock install, where no generation tool is switched on, it sent
+		 * the customer to a screen that only offers to turn the feature on. A
+		 * "continue" action should lead somewhere they were.
+		 *
+		 * builtin_tabs() returns Providers alone until a tool is enabled, which is
+		 * the same test settings-ai.php uses for its own "tools are off" notice.
+		 * See it in Changes / Review other approvals are always right, so the
+		 * continuation never ends up empty.
+		 */
+		?>
+		hasBuiltinAi:<?php echo wp_json_encode( count( \WPCommandCenter\Admin\AppShell::builtin_tabs() ) > 1 ); ?>,
 		approvalsUrl:<?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>,
 		doneMore:    <?php echo wp_json_encode( __( 'Review other approvals', 'ai-command-center' ) ); ?>,
 		changesUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-history' ) ); ?>,
@@ -387,7 +405,8 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		auditNote:   <?php echo wp_json_encode( __( 'This action will be logged in the audit trail.', 'ai-command-center' ) ); ?>,
 		noPending:   <?php echo wp_json_encode( __( 'Nothing is waiting for you. When your assistant asks to change something, it appears here for your decision.', 'ai-command-center' ) ); ?>,
 		clearTitle:  <?php echo wp_json_encode( __( 'Nothing is waiting for you', 'ai-command-center' ) ); ?>,
-		clearDetail: <?php echo wp_json_encode( __( 'When your assistant asks to change something, it appears here for your decision. Nothing runs until you approve it.', 'ai-command-center' ) ); ?>,
+		<?php // Mode-aware: on a Development site nothing will ever appear here to approve. ?>
+		clearDetail: <?php echo wp_json_encode( \WPCommandCenter\Operations\SecurityModeManager::approvals_empty_detail() ); ?>,
 		selectAll:   <?php echo wp_json_encode( __( 'Select all on this page', 'ai-command-center' ) ); ?>,
 		selectOne:   <?php echo wp_json_encode( __( 'Select this request', 'ai-command-center' ) ); ?>,
 		/* translators: 1: range such as "1–25", 2: total count */
@@ -1429,7 +1448,8 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 					'<p class="wpcc-detail-done__note">' + escHtml( i18n.doneUndo ) + '</p>' +
 					'<p class="wpcc-detail-done__actions">' +
 						'<a class="button button-primary" href="' + escHtml( i18n.changesUrl ) + '">' + escHtml( i18n.approvedLink ) + '</a> ' +
-						'<a class="button" href="' + escHtml( i18n.builtinUrl ) + '">' + escHtml( i18n.doneBackAi ) + '</a> ' +
+						// Only when this site actually has Built-in AI switched on — see hasBuiltinAi.
+						( i18n.hasBuiltinAi ? '<a class="button" href="' + escHtml( i18n.builtinUrl ) + '">' + escHtml( i18n.doneBackAi ) + '</a> ' : '' ) +
 						'<a class="button" href="' + escHtml( i18n.approvalsUrl ) + '">' + escHtml( i18n.doneMore ) + '</a>' +
 					'</p>';
 				html += '<div class="wpcc-detail-section wpcc-detail-done">' + nextHtml + '</div>';

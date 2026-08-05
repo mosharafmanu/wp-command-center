@@ -338,8 +338,19 @@ final class AppShell {
 		$tree = [
 			self::HOME_SLUG => [
 				'label'  => __( 'Home', 'ai-command-center' ),
-				// Home's subtitle is the product's promise, not a description of the page.
-				'desc'   => __( 'Ask your AI assistant to change this site, in your own words and your own language. You approve anything that matters.', 'ai-command-center' ),
+				/*
+				 * Home's subtitle is the product's promise, not a description of the
+				 * page — so it has to follow the mode. It ended with "You approve
+				 * anything that matters" on every site, including a Development one
+				 * whose own banner two lines below reads "Approvals are turned off".
+				 * The invitation is constant; the guarantee comes from the one place
+				 * that knows whether it is true.
+				 */
+				'desc'   => sprintf(
+					/* translators: %s: the mode-aware guarantee sentence. */
+					__( 'Ask your AI assistant to change this site, in your own words and your own language. %s', 'ai-command-center' ),
+					SecurityModeManager::promise()
+				),
 				'detail' => true,
 				'tabs'  => [
 					'home' => [ 'label' => __( 'Home', 'ai-command-center' ), 'view' => 'command-home', 'feature' => null ],
@@ -351,7 +362,9 @@ final class AppShell {
 			// Settings › Advanced where the rest of the machinery lives.
 			self::ACTIVITY_SLUG => [
 				'label'  => __( 'Approvals', 'ai-command-center' ),
-				'desc'   => __( 'Changes waiting for your decision. Nothing runs until you approve it.', 'ai-command-center' ),
+				// Mode-aware: on a Development site nothing new is held here, but a
+				// queue built up before the switch still is. See approvals_desc().
+				'desc'   => SecurityModeManager::approvals_desc(),
 				'detail' => true,
 				'tabs'  => [
 					'approvals' => [ 'label' => __( 'Approvals', 'ai-command-center' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
