@@ -241,6 +241,31 @@ has "assistants: action not on button" "name=\"wpcc_token_action\" value=\"creat
 lacks "assistants: no one-click full-access button" "name=\"wpcc_token_action\" value=\"generate_full\"" "$ASSIST"
 has "assistants: double-submit guard" "mkSent"                   "$ASSIST"
 
+# ── Token expiry defaults to 30 days on BOTH forms ──────────────────────────
+#
+# A key that expires on its own is the difference between "I forgot to revoke
+# that" being a note-to-self and being a permanent hole. Never remains available
+# — some connections genuinely are permanent — but it is now chosen, not
+# inherited. Full access AND never expires earns its own warning, because
+# together they mint a credential that can do anything, forever, that nobody
+# will be reminded about.
+echo
+echo "== 5a4. Expiry defaults to 30 days; long-lived credentials are called out =="
+has "manager: 30 days is the default"        "value=\"30d\" selected" "$VIEW"
+has "assistants: 30 days is the default"     "value=\"30d\" selected" "$ASSIST"
+has "manager: never is still offered"        "value=\"never\"" "$VIEW"
+has "assistants: never is still offered"     "value=\"never\"" "$ASSIST"
+has "manager: reopen resets expiry"          "dlg.expires.value = '30d';" "$VIEW"
+has "assistants: reopen resets expiry"       "mkExpires.value = '30d';"   "$ASSIST"
+has "manager: long-lived warning exists"     "wpcc-tokdlg-longlived" "$VIEW"
+has "assistants: long-lived warning exists"  "wpcc-tokenmake-longlived" "$ASSIST"
+has "manager: needs BOTH full and never"     "isFull && dlg.expires && dlg.expires.value === 'never'" "$VIEW"
+has "assistants: needs BOTH full and never"  "isFull && mkExpires && mkExpires.value === 'never'" "$ASSIST"
+has "the warning explains the consequence"   "no expiry to fall back on" "$VIEW"
+# Server-side: an OMITTED expiry must mean the recommended 30 days, not forever.
+has "REST: omitted expiry defaults to 30d"   "expires = .30d.;" "$RESTAPI"
+has "assistants POST: omitted expiry is 30d" "wpcc_token_expires.\] \?\? .30d." "$ASSIST"
+
 # ── OWNER REQUIREMENT: Read-only is the default on BOTH token forms ──────────
 #
 # "Default to Read-only scope, not Full access." Full access must always be an
@@ -291,8 +316,8 @@ lacks "manager: opener does not create"  "wpcc-create-token'.*dlgSubmit" "$VIEW"
 
 # (e) The Full-access warning is tied to the SELECTION, not shown on open — a
 #     warning about a scope the customer has not chosen trains them to ignore it.
-has "manager: warning hidden until full is picked"    "dlg.warn.hidden = dlgScope\(\) !== 'full';" "$VIEW"
-has "assistants: warning hidden until full is picked" "mkNote.hidden = mkScope\(\) !== 'full';"     "$ASSIST"
+has "manager: warning hidden until full is picked"    "dlg.warn.hidden = ! isFull;" "$VIEW"
+has "assistants: warning hidden until full is picked" "mkNote.hidden = ! isFull;"     "$ASSIST"
 
 # (f) The approved scope explanations survive.
 has "manager: read-only explained"     "never request a change" "$VIEW"
