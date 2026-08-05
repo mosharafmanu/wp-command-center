@@ -32,38 +32,81 @@ $wpcc_actor_context = [
 ];
 
 /**
- * UI-level risk assessment (low|medium|high) for the chosen tables — independent of
- * the operation registry's static risk_level. posts/postmeta only -> low; wp_options
- * -> medium; any wpcc_* (plugin-internal) table -> high; anything else -> medium.
+ * What class of data is this table?
+ *
+ * The old model had three buckets — plugin-internal, options, everything else —
+ * so `wp_users`, session stores, token tables and OAuth credentials all landed
+ * in "everything else" and were scored MEDIUM, the same as a category table. A
+ * customer running a domain replace across the whole database was told the risk
+ * was medium while the operation could rewrite credentials.
+ *
+ * Classification is by suffix, and errs toward caution: anything whose name
+ * suggests authentication, sessions or secrets is sensitive even if this
+ * install has never heard of it, because an unknown table matching those words
+ * is exactly the one not to guess about.
  */
-$wpcc_compute_risk = function ( array $tables ) use ( $wpdb ): string {
+$wpcc_classify_table = function ( string $suffix ): string {
+	if ( str_starts_with( $suffix, 'wpcc_' ) ) {
+		return 'system';
+	}
+	if ( in_array( $suffix, [ 'users', 'usermeta' ], true ) ) {
+		return 'users';
+	}
+	// Auth / session / secret surfaces, including third-party ones this install
+	// may have that WP Command Center knows nothing about.
+	if ( preg_match( '/(session|token|oauth|auth|login|password|secret|api_key|apikey|nonce|credential|2fa|totp)/i', $suffix ) ) {
+		return 'security';
+	}
+	if ( in_array( $suffix, [ 'posts', 'terms', 'term_taxonomy', 'term_relationships', 'comments', 'links' ], true ) ) {
+		return 'content';
+	}
+	if ( in_array( $suffix, [ 'postmeta', 'termmeta', 'commentmeta' ], true ) ) {
+		return 'meta';
+	}
+	if ( 'options' === $suffix ) {
+		return 'options';
+	}
+	return 'other';
+};
+
+/**
+ * Risk for the chosen tables — five tiers that mean what they say.
+ *
+ * Drives the badge, and (above `medium`) the dry-run-before-live requirement.
+ * Breadth counts too: replacing one string across the entire database is a
+ * different act from replacing it in posts, whatever the individual tables are.
+ */
+$wpcc_compute_risk = function ( array $tables ) use ( $wpdb, $wpcc_classify_table ): string {
 	if ( empty( $tables ) ) {
 		return 'low';
 	}
-	$has_system = false;
-	$has_options = false;
-	$only_posts_postmeta = true;
+
+	$classes = [];
 	foreach ( $tables as $table ) {
-		$suffix = substr( $table, strlen( $wpdb->prefix ) );
-		if ( str_starts_with( $suffix, 'wpcc_' ) ) {
-			$has_system = true;
-		}
-		if ( 'options' === $suffix ) {
-			$has_options = true;
-		}
-		if ( ! in_array( $suffix, [ 'posts', 'postmeta' ], true ) ) {
-			$only_posts_postmeta = false;
+		$classes[] = $wpcc_classify_table( substr( $table, strlen( $wpdb->prefix ) ) );
+	}
+	$classes = array_unique( $classes );
+
+	// Anything that can rewrite credentials, sessions or the plugin's own
+	// governance state is critical regardless of how few tables are selected.
+	foreach ( [ 'users', 'security', 'system' ] as $critical ) {
+		if ( in_array( $critical, $classes, true ) ) {
+			return 'critical';
 		}
 	}
-	if ( $has_system ) {
+	// A broad sweep across many tables is critical on breadth alone: the
+	// customer cannot have reviewed what a single string touches in all of them.
+	if ( count( $tables ) >= 8 ) {
+		return 'critical';
+	}
+	if ( in_array( 'options', $classes, true ) ) {
 		return 'high';
 	}
-	if ( $has_options ) {
-		return 'medium';
+	if ( in_array( 'other', $classes, true ) ) {
+		return 'high';
 	}
-	if ( $only_posts_postmeta ) {
-		return 'low';
-	}
+	// Content and meta only. Still a real write to live content, so never "low"
+	// once something is selected — low is reserved for "nothing chosen yet".
 	return 'medium';
 };
 
@@ -157,19 +200,12 @@ $wp_tables = $wpdb->get_col( "SHOW TABLES LIKE '{$wpdb->prefix}%'" );
 // Classify each table (content / meta / options / system / other).
 $wpcc_table_groups = [];
 foreach ( $wp_tables as $table ) {
-	$suffix = substr( $table, strlen( $wpdb->prefix ) );
-	if ( str_starts_with( $suffix, 'wpcc_' ) ) {
-		$wpcc_table_groups[ $table ] = 'system';
-	} elseif ( in_array( $suffix, [ 'posts', 'terms', 'term_taxonomy', 'term_relationships', 'comments', 'links' ], true ) ) {
-		$wpcc_table_groups[ $table ] = 'content';
-	} elseif ( in_array( $suffix, [ 'postmeta', 'termmeta', 'commentmeta' ], true ) ) {
-		$wpcc_table_groups[ $table ] = 'meta';
-	} elseif ( 'options' === $suffix ) {
-		$wpcc_table_groups[ $table ] = 'options';
-	} else {
-		$wpcc_table_groups[ $table ] = 'other';
-	}
+	$wpcc_table_groups[ $table ] = $wpcc_classify_table( substr( $table, strlen( $wpdb->prefix ) ) );
 }
+// Tables a first-time customer should never have to think about, let alone
+// tick by accident: the plugin's own governance tables, the user table, and
+// anything holding sessions, tokens or secrets.
+$wpcc_sensitive_groups = [ 'system', 'users', 'security' ];
 
 // Preserve selection across reloads; default to posts + options.
 $wpcc_checked_tables = isset( $_POST['wpcc_sr_action'] )
@@ -220,6 +256,14 @@ $sr_preview_js = $sr_preview ? [
 	.wpcc-risk-low { background: #00a32a; }
 	.wpcc-risk-medium { background: #dba617; }
 	.wpcc-risk-high { background: #d63638; }
+	.wpcc-risk-critical { background: #7f1d1d; }
+	.wpcc-sr-summary { font-weight: normal; color: #50575e; font-size: 12px; float: right; }
+	.wpcc-sr-advanced { border: 1px solid #dcdcde; border-radius: 4px; padding: 10px 12px; margin-bottom: 12px; background: #fbfbfc; }
+	.wpcc-sr-advanced > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+	.wpcc-sr-sensitive { margin-top: 12px; border: 1px solid #eec2c2; border-radius: 4px; padding: 10px 12px; background: #fcf0f0; }
+	.wpcc-sr-sensitive > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: #8a2424; }
+	.wpcc-sr-sensitive__warn { margin: 8px 0; font-size: 12px; line-height: 1.6; color: #8a2424; }
+	.wpcc-sr-gate { margin: 0 0 10px; padding: 8px 10px; font-size: 12px; line-height: 1.6; color: #8a6100; background: #fcf9e8; border: 1px solid #f0e2a6; border-radius: 4px; }
 	.wpcc-modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.5); z-index: 100000; align-items: center; justify-content: center; }
 	.wpcc-modal-overlay.is-visible { display: flex; }
 	.wpcc-modal { background: #fff; padding: 20px 24px; max-width: 520px; width: 90%; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,.2); }
@@ -273,30 +317,87 @@ $sr_preview_js = $sr_preview ? [
 								<option value="custom"><?php esc_html_e( 'Custom Selection', 'ai-command-center' ); ?></option>
 							</select>
 						</p>
+						<?php
+						/*
+						 * Presets first; the raw table list behind a deliberate reveal.
+						 *
+						 * The old picker opened on every table in the database, with the
+						 * plugin's own tables merely display:none behind a checkbox. So a
+						 * first-time customer doing a domain replace was scrolling a list
+						 * containing users, usermeta, session stores and WooCommerce
+						 * internals, deciding which of them a string replace should touch.
+						 * That is not a decision to hand someone who wanted to fix a URL.
+						 *
+						 * A preset now covers the ordinary job. The full list is one click
+						 * away for anyone who needs it, and the tables that can rewrite
+						 * credentials or governance state need a second, separate opt-in
+						 * with the risk stated in words. Nothing is removed — the same
+						 * tables remain reachable, and the governed flow behind them is
+						 * unchanged.
+						 */
+						?>
 						<p>
 							<label><strong><?php esc_html_e( 'Target Tables:', 'ai-command-center' ); ?></strong></label>
-							<label style="font-weight: normal; float: right;">
-								<input type="checkbox" id="wpcc-sr-show-system"> <?php esc_html_e( 'Show System Tables', 'ai-command-center' ); ?>
-							</label>
+							<span id="wpcc-sr-selected-summary" class="wpcc-sr-summary" role="status"></span>
+						</p>
+
+						<details class="wpcc-sr-advanced" id="wpcc-sr-advanced">
+							<summary><?php esc_html_e( 'Choose specific tables', 'ai-command-center' ); ?></summary>
+							<p class="description" style="margin:8px 0;">
+								<?php esc_html_e( 'Most jobs are covered by a preset above. Pick individual tables only if you know why you need them.', 'ai-command-center' ); ?>
+							</p>
 							<div class="wpcc-sr-tables">
 								<?php foreach ( $wp_tables as $table ) :
-									$group     = $wpcc_table_groups[ $table ];
-									$is_system = ( 'system' === $group );
-									$suffix    = substr( $table, strlen( $wpdb->prefix ) );
+									$group        = $wpcc_table_groups[ $table ];
+									$is_sensitive = in_array( $group, $wpcc_sensitive_groups, true );
+									$suffix       = substr( $table, strlen( $wpdb->prefix ) );
+									if ( $is_sensitive ) {
+										continue; // rendered in its own reveal below
+									}
 								?>
-									<label class="wpcc-sr-table-row<?php echo $is_system ? ' wpcc-sr-system-row' : ''; ?>"<?php echo $is_system ? ' style="display:none;"' : ''; ?>>
+									<label class="wpcc-sr-table-row">
 										<input type="checkbox" name="tables[]" value="<?php echo esc_attr( $table ); ?>" data-group="<?php echo esc_attr( $group ); ?>" data-suffix="<?php echo esc_attr( $suffix ); ?>" <?php checked( in_array( $table, $wpcc_checked_tables, true ) ); ?>>
 										<?php echo esc_html( $table ); ?>
 									</label>
 								<?php endforeach; ?>
 							</div>
-						</p>
+
+							<?php
+							// The second gate. Separate from the list above precisely so
+							// that reaching these tables is a distinct, deliberate act.
+							$wpcc_sensitive_tables = array_filter(
+								$wp_tables,
+								static fn ( $t ) => in_array( $wpcc_table_groups[ $t ], $wpcc_sensitive_groups, true )
+							);
+							?>
+							<?php if ( ! empty( $wpcc_sensitive_tables ) ) : ?>
+								<details class="wpcc-sr-sensitive" id="wpcc-sr-sensitive">
+									<summary><?php esc_html_e( 'Show sensitive tables (accounts, sessions, security, plugin internals)', 'ai-command-center' ); ?></summary>
+									<p class="wpcc-sr-sensitive__warn" role="note">
+										<?php esc_html_e( 'These tables hold account records, sign-in sessions, access tokens and WP Command Center’s own approval and audit history. A text replace here can lock people out of the site or damage the record of what happened on it. Selecting any of them makes this a critical-risk run.', 'ai-command-center' ); ?>
+									</p>
+									<div class="wpcc-sr-tables">
+										<?php foreach ( $wpcc_sensitive_tables as $table ) :
+											$suffix = substr( $table, strlen( $wpdb->prefix ) );
+										?>
+											<label class="wpcc-sr-table-row">
+												<input type="checkbox" name="tables[]" value="<?php echo esc_attr( $table ); ?>" data-group="<?php echo esc_attr( $wpcc_table_groups[ $table ] ); ?>" data-suffix="<?php echo esc_attr( $suffix ); ?>" <?php checked( in_array( $table, $wpcc_checked_tables, true ) ); ?>>
+												<?php echo esc_html( $table ); ?>
+											</label>
+										<?php endforeach; ?>
+									</div>
+								</details>
+							<?php endif; ?>
+						</details>
 						<p>
 							<label><input type="checkbox" name="dry_run" id="wpcc-sr-dry-run" value="1" <?php checked( $wpcc_dry_run_checked ); ?>> <?php esc_html_e( 'Dry Run (Preview changes only)', 'ai-command-center' ); ?></label>
 						</p>
 						<p>
 							<?php esc_html_e( 'Computed Risk Level:', 'ai-command-center' ); ?>
 							<span id="wpcc-sr-risk-badge" class="wpcc-risk-badge wpcc-risk-low">LOW</span>
+						</p>
+						<p class="wpcc-sr-gate" id="wpcc-sr-gate-note" role="note" hidden>
+							<?php esc_html_e( 'Run a Dry Preview first. At this risk level the preview is what tells you how many rows a live run would rewrite — tick Dry Run, run it, then come back.', 'ai-command-center' ); ?>
 						</p>
 						<p>
 							<button type="submit" name="wpcc_sr_action" value="run" id="wpcc-sr-submit-btn" class="button button-primary"><?php esc_html_e( 'Run Dry Preview', 'ai-command-center' ); ?></button>
@@ -358,6 +459,9 @@ $sr_preview_js = $sr_preview ? [
 		var LABEL_DRY_RUN   = <?php echo wp_json_encode( __( 'Run Dry Preview', 'ai-command-center' ) ); ?>;
 		var LABEL_LIVE_RUN  = <?php echo wp_json_encode( __( 'Create Replace Request', 'ai-command-center' ) ); ?>;
 		var LABEL_NONE      = <?php echo wp_json_encode( __( 'None selected', 'ai-command-center' ) ); ?>;
+		/* translators: %1$d: number of database tables selected. */
+		var LABEL_SELECTED  = <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d table(s) selected', 'ai-command-center' ) ); ?>;
+		var LABEL_NONE_SELECTED = <?php echo wp_json_encode( __( 'No tables selected yet — pick a preset above.', 'ai-command-center' ) ); ?>;
 		var LABEL_FROM_PREVIEW = <?php echo wp_json_encode( ' ' . __( '(from last Dry Preview)', 'ai-command-center' ) ); ?>;
 		var LABEL_UNKNOWN_ROWS = <?php echo wp_json_encode( __( 'Unknown — run "Run Dry Preview" first for an exact count.', 'ai-command-center' ) ); ?>;
 
@@ -365,7 +469,9 @@ $sr_preview_js = $sr_preview ? [
 		var dryRunCb     = document.getElementById( 'wpcc-sr-dry-run' );
 		var submitBtn    = document.getElementById( 'wpcc-sr-submit-btn' );
 		var presetSelect = document.getElementById( 'wpcc-sr-preset' );
-		var showSystemCb = document.getElementById( 'wpcc-sr-show-system' );
+		var summaryEl    = document.getElementById( 'wpcc-sr-selected-summary' );
+		var advancedEl   = document.getElementById( 'wpcc-sr-advanced' );
+		var gateNote     = document.getElementById( 'wpcc-sr-gate-note' );
 		var tableBoxes   = Array.prototype.slice.call( form.querySelectorAll( 'input[name="tables[]"]' ) );
 		var riskBadge    = document.getElementById( 'wpcc-sr-risk-badge' );
 		var searchInput  = document.getElementById( 'wpcc-sr-search' );
@@ -373,26 +479,35 @@ $sr_preview_js = $sr_preview ? [
 		var confirmedFld = document.getElementById( 'wpcc-sr-confirmed' );
 		var overlay      = document.getElementById( 'wpcc-sr-confirm-overlay' );
 
+		// Mirrors $wpcc_compute_risk on the server, tier for tier. The badge a
+		// customer reads before clicking must be the one the request is scored
+		// with — a preview that under-states the risk is worse than no preview.
 		function computeRisk() {
 			var checked = tableBoxes.filter( function ( cb ) { return cb.checked; } );
 			if ( ! checked.length ) { return 'low'; }
-			var hasSystem = false, hasOptions = false, onlyPostsPostmeta = true;
-			checked.forEach( function ( cb ) {
-				var group  = cb.getAttribute( 'data-group' );
-				var suffix = cb.getAttribute( 'data-suffix' );
-				if ( 'system' === group ) { hasSystem = true; }
-				if ( 'options' === group ) { hasOptions = true; }
-				if ( 'posts' !== suffix && 'postmeta' !== suffix ) { onlyPostsPostmeta = false; }
-			} );
-			if ( hasSystem ) { return 'high'; }
-			if ( hasOptions ) { return 'medium'; }
-			if ( onlyPostsPostmeta ) { return 'low'; }
+			var groups = checked.map( function ( cb ) { return cb.getAttribute( 'data-group' ); } );
+			if ( groups.indexOf( 'users' ) !== -1 || groups.indexOf( 'security' ) !== -1 || groups.indexOf( 'system' ) !== -1 ) {
+				return 'critical';
+			}
+			if ( checked.length >= 8 ) { return 'critical'; }
+			if ( groups.indexOf( 'options' ) !== -1 || groups.indexOf( 'other' ) !== -1 ) { return 'high'; }
 			return 'medium';
 		}
+		// A live run at high or critical risk must be previewed first. The dry run
+		// is the only thing that turns "this might match a lot" into a number, and
+		// it is free — so the guard costs a click and buys the customer the fact
+		// they most need before rewriting rows they cannot see.
+		function needsPreviewFirst( risk ) { return 'high' === risk || 'critical' === risk; }
+		function previewMatchesSelection( tables ) {
+			if ( ! LAST_PREVIEW ) { return false; }
+			var sorted = tables.slice().sort();
+			return LAST_PREVIEW.search === searchInput.value &&
+				LAST_PREVIEW.replace === replaceInput.value &&
+				JSON.stringify( LAST_PREVIEW.tables.slice().sort() ) === JSON.stringify( sorted );
+		}
 		function paintRisk( el, risk ) { el.textContent = risk.toUpperCase(); el.className = 'wpcc-risk-badge wpcc-risk-' + risk; }
-		function refreshRisk() { paintRisk( riskBadge, computeRisk() ); }
+		function refreshRisk() { paintRisk( riskBadge, computeRisk() ); refreshSummary(); refreshMode(); }
 		tableBoxes.forEach( function ( cb ) { cb.addEventListener( 'change', refreshRisk ); } );
-		refreshRisk();
 
 		presetSelect.addEventListener( 'change', function () {
 			var preset = this.value;
@@ -401,18 +516,42 @@ $sr_preview_js = $sr_preview ? [
 			tableBoxes.forEach( function ( cb ) { cb.checked = list.indexOf( cb.value ) !== -1; } );
 			refreshRisk();
 		} );
-
-		showSystemCb.addEventListener( 'change', function () {
-			var rows = form.querySelectorAll( '.wpcc-sr-system-row' );
-			rows.forEach( function ( row ) { row.style.display = showSystemCb.checked ? '' : 'none'; } );
+		// A custom selection is what the reveal is for — open it rather than
+		// leaving the customer looking at an unchanged screen.
+		presetSelect.addEventListener( 'change', function () {
+			if ( 'custom' === this.value && advancedEl ) { advancedEl.open = true; }
 		} );
 
+		// A running summary of what is selected, so the customer never has to open
+		// the reveal to find out what they are about to run against.
+		function refreshSummary() {
+			if ( ! summaryEl ) { return; }
+			var checked = tableBoxes.filter( function ( cb ) { return cb.checked; } );
+			summaryEl.textContent = checked.length
+				? LABEL_SELECTED.replace( '%1$d', checked.length )
+				: LABEL_NONE_SELECTED;
+		}
+
 		function refreshMode() {
-			if ( dryRunCb.checked ) { submitBtn.textContent = LABEL_DRY_RUN; submitBtn.type = 'submit'; }
-			else { submitBtn.textContent = LABEL_LIVE_RUN; submitBtn.type = 'button'; }
+			if ( dryRunCb.checked ) {
+				submitBtn.textContent = LABEL_DRY_RUN;
+				submitBtn.type = 'submit';
+				submitBtn.disabled = false;
+				if ( gateNote ) { gateNote.hidden = true; }
+				return;
+			}
+			submitBtn.textContent = LABEL_LIVE_RUN;
+			submitBtn.type = 'button';
+
+			var tables = tableBoxes.filter( function ( cb ) { return cb.checked; } ).map( function ( cb ) { return cb.value; } );
+			var blocked = needsPreviewFirst( computeRisk() ) && ! previewMatchesSelection( tables );
+			submitBtn.disabled = blocked;
+			if ( gateNote ) { gateNote.hidden = ! blocked; }
 		}
 		dryRunCb.addEventListener( 'change', refreshMode );
-		refreshMode();
+		searchInput.addEventListener( 'input', refreshMode );
+		replaceInput.addEventListener( 'input', refreshMode );
+		refreshRisk();
 
 		submitBtn.addEventListener( 'click', function ( e ) {
 			if ( dryRunCb.checked ) { return; }
