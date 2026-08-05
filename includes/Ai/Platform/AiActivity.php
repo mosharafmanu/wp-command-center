@@ -54,8 +54,82 @@ final class AiActivity {
 
 	/** Humanize a raw action string ("ai.connection.test" → "Ai connection test"). */
 	public static function humanize( string $action ): string {
+		/*
+		 * The activity feed is customer-facing, and it was rendering raw audit
+		 * ids with the dots swapped for spaces: "Operation worker completed",
+		 * "Operation result created", "Operation execution started". On a real
+		 * install those three account for the overwhelming majority of the feed
+		 * (31 of 40 entries when this was written), so what a customer actually
+		 * saw on the Built-in AI screen was a wall of the engine talking to
+		 * itself — twice over, since the category chip beside it already said
+		 * "Operation".
+		 *
+		 * Three layers, in order:
+		 *   1. an explicit map for the events customers actually meet;
+		 *   2. `operation.{operation_id}.{state}` resolved through ActionLabels,
+		 *      the same dictionary Approvals and Changes use, so one operation
+		 *      reads the same way everywhere;
+		 *   3. the original mechanical humanizer, so a newly added event still
+		 *      degrades to readable words rather than to a raw id.
+		 */
+		$explicit = self::event_labels();
+		if ( isset( $explicit[ $action ] ) ) {
+			return $explicit[ $action ];
+		}
+
+		// operation.<operation_id>.<started|completed|failed>
+		if ( preg_match( '/^operation\.([a-z0-9_]+)\.(started|completed|failed)$/', $action, $m ) ) {
+			$title = \WPCommandCenter\Admin\ActionLabels::describe( $m[1], '', [], '' );
+			if ( '' !== $title ) {
+				return match ( $m[2] ) {
+					'started'   => sprintf( /* translators: %s: what the change does. */ __( '%s — started', 'ai-command-center' ), $title ),
+					'failed'    => sprintf( /* translators: %s: what the change does. */ __( '%s — did not run', 'ai-command-center' ), $title ),
+					default     => sprintf( /* translators: %s: what the change does. */ __( '%s — done', 'ai-command-center' ), $title ),
+				};
+			}
+		}
+
 		$s = str_replace( [ '.', '_' ], ' ', $action );
 		return ucfirst( trim( $s ) );
+	}
+
+	/**
+	 * Customer-facing names for the audit events that actually reach the feed.
+	 * Engine vocabulary — worker, execution, result — never appears; what the
+	 * customer sees is what the product was doing on their behalf.
+	 *
+	 * @return array<string,string>
+	 */
+	private static function event_labels(): array {
+		return [
+			// The background queue. "Worker" is the engine's word for it.
+			'operation.worker.started'    => __( 'Background processing started', 'ai-command-center' ),
+			'operation.worker.completed'  => __( 'Background processing completed', 'ai-command-center' ),
+			'operation.worker.failed'     => __( 'Background processing failed', 'ai-command-center' ),
+			'operation.worker.locked'     => __( 'Background processing picked up an item', 'ai-command-center' ),
+			// Applying an approved change.
+			'operation.execution.started'   => __( 'Applying an approved change', 'ai-command-center' ),
+			'operation.execution.completed' => __( 'Approved change applied', 'ai-command-center' ),
+			'operation.execution.failed'    => __( 'A change could not be applied', 'ai-command-center' ),
+			// Bookkeeping the customer does not need named as bookkeeping.
+			'operation.result.created'    => __( 'Result recorded', 'ai-command-center' ),
+			'operation.result.completed'  => __( 'Result recorded', 'ai-command-center' ),
+			// Governance moments that matter to them.
+			'operation.approval.required'        => __( 'Waiting for your approval', 'ai-command-center' ),
+			'operation.approval.auto_requested'  => __( 'Sent for your approval', 'ai-command-center' ),
+			'operation.request.approved'         => __( 'You approved a change', 'ai-command-center' ),
+			'operation.request.rejected'         => __( 'You rejected a change', 'ai-command-center' ),
+			// Built-in AI generation.
+			'seo.generate.started'        => __( 'Generating SEO suggestions', 'ai-command-center' ),
+			'seo.generate.completed'      => __( 'SEO suggestions generated', 'ai-command-center' ),
+			'alt_text.generate.started'   => __( 'Generating alt text', 'ai-command-center' ),
+			'alt_text.generate.completed' => __( 'Alt text generated', 'ai-command-center' ),
+			'content.generate.started'    => __( 'Generating content suggestions', 'ai-command-center' ),
+			'content.generate.completed'  => __( 'Content suggestions generated', 'ai-command-center' ),
+			'proposal.created'            => __( 'Suggestion saved as a draft', 'ai-command-center' ),
+			'proposal.applied'            => __( 'Suggestion applied', 'ai-command-center' ),
+			'proposal.dismissed'          => __( 'Suggestion dismissed', 'ai-command-center' ),
+		];
 	}
 
 	/**
