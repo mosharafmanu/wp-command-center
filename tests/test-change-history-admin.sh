@@ -28,6 +28,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
+
 # shellcheck source=/dev/null
 source "$PLUGIN_DIR/wpcc-env.sh"
 
@@ -328,7 +335,10 @@ echo wp_json_encode( [
 assert_eq   "approval: client mode returns pending_approval"        "pending_approval" "$(pj "$APPR" '.status')"
 assert_true "approval: an approval request was created"             "$(pj "$APPR" '.has_request')"
 assert_true "approval: rollback did NOT execute (value + status unchanged)" "$(pj "$APPR" '.not_executed')"
-assert_eq   "approval: security mode restored to developer"         "developer" "$(pj "$APPR" '.mode_after')"
+# The eval block above captures and restores the mode itself; the assertion
+# used to compare it against a hardcoded "developer", so it only held on a site
+# that happened to start in developer. Compare against the real starting mode.
+assert_eq   "approval: security mode restored to the starting mode" "$WPCC_ORIG_MODE" "$(pj "$APPR" '.mode_after')"
 
 echo
 echo "== 15. STEP 105.3 DestructiveGuard: ordinary (non-high-risk) reversal takes the fast path =="

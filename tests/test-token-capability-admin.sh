@@ -48,6 +48,13 @@ WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
+
 # shellcheck source=/dev/null
 [ -f "$PLUGIN_DIR/wpcc-env.sh" ] && source "$PLUGIN_DIR/wpcc-env.sh"
 

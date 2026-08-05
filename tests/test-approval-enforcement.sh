@@ -9,11 +9,18 @@
 #   - Client mode: write ops via REST also return 200 with pending_approval body
 #   - The request -> approve -> execute workflow works (in Developer mode via REST)
 #   - Manifest security.human_approval_required reflects the active Security Mode
-#   - Security mode is restored to developer after the test
+#   - Security mode is restored to whatever the site started in (mode-guard)
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../wpcc-env.sh"
 WP_PATH="$SCRIPT_DIR/../../../.."
+
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_PATH"
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }

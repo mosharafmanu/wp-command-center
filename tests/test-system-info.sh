@@ -8,6 +8,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../wpcc-env.sh"
 WP_PATH="$SCRIPT_DIR/../../../.."
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_PATH"
+
 PASS=0; FAIL=0
 
 pass()       { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -122,10 +129,11 @@ SHELL_CAPS=$(echo "$DATA" | jq -r '.shell_capabilities // empty')
 assert_nonempty "shell_capabilities field present" "$SHELL_CAPS"
 
 # ===================================================================
-echo "== Cleanup: restore developer mode =="
+echo "== Cleanup: restore the mode the site started in =="
 set_mode "developer"
-RESTORED=$(wp eval "echo get_option('wpcc_security_mode', 'developer');" --path="$WP_PATH" 2>/dev/null)
-assert_eq "mode restored to developer" "developer" "$RESTORED"
+wp eval "update_option('wpcc_security_mode', '${WPCC_ORIG_MODE}');" --path="$WP_PATH" >/dev/null 2>&1
+RESTORED=$(wp eval "echo get_option('wpcc_security_mode', '');" --path="$WP_PATH" 2>/dev/null)
+assert_eq "mode restored to the starting mode" "$WPCC_ORIG_MODE" "$RESTORED"
 
 echo ""
 echo "== Summary =="
