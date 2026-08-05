@@ -101,7 +101,11 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 		// Expiry is validated against the offered set. An unrecognised value used
 		// to fall through to "never" on the manager screen, which turns a typo
 		// into a permanent key — here an unknown value is simply refused.
-		$wpcc_exp_choice = sanitize_key( (string) ( $_POST['wpcc_token_expires'] ?? 'never' ) );
+		// An ABSENT expiry field now means the recommended 30 days, not "never".
+		// Fail-closed on this control means the shorter life, not the longer one:
+		// a form that arrives without the field (tampered, or an old cached page)
+		// should not be the way somebody gets a permanent credential.
+		$wpcc_exp_choice = sanitize_key( (string) ( $_POST['wpcc_token_expires'] ?? '30d' ) );
 		$wpcc_exp_map    = [
 			'30d' => 30 * DAY_IN_SECONDS,
 			'90d' => 90 * DAY_IN_SECONDS,
@@ -774,11 +778,18 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 								<label class="wpcc-tokenmake__label" for="wpcc-tokenmake-expires">
 									<?php esc_html_e( 'Stop working after', 'ai-command-center' ); ?>
 								</label>
+								<?php
+								// 30 days is the default. A key that expires on its own is
+								// the difference between "I forgot to revoke that" being a
+								// note-to-self and being a permanent hole. Never stays on the
+								// list — some connections genuinely are permanent — but it is
+								// now a choice someone makes rather than one they inherit.
+								?>
 								<select id="wpcc-tokenmake-expires" name="wpcc_token_expires">
-									<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'ai-command-center' ); ?></option>
-									<option value="30d"><?php esc_html_e( '30 days', 'ai-command-center' ); ?></option>
+									<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'ai-command-center' ); ?></option>
 									<option value="90d"><?php esc_html_e( '90 days', 'ai-command-center' ); ?></option>
 									<option value="1y"><?php esc_html_e( '1 year', 'ai-command-center' ); ?></option>
+									<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'ai-command-center' ); ?></option>
 								</select>
 								<p class="wpcc-tokenmake__hint">
 									<?php esc_html_e( 'An expiring token stops working on its own. Pick one if this is for a temporary job or someone else’s computer.', 'ai-command-center' ); ?>
@@ -801,6 +812,19 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							 *    warning instead of comfort.
 							 */
 							?>
+							<?php
+							/*
+							 * Full access AND never expires is the one combination worth
+							 * calling out on its own. Either alone is a reasonable choice;
+							 * together they mint a credential that can do anything, for as
+							 * long as the site exists, that nobody will be reminded about.
+							 * Shown only when both are selected, so it stays a signal.
+							 */
+							?>
+							<p class="wpcc-tokenmake__note wpcc-tokenmake__note--warn" id="wpcc-tokenmake-longlived" hidden>
+								<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'ai-command-center' ); ?>
+							</p>
+
 							<p class="wpcc-tokenmake__note<?php echo esc_attr( $wpcc_protected ? '' : ' wpcc-tokenmake__note--warn' ); ?>" id="wpcc-tokenmake-note" data-protected="<?php echo esc_attr( $wpcc_protected ? '1' : '0' ); ?>" hidden>
 								<?php if ( $wpcc_protected ) : ?>
 									<?php
@@ -1203,6 +1227,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		var mkDupe   = document.getElementById('wpcc-tokenmake-dupe');
 		var mkSubmit = document.getElementById('wpcc-tokenmake-submit');
 		var mkNote   = document.getElementById('wpcc-tokenmake-note');
+		var mkLongLived = document.getElementById('wpcc-tokenmake-longlived');
+		var mkExpires   = document.getElementById('wpcc-tokenmake-expires');
 		var mkPrev   = null;
 		var mkSent   = false;
 
@@ -1227,7 +1253,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			// The full-access consequence note appears only when full access is
 			// actually selected — read-only is the default, so on open there is
 			// nothing to warn about.
-			if (mkNote) { mkNote.hidden = mkScope() !== 'full'; }
+			var isFull = mkScope() === 'full';
+			if (mkNote) { mkNote.hidden = ! isFull; }
+			// The long-lived-credential warning needs BOTH conditions.
+			if (mkLongLived) {
+				mkLongLived.hidden = ! ( isFull && mkExpires && mkExpires.value === 'never' );
+			}
 		}
 		function mkShow() {
 			mkPrev = document.activeElement;
@@ -1236,6 +1267,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			// thing "Full access must be an explicit selection" rules out.
 			var ro = mkForm.querySelector('input[name="wpcc_token_scope"][value="read_only"]');
 			if (ro) { ro.checked = true; }
+			// Reopening returns to the safe defaults, expiry included — a dialog
+			// that remembered a previous "never" would hand it back silently.
+			if (mkExpires) { mkExpires.value = '30d'; }
 			mkSyncScope();
 			mkForm.classList.add('is-open');
 			mkLabel.focus();
@@ -1268,6 +1302,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			mkForm.querySelectorAll('input[name="wpcc_token_scope"]'),
 			function (r) { r.addEventListener('change', mkSyncScope); }
 		);
+		if (mkExpires) { mkExpires.addEventListener('change', mkSyncScope); }
 		mkSyncScope();
 
 		// Clicking the backdrop cancels; clicking inside the box does not.

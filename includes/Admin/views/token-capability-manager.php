@@ -145,11 +145,16 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 
 			<div class="wpcc-tokdlg__field">
 				<label class="wpcc-tokdlg__label" for="wpcc-new-expires"><?php esc_html_e( 'Stop working after', 'ai-command-center' ); ?></label>
+				<?php
+				// 30 days is the default; Never remains available as a deliberate
+				// choice rather than an inherited one. See the note in
+				// ai-integrations.php — both forms behave the same way.
+				?>
 				<select id="wpcc-new-expires">
-					<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'ai-command-center' ); ?></option>
-					<option value="30d"><?php esc_html_e( '30 days', 'ai-command-center' ); ?></option>
+					<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'ai-command-center' ); ?></option>
 					<option value="90d"><?php esc_html_e( '90 days', 'ai-command-center' ); ?></option>
 					<option value="1y"><?php esc_html_e( '1 year', 'ai-command-center' ); ?></option>
+					<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'ai-command-center' ); ?></option>
 				</select>
 			</div>
 
@@ -157,6 +162,14 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 			// Shown only when Full access is selected — a warning that is always on
 			// screen is wallpaper. It has to be true, so it names the actual mode.
 			?>
+			<?php
+			// Full access AND never expires: a permanent key to everything, with no
+			// expiry to fall back on if it leaks. Shown only when both are chosen.
+			?>
+			<p class="wpcc-tokdlg__warn wpcc-tokdlg__warn--danger" id="wpcc-tokdlg-longlived" hidden>
+				<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'ai-command-center' ); ?>
+			</p>
+
 			<p class="wpcc-tokdlg__warn<?php echo esc_attr( $wpcc_tok_protected ? '' : ' wpcc-tokdlg__warn--danger' ); ?>" id="wpcc-tokdlg-warn" hidden>
 				<?php if ( $wpcc_tok_protected ) : ?>
 					<?php
@@ -815,6 +828,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		expires: document.getElementById( 'wpcc-new-expires' ),
 		dupe:    document.getElementById( 'wpcc-tokdlg-dupe' ),
 		warn:    document.getElementById( 'wpcc-tokdlg-warn' ),
+		longLived: document.getElementById( 'wpcc-tokdlg-longlived' ),
 		result:  document.getElementById( 'wpcc-tokdlg-result' ),
 		create:  document.getElementById( 'wpcc-tokdlg-create' ),
 		cancel:  document.getElementById( 'wpcc-tokdlg-cancel' ),
@@ -834,7 +848,12 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 	}
 	function dlgSyncScope() {
 		// The full-access warning appears only when full access is actually chosen.
-		dlg.warn.hidden = dlgScope() !== 'full';
+		var isFull = dlgScope() === 'full';
+		dlg.warn.hidden = ! isFull;
+		// The long-lived-credential warning needs BOTH full access and no expiry.
+		if ( dlg.longLived ) {
+			dlg.longLived.hidden = ! ( isFull && dlg.expires && dlg.expires.value === 'never' );
+		}
 	}
 	function dlgCheckDupe() {
 		// Warn, do not block. Two assistants legitimately share a name; what is
@@ -869,7 +888,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		dlg.form.hidden   = false;
 		dlg.secret.hidden = true;
 		dlg.label.value   = '';
-		dlg.expires.value = 'never';
+		dlg.expires.value = '30d';
 		var ro = dlg.root.querySelector( 'input[name="wpcc-new-scope"][value="read_only"]' );
 		if ( ro ) { ro.checked = true; }
 		dlg.result.style.display = 'none';
@@ -948,6 +967,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		dlg.done.addEventListener( 'click', dlgClose );
 		dlg.copy.addEventListener( 'click', dlgCopy );
 		dlg.label.addEventListener( 'input', dlgCheckDupe );
+		dlg.expires.addEventListener( 'change', dlgSyncScope );
 		dlg.value.addEventListener( 'focus', function () { dlg.value.select(); } );
 		Array.prototype.forEach.call( dlg.root.querySelectorAll( 'input[name="wpcc-new-scope"]' ), function ( r ) {
 			r.addEventListener( 'change', dlgSyncScope );

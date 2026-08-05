@@ -1493,7 +1493,19 @@ final class AdminRestApi {
 			'1y'  => YEAR_IN_SECONDS,
 		];
 
-		if ( '' !== $expires && 'never' !== $expires && ! isset( $windows[ $expires ] ) ) {
+		/*
+		 * An OMITTED expiry defaults to 30 days, not to "never".
+		 *
+		 * The route used to treat a missing value as an unlimited lifetime, so the
+		 * least deliberate request produced the most permissive credential. On this
+		 * control fail-closed means the shorter life. "never" is still honoured —
+		 * it just has to be asked for, exactly as it does in the UI.
+		 */
+		if ( '' === $expires ) {
+			$expires = '30d';
+		}
+
+		if ( 'never' !== $expires && ! isset( $windows[ $expires ] ) ) {
 			return new \WP_REST_Response( [
 				'success' => false,
 				'errors'  => [ [
