@@ -105,7 +105,13 @@ has  "reads security mode from config"          "ROOT.mode"                    "
 has  "approval-required pre-signal (gated)"     "approvalRequired"             "$JS"
 has  "outcome read from response status"        "st === 'applied'"             "$JS"
 has  "gated outcome = pending_approval"         "pending_approval"             "$JS"
-has  "Undo only with a change_id"               "applied && !! changeId"       "$JS"
+# The guard, not its spelling. This asserted the literal `applied && !! changeId`
+# until 074224d rewrote it as `applied && changeId` — functionally identical,
+# since ST.changeId is '' when absent — and the suite failed for a refactor that
+# changed no behaviour. Both guards are checked instead: the footer only offers
+# Undo when a change_id came back, and undoAction() refuses to fire without one.
+has  "Undo offered only with a change_id"       "applied && changeId"          "$JS"
+has  "Undo refuses to run without a change_id"  "! ST.changeId ) { return"     "$JS"
 has  "Undo reuses change_history rollback"      "/rollback"                    "$JS"
 lacks "JS no direct seo_manage execution"       "seo_manage"                   "$JS"
 lacks "JS no OperationExecutor reference"       "OperationExecutor"            "$JS"
