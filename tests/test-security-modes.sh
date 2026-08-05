@@ -222,6 +222,77 @@ set_mode "developer"
 RESTORED=$(wp eval "echo get_option('wpcc_security_mode', 'developer');" --path="$WP_PATH" 2>/dev/null)
 assert_eq "Mode restored to developer" "developer" "$RESTORED"
 
+# ── The product's promise must follow the mode ──────────────────────────────
+#
+# Development mode applies AI changes immediately, with no approval step. A
+# dozen screens stated "waits for your approval" unconditionally — Home, the
+# Built-in AI hub, the assistants setup, and the trust strip shown on every
+# generation screen. A safety promise that is false on a live install is worse
+# than no promise, so the promise now lives with the mode and every surface asks
+# for it rather than writing its own.
+echo ""
+echo "== Mode-aware customer promises =="
+# This suite predates the shared helpers, so define what this section needs.
+PLUGIN_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+has()   { if grep -qF -- "$2" "$3"; then pass "$1"; else fail "$1 (missing '$2')"; fi; }
+lacks() { if grep -qF -- "$2" "$3"; then fail "$1 (found '$2')"; else pass "$1"; fi; }
+pj()    { printf '%s' "$1" | jq -r "$2"; }
+
+SMM="$PLUGIN_DIR/includes/Operations/SecurityModeManager.php"
+TRUST="$PLUGIN_DIR/includes/Admin/views/partials/trust-strip.php"
+
+has "promise() exists on the mode manager"   "public static function promise" "$SMM"
+has "approval chip follows the mode"         "public static function approval_chip" "$SMM"
+has "developer mode carries a warning"       "public static function dev_warning"  "$SMM"
+has "trust strip asks for the chip"          "SecurityModeManager::approval_chip"  "$TRUST"
+has "trust strip renders the dev warning"    "dev_warning" "$TRUST"
+lacks "trust strip no longer hardcodes the claim" "esc_html_e( 'Requires approval'" "$TRUST"
+
+# The screens that used to state it unconditionally now ask for it.
+for f in views/settings-ai.php views/ai-integrations.php views/command-home.php; do
+	has "$f asks the mode for its promise" "SecurityModeManager::" "$PLUGIN_DIR/includes/Admin/$f"
+done
+
+# Functional: the sentence, the chip and the warning all flip with the mode, and
+# flip back. Runs against the real option, restoring whatever was set.
+MODE_PHP="$(mktemp)"
+cat > "$MODE_PHP" <<'PHPEOF'
+<?php
+$orig = get_option( 'wpcc_security_mode', 'client' );
+$out  = [];
+foreach ( [ 'client', 'enterprise', 'developer' ] as $mode ) {
+	update_option( 'wpcc_security_mode', $mode );
+	$out[ $mode ] = [
+		'promise'   => \WPCommandCenter\Operations\SecurityModeManager::promise(),
+		'chip'      => \WPCommandCenter\Operations\SecurityModeManager::approval_chip(),
+		'warn_len'  => strlen( \WPCommandCenter\Operations\SecurityModeManager::dev_warning() ),
+	];
+}
+update_option( 'wpcc_security_mode', $orig );
+echo wp_json_encode( [
+	'client_promises_approval'     => ( false !== strpos( $out['client']['promise'], 'approval' ) ),
+	'strict_promises_approval'     => ( false !== strpos( $out['enterprise']['promise'], 'approval' ) ),
+	'dev_says_immediate'           => ( false !== strpos( $out['developer']['promise'], 'immediately' ) ),
+	'dev_does_not_promise_waiting' => ( false === strpos( $out['developer']['promise'], 'waits for your approval' ) ),
+	'client_chip'                  => $out['client']['chip'],
+	'dev_chip'                     => $out['developer']['chip'],
+	'dev_warns'                    => ( $out['developer']['warn_len'] > 0 ),
+	'client_silent'                => ( 0 === $out['client']['warn_len'] ),
+	'restored'                     => get_option( 'wpcc_security_mode' ),
+] );
+PHPEOF
+MODE_OUT="$( wp --path="$WP_PATH" eval-file "$MODE_PHP" 2>/dev/null )"
+rm -f "$MODE_PHP"
+
+assert_eq "Standard promises approval"            "true"  "$(pj "$MODE_OUT" '.client_promises_approval')"
+assert_eq "Strict promises approval"              "true"  "$(pj "$MODE_OUT" '.strict_promises_approval')"
+assert_eq "Development says changes run immediately" "true" "$(pj "$MODE_OUT" '.dev_says_immediate')"
+assert_eq "Development never promises approval"   "true"  "$(pj "$MODE_OUT" '.dev_does_not_promise_waiting')"
+assert_eq "Standard chip reads Requires approval" "Requires approval" "$(pj "$MODE_OUT" '.client_chip')"
+assert_eq "Development chip reads Runs immediately" "Runs immediately" "$(pj "$MODE_OUT" '.dev_chip')"
+assert_eq "Development warns the operator"        "true"  "$(pj "$MODE_OUT" '.dev_warns')"
+assert_eq "Protected modes add no warning"        "true"  "$(pj "$MODE_OUT" '.client_silent')"
+
 echo ""
 echo "== Summary =="
 echo "  $PASS passed, $FAIL failed"

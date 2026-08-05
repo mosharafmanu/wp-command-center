@@ -156,6 +156,44 @@ echo
 echo "== Summary =="
 echo "  $PASS passed, $FAIL failed"
 
+# ── Customer safety in the Search & Replace UI ──────────────────────────────
+#
+# The picker used to open on every table in the database — users, usermeta,
+# session stores, OAuth token tables, WooCommerce internals and the plugin's own
+# governance tables — with WPCC's own tables merely display:none behind a
+# checkbox. A first-time customer fixing a domain name was being asked which of
+# those a text replace should touch. And the risk model had three tiers, so a
+# replace across wp_users scored the same MEDIUM as one across categories.
+echo ""
+echo "== UI safety: table exposure and risk =="
+SR_VIEW="$SCRIPT_DIR/../includes/Admin/views/tools-search-replace.php"
+has()   { if grep -qF -- "$2" "$3"; then pass "$1"; else fail "$1 (missing '$2')"; fi; }
+lacks() { if grep -qF -- "$2" "$3"; then fail "$1 (found '$2')"; else pass "$1"; fi; }
+
+has "tables are classified by data class"        "wpcc_classify_table" "$SR_VIEW"
+has "accounts are their own class"               "'users', 'usermeta'" "$SR_VIEW"
+has "auth/session/secret tables detected by name" "session|token|oauth"  "$SR_VIEW"
+has "sensitive classes are named"                "wpcc_sensitive_groups" "$SR_VIEW"
+has "sensitive tables sit behind their own reveal" "wpcc-sr-sensitive" "$SR_VIEW"
+has "the reveal states the consequence"          "lock people out of the site" "$SR_VIEW"
+has "custom table choice is a disclosure"        "Choose specific tables" "$SR_VIEW"
+lacks "no bare show-system checkbox any more"    "wpcc-sr-show-system" "$SR_VIEW"
+
+# Five tiers that mean what they say, mirrored client-side so the badge the
+# customer reads is the one the request is scored with.
+has "critical tier exists"                       "return 'critical'" "$SR_VIEW"
+has "accounts/security/system are critical"      "in_array( \$critical, \$classes, true )" "$SR_VIEW"
+has "breadth alone can be critical"              "count( \$tables ) >= 8" "$SR_VIEW"
+has "client mirrors the server tiers"            "if ( checked.length >= 8 ) { return 'critical'; }" "$SR_VIEW"
+has "critical has its own badge colour"          "wpcc-risk-critical" "$SR_VIEW"
+
+# A live run at high or critical risk must be previewed first.
+has "dry run gates the live run"                 "function needsPreviewFirst" "$SR_VIEW"
+has "the gate explains itself"                   "Run a Dry Preview first" "$SR_VIEW"
+has "the live button is disabled while gated"    "submitBtn.disabled = blocked" "$SR_VIEW"
+# Governance is unchanged: a live run is still a governed request.
+has "live run still creates a governed request"  "create_request( 'safe_search_replace'" "$SR_VIEW"
+
 # Cleanup
 if [[ -n "$POST_ID" ]]; then wp post delete "$POST_ID" --force > /dev/null; fi
 
