@@ -39,6 +39,9 @@ $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any
  * keys live on Built-in AI › Providers; that is where this goes.
  */
 $ai_url    = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' );
+// An awaiting-approval row links straight to its own decision — see the note in
+// ai-content.php. The proposal already carries request_id.
+$approval_url = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
@@ -222,6 +225,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 	const CORE  = <?php echo wp_json_encode( $core_base ); ?>;
 	const EDIT  = <?php echo wp_json_encode( $edit_base ); ?>;
 	const AI_URL = <?php echo wp_json_encode( $ai_url ); ?>;
+	const APPROVAL_URL = <?php echo wp_json_encode( $approval_url ); ?>;
 	const NONCE = <?php echo wp_json_encode( $nonce ); ?>;
 	const MODE  = <?php echo wp_json_encode( $security_mode ); ?>; // developer | client | enterprise
 	const IS_DEV = ( MODE === 'developer' );
@@ -286,6 +290,26 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		generating:<?php echo wp_json_encode( esc_html__( 'Generating…', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
 		genDone:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d drafts created, %2$d skipped, %3$d failed.', 'ai-command-center' ) ); ?>,
+		/*
+		 * WHY an item was skipped.
+		 *
+		 * "1 skipped" is a number without a meaning. The customer cannot tell
+		 * whether something is broken, whether they lost work, or whether they
+		 * should do anything — and the commonest reason by far is the reassuring
+		 * one: that item already has a draft waiting. The engine has always
+		 * returned a reason per skipped item; the summary simply threw it away.
+		 */
+		/* translators: %1$d: number of items skipped, %2$s: the reasons, already joined. */
+		skipWhy:      <?php echo wp_json_encode( /* translators: %1$d: number, %2$s: value */ __( '%1$d skipped — %2$s', 'ai-command-center' ) ); ?>,
+		skHasDraft:   <?php echo wp_json_encode( esc_html__( 'already has a draft waiting for review', 'ai-command-center' ) ); ?>,
+		skUpToDate:   <?php echo wp_json_encode( esc_html__( 'already up to date', 'ai-command-center' ) ); ?>,
+		skStatus:     <?php echo wp_json_encode( esc_html__( 'trashed or not started yet', 'ai-command-center' ) ); ?>,
+		skNoProvider: <?php echo wp_json_encode( esc_html__( 'no provider key', 'ai-command-center' ) ); ?>,
+		skNoPlugin:   <?php echo wp_json_encode( esc_html__( 'no supported SEO plugin active', 'ai-command-center' ) ); ?>,
+		skUnsupported:<?php echo wp_json_encode( esc_html__( 'does not support this kind of suggestion', 'ai-command-center' ) ); ?>,
+		skNotFound:   <?php echo wp_json_encode( esc_html__( 'no longer exists', 'ai-command-center' ) ); ?>,
+		skOther:      <?php echo wp_json_encode( esc_html__( 'nothing needed generating', 'ai-command-center' ) ); ?>,
+		skReview:     <?php echo wp_json_encode( esc_html__( 'Open the Suggestions tab to review the drafts already waiting.', 'ai-command-center' ) ); ?>,
 		genCap:    <?php echo wp_json_encode( esc_html__( 'Up to 25 at a time; only the first 25 are used.', 'ai-command-center' ) ); ?>,
 		genErr:    <?php echo wp_json_encode( esc_html__( 'Generation failed. Please retry.', 'ai-command-center' ) ); ?>,
 		// Slice 3 — Suggestions tab.
@@ -355,6 +379,9 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'ai-command-center' ) ); ?>,
 		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'ai-command-center' ) ); ?>,
 		colActions:<?php echo wp_json_encode( esc_html__( 'Actions', 'ai-command-center' ) ); ?>,
+		reviewApproval: <?php echo wp_json_encode( esc_html__( 'Review approval', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		reviewApprovalFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Review the approval for %s', 'ai-command-center' ) ); ?>,
 		// Trust polish — post-apply confirmation toast (reversibility + audit affordances).
 		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'ai-command-center' ) ); ?>,
 		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'ai-command-center' ) ); ?>,
@@ -509,7 +536,11 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 					refreshGenerate();
 					return;
 				}
-				if ( status ) { status.textContent = STR.genDone.replace( '%1$d', c ).replace( '%2$d', sk ).replace( '%3$d', f ); }
+					if ( status ) {
+					var line = STR.genDone.replace( '%1$d', c ).replace( '%2$d', sk ).replace( '%3$d', f );
+					if ( sk > 0 ) { line += ' ' + skipDetail( skipped ); }
+					status.textContent = line;
+				}
 				pg.offset = 0; load(); // refresh audit + counts
 				// U1.2 — handoff: when suggestions were created, move the user to them.
 				if ( c > 0 ) { switchTab( 'suggestions' ); }
@@ -517,7 +548,39 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 			} )
 			.catch( () => { genBusy = false; if ( status ) { status.textContent = STR.genErr; } refreshGenerate(); } );
 	}
-	// U1.4 — no-AI-provider guidance with a link to AI Integrations (server-provided URL).
+	/*
+	 * Turn the engine's skip reasons into a sentence. Counts per reason so a mixed
+	 * batch reads honestly ("2 already have a draft waiting, 1 trashed or not
+	 * started yet") instead of collapsing to the first reason found. Recovery
+	 * guidance is appended for the one reason a customer can act on.
+	 */
+	function skipReasonLabel( reason ) {
+		switch ( reason ) {
+			case 'has_open_proposal': return STR.skHasDraft;
+			case 'already_optimized':
+			case 'up_to_date':        return STR.skUpToDate;
+			case 'unsupported_status':return STR.skStatus;
+			case 'no_provider':       return STR.skNoProvider;
+			case 'no_seo_plugin':     return STR.skNoPlugin;
+			case 'capability_unsupported': return STR.skUnsupported;
+			case 'not_found':         return STR.skNotFound;
+			default:                  return STR.skOther;
+		}
+	}
+	function skipDetail( skipped ) {
+		var counts = {}, order = [];
+		( skipped || [] ).forEach( function ( s ) {
+			var label = skipReasonLabel( s && s.reason );
+			if ( ! counts[ label ] ) { counts[ label ] = 0; order.push( label ); }
+			counts[ label ]++;
+		} );
+		var parts = order.map( function ( label ) { return counts[ label ] + ' ' + label; } );
+		var out = STR.skipWhy.replace( '%1$d', ( skipped || [] ).length ).replace( '%2$s', parts.join( ', ' ) );
+		if ( counts[ STR.skHasDraft ] ) { out += ' ' + STR.skReview; }
+		return out;
+	}
+
+	// Guidance when Built-in AI has no provider key (server-provided URL).
 	function showGenNotice() {
 		const el = $( 'wpcc-seo-gen-notice' ); if ( ! el ) { return; }
 		el.innerHTML = '<p>' + esc( STR.noKey ) + ' <a href="' + esc( AI_URL ) + '">' + esc( STR.aiIntegrations ) + '</a></p>';
@@ -871,9 +934,14 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 			// action (never displayed). Reuses POST /admin/history/{change_id}/rollback
 			// → change_history → seo_restore. Pending/failed/reverted rows get no Undo.
 			const cid = reversible ? ' data-cid="' + esc( p.change_id ) + '"' : '';
-			const actions = reversible
-				? '<button type="button" class="button button-small wpcc-seo-undo">' + esc( STR.undo ) + '</button><div class="wpcc-seo-rowmsg" role="status"></div>'
-				: '';
+			// Awaiting approval is not a dead end: link straight to the decision.
+			let actions = '';
+			if ( reversible ) {
+				actions = '<button type="button" class="button button-small wpcc-seo-undo">' + esc( STR.undo ) + '</button><div class="wpcc-seo-rowmsg" role="status"></div>';
+			} else if ( p.status === 'pending_approval' && p.request_id ) {
+				actions = '<a class="button button-small" href="' + esc( APPROVAL_URL + '&view=' + encodeURIComponent( p.request_id ) ) + '" aria-label="' +
+					esc( rowLabel( STR.reviewApprovalFor, title, tid ) ) + '">' + esc( STR.reviewApproval ) + '</a>';
+			}
 			return '<tr' + cid + '>' +
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-seo-meta">' + esc( c.type || '' ) + '</div></td>' +
 				'<td class="wpcc-seo-meta">' + appliedMeta( p ) + '</td>' +

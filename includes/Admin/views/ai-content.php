@@ -39,6 +39,15 @@ $edit_base = esc_url( admin_url( 'post.php' ) ); // client builds ?post=ID&actio
 // Built-in AI keys live on Built-in AI › Providers, not on the MCP Assistants
 // screen (which has no key field). See the note in seo-meta.php.
 $ai_url    = esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' ) );
+/*
+ * Where an awaiting-approval row sends the customer.
+ *
+ * A row that says "Awaiting approval" and offers nothing to click asks the
+ * customer to leave Built-in AI, find the global Approvals screen in the
+ * sidebar, and then identify their own item in a queue of a hundred. The
+ * proposal already carries its request_id, so the row can open the exact one.
+ */
+$approval_url = esc_url( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) );
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
@@ -162,6 +171,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	const CORE   = <?php echo wp_json_encode( $core_base ); ?>;
 	const EDIT   = <?php echo wp_json_encode( $edit_base ); ?>;
 	const AI_URL = <?php echo wp_json_encode( $ai_url ); ?>;
+	const APPROVAL_URL = <?php echo wp_json_encode( $approval_url ); ?>;
 	const NONCE  = <?php echo wp_json_encode( $nonce ); ?>;
 	const MODE   = <?php echo wp_json_encode( $security_mode ); ?>; // developer | client | enterprise
 	const IS_DEV = ( MODE === 'developer' );
@@ -181,6 +191,19 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		save:     <?php echo wp_json_encode( esc_html__( 'Save', 'ai-command-center' ) ); ?>,
 		saved:    <?php echo wp_json_encode( esc_html__( 'Saved', 'ai-command-center' ) ); ?>,
 		dismiss:  <?php echo wp_json_encode( esc_html__( 'Dismiss', 'ai-command-center' ) ); ?>,
+		reviewApproval: <?php echo wp_json_encode( esc_html__( 'Review approval', 'ai-command-center' ) ); ?>,
+		/* translators: %1$s: the reason items were skipped. */
+		skipWhy:      <?php echo wp_json_encode( /* translators: %1$s: value */ esc_html__( 'Skipped because they %1$s.', 'ai-command-center' ) ); ?>,
+		skHasDraft:   <?php echo wp_json_encode( esc_html__( 'already have a draft waiting for review', 'ai-command-center' ) ); ?>,
+		skUpToDate:   <?php echo wp_json_encode( esc_html__( 'are already up to date', 'ai-command-center' ) ); ?>,
+		skStatus:     <?php echo wp_json_encode( esc_html__( 'are trashed or not started yet', 'ai-command-center' ) ); ?>,
+		skNoProvider: <?php echo wp_json_encode( esc_html__( 'have no provider key', 'ai-command-center' ) ); ?>,
+		skUnsupported:<?php echo wp_json_encode( esc_html__( 'do not support this kind of suggestion', 'ai-command-center' ) ); ?>,
+		skNotFound:   <?php echo wp_json_encode( esc_html__( 'no longer exist', 'ai-command-center' ) ); ?>,
+		skOther:      <?php echo wp_json_encode( esc_html__( 'needed nothing generating', 'ai-command-center' ) ); ?>,
+		skReview:     <?php echo wp_json_encode( esc_html__( 'Open Suggestions to review the drafts already waiting.', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		reviewApprovalFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Review the approval for %s', 'ai-command-center' ) ); ?>,
 		/* Row-level accessible names — the visible button keeps its short label. */
 		/* translators: %s: the post or page title. */
 		applyDevFor:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Approve and apply suggestion for %s', 'ai-command-center' ) ); ?>,
@@ -479,9 +502,14 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			// change_id. change_id is an OPAQUE handle for the single Undo action (never
 			// displayed). Reuses POST /admin/history/{change_id}/rollback.
 			const cid = reversible ? ' data-cid="' + esc( p.change_id ) + '"' : '';
-			const actions = reversible
-				? '<button type="button" class="button button-small wpcc-aic-undo">' + esc( STR.undo ) + '</button><div class="wpcc-aic-rowmsg" role="status"></div>'
-				: '';
+			// Awaiting approval is not a dead end: link straight to the decision.
+			let actions = '';
+			if ( reversible ) {
+				actions = '<button type="button" class="button button-small wpcc-aic-undo">' + esc( STR.undo ) + '</button><div class="wpcc-aic-rowmsg" role="status"></div>';
+			} else if ( p.status === 'pending_approval' && p.request_id ) {
+				actions = '<a class="button button-small" href="' + esc( APPROVAL_URL + '&view=' + encodeURIComponent( p.request_id ) ) + '" aria-label="' +
+					esc( rowLabel( STR.reviewApprovalFor, title, tid ) ) + '">' + esc( STR.reviewApproval ) + '</a>';
+			}
 			return '<tr' + cid + '>' +
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-aic-meta">' + esc( c.type || '' ) + '</div></td>' +
 				'<td><span class="wpcc-aic-field">' + esc( fieldLabel( field ) ) + '</span></td>' +
@@ -686,10 +714,35 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		el.innerHTML = html;
 		el.style.display = '';
 	}
+	// The engine's skip reason, in the customer's words.
+	function skipReasonLabel( reason ) {
+		switch ( reason ) {
+			case 'has_open_proposal':      return STR.skHasDraft;
+			case 'already_optimized':
+			case 'up_to_date':             return STR.skUpToDate;
+			case 'unsupported_status':     return STR.skStatus;
+			case 'no_provider':            return STR.skNoProvider;
+			case 'capability_unsupported': return STR.skUnsupported;
+			case 'not_found':              return STR.skNotFound;
+			default:                       return STR.skOther;
+		}
+	}
 	function showBulkNotice( c, s, f, r ) {
 		const el = $( 'wpcc-aic-entry-notice' ); if ( ! el ) { return; }
 		let cls = 'notice-success', extraUrl = '', extraLabel = '';
 		let msg = STR.bulkSummary.replace( '%1$d', c ).replace( '%2$d', s ).replace( '%3$d', f );
+		/*
+		 * Say WHY items were skipped even when others succeeded.
+		 *
+		 * "2 suggestions created · 1 skipped" left the customer to guess what
+		 * happened to the third page — and the commonest answer is the reassuring
+		 * one: it already has a draft waiting. The redirect already carries the
+		 * reason; the mixed-result branch simply never read it.
+		 */
+		if ( c > 0 && s > 0 && r ) {
+			msg += ' ' + STR.skipWhy.replace( '%1$s', skipReasonLabel( r ) );
+			if ( r === 'has_open_proposal' ) { msg += ' ' + STR.skReview; }
+		}
 		if ( c === 0 ) {
 			cls = 'notice-warning';
 			if ( r === 'no_provider' ) { msg = STR.genNoProvider; extraUrl = AI_URL; extraLabel = STR.aiIntegrations; }
