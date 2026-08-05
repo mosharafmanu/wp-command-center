@@ -191,6 +191,17 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
    appears at the moment the customer engages with a row — and it comes FIRST,
    because reading a request is what should precede deciding on it. */
 .wpcc-apr-review { align-self:center; white-space:nowrap; }
+/* Completion card — the "what now?" that a finished change deserves.
+   Token-driven (CDS Scope 2): success colour comes from the design system, not
+   from a literal, so it stays in step with every other success surface. */
+.wpcc-detail-done {
+	background: var( --wpcc-surface-success-soft, var( --wpcc-surface-sunken ) );
+	border: 1px solid var( --wpcc-border-success, var( --wpcc-border-subtle ) );
+	border-left: 3px solid var( --wpcc-risk-low-fg, var( --wpcc-text-accent ) );
+}
+.wpcc-detail-done__lead { margin:0 0 4px; font-size:14px; font-weight:600; color: var( --wpcc-text-primary ); }
+.wpcc-detail-done__note { margin:0 0 12px; font-size:13px; color: var( --wpcc-text-secondary ); }
+.wpcc-detail-done__actions { margin:0; display:flex; gap:8px; flex-wrap:wrap; }
 .wpcc-apr-preview { display:inline-block; margin-left:8px; font-size:13px; color:var(--wpcc-text-secondary); }
 .wpcc-apr-warn { display:inline-block; margin-left:8px; font-size:11px; font-weight:600; color:var(--wpcc-risk-critical-fg); }
 .wpcc-apr-sub { display:block; margin-top:2px; font-size:12px; color:var(--wpcc-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -338,6 +349,19 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		reject:      <?php echo wp_json_encode( __( 'Reject', 'ai-command-center' ) ); ?>,
 		approved:    <?php echo wp_json_encode( __( 'Done — your site has been updated.', 'ai-command-center' ) ); ?>,
 		approvedLink:<?php echo wp_json_encode( __( 'See it in Changes', 'ai-command-center' ) ); ?>,
+		/*
+		 * The end of the journey, on the one page that had none.
+		 *
+		 * After a change ran, the detail page showed a queue table, an execution
+		 * result and an audit trail — a technical record, with nothing to do next.
+		 * The customer had just changed their live site and was left on a log.
+		 */
+		doneTitle:   <?php echo wp_json_encode( __( 'This change has been applied to your site.', 'ai-command-center' ) ); ?>,
+		doneUndo:    <?php echo wp_json_encode( __( 'It is recorded and can be undone from Changes.', 'ai-command-center' ) ); ?>,
+		doneBackAi:  <?php echo wp_json_encode( __( 'Back to Built-in AI', 'ai-command-center' ) ); ?>,
+		builtinUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai' ) ); ?>,
+		approvalsUrl:<?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>,
+		doneMore:    <?php echo wp_json_encode( __( 'Review other approvals', 'ai-command-center' ) ); ?>,
 		changesUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-history' ) ); ?>,
 		rejected:    <?php echo wp_json_encode( __( 'Rejected.', 'ai-command-center' ) ); ?>,
 		/*
@@ -409,6 +433,10 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		secChangeset:<?php echo wp_json_encode( __( 'Change set', 'ai-command-center' ) ); ?>,
 		secDiff:     <?php echo wp_json_encode( __( 'Diff', 'ai-command-center' ) ); ?>,
 		secWhatChanges: <?php echo wp_json_encode( __( 'What will change', 'ai-command-center' ) ); ?>,
+		// Past tense once the decision is made — on a request that has already run,
+		// "What will change" describes a future that has happened.
+		secWhatChanged: <?php echo wp_json_encode( __( 'What changed', 'ai-command-center' ) ); ?>,
+		secWhatWouldHave: <?php echo wp_json_encode( __( 'What this would have changed', 'ai-command-center' ) ); ?>,
 		lblUndoes:      <?php echo wp_json_encode( __( 'Undoes', 'ai-command-center' ) ); ?>,
 		undoUnknown:    <?php echo wp_json_encode( __( 'A change that is no longer in your history', 'ai-command-center' ) ); ?>,
 		lblChangeId:    <?php echo wp_json_encode( __( 'Change id', 'ai-command-center' ) ); ?>,
@@ -495,18 +523,50 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		low:        <?php echo wp_json_encode( __( 'Low Risk', 'ai-command-center' ) ); ?>,
 		diagnostic: i18n.readOnly
 	};
+	/*
+	 * TWO state machines, one screen — and they used to share one vocabulary.
+	 *
+	 * A REQUEST moves pending_review → approved → executed. Its QUEUE ITEM moves
+	 * queued → running → completed. Both were rendered from a single map, so one
+	 * change showed the customer "Executed" in one place and "Completed" in
+	 * another, and a superseded retry attempt showed "Cancelled" beside a change
+	 * that had in fact been applied. Three words for one outcome, one of which
+	 * reads as "your change did not happen" when it did.
+	 *
+	 * The engine states are untouched and still shown verbatim in Detailed. What
+	 * changes is that the customer-facing words describe the OUTCOME, and the same
+	 * reality gets the same word: an executed request and its completed queue item
+	 * both read "Applied".
+	 *
+	 * `cancelled` genuinely means different things in the two machines — a request
+	 * the customer stopped, versus an attempt the engine superseded — so it is the
+	 * one label that must never be shared. That is exactly why these are two maps.
+	 */
 	var statusLabels = {
-		pending_review: <?php echo wp_json_encode( __( 'Pending', 'ai-command-center' ) ); ?>,
+		pending_review: <?php echo wp_json_encode( __( 'Waiting for you', 'ai-command-center' ) ); ?>,
 		approved:       <?php echo wp_json_encode( __( 'Approved', 'ai-command-center' ) ); ?>,
 		rejected:       <?php echo wp_json_encode( __( 'Rejected', 'ai-command-center' ) ); ?>,
-		executed:       <?php echo wp_json_encode( __( 'Executed', 'ai-command-center' ) ); ?>,
-		failed:         <?php echo wp_json_encode( __( 'Failed', 'ai-command-center' ) ); ?>,
+		executed:       <?php echo wp_json_encode( __( 'Applied', 'ai-command-center' ) ); ?>,
+		failed:         <?php echo wp_json_encode( __( 'Did not run', 'ai-command-center' ) ); ?>,
 		cancelled:      <?php echo wp_json_encode( __( 'Cancelled', 'ai-command-center' ) ); ?>,
-		queued:         <?php echo wp_json_encode( __( 'Queued', 'ai-command-center' ) ); ?>,
+		queued:         <?php echo wp_json_encode( __( 'Waiting to run', 'ai-command-center' ) ); ?>,
 		running:        <?php echo wp_json_encode( __( 'Running', 'ai-command-center' ) ); ?>,
-		completed:      <?php echo wp_json_encode( __( 'Completed', 'ai-command-center' ) ); ?>
+		completed:      <?php echo wp_json_encode( __( 'Applied', 'ai-command-center' ) ); ?>
 	};
-	function statusLabel( s ) { return statusLabels[ s ] || s; }
+	// Queue-item overrides: same tokens, different meaning inside the queue.
+	var queueStatusLabels = {
+		completed:      <?php echo wp_json_encode( __( 'Applied', 'ai-command-center' ) ); ?>,
+		queued:         <?php echo wp_json_encode( __( 'Waiting to run', 'ai-command-center' ) ); ?>,
+		running:        <?php echo wp_json_encode( __( 'Running now', 'ai-command-center' ) ); ?>,
+		failed:         <?php echo wp_json_encode( __( 'This attempt did not run', 'ai-command-center' ) ); ?>,
+		// NOT "Cancelled": the change itself may well have been applied by another
+		// attempt. This says what happened to the attempt, and nothing more.
+		cancelled:      <?php echo wp_json_encode( __( 'Attempt stopped', 'ai-command-center' ) ); ?>
+	};
+	function statusLabel( s, kind ) {
+		if ( 'queue' === kind && queueStatusLabels[ s ] ) { return queueStatusLabels[ s ]; }
+		return statusLabels[ s ] || s;
+	}
 
 	function apiFetch( path, opts ) {
 		opts = opts || {};
@@ -1034,8 +1094,11 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 
 	// ── History tab ──
 	var historyOffset = 0;
-	function statusPill( status ) {
-		return '<span class="wpcc-status-pill ' + escHtml(status) + '">' + escHtml( statusLabel(status) ) + '</span>';
+	// The raw engine token rides along in Detailed, so the technical truth is
+	// never lost — only moved out of the customer's way.
+	function statusPill( status, kind ) {
+		return '<span class="wpcc-status-pill ' + escHtml(status) + '">' + escHtml( statusLabel(status, kind) ) + '</span>' +
+			'<code class="wpcc-engineer-only" style="font-size:11px;margin-left:6px;">' + escHtml(status) + '</code>';
 	}
 	function riskBadge( risk ) {
 		return '<span class="wpcc-risk-badge risk-' + escHtml(risk) + '">' + escHtml( riskLabels[risk] || risk ) + '</span>';
@@ -1093,7 +1156,9 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			// Was the raw operation ID. Same dictionary the rest of the product uses.
 			'<td>' + escHtml( WPCC_LABELS.titles[ q.operation_id ] || WPCC_LABELS.areas[ q.operation_id ] || q.operation_id ) +
 				'<span class="wpcc-engineer-only"><br><code style="font-size:11px;">' + escHtml( q.operation_id ) + '</code></span></td>' +
-			'<td>' + statusPill(q.status) + '</td>' +
+			// Queue vocabulary, not request vocabulary — this is the Execution tab's
+			// own table and it shows the SAME rows as the detail panel's queue.
+			'<td>' + statusPill(q.status, 'queue') + '</td>' +
 			'<td>' + escHtml(q.attempts) + ' / ' + escHtml(q.max_attempts) + '</td>' +
 			'<td>' + ( q.error_message ? escHtml(q.error_message) : '—' ) + '</td>' +
 			'<td>' + retryButton(q) + '</td>' +
@@ -1178,6 +1243,16 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	 */
 	var UNDO_ID_KEYS = { change_id: 1, target_change_id: 1, rollback_id: 1 };
 
+	/*
+	 * Object ids are technical details now that the heading names the object.
+	 *
+	 * "Content id 111" sat in What-will-change as though it were one of the things
+	 * being changed. It is not — it is how the engine addresses the page, and the
+	 * heading above already says which page ("Update SEO details — “Shop”"). It
+	 * stays, in Detailed, next to every other identifier.
+	 */
+	var OBJECT_ID_KEYS = { content_id: 1, post_id: 1, media_id: 1, attachment_id: 1, product_id: 1, order_id: 1, user_id: 1, term_id: 1, comment_id: 1 };
+
 	function summarisePayload( payload, undoTarget ) {
 		var rows = [];
 		var undoIds = [];
@@ -1202,6 +1277,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			rows.push( {
 				label: fieldLabel( key ),
 				value: NAMES_A_SETTING[ key ] ? settingName( val ) : displayValue( val ),
+				tech: !! OBJECT_ID_KEYS[ key ],
 			} );
 		} );
 		/*
@@ -1332,11 +1408,31 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			 */
 			var changeRows = summarisePayload( d.payload || {}, d.undo_target );
 			if ( changeRows.length ) {
-				html += section( i18n.secWhatChanges,
+				var st = r.status || '';
+				var changeHeading = i18n.secWhatChanges;
+				if ( st === 'executed' ) { changeHeading = i18n.secWhatChanged; }
+				else if ( st === 'rejected' || st === 'cancelled' || st === 'failed' ) { changeHeading = i18n.secWhatWouldHave; }
+				html += section( changeHeading,
 					'<table class="wpcc-whatchanges"><tbody>' + changeRows.map( function ( r ) {
 						return '<tr' + ( r.tech ? ' class="wpcc-engineer-only"' : '' ) + '><th scope="row">' +
 							escHtml( r.label ) + '</th><td>' + escHtml( r.value ) + '</td></tr>';
 					} ).join('') + '</tbody></table>' );
+			}
+
+			/*
+			 * Continuation. Only on a request that actually ran — a pending one
+			 * already has its Approve/Reject controls, and offering "what next"
+			 * before the decision would be answering a question nobody asked.
+			 */
+			if ( ( r.status || '' ) === 'executed' ) {
+				var nextHtml = '<p class="wpcc-detail-done__lead">' + escHtml( i18n.doneTitle ) + '</p>' +
+					'<p class="wpcc-detail-done__note">' + escHtml( i18n.doneUndo ) + '</p>' +
+					'<p class="wpcc-detail-done__actions">' +
+						'<a class="button button-primary" href="' + escHtml( i18n.changesUrl ) + '">' + escHtml( i18n.approvedLink ) + '</a> ' +
+						'<a class="button" href="' + escHtml( i18n.builtinUrl ) + '">' + escHtml( i18n.doneBackAi ) + '</a> ' +
+						'<a class="button" href="' + escHtml( i18n.approvalsUrl ) + '">' + escHtml( i18n.doneMore ) + '</a>' +
+					'</p>';
+				html += '<div class="wpcc-detail-section wpcc-detail-done">' + nextHtml + '</div>';
 			}
 
 			// The raw request, collapsed, for anyone who wants the exact call.
@@ -1349,7 +1445,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 					escHtml(i18n.colStatus) + '</th><th>' + escHtml(i18n.colAttempts) + '</th><th>' + escHtml(i18n.colError) + '</th><th></th></tr></thead><tbody>' +
 					d.queue_items.map( function(q) {
 						return '<tr><td><code>' + escHtml(String(q.queue_id).substring(0,8)) + '</code></td><td>' +
-							statusPill(q.status) + '</td><td>' + escHtml(q.attempts) + ' / ' + escHtml(q.max_attempts) + '</td><td>' +
+							statusPill(q.status, 'queue') + '</td><td>' + escHtml(q.attempts) + ' / ' + escHtml(q.max_attempts) + '</td><td>' +
 							( q.error_message ? escHtml(q.error_message) : '—' ) + '</td><td>' + retryButton(q) + '</td></tr>';
 					} ).join('') + '</tbody></table>';
 				html += section( i18n.secQueue, qb );
@@ -1360,8 +1456,21 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			// execution result recorded yet" appeared on every single pending item.
 			if ( d.results && d.results.length ) {
 				html += section( i18n.secResults, d.results.map( function(res) {
+					/*
+					 * Four zeros beside "Applied" invite exactly the doubt this screen
+					 * exists to remove. Not every operation reports per-item counts —
+					 * an SEO field update changes one thing and counts none of it — so
+					 * an all-zero row is the absence of a measurement, not a result of
+					 * zero. Show the counts when there are any; otherwise let the
+					 * outcome speak for itself. The raw numbers stay in Detailed.
+					 */
+					var total = ( res.created_count | 0 ) + ( res.updated_count | 0 ) +
+						( res.skipped_count | 0 ) + ( res.error_count | 0 );
+					var countsTxt = escHtml( fmt( i18n.counts, [ res.created_count, res.updated_count, res.skipped_count, res.error_count ] ) );
 					var line = '<p>' + statusPill(res.status) + ' ' +
-						escHtml( fmt( i18n.counts, [ res.created_count, res.updated_count, res.skipped_count, res.error_count ] ) ) + '</p>';
+						( total > 0
+							? countsTxt
+							: '<span class="wpcc-engineer-only">' + countsTxt + '</span>' ) + '</p>';
 					if ( res.error_json && res.error_json.length ) {
 						line += '<pre class="wpcc-diff">' + escHtml( JSON.stringify( res.error_json, null, 2 ) ) + '</pre>';
 					}
