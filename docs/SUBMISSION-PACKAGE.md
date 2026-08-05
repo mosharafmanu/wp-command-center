@@ -21,13 +21,26 @@
 Verify immediately before uploading:
 
 ```bash
-shasum -a 256 build/ai-command-center-1.0.0.zip
-# must print db1db34be5a5320c8cde5cfc326b4ee173c5956ed55d08ea65ac1243e19800ed
+# 1. The tree must be clean. A dirty tree means the artifact is not any commit.
+git status --porcelain          # must print nothing
 
-# ...and the commit it was built from, which the checksum alone cannot tell you:
-git rev-parse HEAD          # must print ad308566aefaafe70ae30bd9755d975db09d7e06
-git status --porcelain      # must print nothing
+# 2. The CONTENT IDENTITY is the stable identifier — it does not change between
+#    builds, and it is what proves the shipped files are the certified ones.
+unzip -q build/ai-command-center-1.0.0.zip -d /tmp/verify
+( cd /tmp/verify && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
+# must print 000599e096e028d1e96263ca98a762c03916b4d39b2fc98c02e9d0464337c3ae
+
+# 3. The archive checksum identifies the exact FILE you are about to upload.
+#    It changes on every rebuild (ZIP mtimes/order are not reproducible), so
+#    record whatever this prints and upload that same file.
+shasum -a 256 build/ai-command-center-1.0.0.zip
 ```
+
+> **Why the content identity and not just the archive hash?** A checksum recorded in
+> a document can never cover the commit that records it, and the archive hash moves
+> on every rebuild. The content identity does neither: it is the hash of the sorted
+> per-file hashes, so it is identical for any build of the same shipped files, and it
+> is what actually distinguishes the certified product from a stale one.
 
 > The archive checksum is **not** reproducible across builds — only the *content identity*
 > is. Do not rebuild unless you intend to re-record the checksum. See RELEASE_HANDOFF §2.
