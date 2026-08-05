@@ -389,6 +389,56 @@ assert_eq "no hardcoded risk hex in approval-center.php (CDS Scope 2)" "0" "$RIS
 RISK_TOKENS="$(grep -cE 'var\(--wpcc-risk-(critical|high|medium|low|diagnostic)-fg\)' "$VIEW" || true)"
 assert_true "risk tiers use CDS risk-semantic tokens" "$([ "${RISK_TOKENS:-0}" -ge 5 ] && echo true || echo false)"
 
+# ── An undo says what it undoes, not which UUID it undoes ───────────────────
+#
+# Found in a real customer journey. "What will change" renders the payload field
+# by field, and an undo's payload is just { action, change_id, confirm } — so the
+# one row a customer read before granting consent was
+# `Change id: 98ba74ef-83d0-402b-…`. The heading directly above it already said
+# "Undo a change — Update SEO details", so the product could resolve the target
+# perfectly well; the consent table simply had no way to ask for it.
+echo
+echo "== Undo target is human-readable (Simple mode) =="
+
+# The resolver is reused, not reimplemented: ActionLabels::undo_target() is what
+# already produces the heading, and it is now reachable from the detail query.
+has "undo_target resolver is callable"        "public static function undo_target" "$PLUGIN_DIR/includes/Admin/ActionLabels.php"
+has "detail envelope carries the resolved target" "'undo_target' => ActionLabels::undo_target" "$QUERY"
+has "view consumes the resolved target"       "summarisePayload\( d.payload \|\| \{\}, d.undo_target \)" "$VIEW"
+
+# The change-id fields never render as a plain row.
+has "change-id fields are diverted"           "UNDO_ID_KEYS" "$VIEW"
+has "human row is shown for every undo"       "'rollback_target' === \( payload \|\| \{\} \).action" "$VIEW"
+has "human row label exists"                  "lblUndoes:" "$VIEW"
+has "unresolvable original still says something" "undoUnknown:" "$VIEW"
+
+# Detailed mode MAY keep the identifier — the established pattern on this screen
+# (the operation id beside Area uses the same class) — but Simple must not.
+has "raw id row is Detailed-only"             "tech: true" "$VIEW"
+has "technical rows carry the disclosure class" "r.tech \\? ' class=" "$VIEW"
+
+# Heading and decision controls are untouched by this change.
+has "heading still describes the undo"        "headline" "$RESTAPI"
+has "approve control unchanged"               "wpcc-approve-btn" "$VIEW"
+has "reject control unchanged"                "wpcc-reject-btn" "$VIEW"
+
+# Functional: the resolver turns a real change_id into words, and returns ''
+# (never a UUID) when the original cannot be found.
+UNDO_OUT="$(wpe '
+	global $wpdb; $c = $wpdb->prefix . "wpcc_change_log";
+	$cid = $wpdb->get_var( "SELECT change_id FROM {$c} WHERE reversible = 1 ORDER BY id DESC LIMIT 1" );
+	$resolved = $cid ? \WPCommandCenter\Admin\ActionLabels::undo_target( [ "change_id" => $cid ] ) : "";
+	$missing  = \WPCommandCenter\Admin\ActionLabels::undo_target( [ "change_id" => "no-such-change-xyz" ] );
+	echo wp_json_encode( [
+		"resolved_nonempty" => ( "" !== trim( (string) $resolved ) ),
+		"resolved_is_uuid"  => (bool) preg_match( "/^[0-9a-f-]{36}$/", (string) $resolved ),
+		"missing_is_empty"  => ( "" === (string) $missing ),
+	] );
+')"
+assert_eq "undo_target resolves a real change to words" "true"  "$(pj "$UNDO_OUT" '.resolved_nonempty')"
+assert_eq "undo_target never returns a bare UUID"       "false" "$(pj "$UNDO_OUT" '.resolved_is_uuid')"
+assert_eq "unresolvable change yields empty, not an id" "true"  "$(pj "$UNDO_OUT" '.missing_is_empty')"
+
 echo
 echo "========================================"
 echo "  RESULTS: $PASS passed, $FAIL failed"

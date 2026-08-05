@@ -75,7 +75,10 @@ has  "no-provider notice element"             "wpcc-seo-gen-notice"  "$VIEW"
 has  "detects no_provider skip reason"        "reason === 'no_provider'" "$VIEW"
 # The connect-a-key link points at the CANONICAL destination, not the legacy
 # `wpcc-connect` alias (AppShell maps that alias to the same place).
-has  "links to Connect > AI Clients"          "page=wpcc-settings&wpcc_tab=connections&cpane=assistants" "$VIEW"
+# See the note in test-ai-content-builder.sh: a missing provider key sends the
+# customer to Built-in AI > Providers, not to the MCP assistants screen.
+has  "links to Built-in AI > Providers"      "apane=ai&aipane=providers" "$VIEW"
+lacks "does NOT link the MCP assistants screen" "cpane=assistants" "$VIEW"
 has  "uses server-provided AI URL const"      "AI_URL"               "$VIEW"
 # (Apply arrives in Slice 4a; per-item Undo in Slice 4b — both covered by
 # test-seo-apply.sh / test-seo-undo.sh. The shared view now legitimately contains the

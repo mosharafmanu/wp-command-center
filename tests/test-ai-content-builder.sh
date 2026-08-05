@@ -126,7 +126,13 @@ has  "reads kind arg"                       "sp.get( 'kind' )"           "$VIEW"
 # The connect-a-key link points at the CANONICAL destination, not the legacy
 # `wpcc-connect` alias (AppShell maps that alias to the same place). Asserting the real
 # target also proves the link lands on the assistants pane, not just the Settings page.
-has  "no_provider links Connect > AI Clients" "page=wpcc-settings&wpcc_tab=connections&cpane=assistants" "$VIEW"
+# The "no AI provider" error must route to the screen that HAS a provider key
+# field — Built-in AI > Providers. It pointed at Settings > Connections >
+# Assistants, the MCP screen, which has no key field and whose own copy says no
+# key is needed there: the one error state whose entire job is "go and add a
+# key" delivered the customer somewhere that made it impossible.
+has  "no_provider links Built-in AI > Providers" "apane=ai&aipane=providers" "$VIEW"
+lacks "no_provider does NOT link the MCP assistants screen" "cpane=assistants" "$VIEW"
 
 echo
 echo "== 10. Config injection + escaping helpers =="
@@ -151,6 +157,53 @@ else
 	assert_eq "catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
 	assert_eq "DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 fi
+
+# ── Built-in AI mental model: the plugin does the work, not an assistant ─────
+#
+# A first-time customer audit found the contradiction this section guards.
+# Built-in AI onboarding promises the plugin generates SEO / Alt Text / Content
+# without opening an external assistant — which is TRUE: the generation chain is
+# AiRuntime -> AnthropicClient / OpenAiCompatibleTransport, with no MCP anywhere.
+# But after a key was added, "What happens next?" said "Connect an AI assistant
+# so it can do the work", telling the customer their key had achieved nothing.
+echo ""
+echo "== 12. Built-in AI needs no external assistant (mental model) =="
+SETUP="$PLUGIN_DIR/includes/Admin/views/ai-setup.php"
+HUB="$PLUGIN_DIR/includes/Admin/views/settings-ai.php"
+
+lacks "next-steps does NOT say an assistant does the work" "Connect an AI assistant so it can do the work" "$SETUP"
+has   "next-steps points at the Built-in AI tools"   "Choose SEO, Alt Text or Content above" "$SETUP"
+has   "next-steps states no assistant is required"   "you do not need to connect an external assistant" "$SETUP"
+has   "assistants named as a SEPARATE optional path" "separate, optional path that needs no provider key" "$SETUP"
+has   "unswitched-on tools get their own next step"  "Switch on SEO, Alt Text or Content above" "$SETUP"
+has   "hub: built-in AI works without an assistant"  "without you opening an assistant" "$HUB"
+has   "hub: MCP path needs no provider key"          "No provider key required" "$HUB"
+
+for f in seo-meta ai-alt-text ai-content; do
+	lacks "$f: no 'connect an assistant' instruction" "Connect an AI assistant" "$PLUGIN_DIR/includes/Admin/views/$f.php"
+done
+
+# ── Row-level accessible names ───────────────────────────────────────────────
+#
+# Every row control carried the SAME accessible name, so a screen reader
+# announced "Generate suggestions" once per row with nothing to tell them
+# apart — operable but not identifiable, which on a bulk-generate table means
+# choosing blind. The alt-text generate checkbox had no accessible name at all.
+echo ""
+echo "== 13. Row controls name the item they act on (a11y) =="
+SEOV="$PLUGIN_DIR/includes/Admin/views/seo-meta.php"
+ALTV="$PLUGIN_DIR/includes/Admin/views/ai-alt-text.php"
+
+has "shared row-label helper (seo)"              "const rowLabel" "$SEOV"
+has "shared row-label helper (alt text)"         "const rowLabel" "$ALTV"
+has "shared row-label helper (content)"          "const rowLabel" "$VIEW"
+has "seo: generate checkbox names the post"      "Generate suggestions for %s" "$SEOV"
+has "seo: suggestion checkbox names the post"    "Select suggestion for %s"    "$SEOV"
+has "alt: generate checkbox names the image"     "Generate alt text for %s"    "$ALTV"
+has "alt: suggestion checkbox names the image"   "Select suggestion for %s"    "$ALTV"
+has "content: apply names the post"              "Approve and apply suggestion for %s"   "$VIEW"
+has "content: submit names the post"             "Submit suggestion for %s for approval" "$VIEW"
+has "content: dismiss names the post"            "Dismiss suggestion for %s"   "$VIEW"
 
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"
