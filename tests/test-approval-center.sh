@@ -439,6 +439,77 @@ assert_eq "undo_target resolves a real change to words" "true"  "$(pj "$UNDO_OUT
 assert_eq "undo_target never returns a bare UUID"       "false" "$(pj "$UNDO_OUT" '.resolved_is_uuid')"
 assert_eq "unresolvable change yields empty, not an id" "true"  "$(pj "$UNDO_OUT" '.missing_is_empty')"
 
+# ── Final UX polish sprint: continuity, naming, honest execution language ────
+echo
+echo "== Approval titles name the content being changed =="
+#
+# Scanning a queue of six "Update SEO details" rows tells a customer nothing
+# about which page each one touches. Two separate causes, both fixed in
+# ActionLabels::target():
+#   - SEO payloads carry `content_id` and nest values under `seo`, so neither
+#     the name scan nor the id scan matched and the target came back empty.
+#   - Content payloads carry a top-level `title` which is the SUGGESTED NEW
+#     title, so a suggestion of "Shopping Basket" for the Cart page rendered as
+#     'Edit a post or page — "Shopping Basket"' — naming a page that does not
+#     exist. Resolving the object's real title fixes both.
+LABELS="$PLUGIN_DIR/includes/Admin/ActionLabels.php"
+has "object name resolver exists"        "private static function object_name" "$LABELS"
+has "resolver reads Built-in AI id keys" "content_id., .post_id., .media_id" "$LABELS"
+has "resolved name takes precedence"     "object_name = self::object_name" "$LABELS"
+
+TITLE_PHP="$(mktemp)"
+cat > "$TITLE_PHP" <<'PHPEOF'
+<?php
+global $wpdb;
+$pid  = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_title <> '' LIMIT 1" );
+$name = get_the_title( $pid );
+$seo  = \WPCommandCenter\Admin\ActionLabels::describe( 'seo_manage', 'seo_update', [ 'content_id' => $pid, 'seo' => [ 'title' => 'X' ] ], '' );
+$con  = \WPCommandCenter\Admin\ActionLabels::describe( 'content_manage', 'content_update', [ 'content_id' => $pid, 'title' => 'A DIFFERENT SUGGESTED TITLE' ], '' );
+$opt  = \WPCommandCenter\Admin\ActionLabels::describe( 'option_manage', 'option_update', [ 'option_id' => 'site_title' ], '' );
+echo wp_json_encode( [
+	'seo_names_page'         => ( '' !== $name && false !== strpos( $seo, $name ) ),
+	'content_names_page'     => ( '' !== $name && false !== strpos( $con, $name ) ),
+	'content_not_suggestion' => ( false === strpos( $con, 'A DIFFERENT SUGGESTED TITLE' ) ),
+	'option_unaffected'      => ( false !== strpos( $opt, 'Site title' ) ),
+] );
+PHPEOF
+TITLE_OUT="$( wp --path="$WP_ROOT" eval-file "$TITLE_PHP" 2>/dev/null )"
+rm -f "$TITLE_PHP"
+assert_eq "SEO approval names the page"                    "true" "$(pj "$TITLE_OUT" '.seo_names_page')"
+assert_eq "Content approval names the page"                "true" "$(pj "$TITLE_OUT" '.content_names_page')"
+assert_eq "Content approval does NOT name the suggestion"  "true" "$(pj "$TITLE_OUT" '.content_not_suggestion')"
+assert_eq "settings approvals unaffected by the resolver"  "true" "$(pj "$TITLE_OUT" '.option_unaffected')"
+
+echo
+echo "== Execution language never contradicts itself =="
+#
+# A request moves pending_review -> approved -> executed; its queue item moves
+# queued -> running -> completed. One shared label map meant a single change
+# showed "Executed", "Completed" AND "Cancelled" at once — the last of which
+# reads as "your change did not happen" when it did.
+has "request and queue have separate label maps" "queueStatusLabels" "$VIEW"
+has "statusLabel takes the state machine"        "function statusLabel\\( s, kind \\)" "$VIEW"
+has "queue rows declare their context"           "statusPill\\(q.status, 'queue'\\)" "$VIEW"
+has "executed reads as Applied"                  "executed: +<\\?php echo wp_json_encode\\( __\\( .Applied." "$VIEW"
+has "completed reads as Applied too"             "completed: +<\\?php echo wp_json_encode\\( __\\( .Applied." "$VIEW"
+has "a stopped ATTEMPT is not a cancelled change" "Attempt stopped" "$VIEW"
+has "raw engine token kept in Detailed"          "margin-left:6px" "$VIEW"
+# An all-zero counter row beside "Applied" reads as a contradiction.
+has "all-zero counters hidden from Simple"       "total > 0" "$VIEW"
+
+echo
+echo "== The journey continues after a decision =="
+has "completion card on executed requests"  "wpcc-detail-done" "$VIEW"
+has "completion offers Changes"             "approvedLink" "$VIEW"
+has "completion offers Built-in AI"         "doneBackAi"   "$VIEW"
+has "completion offers other approvals"     "doneMore"     "$VIEW"
+has "heading is past tense once decided"    "secWhatChanged" "$VIEW"
+has "rejected requests say what would have" "secWhatWouldHave" "$VIEW"
+# Object ids are addressing, not a change the customer made.
+has "object ids are Detailed-only"          "OBJECT_ID_KEYS" "$VIEW"
+# CDS Scope 2: the completion card must stay token-driven like everything else.
+lacks "completion card uses no literal hex" "wpcc-detail-done \{ background:#" "$VIEW"
+
 echo
 echo "========================================"
 echo "  RESULTS: $PASS passed, $FAIL failed"

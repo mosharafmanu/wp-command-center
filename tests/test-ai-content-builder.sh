@@ -205,6 +205,68 @@ has "content: apply names the post"              "Approve and apply suggestion f
 has "content: submit names the post"             "Submit suggestion for %s for approval" "$VIEW"
 has "content: dismiss names the post"            "Dismiss suggestion for %s"   "$VIEW"
 
+# ── Final UX polish sprint: continuity, honest states, modal confidence ─────
+echo ""
+echo "== 14. The journey continues from Built-in AI to the approval =="
+PANEL_JS="$PLUGIN_DIR/assets/js/wpcc-action-panel.js"
+PANEL_PHP="$PLUGIN_DIR/includes/Admin/ActionPanelAssets.php"
+SEOV="$PLUGIN_DIR/includes/Admin/views/seo-meta.php"
+
+# After submitting, the panel used to end on a primary "Close" — leaving the
+# customer to find the global Approvals screen and identify their item among a
+# hundred. The apply response already carried request_id.
+has "panel is given the approvals URL"        "approvalUrl" "$PANEL_PHP"
+has "panel is given the changes URL"          "changesUrl"  "$PANEL_PHP"
+has "panel reads request_id from the apply response" "res.data.request_id" "$PANEL_JS"
+has "submitted state links the exact approval" "approvalUrl + '&view='" "$PANEL_JS"
+has "applied state offers Changes"            "wpcc-qp-changes" "$PANEL_JS"
+has "Close is no longer the primary action"   "wpcc-qp-close' }, t( 'done' )" "$PANEL_JS"
+
+# Awaiting-approval rows in both Built-in AI tools.
+has "content: awaiting rows link the approval" "APPROVAL_URL" "$VIEW"
+has "seo: awaiting rows link the approval"     "APPROVAL_URL" "$SEOV"
+has "content: link names the item (a11y)"      "reviewApprovalFor" "$VIEW"
+has "seo: link names the item (a11y)"          "reviewApprovalFor" "$SEOV"
+
+echo ""
+echo "== 15. Skipped items say WHY, and skips are not called failures =="
+has "seo: reasons are counted and named"   "function skipDetail" "$SEOV"
+has "seo: draft-exists reason"             "skHasDraft"  "$SEOV"
+has "seo: recovery guidance offered"       "skReview"    "$SEOV"
+has "content: mixed results explain skips" "function skipReasonLabel" "$VIEW"
+has "content: reason appended when some succeeded" "c > 0 && s > 0 && r" "$VIEW"
+# These are SKIPS. They used to fall through to the generic failure text,
+# telling the customer something had broken when nothing had.
+has "panel: capability_unsupported is a skip" "capability_unsupported" "$PANEL_JS"
+has "panel: not_found is a skip"              "case 'not_found'"        "$PANEL_JS"
+has "panel: skips say nothing changed"        "skNothingTitle"          "$PANEL_PHP"
+
+echo ""
+echo "== 16. A real failure shows the real reason =="
+# The generators return a message per failed item; the panel discarded all of it
+# in favour of "Could not generate a suggestion. Please try again."
+has "panel reads the failed envelope"      "env.failed" "$PANEL_JS"
+has "panel surfaces the engine message"    "env.failed[ 0 ].message" "$PANEL_JS"
+has "failure still states nothing changed" "nothingChanged" "$PANEL_PHP"
+
+echo ""
+echo "== 17. Modal confidence: loading, duplicates, button hierarchy =="
+has "loading names what is being generated" "generatingFor" "$PANEL_PHP"
+has "loading names the model"               "usingModel"    "$PANEL_PHP"
+has "each workflow declares its subject"    "'subject'"     "$PLUGIN_DIR/includes/Admin/AiActionRegistry.php"
+has "loading answers the anxious question"  "nothingYet"    "$PANEL_PHP"
+has "loading has a spinner"                 "wpcc-qp-spinner" "$PANEL_JS"
+has "duplicate state has a heading"         "existsTitle"   "$PANEL_PHP"
+has "duplicate state explains why"          "still waiting for your review" "$PANEL_PHP"
+has "duplicate primary action is Review"    "reviewDraft"   "$PANEL_PHP"
+# Governance: the gated modes must never gain an immediate-apply shortcut.
+has "gated mode still submits for approval" "applyGate"     "$PANEL_PHP"
+lacks "no Apply Now shortcut in the panel"  "Apply now"     "$PANEL_PHP"
+lacks "no Apply Now shortcut in the JS"     "Apply now"     "$PANEL_JS"
+
+# Asset versioning: a fix inside a released version must reach cached browsers.
+has "panel assets are cache-busted by mtime" "private static function ver" "$PANEL_PHP"
+
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
