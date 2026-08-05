@@ -257,7 +257,21 @@ $wpcc_op_label = static function ( string $name ): string {
 			<?php foreach ( $wpcc_rev as $s ) : ?>
 				<div class="wpcc-oc-row">
 					<span style="flex:1;">
-						<strong style="font-weight:600;"><?php echo esc_html( implode( ', ', array_slice( (array) $s['runtimes'], 0, 3 ) ) ?: __( 'change session', 'ai-command-center' ) ); ?></strong>
+						<?php
+						/*
+						 * Runtime keys are engine vocabulary. This was the one surface that
+						 * printed them raw, so the SAME change session read "Settings · 3
+						 * changes" on Home and "option · 4 reversible changes" here — and it
+						 * did so in Simple mode, where Changes correctly hides raw ids behind
+						 * the Detailed toggle. ActionLabels::area() is what Home, Changes and
+						 * Approvals already use.
+						 */
+						$wpcc_oc_areas = array_map(
+							static fn( $runtime ): string => \WPCommandCenter\Admin\ActionLabels::area( (string) $runtime ),
+							array_slice( (array) $s['runtimes'], 0, 3 )
+						);
+						?>
+						<strong style="font-weight:600;"><?php echo esc_html( implode( ', ', array_unique( $wpcc_oc_areas ) ) ?: __( 'change session', 'ai-command-center' ) ); ?></strong>
 						<span class="muted">· <?php printf( esc_html( /* translators: %d: number */ _n( '%d reversible change', '%d reversible changes', (int) $s['reversible_count'], 'ai-command-center' ) ), (int) $s['reversible_count'] ); ?></span>
 						<span class="muted">· <?php echo esc_html( $s['actor_summary'] ); ?></span>
 					</span>

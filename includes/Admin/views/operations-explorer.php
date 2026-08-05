@@ -80,6 +80,10 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 .wpcc-ops-pager { display:flex;align-items:center;gap:var(--wpcc-space-4);margin:var(--wpcc-space-5) 0;max-width:1100px; }
 .wpcc-ops-pager .wpcc-pageinfo { font-size:var(--wpcc-fs-small);color:var(--wpcc-text-secondary); }
 .wpcc-ops-table { max-width:1100px;margin-top:var(--wpcc-space-2); }
+/* The operations matrix is a wide table by nature. Below ~700px it used to make
+   the DOCUMENT scroll horizontally, which moves the whole admin under the
+   customer instead of just the table. Contain it here. */
+#wpcc-ops-panel { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .wpcc-ops-table .wpcc-op-id { font-family:var(--wpcc-font-mono);font-size:var(--wpcc-fs-caption);color:var(--wpcc-text-secondary); }
 .wpcc-ops-table .wpcc-op-desc { color:var(--wpcc-text-muted);font-size:var(--wpcc-fs-small); }
 .wpcc-op-detail-table { max-width:820px;margin:var(--wpcc-space-3) 0 var(--wpcc-space-7); }

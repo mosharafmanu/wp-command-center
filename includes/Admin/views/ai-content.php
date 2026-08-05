@@ -350,8 +350,8 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			const prov = p.provider ? '<div class="wpcc-aic-prov">' + esc( STR.byAI ) + ( p.model ? ' · ' + esc( p.model ) : '' ) + editedChip + '</div>' : ( editedChip ? '<div>' + editedChip + '</div>' : '' );
 			const curCell = cur ? esc( cur ) : '<em class="wpcc-aic-none">' + esc( STR.none ) + '</em>';
 			const editor = ( field === 'excerpt' )
-				? '<label class="screen-reader-text">' + esc( STR.fieldExcerpt ) + '</label><textarea class="wpcc-aic-ed" rows="3">' + esc( sg ) + '</textarea>'
-				: '<label class="screen-reader-text">' + esc( STR.fieldTitle ) + '</label><input type="text" class="wpcc-aic-et" value="' + esc( sg ) + '">';
+				? '<textarea class="wpcc-aic-ed" rows="3" aria-label="' + esc( STR.fieldExcerpt ) + '">' + esc( sg ) + '</textarea>'
+				: '<input type="text" class="wpcc-aic-et" aria-label="' + esc( STR.fieldTitle ) + '" value="' + esc( sg ) + '">';
 			// proposal_id is an OPAQUE DOM key only (edit/apply/dismiss); never displayed.
 			return '<tr data-id="' + esc( p.proposal_id ) + '" data-tid="' + esc( tid ) + '" data-field="' + esc( field ) + '">' +
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-aic-meta">' + esc( c.type || '' ) + '</div></td>' +

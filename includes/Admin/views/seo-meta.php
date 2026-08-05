@@ -743,11 +743,9 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-seo-meta">' + esc( c.type || '' ) + '</div></td>' +
 				'<td class="wpcc-seo-meta"><div><strong>' + esc( STR.sgCurTitle ) + ':</strong> ' + curT + '</div><div style="margin-top:6px;"><strong>' + esc( STR.sgCurDesc ) + ':</strong> ' + curD + '</div></td>' +
 				'<td>' + prov +
-					'<label class="screen-reader-text">' + esc( STR.sgCurTitle ) + '</label>' +
-					'<input type="text" class="wpcc-seo-et" value="' + esc( sg.title ) + '">' +
+					'<input type="text" class="wpcc-seo-et" aria-label="' + esc( STR.sgCurTitle ) + '" value="' + esc( sg.title ) + '">' +
 					'<div class="wpcc-seo-cc wpcc-seo-cc-t"></div>' +
-					'<label class="screen-reader-text">' + esc( STR.sgCurDesc ) + '</label>' +
-					'<textarea class="wpcc-seo-ed" rows="3">' + esc( sg.description ) + '</textarea>' +
+					'<textarea class="wpcc-seo-ed" rows="3" aria-label="' + esc( STR.sgCurDesc ) + '">' + esc( sg.description ) + '</textarea>' +
 					'<div class="wpcc-seo-cc wpcc-seo-cc-d"></div>' +
 				'</td>' +
 				'<td><button type="button" class="button button-primary button-small wpcc-seo-apply">' + esc( IS_DEV ? STR.applyDev : STR.applyGate ) + '</button> ' +

@@ -157,7 +157,7 @@ $history_url  = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 			];
 			let html = '<table class="widefat striped">' + rowsHtml.map( ( r ) => '<tr><th style="width:180px;">' + r[0] + '</th><td>' + r[1] + '</td></tr>' ).join( '' ) + '</table>';
 			if ( p.status === 'draft' ) {
-				html += '<p><label><?php echo esc_js( __( 'Edit final payload (JSON):', 'ai-command-center' ) ); ?></label><br>' +
+				html += '<p><label for="wpcc-p-edit"><?php echo esc_js( __( 'Edit final payload (JSON):', 'ai-command-center' ) ); ?></label><br>' +
 					'<textarea id="wpcc-p-edit" class="large-text code" rows="3">' + esc( JSON.stringify( p.final_payload || p.payload ) ) + '</textarea></p>' +
 					'<p><button type="button" class="button wpcc-p-save" data-id="' + esc( p.proposal_id ) + '"><?php echo esc_js( __( 'Save final payload', 'ai-command-center' ) ); ?></button></p>';
 			}
