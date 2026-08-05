@@ -88,6 +88,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 
 	<?php // U1.4 — surfaced when generation returns no_provider (no AI key connected). ?>
 	<div id="wpcc-seo-gen-notice" class="notice notice-warning inline" role="status" aria-live="polite" style="display:none;margin:8px 0;"></div>
+	<div id="wpcc-seo-skip-list" class="wpcc-seo-skip" role="status" aria-live="polite" style="display:none;"></div>
 
 	<div id="wpcc-seo-panel">
 		<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
@@ -137,9 +138,21 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		<?php // Segmented, single-status pagination — each segment is one paginated
 		// /admin/proposals read; default = Applied. ?>
 		<div class="wpcc-seo-segbar" id="wpcc-seo-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'ai-command-center' ); ?>">
-			<button type="button" class="button button-primary wpcc-seo-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?></button>
-			<button type="button" class="button wpcc-seo-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'ai-command-center' ); ?></button>
-			<button type="button" class="button wpcc-seo-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'ai-command-center' ); ?></button>
+			<?php
+			/*
+			 * Each segment carries its OWN count.
+			 *
+			 * The tab badge counted `status=applied` only, while the tab itself
+			 * shows three datasets behind these buttons. So "Applied 9" sat above a
+			 * list that, one click later, showed two awaiting items the badge had
+			 * never counted — two numbers describing different things with nothing
+			 * saying so. Now the badge is the tab's total and each segment states
+			 * its own, so every number on the screen refers to exactly one dataset.
+			 */
+			?>
+			<button type="button" class="button button-primary wpcc-seo-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?><span class="wpcc-seo-segcount" id="wpcc-seo-segcount-applied"></span></button>
+			<button type="button" class="button wpcc-seo-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'ai-command-center' ); ?><span class="wpcc-seo-segcount" id="wpcc-seo-segcount-pending_approval"></span></button>
+			<button type="button" class="button wpcc-seo-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'ai-command-center' ); ?><span class="wpcc-seo-segcount" id="wpcc-seo-segcount-failed"></span></button>
 		</div>
 		<table class="widefat striped wpcc-seo-sg-table">
 			<thead>
@@ -189,6 +202,10 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 .wpcc-seo-bulkbar { display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0;padding:8px 10px;border:1px solid #c3c4c7;background:#f6f7f7;border-radius:4px; }
 #wpcc-seo-sg-progress { margin:8px 0;padding:10px;border:1px solid #c3c4c7;background:#fff;border-radius:4px;font-size:13px; }
 .wpcc-seo-tabcount { display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;background:#dcdcde;color:#1d2327;font-size:11px;line-height:18px;vertical-align:2px; }
+.wpcc-seo-segcount { display:inline-block;margin-left:5px;font-size:11px;font-weight:600;opacity:.75; }
+.wpcc-seo-skip { margin:8px 0;padding:10px 14px;background:#fcf9e8;border:1px solid #f0e2a6;border-radius:4px;max-width:820px; }
+.wpcc-seo-skip__head { margin:0 0 6px;font-size:13px;font-weight:600;color:#8a6100; }
+.wpcc-seo-skip__list { margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:#50575e; }
 .wpcc-seo-dash { border:1px solid #c3c4c7;background:#fff;border-radius:4px;padding:16px;max-width:1100px; }
 .wpcc-seo-dash-bar { height:8px;border-radius:5px;background:#e6e6e9;overflow:hidden;margin-bottom:8px; }
 .wpcc-seo-dash-fill { height:100%;background:#00a32a;transition:width .2s; }
@@ -310,6 +327,9 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		skNotFound:   <?php echo wp_json_encode( esc_html__( 'no longer exists', 'ai-command-center' ) ); ?>,
 		skOther:      <?php echo wp_json_encode( esc_html__( 'nothing needed generating', 'ai-command-center' ) ); ?>,
 		skReview:     <?php echo wp_json_encode( esc_html__( 'Open the Suggestions tab to review the drafts already waiting.', 'ai-command-center' ) ); ?>,
+		/* translators: %1$d: number of items that were skipped. */
+		skipHead:     <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d item(s) were skipped:', 'ai-command-center' ) ); ?>,
+		skipOpenDraft:<?php echo wp_json_encode( esc_html__( 'Review the existing draft', 'ai-command-center' ) ); ?>,
 		genCap:    <?php echo wp_json_encode( esc_html__( 'Up to 25 at a time; only the first 25 are used.', 'ai-command-center' ) ); ?>,
 		genErr:    <?php echo wp_json_encode( esc_html__( 'Generation failed. Please retry.', 'ai-command-center' ) ); ?>,
 		// Slice 3 — Suggestions tab.
@@ -432,10 +452,23 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 			setTabCount( 'wpcc-seo-tabcount-suggestions', n );
 			const f = $( 'wpcc-seo-dash-sug' ); if ( f ) { f.textContent = n; }
 		} );
-		api( '/proposals?status=applied&operation_id=seo_manage&limit=1' ).then( ( r ) => {
-			const n = ( r.ok && r.data && r.data.total_count ) || 0;
-			setTabCount( 'wpcc-seo-tabcount-applied', n );
-			const f = $( 'wpcc-seo-dash-applied' ); if ( f ) { f.textContent = n; }
+		// One request per dataset the Applied tab can show. The badge is their
+		// sum (what the tab contains); each segment shows its own.
+		Promise.all(
+			[ 'applied', 'pending_approval', 'failed' ].map( ( st ) =>
+				api( '/proposals?status=' + st + '&operation_id=seo_manage&limit=1' )
+					.then( ( r ) => ( ( r.ok && r.data && r.data.total_count ) || 0 ) )
+			)
+		).then( ( counts ) => {
+			const segs = [ 'applied', 'pending_approval', 'failed' ];
+			segs.forEach( ( st, i ) => {
+				const el = $( 'wpcc-seo-segcount-' + st );
+				if ( el ) { el.textContent = counts[ i ] > 0 ? ' ' + counts[ i ] : ''; }
+			} );
+			setTabCount( 'wpcc-seo-tabcount-applied', counts[0] + counts[1] + counts[2] );
+			// The dashboard footer names "applied (reversible)" specifically, so it
+			// keeps the applied-only number rather than the tab total.
+			const f = $( 'wpcc-seo-dash-applied' ); if ( f ) { f.textContent = counts[0]; }
 		} );
 	}
 
@@ -484,6 +517,9 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 			'<th scope="col" style="width:70px;">' + esc( STR.colScore ) + '</th>' +
 			'</tr></thead><tbody>';
 		items.forEach( ( it ) => {
+			// Remembered so a skipped item can be named. The skip response returns
+			// post_ids; the customer thinks in page names.
+			TITLE_BY_ID[ String( it.post_id ) ] = it.title || ( '#' + it.post_id );
 			const titleCell = it.edit_link
 				? '<a href="' + esc( it.edit_link ) + '">' + esc( it.title || ( '#' + it.post_id ) ) + '</a>'
 				: esc( it.title || ( '#' + it.post_id ) );
@@ -537,10 +573,9 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 					return;
 				}
 					if ( status ) {
-					var line = STR.genDone.replace( '%1$d', c ).replace( '%2$d', sk ).replace( '%3$d', f );
-					if ( sk > 0 ) { line += ' ' + skipDetail( skipped ); }
-					status.textContent = line;
+					status.textContent = STR.genDone.replace( '%1$d', c ).replace( '%2$d', sk ).replace( '%3$d', f );
 				}
+				renderSkipList( skipped );
 				pg.offset = 0; load(); // refresh audit + counts
 				// U1.2 — handoff: when suggestions were created, move the user to them.
 				if ( c > 0 ) { switchTab( 'suggestions' ); }
@@ -554,6 +589,8 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 	 * started yet") instead of collapsing to the first reason found. Recovery
 	 * guidance is appended for the one reason a customer can act on.
 	 */
+	var TITLE_BY_ID = {};
+
 	function skipReasonLabel( reason ) {
 		switch ( reason ) {
 			case 'has_open_proposal': return STR.skHasDraft;
@@ -578,6 +615,35 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		var out = STR.skipWhy.replace( '%1$d', ( skipped || [] ).length ).replace( '%2$s', parts.join( ', ' ) );
 		if ( counts[ STR.skHasDraft ] ) { out += ' ' + STR.skReview; }
 		return out;
+	}
+
+	/*
+	 * Name every skipped item, say why, and offer the way forward.
+	 *
+	 * A count told the customer that something did not happen to some of their
+	 * pages without saying which, why, or what to do — and the commonest reason
+	 * is the one they most want to act on: that page already has a draft waiting.
+	 * Each row names the page, gives the reason in their words, and (for the
+	 * draft case) links straight to the Suggestions tab where it is waiting.
+	 */
+	function renderSkipList( skipped ) {
+		const el = $( 'wpcc-seo-skip-list' );
+		if ( ! el ) { return; }
+		if ( ! skipped || ! skipped.length ) { el.style.display = 'none'; el.innerHTML = ''; return; }
+
+		let h = '<p class="wpcc-seo-skip__head">' + esc( STR.skipHead.replace( '%1$d', skipped.length ) ) + '</p><ul class="wpcc-seo-skip__list">';
+		skipped.forEach( ( sk ) => {
+			const id     = String( sk && sk.post_id ? sk.post_id : '' );
+			const title  = TITLE_BY_ID[ id ] || ( '#' + id );
+			const reason = skipReasonLabel( sk && sk.reason );
+			const draft  = ( sk && sk.reason === 'has_open_proposal' );
+			h += '<li><strong>' + esc( title ) + '</strong> — ' + esc( reason ) +
+				( draft ? ' · <button type="button" class="wpcc-seo-link" data-go="suggestions">' + esc( STR.skipOpenDraft ) + '</button>' : '' ) +
+				'</li>';
+		} );
+		h += '</ul>';
+		el.innerHTML = h;
+		el.style.display = '';
 	}
 
 	// Guidance when Built-in AI has no provider key (server-provided URL).
