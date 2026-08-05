@@ -287,9 +287,21 @@ $sr_preview_js = $sr_preview ? [
 <div class="wpcc-tools-wrap">
 	<h1><?php esc_html_e( 'Tools', 'ai-command-center' ); ?></h1>
 	<p class="description" style="max-width:680px;">
-		<?php esc_html_e( 'Governed maintenance tools. Each runs through the same engine as everything else: changes are previewed, approved, audited, and reversible where supported.', 'ai-command-center' ); ?>
+		<?php esc_html_e( 'Governed maintenance tools. Each runs through the same engine as everything else: changes are previewed, approved and audited. A database search and replace rewrites rows in place and cannot be undone.', 'ai-command-center' ); ?>
 	</p>
-	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
+	<?php
+	/*
+	 * Search & Replace records NO rollback point, so the strip must not offer one.
+	 * The engine has always been honest about this — the run response carries
+	 * `rollback_available: false` with "Rows are mutated in place and cannot be
+	 * automatically reverted", the change log stores `reversible=0` /
+	 * `rollback_kind=none`, and the Changes screen shows no Undo for these rows.
+	 * This screen was the one surface claiming otherwise, on the page where the
+	 * customer actually runs it and decides whether to take a backup first.
+	 */
+	$wpcc_trust_reversible = false;
+	require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php';
+	?>
 
 	<?php if ( ! empty( $sr_success_msg ) ) : ?>
 		<div class="notice inline notice-success is-dismissible"><p><?php echo esc_html( $sr_success_msg ); ?></p></div>
@@ -308,15 +320,15 @@ $sr_preview_js = $sr_preview ? [
 						<?php wp_nonce_field( 'wpcc_sr_action' ); ?>
 						<input type="hidden" name="confirmed" id="wpcc-sr-confirmed" value="0">
 						<p>
-							<label><strong><?php esc_html_e( 'Search For:', 'ai-command-center' ); ?></strong></label>
+							<label for="wpcc-sr-search"><strong><?php esc_html_e( 'Search For:', 'ai-command-center' ); ?></strong></label>
 							<input type="text" name="search" id="wpcc-sr-search" placeholder="e.g. old-domain.com" value="<?php echo esc_attr( wp_unslash( (string) ( $_POST['search'] ?? '' ) ) ); ?>" required>
 						</p>
 						<p>
-							<label><strong><?php esc_html_e( 'Replace With:', 'ai-command-center' ); ?></strong></label>
+							<label for="wpcc-sr-replace"><strong><?php esc_html_e( 'Replace With:', 'ai-command-center' ); ?></strong></label>
 							<input type="text" name="replace" id="wpcc-sr-replace" placeholder="e.g. new-domain.com" value="<?php echo esc_attr( wp_unslash( (string) ( $_POST['replace'] ?? '' ) ) ); ?>">
 						</p>
 						<p>
-							<label><strong><?php esc_html_e( 'Table Preset:', 'ai-command-center' ); ?></strong></label>
+							<label for="wpcc-sr-preset"><strong><?php esc_html_e( 'Table Preset:', 'ai-command-center' ); ?></strong></label>
 							<select id="wpcc-sr-preset">
 								<option value=""><?php esc_html_e( '— Select a preset —', 'ai-command-center' ); ?></option>
 								<option value="content"><?php esc_html_e( 'Content Tables', 'ai-command-center' ); ?></option>
@@ -346,7 +358,7 @@ $sr_preview_js = $sr_preview ? [
 						 */
 						?>
 						<p>
-							<label><strong><?php esc_html_e( 'Target Tables:', 'ai-command-center' ); ?></strong></label>
+							<span><strong><?php esc_html_e( 'Target Tables:', 'ai-command-center' ); ?></strong></span>
 							<span id="wpcc-sr-selected-summary" class="wpcc-sr-summary" role="status"></span>
 						</p>
 

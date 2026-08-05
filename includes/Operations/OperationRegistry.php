@@ -152,7 +152,12 @@ final class OperationRegistry {
 			[
 				'id'                => 'safe_search_replace',
 				'title'             => __( 'Safe Search & Replace', 'ai-command-center' ),
-				'description'       => __( 'Perform a dry-run or live search and replace in the database with rollback support. dry_run (default true) returns matches_found/rows_affected as counts only unless return_matches is set — pass return_matches:true to also get a capped list (default 25, max_matches) of {table, primary_key_column, primary_key_value, column, excerpt} so you can see WHICH rows matched before running live.', 'ai-command-center' ),
+				// NOT reversible, and this description is what an assistant reads before
+				// proposing the operation. It used to say "with rollback support", which
+				// contradicted the engine's own run response (`rollback_available: false`)
+				// and the change log (`reversible=0`, `rollback_kind=none`). Preview via
+				// dry_run is the safety net here — there is no undo behind it.
+				'description'       => __( 'Perform a dry-run or live search and replace in the database. NOT REVERSIBLE: a live run rewrites matching rows in place, records no rollback point, and cannot be undone — preview with dry_run first and take a database backup before running live. dry_run (default true) returns matches_found/rows_affected as counts only unless return_matches is set — pass return_matches:true to also get a capped list (default 25, max_matches) of {table, primary_key_column, primary_key_value, column, excerpt} so you can see WHICH rows matched before running live.', 'ai-command-center' ),
 				'risk_level'        => 'critical',
 				'action_risks'      => [],
 				'requires_approval' => true,
