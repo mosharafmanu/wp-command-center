@@ -299,6 +299,20 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		dismiss:   <?php echo wp_json_encode( esc_html__( 'Dismiss', 'ai-command-center' ) ); ?>,
 		// Slice 5a — page-scoped bulk apply/dismiss (Suggestions tab).
 		selectSug:   <?php echo wp_json_encode( esc_html__( 'Select suggestion', 'ai-command-center' ) ); ?>,
+		/*
+		 * Row-level accessible names.
+		 *
+		 * Every checkbox in these tables carried the SAME aria-label, so a screen
+		 * reader announced "Generate suggestions" twenty-five times with nothing to
+		 * distinguish one row from the next — the control was operable but not
+		 * identifiable, which on a bulk-generate table means choosing blind. The
+		 * visible column already shows the title; these put it in the accessible
+		 * name too.
+		 */
+		/* translators: %s: the post or page title. */
+		genFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Generate suggestions for %s', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		selectSugFor:<?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select suggestion for %s', 'ai-command-center' ) ); ?>,
 		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'ai-command-center' ) ); ?>,
 		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'ai-command-center' ) ); ?>,
 		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'ai-command-center' ) ); ?>,
@@ -354,6 +368,14 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 
 	const $ = ( id ) => document.getElementById( id );
 	const esc = ( s ) => String( s == null ? '' : s ).replace( /[&<>"']/g, ( c ) => ( { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ c ] ) );
+
+	/**
+	 * Build a row-level accessible name: the control's purpose plus WHICH item it
+	 * acts on. Falls back to the numeric id when a row genuinely has no title, so
+	 * the name is never just the bare verb repeated down the table.
+	 */
+	const rowLabel = ( tpl, title, id ) => String( tpl ).replace( '%s', ( title && String( title ).trim() ) ? title : ( '#' + id ) );
+
 	const pg = { limit: LIMIT, offset: 0, total: 0, returned: 0, hasMore: false };
 	let genBusy = false;
 
@@ -439,7 +461,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 				? '<a href="' + esc( it.edit_link ) + '">' + esc( it.title || ( '#' + it.post_id ) ) + '</a>'
 				: esc( it.title || ( '#' + it.post_id ) );
 			h += '<tr>' +
-				'<td><input type="checkbox" class="wpcc-seo-cb" value="' + esc( it.post_id ) + '" aria-label="' + esc( STR.gen ) + '"></td>' +
+				'<td><input type="checkbox" class="wpcc-seo-cb" value="' + esc( it.post_id ) + '" aria-label="' + esc( rowLabel( STR.genFor, it.title, it.post_id ) ) + '"></td>' +
 				'<th scope="row"><strong>' + titleCell + '</strong><div class="wpcc-seo-meta">' + esc( it.post_type || '' ) + '</div></th>' +
 				'<td class="wpcc-seo-meta">' + metaCell( it.seo_title ) + '</td>' +
 				'<td class="wpcc-seo-meta">' + metaCell( it.seo_description ) + '</td>' +
@@ -588,7 +610,7 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 			const curD = cur.description ? esc( cur.description ) : '<em class="wpcc-seo-none">' + esc( STR.none ) + '</em>';
 			// proposal_id is an OPAQUE DOM key only (edit/dismiss/bulk); never displayed.
 			return '<tr data-id="' + esc( p.proposal_id ) + '" data-tid="' + esc( tid ) + '">' +
-				'<td><input type="checkbox" class="wpcc-seo-sg-cb" aria-label="' + esc( STR.selectSug ) + '"></td>' +
+				'<td><input type="checkbox" class="wpcc-seo-sg-cb" aria-label="' + esc( rowLabel( STR.selectSugFor, title, tid ) ) + '"></td>' +
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-seo-meta">' + esc( c.type || '' ) + '</div></td>' +
 				'<td class="wpcc-seo-meta"><div><strong>' + esc( STR.sgCurTitle ) + ':</strong> ' + curT + '</div><div style="margin-top:6px;"><strong>' + esc( STR.sgCurDesc ) + ':</strong> ' + curD + '</div></td>' +
 				'<td>' + prov +

@@ -181,6 +181,15 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		save:     <?php echo wp_json_encode( esc_html__( 'Save', 'ai-command-center' ) ); ?>,
 		saved:    <?php echo wp_json_encode( esc_html__( 'Saved', 'ai-command-center' ) ); ?>,
 		dismiss:  <?php echo wp_json_encode( esc_html__( 'Dismiss', 'ai-command-center' ) ); ?>,
+		/* Row-level accessible names — the visible button keeps its short label. */
+		/* translators: %s: the post or page title. */
+		applyDevFor:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Approve and apply suggestion for %s', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		applyGateFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Submit suggestion for %s for approval', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		saveFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Save edited suggestion for %s', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		dismissFor:   <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Dismiss suggestion for %s', 'ai-command-center' ) ); ?>,
 		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from a post or page.', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
 		ccTitle:  <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'ai-command-center' ) ); ?>,
@@ -232,6 +241,14 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 
 	const $ = ( id ) => document.getElementById( id );
 	const esc = ( s ) => String( s == null ? '' : s ).replace( /[&<>"']/g, ( c ) => ( { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ c ] ) );
+
+	/**
+	 * Row-level accessible name. This screen's row controls are buttons rather
+	 * than checkboxes, and Apply / Save / Dismiss carried the same three names on
+	 * every row — so a screen reader user reviewing a page of suggestions heard
+	 * "Apply" repeatedly with no way to tell which post they were applying to.
+	 */
+	const rowLabel = ( tpl, title, id ) => String( tpl ).replace( '%s', ( title && String( title ).trim() ) ? title : ( '#' + id ) );
 
 	function api( path, opts ) {
 		opts = opts || {};
@@ -320,9 +337,9 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 				'<td>' + prov + editor +
 					'<div class="wpcc-aic-cc"></div>' +
 				'</td>' +
-				'<td><button type="button" class="button button-primary button-small wpcc-aic-apply">' + esc( IS_DEV ? STR.applyDev : STR.applyGate ) + '</button> ' +
-					'<button type="button" class="button button-small wpcc-aic-save">' + esc( STR.save ) + '</button> ' +
-					'<button type="button" class="button button-small wpcc-aic-dismiss">' + esc( STR.dismiss ) + '</button>' +
+				'<td><button type="button" class="button button-primary button-small wpcc-aic-apply" aria-label="' + esc( rowLabel( IS_DEV ? STR.applyDevFor : STR.applyGateFor, title, tid ) ) + '">' + esc( IS_DEV ? STR.applyDev : STR.applyGate ) + '</button> ' +
+					'<button type="button" class="button button-small wpcc-aic-save" aria-label="' + esc( rowLabel( STR.saveFor, title, tid ) ) + '">' + esc( STR.save ) + '</button> ' +
+					'<button type="button" class="button button-small wpcc-aic-dismiss" aria-label="' + esc( rowLabel( STR.dismissFor, title, tid ) ) + '">' + esc( STR.dismiss ) + '</button>' +
 					'<div class="wpcc-aic-rowmsg" role="status"></div></td>' +
 				'</tr>';
 		} ).join( '' ) );

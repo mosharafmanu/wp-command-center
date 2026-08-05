@@ -216,6 +216,10 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 		// Task 8.4 — bulk action labels (Suggestions tab).
 		selectAllSg: <?php echo wp_json_encode( esc_html__( 'Select all on this page', 'ai-command-center' ) ); ?>,
 		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the image title. */
+		genFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Generate alt text for %s', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the image title. */
+		selectSugFor:<?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select suggestion for %s', 'ai-command-center' ) ); ?>,
 		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'ai-command-center' ) ); ?>,
 		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'ai-command-center' ) ); ?>,
 		bulkDone:    <?php echo wp_json_encode( esc_html__( 'processed', 'ai-command-center' ) ); ?>,
@@ -247,6 +251,14 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 
 	const $ = ( id ) => document.getElementById( id );
 	const esc = ( s ) => String( s == null ? '' : s ).replace( /[&<>"']/g, ( c ) => ( { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ c ] ) );
+
+	/**
+	 * Row-level accessible name — the control's purpose plus WHICH image it acts
+	 * on. The generate checkbox previously had no accessible name at all, and the
+	 * suggestion checkbox reused one identical label for every row, so a screen
+	 * reader user selecting images for generation had nothing to tell them apart.
+	 */
+	const rowLabel = ( tpl, title, id ) => String( tpl ).replace( '%s', ( title && String( title ).trim() ) ? title : ( '#' + id ) );
 
 	function req( base, path, opts ) {
 		opts = opts || {};
@@ -297,7 +309,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 						// Rows with a pending suggestion are NOT selectable (generator would skip them).
 						const cb = pending
 							? '<span class="description" title="' + esc( STR.pending ) + '">•</span>'
-							: '<input type="checkbox" class="wpcc-at-cb" value="' + esc( it.attachment_id ) + '">';
+							: '<input type="checkbox" class="wpcc-at-cb" value="' + esc( it.attachment_id ) + '" aria-label="' + esc( rowLabel( STR.genFor, it.title, it.attachment_id ) ) + '">';
 						const pendingChip = pending ? ' <span style="display:inline-block;padding:1px 6px;border-radius:8px;font-size:11px;background:#dcdcde;color:#1d2327;">' + esc( STR.pending ) + '</span>' : '';
 						const alt = it.alt ? esc( it.alt ) : '<em style="color:#646970;">' + esc( STR.none ) + '</em>';
 						return '<tr><td>' + cb + '</td><td>' + thumb + '</td>' +
@@ -424,7 +436,7 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 			// proposal_id is an OPAQUE DOM key only — never shown to the user.
 			// data-mid carries the attachment id needed to rebuild final_payload on save.
 			return '<tr data-id="' + esc( p.proposal_id ) + '" data-mid="' + esc( tid ) + '">' +
-				'<td><input type="checkbox" class="wpcc-at-sg-cb" value="' + esc( p.proposal_id ) + '" aria-label="' + esc( STR.applySel ) + '"></td>' +
+				'<td><input type="checkbox" class="wpcc-at-sg-cb" value="' + esc( p.proposal_id ) + '" aria-label="' + esc( rowLabel( STR.selectSugFor, m.title, tid ) ) + '"></td>' +
 				'<td>' + thumb + '</td>' +
 				'<td>' + esc( m.title || ( '#' + tid ) ) + editedChip + prov + '</td>' +
 				'<td>' + cur + '</td>' +
