@@ -1070,10 +1070,34 @@ final class OperationExecutor {
 			$base['created'] = [ (int) $result['product_id'] ];
 		}
 
-		// Extract content_id for content operations.
+		/*
+		 * Extract content_id for content operations — as CREATED or UPDATED.
+		 *
+		 * This used to file every content_id under "created", whatever the runtime
+		 * had actually done. So retitling one existing post was stored as
+		 * created_count 1 / updated_count 0, and the Approvals screen told the
+		 * owner "Created 1 · Updated 0" for a change that created nothing. On the
+		 * screen whose whole job is reporting what happened to the site, that is
+		 * the wrong fact, and it flowed on into the Changes counters and
+		 * ChangeRecorder, which reads $counts[0] as the created tally.
+		 *
+		 * The runtimes already say which it was: content_create is the only action
+		 * here that creates. content_update / publish / unpublish / schedule /
+		 * taxonomy_assign / featured_image_assign / content_rollback all act on
+		 * something that already exists.
+		 *
+		 * Only an EXPLICIT action reclassifies. A result with no action keeps the
+		 * old "created" behaviour, so runtimes with a different shape are untouched.
+		 */
 		if ( isset( $result['content_id'] ) && is_numeric( $result['content_id'] ) && $result['content_id'] > 0 ) {
-			if ( ! in_array( (int) $result['content_id'], $base['created'], true ) ) {
-				$base['created'][] = (int) $result['content_id'];
+			$content_id = (int) $result['content_id'];
+			$action     = isset( $result['action'] ) ? (string) $result['action'] : '';
+			$is_update  = '' !== $action && ! str_ends_with( $action, '_create' );
+			$bucket     = $is_update ? 'updated' : 'created';
+
+			if ( ! in_array( $content_id, $base['created'], true )
+				&& ! in_array( $content_id, $base['updated'], true ) ) {
+				$base[ $bucket ][] = $content_id;
 			}
 		}
 
