@@ -507,17 +507,75 @@ final class ActionLabels {
 	 *
 	 * @param array<string,mixed> $payload
 	 */
+	/**
+	 * The WordPress object a payload is about, by name, or '' when it is not about
+	 * one. Reads only ids that unambiguously identify a post-table object —
+	 * `content_id` and `media_id` are the Built-in AI parameter names, the rest are
+	 * the engine's. Returns '' for a missing or untitled object so the caller falls
+	 * through to its existing behaviour rather than printing an empty quote.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
+	private static function object_name( array $payload ): string {
+		foreach ( [ 'content_id', 'post_id', 'media_id', 'attachment_id', 'product_id' ] as $key ) {
+			if ( ! isset( $payload[ $key ] ) || ! is_scalar( $payload[ $key ] ) ) {
+				continue;
+			}
+			$id = (int) $payload[ $key ];
+			if ( $id <= 0 ) {
+				continue;
+			}
+			$title = get_the_title( $id );
+			$title = is_string( $title ) ? trim( $title ) : '';
+			if ( '' !== $title ) {
+				return $title;
+			}
+		}
+		return '';
+	}
+
 	public static function target( array $payload ): string {
 		$bits = [];
+
+		/*
+		 * The NAME OF THE THING BEING CHANGED, resolved from its id, first.
+		 *
+		 * Two failures this fixes, both found scanning a real approval queue:
+		 *
+		 *  - "Update SEO details" named nothing at all. SEO payloads carry
+		 *    `content_id` and nest their values under `seo`, so neither loop below
+		 *    matched: no id key knew about `content_id`, and the name scan only
+		 *    looks at the top level. Every SEO approval in the queue therefore read
+		 *    identically, and a customer with six of them could not tell which page
+		 *    each one touched without opening it.
+		 *
+		 *  - Content approvals named the WRONG thing. Their payload has a top-level
+		 *    `title` — which is the SUGGESTED NEW title, not the page's name — so a
+		 *    suggestion of "Shopping Basket" for the Cart page rendered as
+		 *    'Edit a post or page — "Shopping Basket"', describing a page that does
+		 *    not exist. Coincidentally right when the suggestion echoed the title;
+		 *    misleading the moment it did not.
+		 *
+		 * Resolving the object's real title from its id answers "which page is this
+		 * about?" correctly in both cases, and is skipped entirely for payloads that
+		 * carry no such id (settings, plugins, files…), which keep the behaviour
+		 * they had.
+		 */
+		$object_name = self::object_name( $payload );
+		if ( '' !== $object_name ) {
+			$bits[] = '“' . self::shorten( $object_name ) . '”';
+		}
 
 		// A human-meaningful name, if the payload carries one. `option_id` is the
 		// canonical parameter for settings — omitting it meant a correctly-formed
 		// request rendered with LESS detail than a malformed one.
-		foreach ( [ 'title', 'post_title', 'name', 'label', 'slug', 'option_id', 'option', 'option_name', 'field_name', 'plugin', 'theme', 'path', 'query', 'search', 'taxonomy' ] as $key ) {
-			if ( isset( $payload[ $key ] ) && is_scalar( $payload[ $key ] ) && '' !== (string) $payload[ $key ] ) {
-				$value  = self::friendly_option( (string) $payload[ $key ] );
-				$bits[] = '“' . self::shorten( $value ) . '”';
-				break;
+		if ( empty( $bits ) ) {
+			foreach ( [ 'title', 'post_title', 'name', 'label', 'slug', 'option_id', 'option', 'option_name', 'field_name', 'plugin', 'theme', 'path', 'query', 'search', 'taxonomy' ] as $key ) {
+				if ( isset( $payload[ $key ] ) && is_scalar( $payload[ $key ] ) && '' !== (string) $payload[ $key ] ) {
+					$value  = self::friendly_option( (string) $payload[ $key ] );
+					$bits[] = '“' . self::shorten( $value ) . '”';
+					break;
+				}
 			}
 		}
 
