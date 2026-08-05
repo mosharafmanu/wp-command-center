@@ -13,7 +13,7 @@ Engineering is complete. What remains is independent certification and submissio
 | | |
 |---|---|
 | Branch | `release/v1-finalization` |
-| Commit | `21d1cfe19b723c39694deca59df909c7e399e835` (`21d1cfe`) |
+| Commit | `ad308566aefaafe70ae30bd9755d975db09d7e06` (`ad30856`) |
 | `main` | `13549c2` — **untouched, not merged** |
 | Commits ahead of `main` | 120 |
 | Uncommitted | none |
@@ -46,16 +46,16 @@ Twenty-one commits. Everything below was found by using the product, not by read
 File    build/ai-command-center-1.0.0.zip
 Size    1,040,509 bytes (1.0 MB)
 Entries 327 zip entries = 292 files + 35 directory entries
-SHA256  3266ecc7a43ced81565ed7328b9d5905edddd05426eab8b5bbd361aa2cf26b3d
-MD5     771b66779773ea80bc0b91892dd04765
-Commit  21d1cfe19b723c39694deca59df909c7e399e835   (working tree clean)
+SHA256  db1db34be5a5320c8cde5cfc326b4ee173c5956ed55d08ea65ac1243e19800ed
+MD5     a11d23603d0b2c532f2d5d8849b9afbd
+Commit  ad308566aefaafe70ae30bd9755d975db09d7e06   (working tree clean)
 Built   2026-08-05
 ```
 
 **Record the commit with the checksum, always.** The artifact this section used to
 describe (`06ac6188…`) matched byte for byte while being 26 commits stale — it shipped no
 token-creation dialog at all. A checksum identifies a file; only the commit identifies
-the product. All 292 shipped files were verified byte-identical to the tree at `21d1cfe`.
+the product. All 292 shipped files were verified byte-identical to the tree at `ad30856`.
 
 **Content identity (build-independent):**
 
@@ -72,7 +72,7 @@ unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
 ( cd /tmp/pkg && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
 ```
 
-> **Every artifact built before 2026-08-05 from `21d1cfe` MUST NOT be uploaded.** A date
+> **Every artifact built before 2026-08-05 from `ad30856` MUST NOT be uploaded.** A date
 > guard is not enough — the superseded `06ac6188…` was built on 2026-08-05 and still
 > predated 26 commits. Check the commit and a clean tree, not just the hash.
 
@@ -87,8 +87,8 @@ contents are identical. So:
 - To prove two builds are equivalent, compare **extracted contents**, not archive bytes.
 
 ```bash
-shasum -a 256 build/ai-command-center-1.0.0.zip   # 3266ecc7…
-git rev-parse HEAD                                # 21d1cfe…
+shasum -a 256 build/ai-command-center-1.0.0.zip   # db1db34b…
+git rev-parse HEAD                                # ad30856…
 git status --porcelain                            # empty
 ```
 
@@ -543,12 +543,12 @@ If WordPress.org requests changes, work this order:
 ```bash
 cd wp-content/plugins/ai-command-center
 git checkout release/v1-finalization
-git rev-parse HEAD                 # must be 21d1cfe19b723c39694deca59df909c7e399e835
+git rev-parse HEAD                 # must be ad308566aefaafe70ae30bd9755d975db09d7e06
 git status --porcelain             # must be empty
 rm -rf build
 bash scripts/build-release.sh
-shasum -a 256 build/ai-command-center-1.0.0.zip   # 3266ecc7…
-git rev-parse HEAD                                # 21d1cfe…
+shasum -a 256 build/ai-command-center-1.0.0.zip   # db1db34b…
+git rev-parse HEAD                                # ad30856…
 git status --porcelain                            # empty
 ```
 

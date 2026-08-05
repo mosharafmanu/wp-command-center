@@ -10,29 +10,29 @@
 |---|---|
 | **Filename** | `ai-command-center-1.0.0.zip` |
 | **Path** | `build/ai-command-center-1.0.0.zip` |
-| **SHA256** | `3266ecc7a43ced81565ed7328b9d5905edddd05426eab8b5bbd361aa2cf26b3d` |
-| **MD5** | `771b66779773ea80bc0b91892dd04765` |
+| **SHA256** | `db1db34be5a5320c8cde5cfc326b4ee173c5956ed55d08ea65ac1243e19800ed` |
+| **MD5** | `a11d23603d0b2c532f2d5d8849b9afbd` |
 | **Size** | 1,040,509 bytes (1.0 MB) |
 | **Entries** | 327 zip entries = **292 files** + 35 directory entries |
 | **Content identity** | `000599e096e028d1e96263ca98a762c03916b4d39b2fc98c02e9d0464337c3ae` |
-| **Built from commit** | `21d1cfe19b723c39694deca59df909c7e399e835` — working tree clean |
+| **Built from commit** | `ad308566aefaafe70ae30bd9755d975db09d7e06` — working tree clean |
 | **Built** | 2026-08-05 |
 
 Verify immediately before uploading:
 
 ```bash
 shasum -a 256 build/ai-command-center-1.0.0.zip
-# must print 3266ecc7a43ced81565ed7328b9d5905edddd05426eab8b5bbd361aa2cf26b3d
+# must print db1db34be5a5320c8cde5cfc326b4ee173c5956ed55d08ea65ac1243e19800ed
 
 # ...and the commit it was built from, which the checksum alone cannot tell you:
-git rev-parse HEAD          # must print 21d1cfe19b723c39694deca59df909c7e399e835
+git rev-parse HEAD          # must print ad308566aefaafe70ae30bd9755d975db09d7e06
 git status --porcelain      # must print nothing
 ```
 
 > The archive checksum is **not** reproducible across builds — only the *content identity*
 > is. Do not rebuild unless you intend to re-record the checksum. See RELEASE_HANDOFF §2.
 
-**Do not upload any artifact built before 2026-08-05 from commit `21d1cfe`.**
+**Do not upload any artifact built before 2026-08-05 from commit `ad30856`.**
 
 A previous artifact carried the checksum `06ac6188…` and matched this document exactly —
 while being 26 commits stale. It shipped **no token-creation dialog at all**: no required
