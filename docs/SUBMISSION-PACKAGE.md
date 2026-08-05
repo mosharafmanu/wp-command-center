@@ -1,6 +1,6 @@
 # WordPress.org Submission Package — WP Command Center 1.0.0
 
-**Prepared:** 2026-08-03 · **Status:** ready to upload · **Submitted by:** the owner (not automated)
+**Prepared:** 2026-08-03 · **Re-certified:** 2026-08-05 · **Status:** ready to upload · **Submitted by:** the owner (not automated)
 
 ---
 
@@ -10,27 +10,38 @@
 |---|---|
 | **Filename** | `ai-command-center-1.0.0.zip` |
 | **Path** | `build/ai-command-center-1.0.0.zip` |
-| **SHA256** | `06ac6188d6f7683b3a57e13d6b6fe6b025a1f3d76a826ce4593c79e9373f62e3` |
-| **MD5** | `7aaa1249f86ed955099ab3f2aafa4449` |
-| **Size** | 998,938 bytes (976 KB) |
-| **Entries** | 327 files |
-| **Content identity** | `7f86aaecec7653beface75d1e692e8f84bcc0e84c572c11f3320dff1880d9a58` |
-| **Built** | 2026-08-04 from `7ae4a32` |
+| **SHA256** | `3266ecc7a43ced81565ed7328b9d5905edddd05426eab8b5bbd361aa2cf26b3d` |
+| **MD5** | `771b66779773ea80bc0b91892dd04765` |
+| **Size** | 1,040,509 bytes (1.0 MB) |
+| **Entries** | 327 zip entries = **292 files** + 35 directory entries |
+| **Content identity** | `000599e096e028d1e96263ca98a762c03916b4d39b2fc98c02e9d0464337c3ae` |
+| **Built from commit** | `21d1cfe19b723c39694deca59df909c7e399e835` — working tree clean |
+| **Built** | 2026-08-05 |
 
 Verify immediately before uploading:
 
 ```bash
 shasum -a 256 build/ai-command-center-1.0.0.zip
-# must print 06ac6188d6f7683b3a57e13d6b6fe6b025a1f3d76a826ce4593c79e9373f62e3
+# must print 3266ecc7a43ced81565ed7328b9d5905edddd05426eab8b5bbd361aa2cf26b3d
+
+# ...and the commit it was built from, which the checksum alone cannot tell you:
+git rev-parse HEAD          # must print 21d1cfe19b723c39694deca59df909c7e399e835
+git status --porcelain      # must print nothing
 ```
 
 > The archive checksum is **not** reproducible across builds — only the *content identity*
 > is. Do not rebuild unless you intend to re-record the checksum. See RELEASE_HANDOFF §2.
 
-**Do not upload any artifact built before 2026-08-04.** They predate the settings
-data-corruption fix, the Built-in AI reachability fix, and eight Plugin Check errors that
-were cleared before this build. That includes `4449222140b4…`, `cd8d18c0…` and
-`022e994a3428d5…` (the last of which also shipped the rollback-corruption blocker).
+**Do not upload any artifact built before 2026-08-05 from commit `21d1cfe`.**
+
+A previous artifact carried the checksum `06ac6188…` and matched this document exactly —
+while being 26 commits stale. It shipped **no token-creation dialog at all**: no required
+name, no read-only default, no expiry choice, no long-lived-credential warning, just a
+single `generate_full` button. Verifying it as documented confirmed the wrong file,
+because a checksum without a commit is not a release identity.
+
+That is why this table now records the commit and the clean-tree assertion beside the
+hash. Check all three, or you are not checking anything.
 
 ---
 
@@ -87,7 +98,7 @@ WordPress has stated the WP trademark does not cover the abbreviation "WP".
 |---|---|
 | Full T2 regression | **6,361 passed · 0 failed · net-new 0** (run 3 of 3) |
 | Regression baseline | 0 entries (unchanged — comments only) |
-| Plugin Check (artifact) | 0 errors · 814 warnings |
+| Plugin Check (artifact) | **0 errors** · 832 warnings · 2 trademark warnings (display name only) |
 | ZIP contains only distributables | verified — see §5 |
 | Clean-install lifecycle | 6/6 on two sites |
 | Independent staging certification | passed on WP 6.9.5 and WP 7.0.2 |

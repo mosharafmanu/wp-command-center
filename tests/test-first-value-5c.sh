@@ -36,7 +36,16 @@ has "Connect screen renders the explainer" "AgentExplainer::faq\(\)" "$CONNECT"
 # disagreement it should have caught.
 has "Connect screen H1 matches its navigation label" "esc_html_e\( 'Assistants'" "$CONNECT"
 hasnt "Connect screen H1 drops the old jargon term" "esc_html_e\( 'AI Clients'" "$CONNECT"
-has "Connect screen names assistants in plain words" "Connect Claude, Cursor, Codex" "$CONNECT"
+# Was pinned to "Connect Claude, Cursor, Codex..." — a sentence that lived ONLY
+# inside the retired `if ( false )` hero, so it had not rendered to a customer in
+# months and the assertion was defending dead code. It broke the moment that block
+# was deleted, which is the one time it should have stayed silent.
+#
+# The screen still names assistants in plain words, but the naming is now the
+# registry-driven picker rather than a hardcoded sentence, so assert the live
+# thing: the picker exists and asks the customer to choose one.
+has "Connect screen offers a plain-words assistant picker" "Choose your assistant" "$CONNECT"
+has "Connect screen tells the customer to pick one"        "Pick the assistant you" "$CONNECT"
 hasnt "Connect screen no longer leads with MCP-protocol jargon" "via the MCP protocol. All clients share" "$CONNECT"
 
 echo "== 3. First success — no-setup quick win (Phase D) =="
@@ -44,8 +53,8 @@ echo "== 3. First success — no-setup quick win (Phase D) =="
 # the one action that actually starts the product (connect an assistant) and
 # pointed at Diagnostics, a surface V1 de-emphasises. The report still exists
 # at Settings > Diagnostics; it is simply no longer a second front-door CTA.
-lacks "no competing quick-win CTA" "no AI or setup needed" "$HOME_F"
-lacks "no second primary CTA on Home" "Run a site report" "$HOME_F"
+hasnt "no competing quick-win CTA" "no AI or setup needed" "$HOME_F"
+hasnt "no second primary CTA on Home" "Run a site report" "$HOME_F"
 has "Home itself stays read-only" "READ-ONLY" "$HOME_F"
 
 echo "== 4. Approval & undo discoverability (Phase E) =="

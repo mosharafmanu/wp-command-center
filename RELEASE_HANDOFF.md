@@ -13,11 +13,11 @@ Engineering is complete. What remains is independent certification and submissio
 | | |
 |---|---|
 | Branch | `release/v1-finalization` |
-| Commit | `7ae4a32def1adb702881a8d9f0aa377b32a1f427` (`7ae4a32`) |
+| Commit | `21d1cfe19b723c39694deca59df909c7e399e835` (`21d1cfe`) |
 | `main` | `13549c2` — **untouched, not merged** |
-| Commits ahead of `main` | 87 |
+| Commits ahead of `main` | 120 |
 | Uncommitted | none |
-| Remote | **23 commits unpushed** — this pass's work is local. Push before submitting. |
+| Remote | **6 commits unpushed** (this certification pass). Push before submitting. |
 | Plugin directory | `wp-content/plugins/ai-command-center/` |
 
 `main` auto-deploys to production. Nothing has been merged. The merge is the owner's
@@ -44,17 +44,23 @@ Twenty-one commits. Everything below was found by using the product, not by read
 
 ```
 File    build/ai-command-center-1.0.0.zip
-Size    998,938 bytes (976 KB)
-Entries 327 files
-SHA256  06ac6188d6f7683b3a57e13d6b6fe6b025a1f3d76a826ce4593c79e9373f62e3
-MD5     7aaa1249f86ed955099ab3f2aafa4449
-Built   2026-08-04 from 7ae4a32
+Size    1,040,509 bytes (1.0 MB)
+Entries 327 zip entries = 292 files + 35 directory entries
+SHA256  3266ecc7a43ced81565ed7328b9d5905edddd05426eab8b5bbd361aa2cf26b3d
+MD5     771b66779773ea80bc0b91892dd04765
+Commit  21d1cfe19b723c39694deca59df909c7e399e835   (working tree clean)
+Built   2026-08-05
 ```
+
+**Record the commit with the checksum, always.** The artifact this section used to
+describe (`06ac6188…`) matched byte for byte while being 26 commits stale — it shipped no
+token-creation dialog at all. A checksum identifies a file; only the commit identifies
+the product. All 292 shipped files were verified byte-identical to the tree at `21d1cfe`.
 
 **Content identity (build-independent):**
 
 ```
-7f86aaecec7653beface75d1e692e8f84bcc0e84c572c11f3320dff1880d9a58
+000599e096e028d1e96263ca98a762c03916b4d39b2fc98c02e9d0464337c3ae
 ```
 
 This is the SHA256 of the sorted per-file SHA256 manifest of the extracted package. Unlike
@@ -66,9 +72,9 @@ unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
 ( cd /tmp/pkg && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
 ```
 
-> **Every artifact built before 2026-08-04 MUST NOT be uploaded.** They predate the
-> settings data-corruption fix (§1), the Built-in AI reachability fix, and the eight
-> Plugin Check errors cleared before this build.
+> **Every artifact built before 2026-08-05 from `21d1cfe` MUST NOT be uploaded.** A date
+> guard is not enough — the superseded `06ac6188…` was built on 2026-08-05 and still
+> predated 26 commits. Check the commit and a clean tree, not just the hash.
 
 **The checksum identifies this one built file — it is not a fingerprint of the commit.**
 The build is *not* byte-reproducible: two builds from the same clean tree at the same
@@ -81,7 +87,9 @@ contents are identical. So:
 - To prove two builds are equivalent, compare **extracted contents**, not archive bytes.
 
 ```bash
-shasum -a 256 build/ai-command-center-1.0.0.zip
+shasum -a 256 build/ai-command-center-1.0.0.zip   # 3266ecc7…
+git rev-parse HEAD                                # 21d1cfe…
+git status --porcelain                            # empty
 ```
 
 Top-level folder inside the ZIP is `ai-command-center/`. Verified to contain no `tests/`,
@@ -192,7 +200,7 @@ Changing any of these is a breaking change, not a rename:
 ### 5.1 Local — full regression
 
 ```
-T2: 182 suites — 6,488 passed, 0 failed   (3,763s)
+T2: 185 suites — see §5.6 for the 2026-08-05 re-certification run
 ```
 
 Baseline empty — nothing is accepted as a known failure.
@@ -517,7 +525,7 @@ If WordPress.org requests changes, work this order:
    capability enforcement, rollback safety, security defaults or audit integrity to satisfy
    a request. If a request appears to require that, raise it rather than comply silently.
 5. **After any change:**
-   - `bash tests/run.sh --tier T2` standalone → expect 6,361 / 0
+   - `bash tests/run.sh --tier T2` standalone → expect 0 failures (see §5.6)
    - Rebuild: `bash scripts/build-release.sh`
    - Plugin Check the **artifact** → expect 0 errors
    - Re-run the clean-install lifecycle → expect 24/24
@@ -535,11 +543,13 @@ If WordPress.org requests changes, work this order:
 ```bash
 cd wp-content/plugins/ai-command-center
 git checkout release/v1-finalization
-git rev-parse HEAD                 # must be b6c46ec49ec98f898e849bf016ff532a5bfbc3cd
+git rev-parse HEAD                 # must be 21d1cfe19b723c39694deca59df909c7e399e835
 git status --porcelain             # must be empty
 rm -rf build
 bash scripts/build-release.sh
-shasum -a 256 build/ai-command-center-1.0.0.zip
+shasum -a 256 build/ai-command-center-1.0.0.zip   # 3266ecc7…
+git rev-parse HEAD                                # 21d1cfe…
+git status --porcelain                            # empty
 ```
 
 **A rebuild produces a DIFFERENT checksum from §2 even when the tree and commit are
