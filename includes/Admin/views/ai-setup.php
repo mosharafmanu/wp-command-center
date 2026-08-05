@@ -513,14 +513,50 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	<?php endif; ?>
 
 	<!-- ===== Next steps + security ===== -->
+	<?php
+	/*
+	 * What happens next — and it must be BUILT-IN AI's next step, not MCP's.
+	 *
+	 * This list used to tell someone who had just pasted a provider key to go and
+	 * connect an external assistant, on the grounds that the assistant would do
+	 * the work. That is false here and it undoes the whole point of the screen:
+	 * Built-in AI calls the configured
+	 * provider directly (AiRuntime → AnthropicClient / OpenAiCompatibleTransport;
+	 * there is no MCP anywhere in that path), which is exactly why it is the one
+	 * path that needs a key. A customer who follows that instruction concludes
+	 * their key did nothing, goes and connects Claude, and never finds the three
+	 * tools they just paid a provider to power.
+	 *
+	 * The step now depends on whether the tools are actually switched on for this
+	 * site, because those are two genuinely different next actions — and the
+	 * screen already knows which is true rather than making the customer guess.
+	 */
+	$wpcc_ai_tools_on = count( \WPCommandCenter\Admin\AppShell::builtin_tabs() ) > 1;
+	?>
 	<?php if ( $wpcc_store->is_configured( $wpcc_conns[ $wpcc_default ] ?? [] ) ) : ?>
 		<div style="margin:18px 0 0;padding:12px 14px;background:#f0f6fc;border:1px solid #c3c4c7;border-radius:8px;max-width:720px;">
-			<strong style="font-size:13px;"><?php esc_html_e( 'Key added. What happens next?', 'ai-command-center' ); ?></strong>
+			<strong style="font-size:13px;"><?php esc_html_e( 'Your provider is ready. What happens next?', 'ai-command-center' ); ?></strong>
 			<ol style="margin:8px 0 0;padding-left:20px;color:#50575e;font-size:13px;line-height:1.6;">
 				<li><?php esc_html_e( 'Use “Test” on a connection to confirm the key works.', 'ai-command-center' ); ?></li>
-				<li><?php printf( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Connect an AI assistant so it can do the work — see %1$sAssistants%2$s.', 'ai-command-center' ), '<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) . '">', '</a>' ); ?></li>
-				<li><?php esc_html_e( 'Adding a key does not turn AI features on by itself. Built-in AI screens are enabled per site; ask your developer to switch them on if you do not see them.', 'ai-command-center' ); ?></li>
+				<?php if ( $wpcc_ai_tools_on ) : ?>
+					<li><?php esc_html_e( 'Choose SEO, Alt Text or Content above to generate suggestions. Built-in AI uses this provider directly — you do not need to connect an external assistant.', 'ai-command-center' ); ?></li>
+				<?php else : ?>
+					<li><?php esc_html_e( 'Switch on SEO, Alt Text or Content above to start generating. Adding a key does not turn the tools on by itself.', 'ai-command-center' ); ?></li>
+				<?php endif; ?>
+				<li><?php esc_html_e( 'Nothing is published automatically. Every suggestion is a draft you review, and applying one follows the same approval and undo rules as any other change.', 'ai-command-center' ); ?></li>
 			</ol>
+			<p style="margin:10px 0 0;font-size:12px;color:#646970;">
+				<?php
+				// Named as the SEPARATE, OPTIONAL path it is — the correct mental
+				// model — rather than as a step in this one.
+				printf(
+					/* translators: %1$s: opening link tag, %2$s: closing link tag */
+					esc_html__( 'Connecting Claude, Cursor or another assistant is a separate, optional path that needs no provider key — see %1$sAssistants%2$s.', 'ai-command-center' ),
+					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) . '">',
+					'</a>'
+				);
+				?>
+			</p>
 		</div>
 	<?php endif; ?>
 
