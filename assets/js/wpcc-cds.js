@@ -65,15 +65,65 @@
 	var activeIdx = 0;
 	var lastFocus = null;
 
+	/**
+	 * The destination list, already flat and already unique per URL (AppShell::
+	 * nav_map builds one row per real destination). The old version derived rows
+	 * from a section/tab tree, which emitted a section AND its only tab as two
+	 * rows pointing at the same screen. Deduplicating by URL here as well keeps
+	 * that guarantee true even if a future map hands us the same URL twice.
+	 */
 	function flattenNav() {
-		var out = [];
-		( cfg.nav || [] ).forEach( function ( section ) {
-			out.push( { label: section.label, hint: ( cfg.i18n && cfg.i18n.section ) || 'Section', url: section.url } );
-			( section.tabs || [] ).forEach( function ( tab ) {
-				out.push( { label: section.label + ' › ' + tab.label, hint: section.label, url: tab.url } );
+		var seen = {};
+		var out  = [];
+		( cfg.nav || [] ).forEach( function ( item ) {
+			if ( ! item || ! item.url || seen[ item.url ] ) { return; }
+			seen[ item.url ] = true;
+			out.push( {
+				label:    item.label,
+				hint:     item.hint || ( cfg.i18n && cfg.i18n.section ) || 'Section',
+				url:      item.url,
+				keywords: ( item.keywords || '' ).toLowerCase()
 			} );
 		} );
 		return out;
+	}
+
+	/**
+	 * Score one destination against a query, or -1 for no match.
+	 *
+	 * Ranking, best first:
+	 *   0  the label starts with the query        ("app" → Approvals)
+	 *   1  a word inside the label starts with it ("tok" → … › Access tokens)
+	 *   2  the label contains it anywhere
+	 *   3  only a hidden keyword matches          ("undo" → Changes)
+	 *
+	 * Multi-word queries must match every word somewhere ("access token" finds
+	 * Access tokens; "token access" finds it too). Keywords are never displayed —
+	 * they exist so the words a customer actually types reach the screen they
+	 * mean, without turning the list into a glossary.
+	 */
+	function score( item, words ) {
+		var label = item.label.toLowerCase();
+		var hay   = label + ' ' + item.keywords;
+		var best  = 0;
+
+		for ( var i = 0; i < words.length; i++ ) {
+			var w = words[ i ];
+			if ( hay.indexOf( w ) === -1 ) { return -1; }
+
+			var rank;
+			if ( label.indexOf( w ) === 0 ) {
+				rank = 0;
+			} else if ( new RegExp( '(^|[^a-z0-9])' + w.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ) ).test( label ) ) {
+				rank = 1;
+			} else if ( label.indexOf( w ) !== -1 ) {
+				rank = 2;
+			} else {
+				rank = 3;
+			}
+			if ( rank > best ) { best = rank; }
+		}
+		return best;
 	}
 
 	function buildPalette() {
@@ -96,10 +146,38 @@
 	function renderOpts( query ) {
 		var all = flattenNav();
 		var q = ( query || '' ).toLowerCase().trim();
-		var matches = q ? all.filter( function ( o ) { return o.label.toLowerCase().indexOf( q ) !== -1; } ) : all;
+		var matches;
+
+		if ( ! q ) {
+			matches = all;
+		} else {
+			var words = q.split( /\s+/ );
+			matches = all
+				.map( function ( o, i ) { return { o: o, s: score( o, words ), i: i }; } )
+				.filter( function ( r ) { return r.s !== -1; } )
+				// Ties keep map order, which is navigation order — so equally good
+				// matches come back in the order the product itself lists them.
+				.sort( function ( a, b ) { return a.s - b.s || a.i - b.i; } )
+				.map( function ( r ) { return r.o; } );
+		}
+
 		paletteItems = matches;
 		activeIdx = 0;
 		palette.list.innerHTML = '';
+
+		/*
+		 * An empty result used to render an empty <ul>: the panel simply went
+		 * blank, which reads as the search being broken rather than as "that word
+		 * matched nothing". Say so, and say what to do about it.
+		 */
+		if ( ! matches.length ) {
+			var none = WPCC.el( 'li', { class: 'wpcc-cmdk__none', role: 'status' } );
+			none.appendChild( WPCC.el( 'span', null, ( cfg.i18n && cfg.i18n.paletteNone ) || 'Nothing matches that.' ) );
+			none.appendChild( WPCC.el( 'small', null, ( cfg.i18n && cfg.i18n.paletteNoneHint ) || 'Try a shorter word, or clear the box to see everywhere you can go.' ) );
+			palette.list.appendChild( none );
+			return;
+		}
+
 		matches.forEach( function ( o, i ) {
 			var li = WPCC.el( 'li', { class: 'wpcc-cmdk__opt' + ( i === 0 ? ' is-active' : '' ), role: 'option', 'aria-selected': i === 0 ? 'true' : 'false' } );
 			li.appendChild( WPCC.el( 'span', null, o.label ) );

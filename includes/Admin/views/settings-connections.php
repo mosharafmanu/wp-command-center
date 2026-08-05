@@ -19,19 +19,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use WPCommandCenter\Admin\FeatureGate;
+use WPCommandCenter\Admin\AppShell;
 
-$wpcc_conn_panes = [
-	'assistants' => [ 'label' => __( 'Assistants', 'ai-command-center' ),      'view' => 'ai-integrations',          'feature' => null ],
-	'api'        => [ 'label' => __( 'Your own software', 'ai-command-center' ), 'view' => 'api-integrations',       'feature' => null ],
-	'tokens'     => [ 'label' => __( 'Access tokens', 'ai-command-center' ),   'view' => 'token-capability-manager', 'feature' => 'token_capability_manager' ],
-];
-
-foreach ( $wpcc_conn_panes as $wpcc_ck => $wpcc_cp ) {
-	if ( null !== $wpcc_cp['feature'] && ! FeatureGate::allows( $wpcc_cp['feature'] ) ) {
-		unset( $wpcc_conn_panes[ $wpcc_ck ] );
-	}
-}
+/*
+ * The pane list (and its FeatureGate filtering) now lives on AppShell, beside
+ * sections(). It was defined here, where the ⌘K palette could not read it — so
+ * "Access tokens" was a destination the product's own search could never find.
+ * This view still owns everything it renders; it no longer owns the list.
+ */
+$wpcc_conn_panes = AppShell::connection_panes();
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pane selection, no state change.
 $wpcc_conn_active = isset( $_GET['cpane'] ) ? sanitize_key( wp_unslash( $_GET['cpane'] ) ) : '';

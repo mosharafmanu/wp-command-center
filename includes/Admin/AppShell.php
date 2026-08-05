@@ -396,27 +396,226 @@ final class AppShell {
 	}
 
 	/**
-	 * The navigation map for client consumption (the ⌘K palette): each visible
-	 * section + tab as a label + admin URL.
+	 * Settings › Connections panes — the three answers to "who may reach this site".
 	 *
-	 * @return array<int,array{label:string,url:string,tabs:array<int,array{label:string,url:string}>}>
+	 * Lived inside settings-connections.php, where the ⌘K palette could not see it,
+	 * so "Access tokens" was a real destination that search could never find. The
+	 * view still owns the rendering; this owns the list, exactly as sections() owns
+	 * the tab list. Gating (FeatureGate) is applied here so the palette can never
+	 * offer a pane this site does not have.
+	 *
+	 * @return array<string,array{label:string,view:string,feature:?string,keywords:string}>
+	 */
+	public static function connection_panes(): array {
+		$panes = [
+			'assistants' => [
+				'label'    => __( 'Assistants', 'ai-command-center' ),
+				'view'     => 'ai-integrations',
+				'feature'  => null,
+				'keywords' => 'assistant ai claude chatgpt cursor codex gemini copilot windsurf continue connect client mcp setup',
+			],
+			'api'        => [
+				'label'    => __( 'Your own software', 'ai-command-center' ),
+				'view'     => 'api-integrations',
+				'feature'  => null,
+				'keywords' => 'api rest developer integration endpoint openapi code',
+			],
+			'tokens'     => [
+				'label'    => __( 'Access tokens', 'ai-command-center' ),
+				'view'     => 'token-capability-manager',
+				'feature'  => 'token_capability_manager',
+				'keywords' => 'token tokens access key secret revoke expire scope capabilities permission',
+			],
+		];
+		return self::drop_gated( $panes );
+	}
+
+	/**
+	 * Settings › Advanced panes — everything a normal customer never opens.
+	 *
+	 * Extracted from settings-advanced.php for the same reason as
+	 * connection_panes(): Diagnostics, System and Capabilities are destinations,
+	 * and search could not reach any of them. Build/developer gating stays here so
+	 * the palette and the sub-nav can never disagree about what exists.
+	 *
+	 * @return array<string,array{label:string,view:string,feature:?string,keywords:string}>
+	 */
+	public static function advanced_panes(): array {
+		$panes = [
+			'ai'           => [
+				'label'    => __( 'Built-in AI', 'ai-command-center' ),
+				'view'     => 'settings-ai',
+				'feature'  => null,
+				'keywords' => 'ai provider anthropic openai api key model seo alt text content generate',
+			],
+			'diagnostics'  => [
+				'label'    => __( 'Diagnostics', 'ai-command-center' ),
+				'view'     => 'settings-diagnostics',
+				'feature'  => null,
+				'keywords' => 'diagnostics health troubleshoot problem report recommendations patches status check',
+			],
+			'system'       => [
+				'label'    => __( 'System', 'ai-command-center' ),
+				'view'     => 'operations-center',
+				'feature'  => null,
+				'keywords' => 'system engine runtime live feed operations activity queue',
+			],
+			'capabilities' => [
+				'label'    => __( 'Capabilities', 'ai-command-center' ),
+				'view'     => 'operations-explorer',
+				'feature'  => 'operations_explorer',
+				'keywords' => 'capabilities capability operations permissions allowed map what can it do',
+			],
+		];
+
+		// Dev-only proposal surface: build-flagged, off on a stock install.
+		if ( self::proposals_ui_enabled() ) {
+			$panes['drafts'] = [
+				'label'    => __( 'Drafts (Dev)', 'ai-command-center' ),
+				'view'     => 'proposals',
+				'feature'  => null,
+				'keywords' => 'drafts proposals pending suggestions',
+			];
+		}
+
+		// File browsing and database search/replace stay fully functional over
+		// REST/MCP; these screens appear only when developer tools are switched on.
+		if ( DeveloperTools::enabled() ) {
+			$panes['files'] = [
+				'label'    => __( 'File access', 'ai-command-center' ),
+				'view'     => 'file-access',
+				'feature'  => null,
+				'keywords' => 'files file access browse read theme plugin code',
+			];
+			$panes['tools'] = [
+				'label'    => __( 'Search & replace', 'ai-command-center' ),
+				'view'     => 'tools-search-replace',
+				'feature'  => null,
+				'keywords' => 'search replace database find text bulk',
+			];
+		}
+
+		return self::drop_gated( $panes );
+	}
+
+	/**
+	 * Drop any entry whose FeatureGate is closed (the licensing seam; ungated
+	 * today). Shared by both pane lists so the rule is written once.
+	 *
+	 * @param  array<string,array{feature:?string}> $entries
+	 * @return array<string,array>
+	 */
+	private static function drop_gated( array $entries ): array {
+		foreach ( $entries as $key => $entry ) {
+			if ( null !== ( $entry['feature'] ?? null ) && ! FeatureGate::allows( $entry['feature'] ) ) {
+				unset( $entries[ $key ] );
+			}
+		}
+		return $entries;
+	}
+
+	/**
+	 * The navigation map for client consumption (the ⌘K palette).
+	 *
+	 * A FLAT list of real destinations, not a section/tab tree. The tree shape was
+	 * the bug: the palette rendered a section AND its only tab as two rows that
+	 * went to the same screen ("Approvals" and "Approvals › Approvals"), while the
+	 * screens a customer actually searches for — Access tokens, Diagnostics,
+	 * Capabilities, Assistants — were sub-panes the map never described at all, so
+	 * searching for any of them returned nothing.
+	 *
+	 * Each destination carries `keywords`: the words a customer types for a screen
+	 * whose label is something else. "Undo" is how people ask for Changes;
+	 * "Security" is how they ask for Protection; "History" is the word the product
+	 * deliberately stopped using but customers did not. Keywords are matched but
+	 * never displayed, so the list stays readable.
+	 *
+	 * URLs are unique by construction (one row per destination), which is what
+	 * makes duplicate destinations impossible rather than merely unlikely.
+	 *
+	 * @return array<int,array{label:string,hint:string,url:string,keywords:string}>
 	 */
 	public static function nav_map(): array {
 		$out = [];
-		foreach ( self::sections() as $slug => $section ) {
-			if ( self::HOME_SLUG === $slug ) {
-				$out[] = [ 'label' => $section['label'], 'url' => admin_url( 'admin.php?page=' . $slug ), 'tabs' => [] ];
+
+		$add = static function ( string $label, string $hint, string $url, string $keywords ) use ( &$out ): void {
+			$out[] = [
+				'label'    => $label,
+				'hint'     => $hint,
+				'url'      => $url,
+				'keywords' => $keywords,
+			];
+		};
+
+		$sections = self::sections();
+
+		// Section-level keywords, keyed by slug. A section whose visible name is
+		// not the word customers reach for needs the other words too.
+		$section_keywords = [
+			self::HOME_SLUG     => 'home dashboard start setup overview get started connect first',
+			self::ACTIVITY_SLUG => 'approvals approve review pending waiting requests decide queue permission',
+			self::HISTORY_SLUG  => 'changes history undo rollback revert restore activity audit log what changed',
+			self::SETTINGS_SLUG => 'settings options configure preferences',
+		];
+
+		foreach ( $sections as $slug => $section ) {
+			$keywords = $section_keywords[ $slug ] ?? '';
+
+			// Home and any single-tab section ARE one destination. Emitting the
+			// section and its lone tab is what produced the duplicate rows.
+			if ( self::HOME_SLUG === $slug || count( $section['tabs'] ) <= 1 ) {
+				$add(
+					$section['label'],
+					__( 'Section', 'ai-command-center' ),
+					admin_url( 'admin.php?page=' . $slug ),
+					$keywords
+				);
 				continue;
 			}
-			$tabs = [];
+
+			// Multi-tab sections list their tabs only — the bare section URL just
+			// redisplays the first tab, so it is the same destination again.
 			foreach ( $section['tabs'] as $key => $tab ) {
-				$tabs[] = [
-					'label' => $tab['label'],
-					'url'   => admin_url( 'admin.php?page=' . $slug . '&wpcc_tab=' . $key ),
-				];
+				$tab_url = admin_url( 'admin.php?page=' . $slug . '&wpcc_tab=' . $key );
+
+				// Settings' two hub tabs are containers: their panes are the real
+				// destinations, so the hub itself is not listed separately.
+				if ( self::SETTINGS_SLUG === $slug && 'connections' === $key ) {
+					foreach ( self::connection_panes() as $pane_key => $pane ) {
+						$add(
+							$section['label'] . ' › ' . $tab['label'] . ' › ' . $pane['label'],
+							$tab['label'],
+							$tab_url . '&cpane=' . $pane_key,
+							$keywords . ' connections ' . $pane['keywords']
+						);
+					}
+					continue;
+				}
+				if ( self::SETTINGS_SLUG === $slug && 'advanced' === $key ) {
+					foreach ( self::advanced_panes() as $pane_key => $pane ) {
+						$add(
+							$section['label'] . ' › ' . $tab['label'] . ' › ' . $pane['label'],
+							$tab['label'],
+							$tab_url . '&apane=' . $pane_key,
+							$keywords . ' advanced ' . $pane['keywords']
+						);
+					}
+					continue;
+				}
+
+				$extra = ( self::SETTINGS_SLUG === $slug && 'security' === $key )
+					? ' security protection safe mode approval rules strict permission risk'
+					: '';
+
+				$add(
+					$section['label'] . ' › ' . $tab['label'],
+					$section['label'],
+					$tab_url,
+					$keywords . $extra
+				);
 			}
-			$out[] = [ 'label' => $section['label'], 'url' => admin_url( 'admin.php?page=' . $slug ), 'tabs' => $tabs ];
 		}
+
 		return $out;
 	}
 

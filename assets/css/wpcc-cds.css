@@ -812,6 +812,22 @@
 	background: var( --wpcc-surface-accent-soft );
 }
 
+/* No match. Not an option row: nothing here is selectable or navigable, so it
+   must not look like the rows above it (no hover, no pointer, no active state). */
+.wpcc-cmdk__none {
+	display: block;
+	padding: var( --wpcc-space-5 );
+	font-size: var( --wpcc-fs-body );
+	color: var( --wpcc-text-primary );
+	cursor: default;
+}
+
+.wpcc-cmdk__none small {
+	display: block;
+	margin-top: var( --wpcc-space-2 );
+	color: var( --wpcc-text-secondary );
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
  * Responsive — mobile-first behavior for narrow viewports / touch.
  * ────────────────────────────────────────────────────────────────────────── */

@@ -22,35 +22,15 @@
 
 defined( 'ABSPATH' ) || exit;
 
-use WPCommandCenter\Admin\FeatureGate;
-use WPCommandCenter\Admin\DeveloperTools;
 use WPCommandCenter\Admin\AppShell;
 
-$wpcc_adv_panes = [
-	'ai'           => [ 'label' => __( 'Built-in AI', 'ai-command-center' ),  'view' => 'settings-ai',           'feature' => null ],
-	'diagnostics'  => [ 'label' => __( 'Diagnostics', 'ai-command-center' ),  'view' => 'settings-diagnostics',  'feature' => null ],
-	'system'       => [ 'label' => __( 'System', 'ai-command-center' ),       'view' => 'operations-center',     'feature' => null ],
-	'capabilities' => [ 'label' => __( 'Capabilities', 'ai-command-center' ), 'view' => 'operations-explorer',   'feature' => 'operations_explorer' ],
-];
-
-// Dev-only proposal surface: build-flagged, off on a stock install.
-if ( AppShell::proposals_ui_enabled() ) {
-	$wpcc_adv_panes['drafts'] = [ 'label' => __( 'Drafts (Dev)', 'ai-command-center' ), 'view' => 'proposals', 'feature' => null ];
-}
-
-// File browsing and database search/replace stay fully functional over REST/MCP;
-// these screens appear only when developer tools are switched on for the site.
-if ( DeveloperTools::enabled() ) {
-	$wpcc_adv_panes['files'] = [ 'label' => __( 'File access', 'ai-command-center' ),     'view' => 'file-access',          'feature' => null ];
-	$wpcc_adv_panes['tools'] = [ 'label' => __( 'Search & replace', 'ai-command-center' ), 'view' => 'tools-search-replace', 'feature' => null ];
-}
-
-// Drop any pane whose FeatureGate is closed (licensing seam; ungated today).
-foreach ( $wpcc_adv_panes as $wpcc_ak => $wpcc_ap ) {
-	if ( null !== $wpcc_ap['feature'] && ! FeatureGate::allows( $wpcc_ap['feature'] ) ) {
-		unset( $wpcc_adv_panes[ $wpcc_ak ] );
-	}
-}
+/*
+ * The pane list — including the build/developer gating and the FeatureGate
+ * filtering — now lives on AppShell beside sections(), so the ⌘K palette can
+ * offer Diagnostics, System and Capabilities as the destinations they are, and
+ * can never offer a pane this site has switched off. Rendering is unchanged.
+ */
+$wpcc_adv_panes = AppShell::advanced_panes();
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pane selection, no state change.
 $wpcc_adv_active = isset( $_GET['apane'] ) ? sanitize_key( wp_unslash( $_GET['apane'] ) ) : '';
