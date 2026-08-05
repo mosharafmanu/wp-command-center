@@ -29,7 +29,16 @@ $nonce     = wp_create_nonce( 'wp_rest' );
 $api_base  = rest_url( 'wp-command-center/v1/admin' );
 $core_base = rest_url( 'wp/v2' );
 $edit_base = admin_url( 'post.php' ); // client builds ?post=ID&action=edit (any post type)
-$ai_url    = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ); // U1.4 — connect an AI key
+/*
+ * Where "no AI provider is connected" sends the customer.
+ *
+ * This pointed at Settings › Connections › Assistants — the MCP screen, which
+ * has no provider key field on it at all. So the one error state whose entire
+ * job is "go and add a key" delivered the customer to a screen where that is
+ * impossible, and told them on arrival that no key is needed there. Built-in AI
+ * keys live on Built-in AI › Providers; that is where this goes.
+ */
+$ai_url    = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' );
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
@@ -253,12 +262,12 @@ button.wpcc-seo-stat:hover { background:#fff;border-color:#8c8f94; }
 		/* translators: %d: suggestions created */
 		viewSug:       <?php echo wp_json_encode( /* translators: %d: number */ __( 'Review %d suggestions →', 'ai-command-center' ) ); ?>,
 		// U1.4 — no AI provider connected.
-		noKey:         <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so no suggestions were generated. Add an Anthropic API key, then try again.', 'ai-command-center' ) ); ?>,
-		aiIntegrations:<?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'ai-command-center' ) ); ?>,
+		noKey:         <?php echo wp_json_encode( esc_html__( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key on Built-in AI › Providers, then try again.', 'ai-command-center' ) ); ?>,
+		aiIntegrations:<?php echo wp_json_encode( esc_html__( 'Open Built-in AI › Providers', 'ai-command-center' ) ); ?>,
 		// Contextual row-action result notices (wpcc_seo_gen redirect codes).
 		genCreated:    <?php echo wp_json_encode( esc_html__( 'SEO suggestion created. Review it below and apply when you’re ready.', 'ai-command-center' ) ); ?>,
 		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'ai-command-center' ) ); ?>,
-		genNoProvider: <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so nothing was generated. Add an Anthropic API key in AI Integrations.', 'ai-command-center' ) ); ?>,
+		genNoProvider: <?php echo wp_json_encode( esc_html__( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key on Built-in AI › Providers.', 'ai-command-center' ) ); ?>,
 		genNoPlugin:   <?php echo wp_json_encode( esc_html__( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'ai-command-center' ) ); ?>,
 		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive SEO suggestions (e.g. trashed or auto-draft) and were skipped. Draft, pending, scheduled, private, and published content are all supported.', 'ai-command-center' ) ); ?>,
 		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'ai-command-center' ) ); ?>,

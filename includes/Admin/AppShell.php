@@ -101,12 +101,24 @@ final class AppShell {
 			'wpcc-patches'            => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'diagnostics' ] ],
 			'wpcc-site-intelligence'  => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'diagnostics' ] ],
 			'wpcc-file-access'        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'files' ] ],
-			// Built-in AI (optional, off by default) and its flag-gated tools.
-			self::BUILTIN_SLUG        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
-			'wpcc-ai-setup'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
-			'wpcc-alt-text'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
-			'wpcc-seo'                => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
-			'wpcc-ai-content'         => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai' ] ],
+			/*
+			 * Built-in AI (optional, off by default) and its flag-gated tools.
+			 *
+			 * Each of these MUST carry its `aipane`, not just `apane => ai`.
+			 * The three tools' bulk actions (SeoRowActions, MediaRowActions,
+			 * ContentRowActions) redirect to these slugs after generating, and
+			 * every one of them resolved to the Built-in AI hub's FIRST pane —
+			 * Providers. So the customer selected a page, ran a real generation
+			 * that really succeeded, and landed on a provider-key settings screen
+			 * with no suggestion and no confirmation, because the result notice is
+			 * rendered by the tool's own view. The work was done and the product
+			 * showed them somewhere else.
+			 */
+			self::BUILTIN_SLUG        => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai', 'aipane' => 'providers' ] ],
+			'wpcc-ai-setup'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai', 'aipane' => 'providers' ] ],
+			'wpcc-alt-text'           => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai', 'aipane' => 'alt_text' ] ],
+			'wpcc-seo'                => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai', 'aipane' => 'seo' ] ],
+			'wpcc-ai-content'         => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai', 'aipane' => 'content' ] ],
 			'wpcc-proposals'          => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'drafts' ] ],
 		];
 	}
@@ -126,6 +138,8 @@ final class AppShell {
 	public static function legacy_tab_map(): array {
 		$adv = static fn ( string $pane ): array => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => $pane ] ];
 		$con = static fn ( string $pane ): array => [ self::SETTINGS_SLUG, 'connections', [ 'cpane' => $pane ] ];
+		// Built-in AI is a hub inside a hub: apane selects it, aipane selects the tool.
+		$bai = static fn ( string $pane ): array => [ self::SETTINGS_SLUG, 'advanced', [ 'apane' => 'ai', 'aipane' => $pane ] ];
 
 		return [
 			// Pre-5-C section slugs.
@@ -136,9 +150,9 @@ final class AppShell {
 				'operations' => $adv( 'capabilities' ),
 				'runtime'    => $adv( 'diagnostics' ),
 				'drafts'     => $adv( 'drafts' ),
-				'alt_text'   => $adv( 'ai' ),
-				'seo'        => $adv( 'ai' ),
-				'ai_content' => $adv( 'ai' ),
+				'alt_text'   => $bai( 'alt_text' ),
+				'seo'        => $bai( 'seo' ),
+				'ai_content' => $bai( 'content' ),
 			],
 			'wpcc-audit' => [
 				'*'            => [ self::HISTORY_SLUG, 'changes' ],
@@ -161,13 +175,15 @@ final class AppShell {
 				'setup'        => $adv( 'ai' ),
 				'files'        => $adv( 'files' ),
 			],
-			// Retired Built-in AI section.
+			// Retired Built-in AI section. Each old tab keeps landing on its OWN
+			// pane inside the hub — see the note in legacy_map(): dropping the
+			// `aipane` sends a finished generation to the Providers screen.
 			self::BUILTIN_SLUG => [
-				'*'         => $adv( 'ai' ),
-				'providers' => $adv( 'ai' ),
-				'seo'       => $adv( 'ai' ),
-				'alt_text'  => $adv( 'ai' ),
-				'content'   => $adv( 'ai' ),
+				'*'         => $bai( 'providers' ),
+				'providers' => $bai( 'providers' ),
+				'seo'       => $bai( 'seo' ),
+				'alt_text'  => $bai( 'alt_text' ),
+				'content'   => $bai( 'content' ),
 			],
 			// Approvals: its former engine-facing siblings moved to Advanced.
 			self::ACTIVITY_SLUG => [

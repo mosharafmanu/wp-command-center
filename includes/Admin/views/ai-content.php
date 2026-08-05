@@ -36,7 +36,9 @@ $nonce     = wp_create_nonce( 'wp_rest' );
 $api_base  = esc_url( rest_url( 'wp-command-center/v1/admin' ) );
 $core_base = esc_url( rest_url( 'wp/v2' ) );
 $edit_base = esc_url( admin_url( 'post.php' ) ); // client builds ?post=ID&action=edit (any post type)
-$ai_url    = esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ); // connect an AI key
+// Built-in AI keys live on Built-in AI › Providers, not on the MCP Assistants
+// screen (which has no key field). See the note in seo-meta.php.
+$ai_url    = esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' ) );
 // Server-rendered security mode drives the apply button label (developer applies
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
@@ -219,11 +221,11 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		// Contextual entry-point notices (wpcc_content_gen / wpcc_content_bulk).
 		genCreated:    <?php echo wp_json_encode( esc_html__( 'Suggestion created. Review it below and apply when you’re ready.', 'ai-command-center' ) ); ?>,
 		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'ai-command-center' ) ); ?>,
-		genNoProvider: <?php echo wp_json_encode( esc_html__( 'No AI provider is connected, so nothing was generated. Add an Anthropic API key in AI Integrations.', 'ai-command-center' ) ); ?>,
+		genNoProvider: <?php echo wp_json_encode( esc_html__( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key on Built-in AI › Providers.', 'ai-command-center' ) ); ?>,
 		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive suggestions (e.g. trashed or auto-draft) and were skipped.', 'ai-command-center' ) ); ?>,
 		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'ai-command-center' ) ); ?>,
 		genSkipped:    <?php echo wp_json_encode( esc_html__( 'Nothing was generated for the selected items.', 'ai-command-center' ) ); ?>,
-		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open AI Integrations', 'ai-command-center' ) ); ?>,
+		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open Built-in AI › Providers', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
 		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'ai-command-center' ) ); ?>
 	};
