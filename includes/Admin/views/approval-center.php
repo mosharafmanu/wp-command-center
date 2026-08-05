@@ -176,8 +176,21 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 
 .wpcc-apr-pick { display:flex; align-items:center; }
 .wpcc-apr-main { flex:1; min-width:0; }
-.wpcc-apr-title { display:inline-block; font-size:13.5px; font-weight:600; color:var(--wpcc-text-primary); text-decoration:none; line-height:1.4; }
-.wpcc-apr-title:hover { color:var(--wpcc-text-accent); text-decoration:underline; }
+/*
+ * The row title has always been a link to the full request, but it was painted
+ * exactly like static text — same colour as the sub-line, no underline — and
+ * only revealed itself on hover. So on a queue of eighty rows the only two
+ * things that LOOKED actionable were Approve and Reject, and the one action
+ * that lets a customer find out what they are approving was invisible. The
+ * layout is untouched; the link now looks like a link.
+ */
+.wpcc-apr-title { display:inline-block; font-size:13.5px; font-weight:600; color:var(--wpcc-text-accent); text-decoration:none; line-height:1.4; }
+.wpcc-apr-title:hover,
+.wpcc-apr-title:focus { text-decoration:underline; }
+/* Review sits with the other actions, so it costs no resting visual weight and
+   appears at the moment the customer engages with a row — and it comes FIRST,
+   because reading a request is what should precede deciding on it. */
+.wpcc-apr-review { align-self:center; white-space:nowrap; }
 .wpcc-apr-preview { display:inline-block; margin-left:8px; font-size:13px; color:var(--wpcc-text-secondary); }
 .wpcc-apr-warn { display:inline-block; margin-left:8px; font-size:11px; font-weight:600; color:var(--wpcc-risk-critical-fg); }
 .wpcc-apr-sub { display:block; margin-top:2px; font-size:12px; color:var(--wpcc-text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -320,15 +333,32 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 
 	var i18n = {
 		readOnly:    <?php echo wp_json_encode( __( 'Read Only', 'ai-command-center' ) ); ?>,
+		review:      <?php echo wp_json_encode( __( 'Review', 'ai-command-center' ) ); ?>,
 		approve:     <?php echo wp_json_encode( __( 'Approve', 'ai-command-center' ) ); ?>,
 		reject:      <?php echo wp_json_encode( __( 'Reject', 'ai-command-center' ) ); ?>,
 		approved:    <?php echo wp_json_encode( __( 'Done — your site has been updated.', 'ai-command-center' ) ); ?>,
 		approvedLink:<?php echo wp_json_encode( __( 'See it in Changes', 'ai-command-center' ) ); ?>,
 		changesUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-history' ) ); ?>,
 		rejected:    <?php echo wp_json_encode( __( 'Rejected.', 'ai-command-center' ) ); ?>,
-		approvedErr: <?php echo wp_json_encode( __( 'Approved but execution failed: ', 'ai-command-center' ) ); ?>,
+		/*
+		 * Four things a failure has to say: what happened, whether the site
+		 * changed, what to do, and where the detail is. "Approved but execution
+		 * failed: <engine string>" answered only the first, and answered it in the
+		 * engine's words.
+		 *
+		 * This case is precise and worth stating precisely: the DECISION was
+		 * recorded, and the change did NOT run — so the site is untouched. That is
+		 * the fact the customer is actually anxious about.
+		 */
+		approvedErr: <?php echo wp_json_encode( __( 'You approved this, but it could not run — so nothing on your site has changed. It stays in Approvals; you can try it again from the Execution tab.', 'ai-command-center' ) ); ?>,
 		unknownErr:  <?php echo wp_json_encode( __( 'Unknown error.', 'ai-command-center' ) ); ?>,
-		reqFailed:   <?php echo wp_json_encode( __( 'Request failed. Please try again.', 'ai-command-center' ) ); ?>,
+		/*
+		 * This one fires from .catch() — the request never completed, so we
+		 * genuinely do not know whether the server recorded the decision. Saying
+		 * "Request failed. Please try again." invites a second approval of
+		 * something that may already be approved. Say what is actually known.
+		 */
+		reqFailed:   <?php echo wp_json_encode( __( 'Could not reach your site, so this decision may not have been saved. Reload the page to see where the request stands before deciding again.', 'ai-command-center' ) ); ?>,
 		destructive: <?php echo wp_json_encode( __( 'DESTRUCTIVE — this permanently deletes data and cannot be undone.', 'ai-command-center' ) ); ?>,
 		auditNote:   <?php echo wp_json_encode( __( 'This action will be logged in the audit trail.', 'ai-command-center' ) ); ?>,
 		noPending:   <?php echo wp_json_encode( __( 'Nothing is waiting for you. When your assistant asks to change something, it appears here for your decision.', 'ai-command-center' ) ); ?>,
@@ -355,7 +385,9 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		moreQueued:  <?php echo wp_json_encode( /* translators: %d: number */ __( '(%d pending in total)', 'ai-command-center' ) ); ?>,
 		noHistory:   <?php echo wp_json_encode( __( 'Nothing decided yet. Once you approve or reject something, it is kept here as a record.', 'ai-command-center' ) ); ?>,
 		noQueue:     <?php echo wp_json_encode( __( 'The execution queue is empty.', 'ai-command-center' ) ); ?>,
-		loadFailed:  <?php echo wp_json_encode( __( 'Failed to load.', 'ai-command-center' ) ); ?>,
+		// Reading, not writing: nothing was attempted, so nothing changed. The
+		// wording matches Changes and Access tokens, which already say this well.
+		loadFailed:  <?php echo wp_json_encode( __( 'Could not load this list — nothing has changed on your site. Your admin session may have expired; reload the page to try again.', 'ai-command-center' ) ); ?>,
 		loadMore:    <?php echo wp_json_encode( __( 'Load more', 'ai-command-center' ) ); ?>,
 		colOp:       <?php echo wp_json_encode( __( 'Operation', 'ai-command-center' ) ); ?>,
 		colAction:   <?php echo wp_json_encode( __( 'Action', 'ai-command-center' ) ); ?>,
@@ -597,6 +629,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			'</div>' +
 			'<span class="wpcc-risk-badge risk-' + escHtml(risk) + '">' + escHtml(label) + '</span>' +
 			'<div class="wpcc-apr-actions">' +
+				'<a class="button button-small wpcc-apr-review" href="' + escHtml(baseUrl) + '&view=' + escHtml(req.request_id) + '">' + escHtml(i18n.review) + '</a> ' +
 				'<button class="button button-small wpcc-approve-btn" data-id="' + escHtml(req.request_id) + '" data-action="approve">' + escHtml(i18n.approve) + '</button> ' +
 				'<button class="button button-small button-link-delete wpcc-reject-btn" data-id="' + escHtml(req.request_id) + '" data-action="reject">' + escHtml(i18n.reject) + '</button>' +
 			'</div>' +
@@ -801,8 +834,18 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 				 * the message tells the truth about what happened to the change.
 				 */
 				var failed = !! data.error;
-				var msg    = failed ? ( i18n.approvedErr + data.error ) : i18n.approved;
-				showResult( ctx.result, msg, failed ? 'error' : 'success' );
+				showResult( ctx.result, failed ? i18n.approvedErr : i18n.approved, failed ? 'error' : 'success' );
+				/*
+				 * The engine's own words for what went wrong are kept — they are
+				 * what a developer needs — but they are a technical detail, so they
+				 * live behind the Detailed disclosure like every other technical
+				 * detail on this screen. In Simple mode the customer gets the
+				 * sentence above, which already tells them their site is untouched
+				 * and what to do next.
+				 */
+				if ( failed && ctx.result ) {
+					ctx.result.innerHTML += ' <span class="wpcc-engineer-only"><code>' + escHtml( data.error ) + '</code></span>';
+				}
 				if ( ctx.card ) { ctx.card.style.opacity = '0.6'; }
 				loadSummary();
 				/*

@@ -40,6 +40,43 @@ $wpcc_dur = static function ( $ms ): string {
 	$ms = (int) $ms;
 	return $ms >= 1000 ? sprintf( '%.1fs', $ms / 1000 ) : ( $ms . ' ms' );
 };
+
+/**
+ * Name one row of activity.
+ *
+ * Two vocabularies land in this timeline. Most rows carry a real OPERATION id
+ * (workflow_manage, site_builder_manage, content_manage…) which the product
+ * already knows how to say in plain words — ActionLabels is the same dictionary
+ * Approvals and Changes use, so routing through it makes one operation read the
+ * same way in all three places instead of three ways.
+ *
+ * The rest are the queue's own internal event kinds. There are only a handful,
+ * they repeat constantly (the background queue ticks on every install, so an
+ * untouched site still fills this list with "worker" within minutes), and none
+ * of them mean anything outside the engine. They get plain equivalents here.
+ *
+ * Unknown names fall through to ActionLabels' own title-casing — nothing is
+ * hidden, invented, or dropped.
+ */
+$wpcc_op_label = static function ( string $name ): string {
+	$kinds = [
+		'worker'    => __( 'Background queue check', 'ai-command-center' ),
+		'execution' => __( 'Ran an approved change', 'ai-command-center' ),
+		'result'    => __( 'Recorded a result', 'ai-command-center' ),
+		'recorded'  => __( 'Recorded activity', 'ai-command-center' ),
+		'inspect'   => __( 'Looked something up', 'ai-command-center' ),
+	];
+	if ( isset( $kinds[ $name ] ) ) {
+		return $kinds[ $name ];
+	}
+	// The fallback argument must stay EMPTY: ActionLabels::action() returns the
+	// fallback verbatim when no action is supplied, so passing the raw id as a
+	// fallback short-circuits the very dictionary this call exists to consult
+	// (`wp_cli_bridge` came back as "wp_cli_bridge" instead of "WP-CLI"). Handle
+	// the genuinely-unknown case here instead.
+	$label = \WPCommandCenter\Admin\ActionLabels::describe( $name, '', [], '' );
+	return '' !== $label ? $label : $name;
+};
 ?>
 <style>
 .wpcc-oc { max-width: 1100px; }
@@ -89,8 +126,28 @@ $wpcc_dur = static function ( $ms ): string {
 			<?php endif; ?>
 			<?php if ( ! empty( $wpcc_attn['failures'] ) ) : ?>
 				<p style="margin:0 0 4px;font-size:13px;font-weight:600;"><?php esc_html_e( 'Recent failures:', 'ai-command-center' ); ?></p>
+				<?php
+				/*
+				 * A failure listed here is a RECORD, not a task.
+				 *
+				 * These four rows sat under a red "Needs attention" heading with no
+				 * explanation and no action, three lines above a note promising that
+				 * "nothing here needs your attention" — so the screen contradicted
+				 * itself about the only thing it was shouting about. A customer could
+				 * not tell whether their site was damaged, whether something would
+				 * retry, or what they were supposed to do.
+				 *
+				 * State the two facts that resolve it: a failure stops the operation,
+				 * and whatever it managed to change is recorded in Changes like
+				 * everything else. Both are true regardless of what failed.
+				 */
+				?>
+				<p class="muted" style="margin:0 0 8px;font-size:12px;">
+					<?php esc_html_e( 'A failed operation stopped and did not finish. It will not retry on its own. Anything it changed before stopping is recorded in Changes, where it can be reviewed or undone.', 'ai-command-center' ); ?>
+					<a href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'Open Changes →', 'ai-command-center' ); ?></a>
+				</p>
 				<?php foreach ( $wpcc_attn['failures'] as $frow ) : ?>
-					<div style="font-size:12px;color:#50575e;">&#10007; <code><?php echo esc_html( $frow['operation'] ?: $frow['kind'] ); ?></code><?php if ( '' !== $frow['error_code'] ) : ?> — <?php echo esc_html( $frow['error_code'] ); ?><?php endif; ?> <span class="muted"><?php echo $frow['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'ai-command-center' ), human_time_diff( $frow['time'], time() ) ) ) : ''; ?></span></div>
+					<div style="font-size:12px;color:#50575e;">&#10007; <strong><?php echo esc_html( $wpcc_op_label( (string) ( $frow['operation'] ?: $frow['kind'] ) ) ); ?></strong><?php if ( '' !== $frow['error_code'] ) : ?> — <code><?php echo esc_html( $frow['error_code'] ); ?></code><?php endif; ?> <span class="muted"><?php echo $frow['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'ai-command-center' ), human_time_diff( $frow['time'], time() ) ) ) : ''; ?></span></div>
 				<?php endforeach; ?>
 			<?php endif; ?>
 		</div>
@@ -126,7 +183,7 @@ $wpcc_dur = static function ( $ms ): string {
 					<?php foreach ( $wpcc_tl['rows'] as $row ) : [ $slabel, $scolor ] = $wpcc_status_meta( $row['status'] ); ?>
 						<div class="wpcc-oc-row">
 							<span class="wpcc-oc-badge" style="background:<?php echo esc_attr( $scolor ); ?>22;color:<?php echo esc_attr( $scolor ); ?>;"><?php echo esc_html( $slabel ); ?></span>
-							<span style="flex:1;"><strong style="font-weight:600;"><?php echo esc_html( $row['operation'] ?: $row['kind'] ); ?></strong><?php if ( '' !== $row['provider'] ) : ?> <span class="muted">· <?php echo esc_html( $row['provider'] ); ?><?php echo '' !== $row['model'] ? '/' . esc_html( $row['model'] ) : ''; ?></span><?php endif; ?></span>
+							<span style="flex:1;"><strong style="font-weight:600;"><?php echo esc_html( $wpcc_op_label( (string) ( $row['operation'] ?: $row['kind'] ) ) ); ?></strong><?php if ( '' !== $row['provider'] ) : ?> <span class="muted">· <?php echo esc_html( $row['provider'] ); ?><?php echo '' !== $row['model'] ? '/' . esc_html( $row['model'] ) : ''; ?></span><?php endif; ?></span>
 							<?php
 						// Print the duration only when it was actually measured. This
 						// column rendered the literal word "unknown" on every row, so a
@@ -159,6 +216,21 @@ $wpcc_dur = static function ( $ms ): string {
 				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Running', 'ai-command-center' ); ?></span><strong><?php echo (int) $wpcc_status['running']; ?></strong></div>
 				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Cancelled', 'ai-command-center' ); ?></span><strong><?php echo (int) $wpcc_status['cancelled']; ?></strong></div>
 				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Avg duration', 'ai-command-center' ); ?></span><strong><?php echo null !== $wpcc_status['avg_duration_ms'] ? esc_html( $wpcc_dur( $wpcc_status['avg_duration_ms'] ) ) : esc_html__( 'unknown', 'ai-command-center' ); ?></strong></div>
+				<?php
+				/*
+				 * Say what these numbers count.
+				 *
+				 * The largest figure on this screen is a "Completed" total in the tens
+				 * of thousands sitting beside a red four-digit "Failed", with nothing
+				 * to scale either against. Most of the completed count is the
+				 * background queue ticking; a failure is an operation that stopped.
+				 * Neither is a to-do. Without that sentence the panel reads as a
+				 * damage report on a site where nothing is wrong.
+				 */
+				?>
+				<p class="muted" style="font-size:11px;margin:8px 0 0;">
+					<?php esc_html_e( 'Most of this is the background queue checking for work — it runs on every site, whether or not an assistant is connected. A failure means an operation stopped and was not retried. Whatever did change is listed under Changes, so that is the place to check what actually happened to your site.', 'ai-command-center' ); ?>
+				</p>
 			</div>
 
 			<!-- 5. DATA HONESTY -->

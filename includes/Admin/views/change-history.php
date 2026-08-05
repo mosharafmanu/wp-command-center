@@ -328,7 +328,18 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'ai-command-center' ) ); ?>,
 		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'ai-command-center' ) ); ?>,
 		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'ai-command-center' ) ); ?>,
-		genericFail: <?php echo wp_json_encode( __( 'Restore failed.', 'ai-command-center' ) ); ?>,
+		/*
+		 * "Restore failed." leaves the one question that matters unanswered: what
+		 * is the state of my site now?
+		 *
+		 * This string is the LAST-RESORT fallback. Its main caller is the .catch()
+		 * below — the request never completed, so whether the undo ran is genuinely
+		 * unknown. When the server does answer, its own message is shown instead,
+		 * including RollbackDelta's `partial` and `conflict` wording (a rollback
+		 * can restore some fields and skip others). So this must NOT promise that
+		 * nothing happened; it points at the one place that always knows.
+		 */
+		genericFail: <?php echo wp_json_encode( __( 'The undo could not be completed. Reload this page before trying again — the change list always shows where things actually stand.', 'ai-command-center' ) ); ?>,
 		openApprove: <?php echo wp_json_encode( __( 'Review and approve it', 'ai-command-center' ) ); ?>,
 		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'ai-command-center' ) ); ?>,
 		close:       <?php echo wp_json_encode( __( 'Close', 'ai-command-center' ) ); ?>,
