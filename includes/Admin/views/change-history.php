@@ -309,6 +309,16 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		allChanges:  <?php echo wp_json_encode( __( 'all changes', 'ai-command-center' ) ); ?>,
 		view:        <?php echo wp_json_encode( __( 'View', 'ai-command-center' ) ); ?>,
 		actor:       <?php echo wp_json_encode( __( 'Actor', 'ai-command-center' ) ); ?>,
+		// "Actor" is the data model's word. On a row a customer reads to find out
+		// what happened to their site, the word is "By".
+		by:          <?php echo wp_json_encode( __( 'By', 'ai-command-center' ) ); ?>,
+		actorTypes:  {
+			mcp:     <?php echo wp_json_encode( __( 'an AI assistant', 'ai-command-center' ) ); ?>,
+			token:   <?php echo wp_json_encode( __( 'a connected assistant', 'ai-command-center' ) ); ?>,
+			admin:   <?php echo wp_json_encode( __( 'a site administrator', 'ai-command-center' ) ); ?>,
+			system:  <?php echo wp_json_encode( __( 'this site, automatically', 'ai-command-center' ) ); ?>,
+			unknown: <?php echo wp_json_encode( __( 'an unidentified caller', 'ai-command-center' ) ); ?>
+		},
 		restore:     <?php echo wp_json_encode( __( 'Undo', 'ai-command-center' ) ); ?>,
 		restoreQ:    <?php echo wp_json_encode( __( 'Undo this change? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'ai-command-center' ) ); ?>,
 		/* translators: %s: plain-language name of the change being undone */
@@ -412,6 +422,23 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		return qs( p );
 	}
 
+	/*
+	 * Who did this, in words.
+	 *
+	 * The old expression fell through to `c.actor.type` when a record carried no
+	 * label, so rows rendered "Actor: mcp" — the internal name of a protocol,
+	 * presented as the answer to "who changed my site?". A label (a token's name,
+	 * a WordPress username) is always preferred; only the bare type falls back
+	 * here, and it falls back to something a person can read.
+	 */
+	function actorText( a ) {
+		if ( ! a ) { return ''; }
+		if ( a.label )      { return String( a.label ); }
+		if ( a.user_login ) { return String( a.user_login ); }
+		var t = String( a.type || '' );
+		return i18n.actorTypes[ t ] || t;
+	}
+
 	// ── Timeline / reversible rendering ──
 	var lastDay = null;
 	function renderChange( c ) {
@@ -440,16 +467,25 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		var techId = ( c.operation_id || '' ) + ( c.action ? ' · ' + c.action : '' );
 		var area   = WPCC_LABELS.areas[ c.operation_id ] || '';
 		var target = c.target_key ? escHtml(c.target_key) : '';
-		var actor  = ( c.actor && ( c.actor.label || c.actor.user_login || c.actor.type ) ) || '';
+		var actor  = actorText( c.actor );
 
+		/*
+		 * Correlation identifiers, not customer information.
+		 *
+		 * "Session c6fd17df…" and "Change-set 9a41b0c2…" are how an engineer joins
+		 * two rows together. To someone asking "what changed on my site?" they are
+		 * eight random characters sitting where a fact should be. They stay — they
+		 * are genuinely useful — behind the Detailed disclosure, which is the
+		 * control that exists to say exactly this.
+		 */
 		var links = c.links || {};
 		var chips = '';
 		if ( links.session_id ) {
-			chips += '<a class="wpcc-chip" href="' + escHtml( sessionUrl( links.session_id ) ) + '">' +
+			chips += '<a class="wpcc-chip wpcc-engineer-only" href="' + escHtml( sessionUrl( links.session_id ) ) + '">' +
 				escHtml(i18n.session) + ' ' + escHtml( String(links.session_id).substring(0,8) ) + '&#8230;</a>';
 		}
 		if ( rev.change_set_id ) {
-			chips += '<span class="wpcc-chip">' + escHtml(i18n.lChangeSet) + ' ' + escHtml( String(rev.change_set_id).substring(0,8) ) + '&#8230;</span>';
+			chips += '<span class="wpcc-chip wpcc-engineer-only">' + escHtml(i18n.lChangeSet) + ' ' + escHtml( String(rev.change_set_id).substring(0,8) ) + '&#8230;</span>';
 		}
 
 		// Restore is secondary and only offered when actually reversible.
@@ -464,8 +500,11 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			'</div>' +
 			'<div class="wpcc-change-meta">' +
 				( area ? '<span>' + escHtml(area) + '</span>' : '' ) +
-				( target ? '<span>' + target + '</span>' : '' ) +
-				( actor ? '<span>' + escHtml(i18n.actor) + ': ' + escHtml(actor) + '</span>' : '' ) +
+				// The raw target key ("content:112") names the row for an engineer;
+				// the row's own title already names it for everyone else ("Edit a
+				// post or page — “Cart”"). Detailed only.
+				( target ? '<span class="wpcc-engineer-only">' + target + '</span>' : '' ) +
+				( actor ? '<span>' + escHtml(i18n.by) + ' ' + escHtml(actor) + '</span>' : '' ) +
 				'<span class="wpcc-engineer-only"><code>' + escHtml(techId) + '</code></span>' +
 				revBadge + chips + restore +
 			'</div>' +

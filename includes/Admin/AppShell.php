@@ -303,11 +303,28 @@ final class AppShell {
 		 * admin-bar link and redirect keeps resolving; only the labels, the grouping
 		 * and what lives inside them are redesigned.
 		 */
+		/*
+		 * `detail` — does this section actually HAVE a Detailed view?
+		 *
+		 * The Simple/Detailed control was rendered on every section, but the
+		 * disclosure it drives (`.wpcc-engineer-only` / `.wpcc-builder-only`)
+		 * exists only on Home, Approvals and Changes. On all eight Settings
+		 * destinations the toggle changed row spacing and nothing else — a control
+		 * labelled "Level of detail" that did not change the level of detail. A
+		 * customer who presses it, sees nothing happen and presses it again has
+		 * just learned that this product's controls are decorative, on the screens
+		 * where they most need to trust them.
+		 *
+		 * So it is shown where it works. Same rule the shell already applies to the
+		 * whole tools group before first connection ($has_started, below): a
+		 * control appears when it can do something.
+		 */
 		$tree = [
 			self::HOME_SLUG => [
-				'label' => __( 'Home', 'ai-command-center' ),
+				'label'  => __( 'Home', 'ai-command-center' ),
 				// Home's subtitle is the product's promise, not a description of the page.
-				'desc'  => __( 'Ask your AI assistant to change this site, in your own words and your own language. You approve anything that matters.', 'ai-command-center' ),
+				'desc'   => __( 'Ask your AI assistant to change this site, in your own words and your own language. You approve anything that matters.', 'ai-command-center' ),
+				'detail' => true,
 				'tabs'  => [
 					'home' => [ 'label' => __( 'Home', 'ai-command-center' ), 'view' => 'command-home', 'feature' => null ],
 				],
@@ -317,8 +334,9 @@ final class AppShell {
 			// draft surface that used to share it are engine internals; they moved to
 			// Settings › Advanced where the rest of the machinery lives.
 			self::ACTIVITY_SLUG => [
-				'label' => __( 'Approvals', 'ai-command-center' ),
-				'desc'  => __( 'Changes waiting for your decision. Nothing runs until you approve it.', 'ai-command-center' ),
+				'label'  => __( 'Approvals', 'ai-command-center' ),
+				'desc'   => __( 'Changes waiting for your decision. Nothing runs until you approve it.', 'ai-command-center' ),
+				'detail' => true,
 				'tabs'  => [
 					'approvals' => [ 'label' => __( 'Approvals', 'ai-command-center' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
 				],
@@ -326,15 +344,21 @@ final class AppShell {
 			// Was "History" — the system's word for it. The customer calls these
 			// changes, and comes here to see or undo one.
 			self::HISTORY_SLUG => [
-				'label' => __( 'Changes', 'ai-command-center' ),
-				'desc'  => __( 'Everything that has changed on this site. Supported changes can be undone from here.', 'ai-command-center' ),
+				'label'  => __( 'Changes', 'ai-command-center' ),
+				'desc'   => __( 'Everything that has changed on this site. Supported changes can be undone from here.', 'ai-command-center' ),
+				'detail' => true,
 				'tabs'  => [
 					'changes' => [ 'label' => __( 'Changes', 'ai-command-center' ), 'view' => 'change-history', 'feature' => 'change_history' ],
 				],
 			],
 			self::SETTINGS_SLUG => [
-				'label' => __( 'Settings', 'ai-command-center' ),
-				'desc'  => __( 'How this site is protected, who can reach it, and everything advanced.', 'ai-command-center' ),
+				'label'  => __( 'Settings', 'ai-command-center' ),
+				'desc'   => __( 'How this site is protected, who can reach it, and everything advanced.', 'ai-command-center' ),
+				// No Detailed view: Settings screens are already the detailed ones.
+				// Advanced is, by its own subtitle, "everything a normal customer
+				// never needs to open" — there is nothing here to progressively
+				// disclose, so the control that discloses it is not shown.
+				'detail' => false,
 				// Five tabs → three, grouped by the question each answers:
 				//   Protection  — how much can AI change without asking?
 				//   Connections — who is allowed to reach this site?
@@ -560,11 +584,17 @@ final class AppShell {
 					// change: "Builder / Engineer" asked the customer to pick a job title
 					// to decide how much detail they wanted.
 					?>
-					<?php if ( $has_started ) : ?>
+					<?php if ( $has_started && ! empty( $section['detail'] ) ) : ?>
 						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'ai-command-center' ); ?>">
 							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'ai-command-center' ); ?></button>
 							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'ai-command-center' ); ?></button>
 						</div>
+					<?php endif; ?>
+					<?php
+					// Search is not a disclosure control: it reaches every screen from
+					// every screen, so it stays wherever the customer is.
+					?>
+					<?php if ( $has_started ) : ?>
 						<button type="button" class="wpcc-shell__cmdk" aria-haspopup="dialog">
 							<?php esc_html_e( 'Search', 'ai-command-center' ); ?> <kbd>&#8984;K</kbd>
 						</button>
