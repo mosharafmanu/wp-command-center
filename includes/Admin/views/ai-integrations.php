@@ -472,7 +472,18 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	if ( false ) :
 	?>
 	<section class="wpcc-ai-hero">
-		<p class="wpcc-ai-lead"><?php esc_html_e( 'Connect Claude, Cursor, Codex, ChatGPT, Gemini or any other AI assistant to this site. Anything it changes waits for your approval, is recorded, and can be undone.', 'ai-command-center' ); ?></p>
+		<?php
+		// The promise follows the mode. On a Development site "waits for your
+		// approval" is simply false, and this is the first sentence a customer
+		// reads on the screen where they hand an assistant the keys.
+		?>
+		<p class="wpcc-ai-lead"><?php
+			printf(
+				/* translators: %s: the mode-aware guarantee sentence. */
+				esc_html__( 'Connect Claude, Cursor, Codex, ChatGPT, Gemini or any other AI assistant to this site. %s', 'ai-command-center' ),
+				esc_html( SecurityModeManager::promise() )
+			);
+		?></p>
 		<div class="wpcc-ai-chips" role="note" aria-label="<?php esc_attr_e( 'How every assistant stays safe', 'ai-command-center' ); ?>">
 			<span class="wpcc-cds-chip wpcc-cds-chip--approval"><?php esc_html_e( 'Needs your approval', 'ai-command-center' ); ?></span>
 			<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Recorded', 'ai-command-center' ); ?></span>
@@ -662,7 +673,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<div class="wpcc-ai-panel">
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Access tokens', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'A token is your assistant’s key to this site. A standard token lets your assistant answer questions about the site and propose changes — it can never change anything on its own, because every change waits for your approval first.', 'ai-command-center' ); ?></p>
+				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php
+					echo esc_html(
+						SecurityModeManager::is_protected()
+							? __( 'A token is your assistant’s key to this site. A standard token lets your assistant answer questions about the site and propose changes — it can never change anything on its own, because every change waits for your approval first.', 'ai-command-center' )
+							: __( 'A token is your assistant’s key to this site. A standard token lets your assistant answer questions about the site and change it. This site is in Development mode, so those changes apply immediately without asking you.', 'ai-command-center' )
+					);
+				?></p>
 				<?php
 				// Read-only is NOT the recommended starting point here, and that is a
 				// deliberate, unchanged decision: the read-only SCOPE allowlist
@@ -1088,7 +1105,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			<div>
 				<strong><?php esc_html_e( 'Connecting an assistant is safe by design.', 'ai-command-center' ); ?></strong>
 				<ul>
-					<li><?php esc_html_e( 'Any change your assistant makes waits for your approval first.', 'ai-command-center' ); ?></li>
+					<li><?php echo esc_html( SecurityModeManager::is_protected()
+						? __( 'Any change your assistant makes waits for your approval first.', 'ai-command-center' )
+						: __( 'This site is in Development mode, so your assistant’s changes apply immediately — no approval step.', 'ai-command-center' ) ); ?></li>
 					<li><?php esc_html_e( 'Every action is recorded under Changes.', 'ai-command-center' ); ?></li>
 					<li><?php esc_html_e( 'Reversible changes can be undone from the Changes screen.', 'ai-command-center' ); ?></li>
 				</ul>

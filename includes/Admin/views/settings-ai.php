@@ -75,7 +75,13 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 		<div class="wpcc-ai-path">
 			<span class="wpcc-ai-path__tag"><?php esc_html_e( 'Path 1 — the main way', 'ai-command-center' ); ?></span>
 			<strong><?php esc_html_e( 'Your own AI assistant', 'ai-command-center' ); ?></strong>
-			<p><?php esc_html_e( 'You work in Claude, Cursor or ChatGPT and ask it to change this site. It brings its own AI, so no key is needed here. Everything it wants to change waits for your approval, is recorded, and can be undone.', 'ai-command-center' ); ?></p>
+			<p><?php
+				printf(
+					/* translators: %s: the mode-aware guarantee sentence. */
+					esc_html__( 'You work in Claude, Cursor or ChatGPT and ask it to change this site. It brings its own AI, so no key is needed here. %s', 'ai-command-center' ),
+					esc_html( \WPCommandCenter\Operations\SecurityModeManager::promise() )
+				);
+			?></p>
 			<span class="wpcc-ai-path__note"><?php esc_html_e( 'No provider key required', 'ai-command-center' ); ?></span>
 		</div>
 		<div class="wpcc-ai-path">
@@ -86,7 +92,9 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 		</div>
 	</div>
 	<p class="description" style="max-width:680px;margin:0 0 18px;">
-		<?php esc_html_e( 'Both paths obey the same rules: anything that changes your site still needs your approval, and is still recorded.', 'ai-command-center' ); ?>
+		<?php echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::is_protected()
+			? __( 'Both paths obey the same rules: anything that changes your site still needs your approval, and is still recorded.', 'ai-command-center' )
+			: __( 'Both paths obey the same rules — and this site is in Development mode, so changes on both apply immediately. Everything is still recorded and can be undone.', 'ai-command-center' ) ); ?>
 	</p>
 
 	<?php if ( $wpcc_ai_tools_off ) : ?>

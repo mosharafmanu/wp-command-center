@@ -141,4 +141,56 @@ final class SecurityModeManager {
 	public static function is_protected(): bool {
 		return self::current() !== self::MODE_DEVELOPER;
 	}
+
+	/*
+	 * ── The product's promise, in ONE place ──────────────────────────────────
+	 *
+	 * "Anything it changes waits for your approval" was written out by hand on a
+	 * dozen screens — Home, Built-in AI, the assistants setup, the token dialogs,
+	 * the trust strip on every generation screen. All of them stated it
+	 * unconditionally, so on a site in Development mode the product told the
+	 * customer their changes were held for approval while the engine applied them
+	 * immediately. A safety promise that is false is worse than no promise.
+	 *
+	 * The promise is a function of the mode, so it lives with the mode. Callers
+	 * ask for the sentence rather than writing one, which is what stops the
+	 * twelve copies drifting apart again.
+	 */
+
+	/**
+	 * The one-line guarantee shown beside an AI feature.
+	 *
+	 * Every mode keeps the audit trail and the undo; only the approval step
+	 * differs, so only that clause changes.
+	 */
+	public static function promise(): string {
+		return self::is_protected()
+			? __( 'Anything it changes waits for your approval, is recorded, and can be undone.', 'ai-command-center' )
+			: __( 'This site is in Development mode, so changes run immediately without approval. Everything is still recorded and can be undone.', 'ai-command-center' );
+	}
+
+	/**
+	 * The approval guarantee as a short chip label — "Requires approval" on a
+	 * protected site, and the truth on an unprotected one.
+	 */
+	public static function approval_chip(): string {
+		return self::is_protected()
+			? __( 'Requires approval', 'ai-command-center' )
+			: __( 'Runs immediately', 'ai-command-center' );
+	}
+
+	/**
+	 * A short warning for Development mode, or '' when the site is protected.
+	 * Callers render it only when non-empty, so protected sites gain no clutter.
+	 */
+	public static function dev_warning(): string {
+		return self::is_protected()
+			? ''
+			: __( 'Development mode is on: AI changes apply immediately, with no approval step. Switch to Standard protection before using this on a live site.', 'ai-command-center' );
+	}
+
+	/** Where a customer changes the mode — used by the warnings above. */
+	public static function settings_url(): string {
+		return admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=security' );
+	}
 }

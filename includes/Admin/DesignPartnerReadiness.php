@@ -45,7 +45,7 @@ final class DesignPartnerReadiness {
 			'label'        => __( 'Approvals are on (Client-safe mode)', 'ai-command-center' ),
 			'status'       => $client_safe ? 'pass' : 'warning',
 			'detail'       => $client_safe
-				? __( 'Every AI change waits for your approval before it applies.', 'ai-command-center' )
+				? \WPCommandCenter\Operations\SecurityModeManager::promise()
 				: __( 'You’re in Developer mode, which applies AI writes without approval. Switch to Client-safe mode before working on a real site.', 'ai-command-center' ),
 			'action_label' => $client_safe ? '' : __( 'Set Client-safe mode', 'ai-command-center' ),
 			'action_url'   => $security_url,

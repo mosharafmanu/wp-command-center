@@ -822,6 +822,20 @@
 	cursor: default;
 }
 
+/* Development-mode warning under the trust strip. Only rendered when the site
+   is actually unprotected, so a protected site gains nothing. */
+.wpcc-bai-devnote {
+	margin: var( --wpcc-space-2 ) 0 var( --wpcc-space-4 );
+	padding: var( --wpcc-space-3 ) var( --wpcc-space-4 );
+	font-size: var( --wpcc-fs-caption );
+	line-height: 1.6;
+	color: var( --wpcc-risk-critical-fg, #8a2424 );
+	background: var( --wpcc-risk-critical-bg, #fcf0f0 );
+	border: 1px solid var( --wpcc-risk-critical-br, #eec2c2 );
+	border-radius: var( --wpcc-radius-sm );
+	max-width: 78ch;
+}
+
 .wpcc-cmdk__none small {
 	display: block;
 	margin-top: var( --wpcc-space-2 );

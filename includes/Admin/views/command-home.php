@@ -193,7 +193,11 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			<span class="wpcc-setup__protection-dot <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 			<?php
 			if ( $wpcc_protected ) {
-				esc_html_e( 'Already protected — changes will wait for your approval.', 'ai-command-center' );
+				// Mode-aware: on a Development site this line used to reassure the
+				// customer about a protection they did not have.
+				echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::is_protected()
+					? __( 'Already protected — changes will wait for your approval.', 'ai-command-center' )
+					: __( 'Development mode — AI changes apply immediately, with no approval step.', 'ai-command-center' ) );
 			} else {
 				esc_html_e( 'Approvals are off — AI changes will apply immediately.', 'ai-command-center' );
 			}
