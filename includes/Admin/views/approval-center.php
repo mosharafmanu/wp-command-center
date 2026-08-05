@@ -409,6 +409,9 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		secChangeset:<?php echo wp_json_encode( __( 'Change set', 'ai-command-center' ) ); ?>,
 		secDiff:     <?php echo wp_json_encode( __( 'Diff', 'ai-command-center' ) ); ?>,
 		secWhatChanges: <?php echo wp_json_encode( __( 'What will change', 'ai-command-center' ) ); ?>,
+		lblUndoes:      <?php echo wp_json_encode( __( 'Undoes', 'ai-command-center' ) ); ?>,
+		undoUnknown:    <?php echo wp_json_encode( __( 'A change that is no longer in your history', 'ai-command-center' ) ); ?>,
+		lblChangeId:    <?php echo wp_json_encode( __( 'Change id', 'ai-command-center' ) ); ?>,
 		secPayload:  <?php echo wp_json_encode( __( 'Technical details', 'ai-command-center' ) ); ?>,
 		yes:         <?php echo wp_json_encode( __( 'Yes', 'ai-command-center' ) ); ?>,
 		no:          <?php echo wp_json_encode( __( 'No', 'ai-command-center' ) ); ?>,
@@ -1164,10 +1167,30 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		return ( i18n.fieldNames && i18n.fieldNames[ s ] ) ? i18n.fieldNames[ s ] : displayValue( v );
 	}
 
-	function summarisePayload( payload ) {
+	/*
+	 * `undoTarget` is the server-resolved description of the change an undo
+	 * reverses (ApprovalAdminQuery::detail -> ActionLabels::undo_target). When it
+	 * is present, the change-id fields become ONE readable row instead of a raw
+	 * UUID: "Undoes: Update SEO details". The identifier itself is still available
+	 * to anyone who wants it — as a Detailed-only row, and in the raw request
+	 * payload one click below — but it is no longer the answer a customer reads
+	 * when deciding whether to approve.
+	 */
+	var UNDO_ID_KEYS = { change_id: 1, target_change_id: 1, rollback_id: 1 };
+
+	function summarisePayload( payload, undoTarget ) {
 		var rows = [];
+		var undoIds = [];
 		Object.keys( payload || {} ).forEach( function ( key ) {
 			if ( PAYLOAD_SKIP[ key ] ) { return; }
+			// Collect only ids that actually have a value — an undo request can
+			// carry an empty change_id, and an empty "Change id: " row is noise
+			// wearing a label.
+			if ( UNDO_ID_KEYS[ key ] ) {
+				var idVal = String( payload[ key ] == null ? '' : payload[ key ] ).trim();
+				if ( idVal ) { undoIds.push( idVal ); }
+				return;
+			}
 			var val = payload[ key ];
 			// One level down: settings/fields/meta hold the values that actually change.
 			if ( val && typeof val === 'object' && ! Array.isArray( val ) ) {
@@ -1181,6 +1204,24 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 				value: NAMES_A_SETTING[ key ] ? settingName( val ) : displayValue( val ),
 			} );
 		} );
+		/*
+		 * Keyed off the ACTION, not off finding an id.
+		 *
+		 * An undo whose change_id is empty (it happens — the reversible list can
+		 * submit one) would otherwise produce an entirely blank "What will change"
+		 * on a screen asking for consent. Every undo says what it undoes, even
+		 * when the honest answer is that the original can no longer be resolved.
+		 */
+		if ( 'rollback_target' === ( payload || {} ).action || undoIds.length ) {
+			rows.unshift( {
+				label: i18n.lblUndoes,
+				value: ( undoTarget && String( undoTarget ).trim() ) ? undoTarget : i18n.undoUnknown
+			} );
+			// The identifier itself: Detailed only, and only when there is one.
+			if ( undoIds.length ) {
+				rows.push( { label: i18n.lblChangeId, value: undoIds.join( ', ' ), tech: true } );
+			}
+		}
 		return rows;
 	}
 
@@ -1289,11 +1330,12 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			 * open by default. The raw JSON stays exactly one click away for anyone
 			 * who wants it.
 			 */
-			var changeRows = summarisePayload( d.payload || {} );
+			var changeRows = summarisePayload( d.payload || {}, d.undo_target );
 			if ( changeRows.length ) {
 				html += section( i18n.secWhatChanges,
 					'<table class="wpcc-whatchanges"><tbody>' + changeRows.map( function ( r ) {
-						return '<tr><th scope="row">' + escHtml( r.label ) + '</th><td>' + escHtml( r.value ) + '</td></tr>';
+						return '<tr' + ( r.tech ? ' class="wpcc-engineer-only"' : '' ) + '><th scope="row">' +
+							escHtml( r.label ) + '</th><td>' + escHtml( r.value ) + '</td></tr>';
 					} ).join('') + '</tbody></table>' );
 			}
 

@@ -579,9 +579,17 @@ final class ActionLabels {
 	 * whenever the change cannot be resolved — a missing original must never stop an
 	 * approval row from rendering.
 	 *
+	 * PUBLIC because the approval detail needs it directly, not only through
+	 * describe(). That screen's "What will change" table renders the payload
+	 * field-by-field, so an undo showed its one field as `Change id:
+	 * 98ba74ef-83d0-…` — a raw internal identifier presented as the answer to
+	 * "what will change" on the screen where consent is given. The heading above
+	 * it already said "Undo a change — Update SEO details", so the product could
+	 * clearly resolve the target; the table just had no way to ask for it.
+	 *
 	 * @param array<string,mixed> $payload
 	 */
-	private static function undo_target( array $payload ): string {
+	public static function undo_target( array $payload ): string {
 		/*
 		 * An undo names its target by change_id OR by rollback_id — the latter is the
 		 * handle a write returns and, since the rollback routing contract, the value a

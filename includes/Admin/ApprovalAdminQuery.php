@@ -220,6 +220,22 @@ final class ApprovalAdminQuery {
 			'action'      => 'approval_detail',
 			'request'     => $formatted,
 			'payload'     => $this->strip_payload( $payload ),
+			/*
+			 * The plain-language description of the change an undo reverses.
+			 *
+			 * "What will change" renders the payload field by field, so an undo —
+			 * whose payload is just { action, change_id, confirm } — showed its one
+			 * meaningful field as `Change id: 98ba74ef-83d0-…`. A raw UUID is not an
+			 * answer to "what will change", least of all on the screen where the
+			 * customer gives consent. ActionLabels::undo_target() already resolves
+			 * the original change to words (it is what puts "Undo a change — Update
+			 * SEO details" in the heading); resolving it once here means the view
+			 * never has to guess and never has to look anything up itself.
+			 *
+			 * Empty for every non-undo request, and empty when the original change
+			 * cannot be found — a missing original must not stop the row rendering.
+			 */
+			'undo_target' => ActionLabels::undo_target( $payload ),
 			'queue_items' => $queue_items,
 			'results'     => $results,
 			'change_set'  => $change_set,
