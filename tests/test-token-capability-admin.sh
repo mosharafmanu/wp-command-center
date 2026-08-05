@@ -160,9 +160,16 @@ echo
 echo "== 4. App Shell hosts Tokens & Capabilities as Access › Tokens =="
 # Experience Layer: the standalone submenu became the Access › Tokens tab, routed
 # by the 5-C App Shell via ?wpcc_tab=tokens; the legacy slug redirects in.
-has "Access tokens pane labeled"      "__\( 'Access tokens', '$WPCC_TEXTDOMAIN' \)" "$CONN"
-has "Tokens tab renders the manager view" "'view' => 'token-capability-manager'" "$CONN"
-has "Tokens tab gated by token_capability_manager feature" "'feature' => 'token_capability_manager'" "$CONN"
+# The Connections pane list moved OUT of settings-connections.php and onto
+# AppShell::connection_panes(), so the ⌘K palette can offer "Access tokens" as a
+# destination (it could not see a list defined inside a view, which is why
+# searching for the tokens screen returned nothing). The view still renders the
+# panes; it no longer declares them — so these three assertions follow the
+# declaration to its new home. The pane's label, view and gate are unchanged.
+has "Access tokens pane labeled"      "__\( 'Access tokens', '$WPCC_TEXTDOMAIN' \)" "$SHELL"
+has "Tokens tab renders the manager view" "'view'     => 'token-capability-manager'" "$SHELL"
+has "Tokens tab gated by token_capability_manager feature" "'feature'  => 'token_capability_manager'" "$SHELL"
+has "Connections hub consumes the shared pane list" "AppShell::connection_panes" "$CONN"
 has "FeatureGate gates the Tokens tab" "FeatureGate::allows"      "$SHELL"
 has "legacy tokens slug redirects (map)" "'wpcc-tokens'             => \[ self::SETTINGS_SLUG, 'connections'" "$SHELL"
 has "Settings section registered"      "render_settings"          "$MENU"
@@ -188,7 +195,127 @@ has "honesty: admin editing locked"   "adminLocked|is_admin"     "$VIEW"
 has "create-token control"            "wpcc-create-token"        "$VIEW"
 has "revoke-token control"            "wpcc-token-revoke"        "$VIEW"
 has "delete-token control"            "wpcc-token-delete"        "$VIEW"
-has "new-token (copy-once) region"    "wpcc-new-token"           "$VIEW"
+has "new-token (copy-once) region"    "wpcc-tokdlg-secret"       "$VIEW"
+
+# ── Token creation is a deliberate act (RC hardening) ────────────────────────
+# The create form used to sit permanently open above the token list, so the
+# resting state of the access register was one click from minting a key, with
+# the scope in an unlabelled two-option dropdown. It is now a dialog with an
+# explicit final action, and the one-time secret is revealed inside it.
+echo
+echo "== 5a1. Token creation is deliberate, explained, and recoverable =="
+has "creation dialog present"         "wpcc-tok-dialog"          "$VIEW"
+has "dialog is a real dialog"         "aria-modal=\"true\""      "$VIEW"
+has "opener is not a submit"          "aria-haspopup=\"dialog\"" "$VIEW"
+has "label field required by client"  "labelReq"                 "$VIEW"
+has "read-only is the default scope"  "value=\"read_only\" checked" "$VIEW"
+has "full access is an explicit pick" "value=\"full\""           "$VIEW"
+has "scope choices are explained"     "never request a change"   "$VIEW"
+has "expiry offered"                  "wpcc-new-expires"         "$VIEW"
+has "full-access warning present"     "wpcc-tokdlg-warn"         "$VIEW"
+has "warning names the real mode"     "SecurityModeManager::label" "$VIEW"
+has "explicit final create action"    "wpcc-tokdlg-create"       "$VIEW"
+has "one-time secret has Copy"        "wpcc-tokdlg-copy"         "$VIEW"
+has "one-time secret has Done"        "wpcc-tokdlg-done"         "$VIEW"
+has "duplicate-name warning"          "dupeWarn"                 "$VIEW"
+has "double-submit guard"             "dlgWorking"               "$VIEW"
+
+# The SAME hardening on the Assistants screen, which is the primary journey and
+# where a single unguarded button used to mint a full-access, never-expiring
+# token named after the clock.
+ASSIST="$PLUGIN_DIR/includes/Admin/views/ai-integrations.php"
+has "assistants: creation dialog"     "wpcc-tokenmake-panel"     "$ASSIST"
+has "assistants: label required"      "name=\"wpcc_token_label\"" "$ASSIST"
+has "assistants: scope is a choice"   "name=\"wpcc_token_scope\"" "$ASSIST"
+has "assistants: expiry offered"      "name=\"wpcc_token_expires\"" "$ASSIST"
+has "assistants: action not on button" "name=\"wpcc_token_action\" value=\"create\"" "$ASSIST"
+# Matches the CONTROL, not any mention of it: the file documents the button it
+# replaced, and a bare "generate_full" substring test would fail on that comment.
+lacks "assistants: no one-click full-access button" "name=\"wpcc_token_action\" value=\"generate_full\"" "$ASSIST"
+has "assistants: double-submit guard" "mkSent"                   "$ASSIST"
+
+# ── OWNER REQUIREMENT: Read-only is the default on BOTH token forms ──────────
+#
+# "Default to Read-only scope, not Full access." Full access must always be an
+# explicit selection, on every surface that mints a token. These assertions are
+# the contract — a future change that re-defaults either form to full access
+# must fail here rather than ship.
+echo
+echo "== 5a3. Read-only default + explicit Full access (owner P0) =="
+
+# (a) Both forms preselect read-only.
+has "manager: read-only preselected"     "value=\"read_only\" checked" "$VIEW"
+has "assistants: read-only preselected"  "value=\"read_only\" checked" "$ASSIST"
+
+# (b) Full access is never preselected on either form. The `checked` attribute
+#     must never appear on a full-access radio, in either attribute order.
+lacks "manager: full access not preselected"    "value=\"full\"[^>]*checked|checked[^>]*value=\"full\"" "$VIEW"
+lacks "assistants: full access not preselected" "value=\"full\"[^>]*checked|checked[^>]*value=\"full\"" "$ASSIST"
+
+# (c) Full access requires an EXPLICIT selection — enforced on the server, not
+#     only in the markup. The Assistants POST handler must grant full access
+#     ONLY on the literal "full"; a missing or unrecognised scope is read-only.
+#     (Before hardening this ran the other way round, so a stripped field
+#     produced a full-access key.)
+has "assistants: server grants full only on explicit 'full'" \
+    "SCOPE_FULL === sanitize_key\( \(string\) \( \\\$_POST\['wpcc_token_scope'\] \?\? '' \) \)" "$ASSIST"
+has "assistants: server falls back to read-only" ": AuthTokens::SCOPE_READ_ONLY;" "$ASSIST"
+#     The REST path is fail-closed by refusal: an unknown scope is rejected
+#     outright rather than defaulted (AuthTokens::create validates the enum).
+has "engine validates scope against an allowlist" "in_array\( \\\$scope, self::VALID_SCOPES, true \)" \
+    "$PLUGIN_DIR/includes/Security/AuthTokens.php"
+#     Client-side fallbacks resolve to read-only, never full.
+has "manager: client scope fallback is read-only"    "return el \? el.value : 'read_only';" "$VIEW"
+has "assistants: client scope fallback is read-only" "return el \? el.value : 'read_only';" "$ASSIST"
+#     Reopening the dialog returns to the safe default rather than remembering
+#     a previous full-access pick.
+has "manager: reopen resets to read-only"    "value=\"read_only\"\]' \);" "$VIEW"
+has "assistants: reopen resets to read-only" "value=\"read_only\"\]'\);" "$ASSIST"
+
+# (d) Opening or cancelling the dialog creates NOTHING. The opener and the
+#     cancel control must not be submits, and the create action must not ride on
+#     the opener — so no path from "I looked at this dialog" reaches a token.
+has "assistants: opener is type=button"  "<button type=\"button\"[^>]*id=\"wpcc-tokenmake-open\"" "$ASSIST"
+has "assistants: cancel is type=button"  "<button type=\"button\"[^>]*id=\"wpcc-tokenmake-cancel\"" "$ASSIST"
+has "assistants: create action is a hidden field, not the opener" \
+    "<input type=\"hidden\" name=\"wpcc_token_action\" value=\"create\"" "$ASSIST"
+has "manager: create fires only from the explicit control" "dlg.create.addEventListener\( 'click', dlgSubmit \)" "$VIEW"
+lacks "manager: opener does not create"  "wpcc-create-token'.*dlgSubmit" "$VIEW"
+
+# (e) The Full-access warning is tied to the SELECTION, not shown on open — a
+#     warning about a scope the customer has not chosen trains them to ignore it.
+has "manager: warning hidden until full is picked"    "dlg.warn.hidden = dlgScope\(\) !== 'full';" "$VIEW"
+has "assistants: warning hidden until full is picked" "mkNote.hidden = mkScope\(\) !== 'full';"     "$ASSIST"
+
+# (f) The approved scope explanations survive.
+has "manager: read-only explained"     "never request a change" "$VIEW"
+has "assistants: read-only explained"  "Inspect the site without requesting changes" "$ASSIST"
+has "assistants: full access explained" "according to the active protection mode" "$ASSIST"
+
+# (g) Functional: the engine refuses a token with no scope and with a bogus
+#     scope, and still mints read-only when asked explicitly. This is the
+#     server-side half of "full access is never the fallback".
+SCOPE_OUT="$(wpe '
+	$at = new \WPCommandCenter\Security\AuthTokens();
+	$empty = $at->create( "wpcc-scope-guard", "", null, 1 );
+	echo "empty=" . ( is_wp_error( $empty ) ? $empty->get_error_code() : "CREATED" ) . "\n";
+	$bogus = $at->create( "wpcc-scope-guard", "full_access", null, 1 );
+	echo "bogus=" . ( is_wp_error( $bogus ) ? $bogus->get_error_code() : "CREATED" ) . "\n";
+	$ro = $at->create( "wpcc-scope-guard-ro", "read_only", null, 1 );
+	if ( ! is_wp_error( $ro ) ) {
+		echo "readonly=" . $ro["record"]["scope"] . "\n";
+		$at->delete( $ro["record"]["id"] );
+	}
+')"
+getscope() { echo "$SCOPE_OUT" | grep "^$1=" | cut -d= -f2 | tr -d '\r'; }
+assert_eq "empty scope refused (never defaulted to full)" "wpcc_invalid_scope" "$(getscope empty)"
+assert_eq "bogus scope refused (never defaulted to full)" "wpcc_invalid_scope" "$(getscope bogus)"
+assert_eq "explicit read_only still mints read_only"      "read_only"          "$(getscope readonly)"
+
+# Server-side: an unrecognised expiry must be REFUSED, not silently downgraded
+# to "never" — the failure mode of a bad input on a control whose purpose is to
+# limit a key's life cannot be the most permissive option available.
+has "server validates expiry"         "wpcc_invalid_expiry"      "$RESTAPI"
 
 echo
 echo "== 5a2. S2.1 — server-side token pagination in the view =="

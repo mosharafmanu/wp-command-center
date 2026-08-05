@@ -30,10 +30,12 @@ for f in "$SHELL_F" "$CATALOG" "$AISETUP" "$HOME_F" "$SETTINGS" "$CHANGES" "$TOK
 done
 
 echo "== 2. Navigation rebuild — clarity, no regression =="
-has "sections carry a plain-language description" "'desc'  => __\(" "$SHELL_F"
+has "sections carry a plain-language description" "'desc'   => __\(" "$SHELL_F"
 has "shell renders the section description" "wpcc-shell__desc" "$SHELL_F"
 # The tab is named for what the customer connects, not for the client category.
-has "assistant door uses plain 'Assistants' label" "__\( 'Assistants'" "$ROOT/includes/Admin/views/settings-connections.php"
+# The pane list (and this label) moved to AppShell::connection_panes() so the
+# ⌘K palette can offer it as a destination; the hub view still renders it.
+has "assistant door uses plain 'Assistants' label" "__\( 'Assistants'" "$SHELL_F"
 # Phase 2B: Runtime retired; the advanced area is now the Advanced hub.
 has "Advanced hub present under Settings" "__\( 'Advanced', '$WPCC_TEXTDOMAIN' \)" "$SHELL_F"
 has "Connect section slug intact" "CONNECT_SLUG\s*=\s*'wpcc-connect'" "$SHELL_F"

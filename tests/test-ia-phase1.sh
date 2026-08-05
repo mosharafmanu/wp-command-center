@@ -59,7 +59,7 @@ has "slug: Home (top-level)"   "HOME_SLUG\s*=\s*'wp-command-center'" "$SHELL_PHP
 # legacy redirect source, so it must NOT appear in SECTION_SLUGS.
 has "slug kept for legacy redirect" "BUILTIN_SLUG\s*=\s*'wpcc-built-in-ai'"  "$SHELL_PHP"
 # Redesign: Built-in AI is an Advanced PANE, not a Settings tab.
-has "Built-in AI re-homed → Advanced pane" "'ai'           => \[ 'label' => __\( 'Built-in AI'" "$ROOT/includes/Admin/views/settings-advanced.php"
+has "Built-in AI re-homed → Advanced pane" "'ai'           => \[" "$SHELL_PHP"
 has "builtin tabs extracted + gated"      "public static function builtin_tabs" "$SHELL_PHP"
 has "slug: Connect"            "CONNECT_SLUG\s*=\s*'wpcc-connect'"      "$SHELL_PHP"
 has "slug: Activity"           "ACTIVITY_SLUG\s*=\s*'wpcc-activity'"     "$SHELL_PHP"
@@ -70,31 +70,63 @@ has "section label: Approvals"   "__\( 'Approvals'" "$SHELL_PHP"
 has "section label: Changes"     "__\( 'Changes'"   "$SHELL_PHP"
 # Tab → existing view mapping (re-homing, not rebuilding).
 has "Built-in AI › Providers → ai-setup"        "'view' => 'ai-setup'"          "$SHELL_PHP"
-has "Connections hosts ai-integrations" "'view' => 'ai-integrations'" "$ROOT/includes/Admin/views/settings-connections.php"
-has "Connections hosts api-integrations" "'view' => 'api-integrations'" "$ROOT/includes/Admin/views/settings-connections.php"
-has "Advanced hosts operations-center" "'view' => 'operations-center'" "$ROOT/includes/Admin/views/settings-advanced.php"
+has "Connections hosts ai-integrations" "'view'     => 'ai-integrations'" "$SHELL_PHP"
+has "Connections hosts api-integrations" "'view'     => 'api-integrations'" "$SHELL_PHP"
+has "Advanced hosts operations-center" "'view'     => 'operations-center'" "$SHELL_PHP"
 has "Activity › Approvals → approval-center"      "'view' => 'approval-center'"   "$SHELL_PHP"
 has "History › Changes → change-history"          "'view' => 'change-history'"    "$SHELL_PHP"
-has "Connections hosts token manager" "'view' => 'token-capability-manager'" "$ROOT/includes/Admin/views/settings-connections.php"
+has "Connections hosts token manager" "'view'     => 'token-capability-manager'" "$SHELL_PHP"
 # V1: database search & replace moved out of a top-level Settings tab into the
 # Advanced hub, alongside the other developer tools (gated by DeveloperTools).
 lacks "Tools is not a top-level Settings tab" "'tools'       => \[ 'label' => __\( 'Tools'" "$SHELL_PHP"
-has "Search & Replace hosted in Advanced hub"  "'view' => 'tools-search-replace'" "$ROOT/includes/Admin/views/settings-advanced.php"
-has "developer tools gated by default"          "DeveloperTools::enabled" "$ROOT/includes/Admin/views/settings-advanced.php"
+has "Search & Replace hosted in Advanced hub"  "'view'     => 'tools-search-replace'" "$SHELL_PHP"
+has "developer tools gated by default"          "DeveloperTools::enabled" "$SHELL_PHP"
 has "patches gated by default"                  "DeveloperTools::enabled" "$ROOT/includes/Admin/views/settings-diagnostics.php"
 # Phase 2B: Diagnostics + Advanced hubs replace the flat diagnostic/advanced tabs;
 # Runtime is retired (no 'dashboard' view in the shell).
-has "Advanced hub hosts diagnostics" "'view' => 'settings-diagnostics'" "$ROOT/includes/Admin/views/settings-advanced.php"
+has "Advanced hub hosts diagnostics" "'view'     => 'settings-diagnostics'" "$SHELL_PHP"
 has "Settings › Advanced hub"                     "'view' => 'settings-advanced'"    "$SHELL_PHP"
 lacks "Runtime tab removed (no dashboard view)"   "'view' => 'dashboard'"            "$SHELL_PHP"
 # FeatureGate preserved on moved gated tabs.
 has "FeatureGate preserved (approval_center)"  "'approval_center'"          "$SHELL_PHP"
 has "FeatureGate preserved (change_history)"   "'change_history'"           "$SHELL_PHP"
-has "FeatureGate preserved (token cap mgr)"    "'token_capability_manager'" "$ROOT/includes/Admin/views/settings-connections.php"
-has "FeatureGate preserved (operations expl)"  "'operations_explorer'"      "$ROOT/includes/Admin/views/settings-advanced.php"
+has "FeatureGate preserved (token cap mgr)"    "'token_capability_manager'" "$SHELL_PHP"
+has "FeatureGate preserved (operations expl)"  "'operations_explorer'"      "$SHELL_PHP"
+# NOTE — the Connections/Advanced PANE lists above are asserted against
+# AppShell, not against the two hub views. They were declared inside the views,
+# where the ⌘K palette could not read them, so Access tokens / Diagnostics /
+# System / Capabilities were real destinations the product's own search could
+# never find. The declarations (labels, views, FeatureGate keys, DeveloperTools
+# gating) moved to AppShell::connection_panes() / ::advanced_panes() unchanged;
+# the views now consume them and still own all rendering.
+has "Connections hub consumes shared panes" "AppShell::connection_panes" "$ROOT/includes/Admin/views/settings-connections.php"
+has "Advanced hub consumes shared panes"    "AppShell::advanced_panes"   "$ROOT/includes/Admin/views/settings-advanced.php"
+
 # Selector + chrome retained.
 has "namespaced wpcc_tab selector"  "wpcc_tab" "$SHELL_PHP"
 has "nav map exposed for palette"   "function nav_map" "$SHELL_PHP"
+
+# ── Palette reaches every destination, once (RC hardening) ───────────────────
+# The map used to be a section/tab TREE, which emitted a section and its only
+# tab as two rows going to the same screen, and described no sub-panes at all —
+# so "Access Tokens", "Undo", "Security", "Diagnostics", "Capabilities",
+# "History" and "Assistants" every one returned nothing.
+has "palette map is flat + keyworded" "'keywords'" "$SHELL_PHP"
+has "palette reaches connection panes" "cpane=" "$SHELL_PHP"
+has "palette reaches advanced panes"   "apane=" "$SHELL_PHP"
+has "undo/history reach Changes"       "undo rollback revert"  "$SHELL_PHP"
+has "security reaches Protection"      "security protection"   "$SHELL_PHP"
+has "palette dedupes by url"           "seen\[ item.url \]"    "$ROOT/assets/js/wpcc-cds.js"
+has "palette has an empty state"       "wpcc-cmdk__none"       "$ROOT/assets/js/wpcc-cds.js"
+has "palette keeps keyboard nav"       "ArrowDown"             "$ROOT/assets/js/wpcc-cds.js"
+
+# ── Simple/Detailed is shown only where it does something ────────────────────
+# The toggle rendered on all four sections but the disclosure it drives exists
+# only on Home, Approvals and Changes; on the eight Settings destinations it
+# changed row spacing and nothing else.
+has "sections declare whether they have detail" "'detail' =>" "$SHELL_PHP"
+has "Settings declares no detail view"          "'detail' => false" "$SHELL_PHP"
+has "toggle rendered only when detail exists"   "\\\$has_started && ! empty\\( \\\$section\\['detail'\\] \\)" "$SHELL_PHP"
 has "graceful empty section state"  "render_empty_section" "$SHELL_PHP"
 
 echo

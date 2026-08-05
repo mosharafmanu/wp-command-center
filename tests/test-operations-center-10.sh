@@ -50,13 +50,19 @@ has "empty: no reversible" "No reversible changes recorded yet" "$V"
 has "all clear state" "All clear" "$V"
 
 echo "== 6. Safety — escaping, link, nav, access =="
-has "operation output escaped" "esc_html\( \\\$row\['operation'\]" "$V"
+# The row name is now resolved through ActionLabels (the same plain-language
+# dictionary Approvals and Changes use) before output — "worker" was the engine's
+# internal name for the background queue, repeated on every row. Escaping is
+# unchanged and still asserted: the resolved label is what reaches esc_html().
+has "operation output escaped" "esc_html\( \\\$wpcc_op_label\(" "$V"
+has "row names use the product dictionary" "ActionLabels::describe" "$V"
 has "session id url-safe" "rawurlencode\( \(string\) \\\$s\['session_id'\] \)" "$V"
 has "review link to change history sessions" "wpcc-history&wpcc_tab=changes&tab=sessions" "$V"
 # The Operations Center view is registered as the "System" pane of Settings > Advanced
 # (settings-advanced.php), not in AppShell. AppShell only keeps the legacy
 # wpcc-operations-center slug as a redirect to that pane.
-has "view registered as the Advanced > System pane" "'view' => 'operations-center'" "$ROOT/includes/Admin/views/settings-advanced.php"
+# Pane list moved to AppShell::advanced_panes() so the ⌘K palette can reach it.
+has "view registered as the Advanced > System pane" "'view'     => 'operations-center'" "$ROOT/includes/Admin/AppShell.php"
 has "legacy slug still redirects to it" "'wpcc-operations-center'" "$SHELL_F"
 has "legacy slug mapped" "'wpcc-operations-center'" "$SHELL_F"
 
