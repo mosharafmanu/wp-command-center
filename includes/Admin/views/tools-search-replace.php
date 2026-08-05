@@ -264,6 +264,15 @@ $sr_preview_js = $sr_preview ? [
 	.wpcc-sr-sensitive > summary { cursor: pointer; font-weight: 600; font-size: 13px; color: #8a2424; }
 	.wpcc-sr-sensitive__warn { margin: 8px 0; font-size: 12px; line-height: 1.6; color: #8a2424; }
 	.wpcc-sr-gate { margin: 0 0 10px; padding: 8px 10px; font-size: 12px; line-height: 1.6; color: #8a6100; background: #fcf9e8; border: 1px solid #f0e2a6; border-radius: 4px; }
+	/* The form and its preview sat in a hardcoded two-column grid with no
+	   breakpoint, so on a tablet or phone each column was ~220px wide holding
+	   text inputs and a table list. Stacks at the WordPress admin breakpoint. */
+	.wpcc-sr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+	@media ( max-width: 782px ) {
+		.wpcc-sr-grid { grid-template-columns: 1fr; }
+		.wpcc-tools-panel-body { padding: 15px; }
+		.wpcc-sr-tables { max-height: 220px; }
+	}
 	.wpcc-modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.5); z-index: 100000; align-items: center; justify-content: center; }
 	.wpcc-modal-overlay.is-visible { display: flex; }
 	.wpcc-modal { background: #fff; padding: 20px 24px; max-width: 520px; width: 90%; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,.2); }
@@ -293,7 +302,7 @@ $sr_preview_js = $sr_preview ? [
 		<h2 class="wpcc-tools-panel-header"><?php esc_html_e( 'Safe Search & Replace', 'ai-command-center' ); ?></h2>
 		<div class="wpcc-tools-panel-body">
 			<p class="description" style="margin-top:0;"><?php esc_html_e( 'Find and replace text across database tables (for example after a domain change). Preview safely with Dry Run; a live run creates a governed request you approve under Approvals.', 'ai-command-center' ); ?></p>
-			<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+			<div class="wpcc-sr-grid">
 				<div class="wpcc-sr-form">
 					<form method="post" id="wpcc-sr-form">
 						<?php wp_nonce_field( 'wpcc_sr_action' ); ?>
