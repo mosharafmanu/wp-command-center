@@ -3,7 +3,7 @@
 **This is the final V1 release handoff, not a development handoff.**
 Engineering is complete. What remains is independent certification and submission.
 
-**Date:** 2026-08-04 (release-candidate finalization)
+**Date:** 2026-08-07 (v1.0.0 source freeze — supersedes the 2026-08-04 finalization pass)
 **Every number below was read from the running plugin or the built artifact, not recalled.**
 
 ---
@@ -13,12 +13,21 @@ Engineering is complete. What remains is independent certification and submissio
 | | |
 |---|---|
 | Branch | `release/v1-finalization` |
-| Commit | `ad308566aefaafe70ae30bd9755d975db09d7e06` (`ad30856`) |
+| **Source-freeze commit** | `8200074867a9d2c43a4de0e10cc46241049acb8a` (`8200074`) — *the artifact was built from this tree* |
+| **Tag target** | the documentation commit that added §5.7, i.e. the commit immediately after `8200074` |
 | `main` | `13549c2` — **untouched, not merged** |
-| Commits ahead of `main` | 120 |
-| Uncommitted | none |
-| Remote | **6 commits unpushed** (this certification pass). Push before submitting. |
+| Commits ahead of `main` | 125 (124 at the source freeze + 1 documentation commit) |
+| Uncommitted | none tracked. `RESUME-HANDOFF.md` is deliberately untracked and disposable. |
+| Remote | **11 commits unpushed**. Push before submitting. |
 | Plugin directory | `wp-content/plugins/ai-command-center/` |
+
+**Why the tag points at the documentation commit, not the source freeze.** Artifact
+checksums cannot be known until after the build, and the build requires a clean tree — so
+the identity recorded here can only be written *after* the commit it describes. Root-level
+`*.md` is not packaged (the builder hard-fails on any `.md` inside the archive), so the
+documentation commit changes **no runtime file**: the package's Content-ID is identical at
+both commits, and that equality is recorded in §5.7 as evidence rather than asserted. Tag
+the documentation commit so the tag carries accurate release documentation.
 
 `main` auto-deploys to production. Nothing has been merged. The merge is the owner's
 decision and should happen **after** WordPress.org approval, not before.
@@ -44,23 +53,33 @@ Twenty-one commits. Everything below was found by using the product, not by read
 
 ```
 File    build/ai-command-center-1.0.0.zip
-Size    1,040,509 bytes (1.0 MB)
-Entries 327 zip entries = 292 files + 35 directory entries
-SHA256  db1db34be5a5320c8cde5cfc326b4ee173c5956ed55d08ea65ac1243e19800ed
-MD5     a11d23603d0b2c532f2d5d8849b9afbd
-Commit  ad308566aefaafe70ae30bd9755d975db09d7e06   (working tree clean)
-Built   2026-08-05
+Size    1,076,581 bytes (1.0 MB)
+Entries 333 zip entries = 298 files + 35 directory entries
+SHA256  10e1d3996d5a35d6591d7d865c379236face88e02367954cc86e64965ec0ad75
+MD5     7729431ea9c0dd75d84d58403dbdbe6c
+Commit  8200074867a9d2c43a4de0e10cc46241049acb8a   (working tree clean, 0 dirty tracked files)
+Built   2026-08-07
+Version 1.0.0   ·   DB schema 2.6.0   ·   MCP tools 42
 ```
+
+`298 files = the 292 of the 2026-08-05 build + exactly the 6 new runtime files`
+(`UsageLedger`, `GenerationUsage`, `ProviderProvenance`, `SourceContentSignal`,
+`CommandPaletteIntegration`, `wpcc-command-palette.js`). That arithmetic is an independent
+check that nothing else crept into the package.
+
+All 298 packaged files were verified **byte-identical** to the committed source tree
+(`cmp` per file: 298 identical, 0 differing, 0 not-in-source), and all 280 packaged PHP
+files pass `php -l`.
 
 **Record the commit with the checksum, always.** The artifact this section used to
 describe (`06ac6188…`) matched byte for byte while being 26 commits stale — it shipped no
 token-creation dialog at all. A checksum identifies a file; only the commit identifies
-the product. All 292 shipped files were verified byte-identical to the tree at `ad30856`.
+the product. All 298 shipped files were verified byte-identical to the tree at `8200074`.
 
 **Content identity (build-independent):**
 
 ```
-000599e096e028d1e96263ca98a762c03916b4d39b2fc98c02e9d0464337c3ae
+7748445f576343df1c783f1e86739cd5b6d1e72ecf7525a37b33143efb4f3f06
 ```
 
 This is the SHA256 of the sorted per-file SHA256 manifest of the extracted package. Unlike
@@ -72,9 +91,11 @@ unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
 ( cd /tmp/pkg && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
 ```
 
-> **Every artifact built before 2026-08-05 from `ad30856` MUST NOT be uploaded.** A date
-> guard is not enough — the superseded `06ac6188…` was built on 2026-08-05 and still
-> predated 26 commits. Check the commit and a clean tree, not just the hash.
+> **Every artifact built before 2026-08-07 MUST NOT be uploaded** — including the
+> `ad30856` build described by earlier revisions of this section, which predates the
+> v1.0.0 freeze work entirely. A date guard is not enough: the superseded `06ac6188…` was
+> built on 2026-08-05 and still predated 26 commits. Check the commit **and** a clean tree
+> **and** the Content-ID, not just the archive hash.
 
 **The checksum identifies this one built file — it is not a fingerprint of the commit.**
 The build is *not* byte-reproducible: two builds from the same clean tree at the same
@@ -87,9 +108,9 @@ contents are identical. So:
 - To prove two builds are equivalent, compare **extracted contents**, not archive bytes.
 
 ```bash
-shasum -a 256 build/ai-command-center-1.0.0.zip   # db1db34b…
-git rev-parse HEAD                                # ad30856…
-git status --porcelain                            # empty
+shasum -a 256 build/ai-command-center-1.0.0.zip   # 10e1d399…
+git rev-parse HEAD                                # 8200074… (or the docs commit after it)
+git status --porcelain --untracked-files=no       # empty
 ```
 
 Top-level folder inside the ZIP is `ai-command-center/`. Verified to contain no `tests/`,
@@ -377,6 +398,62 @@ throughout).
 active-plugin lists, Elementor `_elementor_data` byte-identical, theme `acf-json`
 byte-identical, product meta at baseline, plugin fully purged).
 
+### 5.7 Source freeze and final artifact — 2026-08-07
+
+The freeze pass. Everything below was measured at the tree that became `8200074`, not
+recalled from an earlier run.
+
+**Quality gates**
+
+| Gate | Result |
+|---|---|
+| T0 (20 suites, changed-file signal) | **1165 passed · 0 failed** · net-new 0 · 262s · exit 0 |
+| T1 (51 suites) | **2155 passed · 0 failed** · net-new 0 · 843s · exit 0 |
+| **T2 (195 suites — every suite)** | **6990 passed · 0 failed** · net-new 0 · 3519s · exit 0 |
+| PHP lint | 280/280 source files clean; 280/280 packaged files clean |
+| JS syntax (`node --check`) | 6/6 clean, including the MCP relay |
+| WordPress Plugin Check | **0 errors**, 824 warnings |
+| MCP tool count | **42** (dev site and fresh isolated install) |
+
+T2 sets its own governance baseline (developer + capabilities + all three Built-in AI
+tools on) so the headline number does not depend on the operator's mode. T0/T1 inherit the
+site's mode and were run against the same baseline.
+
+**Isolated installation smoke test** — WordPress 7.0.3, ZIP only, no provider key present.
+
+Install · activate · Home / Approvals / Changes / Settings / Built-in AI all render ·
+defaults correct on first run (Standard protection, SEO + Alt Text + Content all **off**,
+zero connections, empty usage ledger) · MCP `initialize` OK · **42 tools** · read call OK ·
+Standard-mode visitor-affecting write returned **`pending_approval`** with the published
+post count unchanged · **MCP self-approval refused with `wpcc_approval_requires_human`**,
+request left `pending_review`, site unchanged · smoke request cancelled · deactivate →
+reactivate → still initializes at 1.0.0 / DB 2.6.0 / 42 tools.
+
+**One known, non-blocking defect found during the smoke test.** A fresh install with no
+default connection emits two `Undefined array key` notices on the Built-in AI screen:
+`ai-setup.php` passes `$wpcc_conns[ $wpcc_default ] ?? []` into
+`ConnectionStore::is_configured()`, and `CredentialStore::has_secret()` reads `$conn['id']`
+and `$conn['provider']` without guarding an empty array. It is **pre-existing** — the
+identical call is in `main`, in the pre-freeze commit and in the freeze commit; only the
+line number moved. The page renders fully, nothing is displayed with `WP_DEBUG` off, and no
+behaviour is affected. Not fixed here because changing `CredentialStore.php` after the fact
+would invalidate the T2 run that certified this exact tree. Fix for 1.0.1: guard the two
+reads (`$conn['id'] ?? ''`, `$conn['provider'] ?? ''`) or return early on an empty `$conn`.
+
+**Artifact provenance.** The package was rebuilt from scratch at `8200074` with a clean
+tree; the pre-freeze ZIP was deleted rather than reused. Its Content-ID
+(`7748445f…`) is **identical** to the pre-commit build, which proves the freeze commit
+changed no file contents — only the archive SHA256 moved, as it does on every rebuild.
+
+**Test-infrastructure note (does not ship).** `tests/run.sh`'s `GOV_RESTORE` passes its
+state snapshot as a positional argument to `wp eval`, which this WP-CLI build rejects
+(`Error: Too many positional arguments`); the call is `2>/dev/null`, so the failure is
+silent and governance restore is a **no-op in this environment**. It did not affect any
+result — T2 sets its baseline once, globally, at the start — but it means the operator's
+protection mode is **not** restored when a run ends, despite the runner announcing that it
+will be. Restore it by hand after any T0/T1/T2 run, or fix `GOV_RESTORE` to pass the
+snapshot via an environment variable instead of `$argv`.
+
 ---
 
 ## 6. Known limitations
@@ -543,14 +620,21 @@ If WordPress.org requests changes, work this order:
 ```bash
 cd wp-content/plugins/ai-command-center
 git checkout release/v1-finalization
-git rev-parse HEAD                 # must be ad308566aefaafe70ae30bd9755d975db09d7e06
-git status --porcelain             # must be empty
-rm -rf build
+git rev-parse HEAD                 # must be 8200074867a9d2c43a4de0e10cc46241049acb8a
+                                   # (or the documentation commit directly after it —
+                                   #  root *.md is not packaged, so the runtime is identical)
+git status --porcelain --untracked-files=no       # must be empty
+rm -f build/ai-command-center-1.0.0.zip
 bash scripts/build-release.sh
-shasum -a 256 build/ai-command-center-1.0.0.zip   # db1db34b…
-git rev-parse HEAD                                # ad30856…
-git status --porcelain                            # empty
+shasum -a 256 build/ai-command-center-1.0.0.zip   # will DIFFER from §2 — expected
+unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg && \
+( cd /tmp/pkg && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
+                                   # must be 7748445f…  ← this is the real equality check
 ```
+
+> `rm -f` the ZIP rather than `rm -rf build`: `build/freeze-evidence/` holds the T0/T1/T2
+> logs and the pre-restore option and request backups, and is git-ignored but not
+> reproducible.
 
 **A rebuild produces a DIFFERENT checksum from §2 even when the tree and commit are
 correct.** The archive is not byte-reproducible: per-file mtimes and entry order vary
