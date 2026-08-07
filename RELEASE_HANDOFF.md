@@ -55,10 +55,10 @@ Twenty-one commits. Everything below was found by using the product, not by read
 File    build/ai-command-center-1.0.0.zip
 Size    1,076,581 bytes (1.0 MB)
 Entries 333 zip entries = 298 files + 35 directory entries
-SHA256  10e1d3996d5a35d6591d7d865c379236face88e02367954cc86e64965ec0ad75
-MD5     7729431ea9c0dd75d84d58403dbdbe6c
-Commit  8200074867a9d2c43a4de0e10cc46241049acb8a   (working tree clean, 0 dirty tracked files)
-Built   2026-08-07
+SHA256  de0b8d974c655ff5352514f48980c59999bb22caac10d4fc6935d606af945175
+MD5     see `md5 -q build/ai-command-center-1.0.0.zip` — build-local, like the SHA256
+Runtime 8200074867a9d2c43a4de0e10cc46241049acb8a   (source freeze; clean tree)
+Built   2026-08-07, from the documentation commit that follows the source freeze
 Version 1.0.0   ·   DB schema 2.6.0   ·   MCP tools 42
 ```
 
@@ -70,6 +70,14 @@ check that nothing else crept into the package.
 All 298 packaged files were verified **byte-identical** to the committed source tree
 (`cmp` per file: 298 identical, 0 differing, 0 not-in-source), and all 280 packaged PHP
 files pass `php -l`.
+
+**Which commit built the ZIP does not matter; which runtime it contains does.** Root-level
+`*.md` is never packaged, so the source freeze and every documentation commit after it
+produce a package with the same runtime. That was not assumed — the package was built at
+the source freeze and again at the documentation commit, and both extract to Content-ID
+`7748445f…`. Use the Content-ID to prove two artifacts are the same product; the SHA256
+above identifies only the one file currently in `build/`, and **changes on every rebuild
+even when nothing else has**. Re-verify the SHA256 of the exact file you upload.
 
 **Record the commit with the checksum, always.** The artifact this section used to
 describe (`06ac6188…`) matched byte for byte while being 26 commits stale — it shipped no
