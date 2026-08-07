@@ -211,6 +211,48 @@ final class OperationExecutor {
 					InvalidActionContract::message_for( $operation_id, $requested_action, $declared_actions )
 				);
 			}
+
+			/*
+			 * F-06 — a bulk action with an EMPTY target list, caught before it can
+			 * spend an approval decision.
+			 *
+			 * bulk_content / bulk_publish / bulk_unpublish already refuse an empty
+			 * `ids` — but inside the runtime, which runs AFTER the approval gate. So
+			 * `{"action":"bulk_publish","ids":[]}` was filed as a HIGH-risk pending
+			 * request, waited for the owner, and then failed the moment they approved
+			 * it. There is nothing for them to decide: no ID means no target, and the
+			 * runtime's own answer is already "this cannot run".
+			 *
+			 * Deliberately narrow — only the actions whose runtime ALREADY declares an
+			 * empty list invalid. bulk_media / bulk_woocommerce / bulk_acf return a
+			 * successful `updated: 0` for an empty list today, and this guard must
+			 * never reject a call the runtime would have accepted; like the guards
+			 * above it can only ever reject, never admit.
+			 *
+			 * ABSENT is left to the runtime, exactly as the missing-parameter gate
+			 * does: this fires on `ids` supplied and empty, and on `ids` omitted, both
+			 * of which the runtime answers identically with wpcc_missing_bulk_ids.
+			 * Same code, same message — the pre-approval timing must not change a
+			 * contract callers already branch on.
+			 */
+			if ( 'bulk_manage' === $operation_id
+				&& in_array( $requested_action, [ 'bulk_content', 'bulk_publish', 'bulk_unpublish' ], true )
+				&& [] === array_filter( (array) ( $payload['ids'] ?? [] ), static fn( $id ) => '' !== $id && null !== $id ) ) {
+
+				$audit->record( 'operation.missing_parameters', [
+					'operation_id' => $operation_id,
+					'action'       => $requested_action,
+					'missing'      => [ 'ids' ],
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] );
+
+				return $this->fail(
+					$operation_id,
+					'wpcc_missing_bulk_ids',
+					__( 'ids is required — provide the IDs to update.', 'ai-command-center' )
+					. ' ' . __( 'Nothing was queued for approval — a request that cannot execute should not need your decision.', 'ai-command-center' )
+				);
+			}
 		}
 
 		/*

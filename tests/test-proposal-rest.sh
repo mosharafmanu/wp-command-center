@@ -164,8 +164,15 @@ assert_eq "only Schema + ProposalStore write-reference wpcc_proposals (code)" \
 
 # REST proposal handlers delegate (ProposalApplyService present for apply path).
 RA_CODE="$(grep -vE '^[[:space:]]*(\*|/\*|//)' includes/Admin/AdminRestApi.php)"
+# Here-string, NOT `printf ... | grep -q`. Same trap already documented in tests/run.sh:
+# under `set -o pipefail`, grep -q exits the moment it matches — and this match is near
+# the top of 46 KB of code — which SIGPIPEs the still-writing printf. printf exits 141,
+# pipefail propagates it, and the pipeline reports failure for a string it had ALREADY
+# matched. Measured here: the piped form returned no/no/yes/yes across four runs of the
+# same unchanged file, while the here-string returned yes every time. A here-string has
+# no pipe and no writer to kill, so it cannot race.
 assert_eq "REST apply path delegates to ProposalApplyService" "yes" \
-  "$(printf '%s\n' "$RA_CODE" | grep -q 'ProposalApplyService' && echo yes || echo no)"
+  "$(grep -q 'ProposalApplyService' <<<"$RA_CODE" && echo yes || echo no)"
 
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

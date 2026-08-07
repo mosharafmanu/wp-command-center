@@ -38,12 +38,38 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 		<?php esc_html_e( 'Turn on the AI tools you want to use — each appears as a tab here once it’s on. Generation runs on the provider you select as the default (Anthropic or an OpenAI-compatible provider).', 'ai-command-center' ); ?>
 	</p>
 
-	<?php if ( $wpcc_bai_notice ) : ?>
-		<div class="wpcc-cds-notice wpcc-cds-notice--<?php echo esc_attr( 'warning' === $wpcc_bai_notice['type'] ? 'warning' : 'success' ); ?>" role="status" style="margin:12px 0 0;">
-			<p><?php echo esc_html( $wpcc_bai_notice['message'] ); ?></p>
-		</div>
-	<?php endif; ?>
+	<?php
+	/*
+	 * The notice slot is always present, whether or not there is a notice.
+	 *
+	 * Toggling a tool posts the form and re-renders the page. On the way back the card
+	 * grew a confirmation banner it did not have before, which pushed the whole tool list
+	 * — and everything below it — down by the height of that banner. The button you had
+	 * just pressed was no longer under your cursor, and the next tool's button had slid
+	 * into roughly where it used to be, which is the worst possible way for a list of
+	 * on/off switches to move. Reserving the space means the banner appears IN it rather
+	 * than in front of it, and nothing below shifts.
+	 */
+	$wpcc_bai_has_notice = ! empty( $wpcc_bai_notice );
+	?>
+	<div class="wpcc-bai-noticeslot" role="status" aria-live="polite">
+		<?php if ( $wpcc_bai_has_notice ) : ?>
+			<div class="wpcc-cds-notice wpcc-cds-notice--<?php echo esc_attr( 'warning' === $wpcc_bai_notice['type'] ? 'warning' : 'success' ); ?>">
+				<p><?php echo esc_html( $wpcc_bai_notice['message'] ); ?></p>
+			</div>
+		<?php endif; ?>
+	</div>
 
+	<style>
+	/*
+	 * Height of one notice line, reserved whether or not a notice is showing. Presentation
+	 * only, scoped to this card. min-height rather than a fixed height so a message that
+	 * wraps to two lines is never clipped — it grows in the rare case instead of the
+	 * common one shifting every time.
+	 */
+	.wpcc-bai-noticeslot { min-height: 46px; margin: 12px 0 0; }
+	.wpcc-bai-noticeslot > .wpcc-cds-notice { margin: 0; }
+	</style>
 	<ul style="list-style:none;margin:14px 0 0;padding:0;display:grid;gap:10px;">
 		<?php foreach ( BuiltinAiSettings::tools() as $wpcc_tool_key => $wpcc_tool ) :
 			$wpcc_status  = BuiltinAiSettings::status( $wpcc_tool_key );
@@ -51,7 +77,7 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 			$wpcc_locked  = in_array( $wpcc_status, [ 'enabled_by_config', 'disabled_by_config' ], true );
 			$wpcc_warn    = 'requires_provider' === $wpcc_status;
 			?>
-			<li style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;background:var(--wpcc-surface-sunken);border-radius:var(--wpcc-radius-sm);">
+			<li id="wpcc-bai-tool-<?php echo esc_attr( $wpcc_tool_key ); ?>" style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;background:var(--wpcc-surface-sunken);border-radius:var(--wpcc-radius-sm);">
 				<span style="display:flex;align-items:center;gap:10px;">
 					<span class="dashicons <?php echo $wpcc_is_on ? ( $wpcc_warn ? 'dashicons-warning' : 'dashicons-yes-alt' ) : 'dashicons-marker'; ?>" aria-hidden="true" style="color:<?php echo $wpcc_is_on ? ( $wpcc_warn ? 'var(--wpcc-state-warning-fg)' : 'var(--wpcc-state-success-fg)' ) : 'var(--wpcc-gray-500)'; ?>;"></span>
 					<span style="display:flex;flex-direction:column;">
@@ -70,11 +96,21 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 					?>
 					<span class="description" style="white-space:nowrap;" title="<?php esc_attr_e( 'A constant or filter in your site’s code controls this tool, so it cannot be changed from here.', 'ai-command-center' ); ?>"><span class="dashicons dashicons-lock" aria-hidden="true"></span> <?php esc_html_e( 'Set in code', 'ai-command-center' ); ?></span>
 				<?php else : ?>
-					<form method="post" style="margin:0;">
+					<?php
+					/*
+					 * The form posts back to this row's own anchor, so the browser
+					 * restores the scroll position to the switch that was just used
+					 * rather than dropping the reader at the top of a long settings page.
+					 * `autofocus` on the tool that changed puts the keyboard back where
+					 * it was too — the same switch, now reading the opposite label.
+					 */
+					$wpcc_bai_changed = ( $wpcc_bai_notice && isset( $_POST['wpcc_builtin_ai_tool'] ) && sanitize_key( wp_unslash( $_POST['wpcc_builtin_ai_tool'] ) ) === $wpcc_tool_key ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- display-only; the state change was already nonce-verified in handle_post().
+					?>
+					<form method="post" action="#wpcc-bai-tool-<?php echo esc_attr( $wpcc_tool_key ); ?>" style="margin:0;">
 						<?php wp_nonce_field( BuiltinAiSettings::NONCE ); ?>
 						<input type="hidden" name="wpcc_builtin_ai_tool" value="<?php echo esc_attr( $wpcc_tool_key ); ?>">
 						<input type="hidden" name="wpcc_builtin_ai_state" value="<?php echo $wpcc_is_on ? '0' : '1'; ?>">
-						<button type="submit" class="button <?php echo $wpcc_is_on ? '' : 'button-primary'; ?>">
+						<button type="submit" class="button <?php echo $wpcc_is_on ? '' : 'button-primary'; ?>"<?php echo $wpcc_bai_changed ? ' autofocus' : ''; ?>>
 							<?php echo $wpcc_is_on ? esc_html__( 'Turn off', 'ai-command-center' ) : esc_html__( 'Turn on', 'ai-command-center' ); ?>
 						</button>
 					</form>

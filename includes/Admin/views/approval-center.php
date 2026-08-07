@@ -635,9 +635,26 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	// ── Summary ──
 	function loadSummary() {
 		apiFetch( '/approvals/summary' ).then( function( data ) {
+			if ( ! data.summary ) { return; }
 			var el = document.getElementById('wpcc-approval-summary');
-			if ( ! el || ! data.summary ) { return; }
 			var s = data.summary;
+
+			/*
+			 * The counters come first, and unconditionally.
+			 *
+			 * This used to return early when #wpcc-approval-summary was absent — and it
+			 * is absent on exactly one screen: the single-request detail view, which
+			 * deliberately drops the queue-level chips. So on the one page where a
+			 * decision is most often made, the toolbar counter was never told the
+			 * request had been resolved: approve or reject the last pending item and
+			 * the admin bar went on advertising "Approvals 1" until the next
+			 * navigation. The missing chip container is a layout fact; it says nothing
+			 * about whether the badges are on the page.
+			 */
+			updateBadge( s.pending );
+
+			if ( ! el ) { return; }
+
 			// Only counts that change what the user does next. "Resolved (all-time)"
 			// was a vanity number: it never requires an action and it gave a
 			// lifetime total equal visual weight to the four critical items that
@@ -666,17 +683,39 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 					( s.queue_failed > 0 ? chip( i18n.chipFailed, s.queue_failed, true ) : '' )
 				)
 				: '';
-			updateBadge( s.pending );
 		} ).catch( function() {} );
 	}
 	function chip( label, value, alert ) {
 		return '<div class="wpcc-summary-chip' + ( alert ? ' alert' : '' ) + '"><strong>' + escHtml( value ) + '</strong>' + escHtml( label ) + '</div>';
 	}
 	function updateBadge( count ) {
+		count = parseInt( count, 10 ) || 0;
 		var badge = document.getElementById('wpcc-pending-badge');
-		if ( ! badge ) { return; }
-		if ( count > 0 ) { badge.textContent = count; badge.style.display = 'inline'; }
-		else { badge.style.display = 'none'; }
+		if ( badge ) {
+			if ( count > 0 ) { badge.textContent = count; badge.style.display = 'inline'; }
+			else { badge.style.display = 'none'; }
+		}
+		/*
+		 * The toolbar counter is rendered by PHP at page load (AdminMenu::admin_bar_badge)
+		 * and then never told anything again, so approving the last pending request left
+		 * the admin bar insisting one was still waiting until the next navigation — the
+		 * screen disagreeing with itself about the one number it exists to report.
+		 *
+		 * Correct it from the same authoritative summary the in-page badge uses. Only
+		 * downward: the node does not exist when the page loaded with nothing pending,
+		 * and inventing one here would mean re-implementing its markup, its icon and its
+		 * capability check in JavaScript. Going stale-high is the failure that misleads;
+		 * a newly-arrived request appears on the next page load as it always has.
+		 */
+		var barCount = document.getElementById('wpcc-adminbar-pending-count');
+		if ( ! barCount ) { return; }
+		var barNode = document.getElementById('wp-admin-bar-wpcc-pending-approvals');
+		if ( count > 0 ) {
+			barCount.textContent = count;
+			if ( barNode ) { barNode.style.display = ''; }
+		} else if ( barNode ) {
+			barNode.style.display = 'none';
+		}
 	}
 
 	// ── Pending tab ────────────────────────────────────────────────────────────
@@ -896,6 +935,32 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		if ( body ) { opts.body = JSON.stringify( body ); }
 		return apiFetch( '/approvals/' + id + '/' + action, opts );
 	}
+	/*
+	 * One way back to the truth after a decision.
+	 *
+	 * A decision changes more than the row that was clicked: the status, the
+	 * resolver, the timestamps, the audit trail, the queue, the execution result
+	 * and every count on the screen. Patching those individually is how the detail
+	 * screen came to say "pending_review · WAITING FOR YOU" under a green
+	 * "Rejected." — the confirmation and the record contradicting each other until
+	 * the customer reloaded by hand.
+	 *
+	 * So nothing is patched. The summary and, on a detail screen, the request
+	 * itself are re-read from the server and re-rendered from that response, which
+	 * is the same authoritative record a manual reload would have fetched. The
+	 * decision's own confirmation is handed to loadDetail() so it survives the
+	 * repaint instead of being wiped by it.
+	 *
+	 * Called only after a recorded decision. A failed action must leave the screen
+	 * exactly as it was, still showing the controls needed to try again.
+	 */
+	function refreshAfterDecision( notice ) {
+		loadSummary();
+		if ( ! detailId ) { return; }
+		// Deferred so the confirmation is readable in place before the section
+		// repaints; the repaint then re-states it from the authoritative record.
+		window.setTimeout( function () { loadDetail( detailId, notice ); }, 1200 );
+	}
 	function submitApprove( ctx, body ) {
 		ctx.btn.disabled = true; if ( ctx.sibling ) { ctx.sibling.disabled = true; }
 		postAction( ctx.id, 'approve', body ).then( function( data ) {
@@ -929,7 +994,6 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 					ctx.result.innerHTML += ' <span class="wpcc-engineer-only"><code>' + escHtml( data.error ) + '</code></span>';
 				}
 				if ( ctx.card ) { ctx.card.style.opacity = '0.6'; }
-				loadSummary();
 				/*
 				 * Close the loop.
 				 *
@@ -955,16 +1019,18 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 						window.setTimeout( function () { loadPending(); loadSummary(); }, 260 );
 					}, 2600 );
 				}
-				/*
-				 * On the detail screen the status chip still read PENDING after the
-				 * decision had been recorded, so the page contradicted itself. Re-read
-				 * the request so the chip, the audit trail and the buttons all reflect
-				 * what actually happened. Deferred so the result message is readable
-				 * before the section repaints.
-				 */
-				if ( detailId ) {
-					window.setTimeout( function () { loadDetail( detailId ); }, 1200 );
-				}
+				// Authoritative re-read: the chip, the timestamps, the audit trail, the
+				// queue and the counts all come back from the server rather than being
+				// guessed at here. The confirmation just shown is carried through the
+				// repaint — including the engine's own error text when the decision was
+				// recorded but the change could not run.
+				refreshAfterDecision( {
+					msg:  failed ? i18n.approvedErr : i18n.approved,
+					cls:  failed ? 'error' : 'success',
+					html: failed
+						? ' <span class="wpcc-engineer-only"><code>' + escHtml( data.error ) + '</code></span>'
+						: ''
+				} );
 			} else {
 				showResult( ctx.result, actionError( data ), 'error' );
 				ctx.btn.disabled = false; if ( ctx.sibling ) { ctx.sibling.disabled = false; }
@@ -991,7 +1057,13 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 					if ( data && data.success ) {
 						showResult( result, i18n.rejected, 'success' );
 						if ( card ) { card.style.opacity = '0.6'; }
-						loadSummary();
+						// Rejecting used to update nothing but the summary counts, so a
+						// detail screen kept its "WAITING FOR YOU" chip, its Approve and
+						// Reject buttons and its pre-decision audit trail under a green
+						// "Rejected." — the one path where the page could still be acted
+						// on after the decision had already been made. Same authoritative
+						// re-read as approve.
+						refreshAfterDecision( { msg: i18n.rejected, cls: 'success', html: '' } );
 					} else {
 						showResult( result, actionError( data ), 'error' );
 						btn.disabled = false; if ( sibling ) { sibling.disabled = false; }
@@ -1333,7 +1405,15 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	// Lifecycle-timestamp row: render only when the timestamp is actually set,
 	// so a successful request does not show empty "Rejected —/Failed —" rows.
 	function tsRow( label, ts ) { return ts ? metaRow( label, whenAgo(ts) ) : ''; }
-	function loadDetail( id ) {
+	/*
+	 * Render the request from the server's record.
+	 *
+	 * `notice` is optional and carries the confirmation for a decision that was
+	 * just recorded, so the repaint that proves the decision landed does not also
+	 * erase the sentence telling the customer it did. It is presentation only —
+	 * every fact on this screen comes from the response.
+	 */
+	function loadDetail( id, notice ) {
 		var box = document.getElementById('wpcc-detail');
 		if ( ! box ) { return; }
 		apiFetch( '/approvals/' + id ).then( function( d ) {
@@ -1367,9 +1447,16 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 					'</div>'
 				: '';
 
+			// The decision's confirmation, restated above the record it produced.
+			// Text is escaped; `html` is the caller's own already-escaped markup.
+			var decided = notice && notice.msg
+				? '<div class="wpcc-card-result ' + escHtml( notice.cls || 'success' ) + '" role="status" aria-live="polite" ' +
+					'style="display:block;margin:0 0 12px;">' + escHtml( notice.msg ) + ( notice.html || '' ) + '</div>'
+				: '';
+
 			var head = '<div class="wpcc-detail-head">' +
 				'<span class="wpcc-detail-title">' + escHtml(r.headline || r.operation) + '</span>' +
-				statusPill(r.status) + riskBadge(risk) + '</div>' + decision;
+				statusPill(r.status) + riskBadge(risk) + '</div>' + decided + decision;
 
 			// "Action" previously showed the AREA ("Site files"), and "Resolved by"
 			// printed "unavailable" on every pending request — a row that is empty by

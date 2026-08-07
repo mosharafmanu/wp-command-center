@@ -42,11 +42,12 @@ final class ConnectionStatus {
 	 * }
 	 */
 	public static function get(): array {
+		// Usable, not merely flagged active: an expired token keeps status
+		// 'active' in the manifest but is refused by AuthTokens::validate(), so
+		// counting it here reported a live connection for a key that cannot open
+		// the door. AuthTokens::is_usable() is the rule validate() applies.
 		$tokens = ( new AuthTokens() )->list();
-		$active = array_values( array_filter(
-			$tokens,
-			static fn ( $t ) => ( $t['status'] ?? '' ) === 'active'
-		) );
+		$active = AuthTokens::usable_only( $tokens );
 
 		$last_used = null;
 		foreach ( $active as $token ) {

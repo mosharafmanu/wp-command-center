@@ -95,6 +95,46 @@ final class AuthTokens {
 		return '';
 	}
 
+	/**
+	 * Canonical answer to "would this token work right now?".
+	 *
+	 * The stored `status` is not the whole rule: it stays 'active' on a token
+	 * whose `expires_at` has passed, because expiry is computed at use time
+	 * rather than written back. Anything that counts, lists or offers tokens
+	 * has to apply both halves or it disagrees with validate() — which is how
+	 * the Set up screen came to announce "4 access tokens ready" on a site with
+	 * one usable token and three revoked ones. This is the single definition for
+	 * anything that COUNTS or OFFERS tokens: usable_only() wraps it, and
+	 * AdoptionStatus, ConnectionStatus and the Integrations screen all go
+	 * through that.
+	 *
+	 * status_badge() deliberately does not call this. A badge has to say WHY a
+	 * token is unusable — "Revoked" and "Expired" are different facts to the
+	 * person reading the table — so it keeps the three-way form of the same
+	 * rule. Both agree on the boundary: expired means `expires_at < time()`.
+	 *
+	 * @param array<string, mixed> $token A token record from list().
+	 */
+	public static function is_usable( array $token ): bool {
+		if ( self::STATUS_ACTIVE !== ( $token['status'] ?? '' ) ) {
+			return false;
+		}
+
+		$expires = $token['expires_at'] ?? null;
+
+		return null === $expires || (int) $expires >= time();
+	}
+
+	/**
+	 * Filter a list of token records down to the ones that would work right now.
+	 *
+	 * @param array<int, array<string, mixed>> $tokens
+	 * @return array<int, array<string, mixed>> Re-indexed.
+	 */
+	public static function usable_only( array $tokens ): array {
+		return array_values( array_filter( $tokens, [ self::class, 'is_usable' ] ) );
+	}
+
 	public static function status_badge( array $token ): string {
 		if ( self::STATUS_REVOKED === $token['status'] ) {
 			return sprintf( '<span class="wpcc-badge wpcc-badge--neutral">%s</span>', esc_html__( 'Revoked', 'ai-command-center' ) );

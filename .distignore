@@ -22,7 +22,22 @@ artifacts
 tests
 examples
 scripts
-sdk
+build
+
+# sdk/ is NOT excluded wholesale, and must not be.
+#
+# sdk/javascript/wpcc-mcp-relay.mjs is a runtime file. The configuration this
+# plugin generates for Claude Desktop, Cursor, Codex and the rest tells the
+# user's machine to fetch that exact path from their own site and run it (see
+# Integration\BaseClientIntegration::relay_url()). Drop it and the fetch 404s,
+# the connector never starts, and every connection fails silently.
+#
+# scripts/build-release.sh copies it explicitly and fails the build if it is
+# missing. A bare `sdk` line here made this file disagree with the authoritative
+# packager on the one file whose absence breaks the product, which defeats the
+# purpose of keeping the two in step. Only the source-only samples are excluded.
+sdk/php
+sdk/javascript/client.js
 
 # Root development documents
 HANDOFF-STEP-*.md

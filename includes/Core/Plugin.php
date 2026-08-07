@@ -87,6 +87,11 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new AdminMenu() )->init();
 			( new Assets() )->init();
+			// Put this plugin's screens into WordPress's own ⌘K palette. Navigate-only,
+			// same destinations and same capability gate as the admin menu; without it
+			// the palette's fuzzy matcher had no product-owned answer to rank and
+			// offered Marketing rows for "token". See CommandPaletteIntegration.
+			( new \WPCommandCenter\Admin\CommandPaletteIntegration() )->init();
 			// Per-feature classes retain their no-JS admin-post fallback handlers + Bulk
 			// Actions; their row links are consolidated into the single AI Assist entry.
 			( new \WPCommandCenter\Admin\SeoRowActions() )->init();

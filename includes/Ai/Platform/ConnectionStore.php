@@ -198,11 +198,27 @@ final class ConnectionStore {
 	}
 
 	public function delete( string $id ): void {
+		$conn   = $this->get( $id );
 		$stored = get_option( self::OPT_CONNECTIONS, [] );
 		$stored = is_array( $stored ) ? $stored : [];
 		unset( $stored[ $id ] );
 		update_option( self::OPT_CONNECTIONS, $stored, false );
 		$this->creds->clear_secret( $id );
+
+		/*
+		 * The bootstrap connection's key lives in the pre-6R OPTIONS, not in the
+		 * credential store — so clearing the store deleted nothing, all() saw a legacy
+		 * key still present and immediately re-synthesized the connection. A customer
+		 * who deleted "Anthropic (existing)" watched it come straight back, now
+		 * reporting "Needs a key", with their real key still sitting in the database.
+		 * Deleting it means deleting it. A key supplied by a CONSTANT is site
+		 * configuration and is left alone — no option write can remove it, and
+		 * pretending otherwise would be the same lie in the other direction.
+		 */
+		if ( $conn && ! empty( $conn['bridge_legacy'] ) && ! $this->creds->is_constant_backed( $conn ) ) {
+			delete_option( self::ANTHROPIC_KEY_OPTION );
+			delete_option( 'wpcc_alt_text_api_key' ); // the GA#1 legacy vision key
+		}
 		if ( (string) get_option( self::OPT_DEFAULT, '' ) === $id ) {
 			delete_option( self::OPT_DEFAULT );
 		}

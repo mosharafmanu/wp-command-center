@@ -99,6 +99,11 @@ use WPCommandCenter\Seo\SeoMetaProviderResolver;
 use WPCommandCenter\Seo\SeoMetaGenerator;
 use WPCommandCenter\Proposals\ProposalStore;
 
+// Explicit opt-in: the generators refuse output from a provider the product does not
+// ship, so a stub cannot silently become a customer-facing draft. A test context says
+// so out loud. Nothing in the shipped plugin defines this.
+define( 'WPCC_ALLOW_TEST_AI_PROVIDER', true );
+
 $a=get_users(['role'=>'administrator','number'=>1]); wp_set_current_user($a?$a[0]->ID:1);
 $out = [];
 

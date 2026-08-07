@@ -562,17 +562,32 @@ final class AppShell {
 	 * URLs are unique by construction (one row per destination), which is what
 	 * makes duplicate destinations impossible rather than merely unlikely.
 	 *
-	 * @return array<int,array{label:string,hint:string,url:string,keywords:string}>
+	 * `keywords` is everything that should reach this destination, including the
+	 * words its parent section contributes. `aliases` is the subset that is about
+	 * THIS screen and nothing else.
+	 *
+	 * The distinction matters to WordPress's own command palette, which scores
+	 * fuzzily: the longer and more varied a searchable string, the more likely some
+	 * unrelated query's letters appear across it in order. Feeding it the inherited
+	 * words was enough to make "protection" rank Changes above Protection — Changes
+	 * does not contain the word at all, but "WP Command Center: Changes … rollback
+	 * revert restore …" contains its letters in sequence. The plugin's own palette
+	 * matches contiguously and is unaffected, so it keeps using `keywords`; see
+	 * CommandPaletteIntegration for the other consumer.
+	 *
+	 * @return array<int,array{label:string,hint:string,url:string,keywords:string,aliases:string}>
 	 */
 	public static function nav_map(): array {
 		$out = [];
 
-		$add = static function ( string $label, string $hint, string $url, string $keywords ) use ( &$out ): void {
+		$add = static function ( string $label, string $hint, string $url, string $keywords, string $aliases = '' ) use ( &$out ): void {
 			$out[] = [
 				'label'    => $label,
 				'hint'     => $hint,
 				'url'      => $url,
 				'keywords' => $keywords,
+				// A top-level section owns all of its words; only the panes inherit.
+				'aliases'  => '' !== $aliases ? $aliases : $keywords,
 			];
 		};
 
@@ -615,7 +630,8 @@ final class AppShell {
 							$section['label'] . ' › ' . $tab['label'] . ' › ' . $pane['label'],
 							$tab['label'],
 							$tab_url . '&cpane=' . $pane_key,
-							$keywords . ' connections ' . $pane['keywords']
+							$keywords . ' connections ' . $pane['keywords'],
+							'connections ' . $pane['keywords']
 						);
 					}
 					continue;
@@ -626,21 +642,26 @@ final class AppShell {
 							$section['label'] . ' › ' . $tab['label'] . ' › ' . $pane['label'],
 							$tab['label'],
 							$tab_url . '&apane=' . $pane_key,
-							$keywords . ' advanced ' . $pane['keywords']
+							$keywords . ' advanced ' . $pane['keywords'],
+							'advanced ' . $pane['keywords']
 						);
 					}
 					continue;
 				}
 
 				$extra = ( self::SETTINGS_SLUG === $slug && 'security' === $key )
-					? ' security protection safe mode approval rules strict permission risk'
+					? ' protection security mode safe approval rules strict permission risk'
 					: '';
 
 				$add(
 					$section['label'] . ' › ' . $tab['label'],
 					$section['label'],
 					$tab_url,
-					$keywords . $extra
+					$keywords . $extra,
+					// A tab's own words, not its section's. Settings › Protection is
+					// about protection; "settings options configure preferences" is
+					// true of every tab under Settings and identifies none of them.
+					'' !== $extra ? trim( $extra ) : $tab['label']
 				);
 			}
 		}

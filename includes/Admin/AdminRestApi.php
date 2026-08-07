@@ -561,11 +561,19 @@ final class AdminRestApi {
 	 * { created, skipped, failed, … } envelope the SEO/Alt generate routes return,
 	 * so one client (the Governed Action Panel) consumes every generator identically.
 	 *
-	 * @param array $generate { kind: 'title'|'excerpt', post_id: int }
+	 * Regeneration ("give me a different suggestion") rides the SAME branch via an
+	 * optional `replacing` proposal id — still no new route. The generator validates
+	 * that the id is a DRAFT for exactly this post and field, and retires it only after
+	 * the replacement has been created, so a failed retry leaves the customer's current
+	 * suggestion untouched. A proposal already submitted for approval or applied is
+	 * never replaceable: that would route around a decision already in flight.
+	 *
+	 * @param array $generate { kind: 'title'|'excerpt', post_id: int, replacing?: string }
 	 */
 	private function proposals_generate_content( array $generate ): \WP_REST_Response {
-		$kind    = sanitize_key( (string) ( $generate['kind'] ?? '' ) );
-		$post_id = (int) ( $generate['post_id'] ?? 0 );
+		$kind      = sanitize_key( (string) ( $generate['kind'] ?? '' ) );
+		$post_id   = (int) ( $generate['post_id'] ?? 0 );
+		$replacing = sanitize_text_field( (string) ( $generate['replacing'] ?? '' ) );
 
 		$feature = [ 'title' => 'title_generator', 'excerpt' => 'excerpt_generator' ][ $kind ] ?? '';
 		if ( '' === $feature ) {
@@ -574,11 +582,26 @@ final class AdminRestApi {
 		if ( ! FeatureGate::allows( $feature ) ) {
 			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_feature_unavailable', 'message' => __( 'This feature is not available in the current edition.', 'ai-command-center' ) ], 403 );
 		}
+		/*
+		 * The Content tool must actually be switched on.
+		 *
+		 * Every other Content surface asks this — the row action, the bulk action, the
+		 * tab itself — but this branch checked only the edition gate, so a tool a site
+		 * had deliberately turned off could still be driven through the REST route. The
+		 * switch that the admin screen presents as "Content is off" should mean it
+		 * everywhere, not just where the buttons happen to be hidden.
+		 */
+		if ( ! BuiltinAiSettings::is_on( 'content' ) ) {
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_tool_disabled', 'message' => __( 'The Content tool is switched off for this site.', 'ai-command-center' ) ], 403 );
+		}
 		if ( $post_id <= 0 ) {
 			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_post_id', 'message' => __( 'A valid post id is required.', 'ai-command-center' ) ], 400 );
 		}
 
-		$result = ( new ContentFieldGenerator() )->generate( $post_id, $kind, [ 'actor' => $this->admin_actor() ] );
+		$result = ( new ContentFieldGenerator() )->generate( $post_id, $kind, [
+			'actor'     => $this->admin_actor(),
+			'replacing' => $replacing,
+		] );
 		return new \WP_REST_Response( $result, 200 );
 	}
 

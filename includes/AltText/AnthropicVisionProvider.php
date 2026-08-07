@@ -79,6 +79,8 @@ final class AnthropicVisionProvider implements AltTextProvider {
 			$prompt .= ' Context hint (may be irrelevant): ' . wp_strip_all_tags( $hint );
 		}
 
+		// `meta` is non-wire metadata: it attributes the call to a feature for the usage
+		// ledger and never reaches the provider's request body.
 		$request = new GenerationRequest(
 			$model,
 			self::MAX_TOKENS,
@@ -90,7 +92,10 @@ final class AnthropicVisionProvider implements AltTextProvider {
 						new GenerationTextPart( $prompt ),
 					]
 				),
-			]
+			],
+			GenerationRequest::DEFAULT_TIMEOUT,
+			[],
+			[ 'feature' => 'alt_text' ]
 		);
 
 		$result = $this->runtime->generate( $request );

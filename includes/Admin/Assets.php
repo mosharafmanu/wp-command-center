@@ -31,7 +31,7 @@ final class Assets {
 	 *
 	 * @param string $relative Path under the plugin root, e.g. `assets/css/wpcc-cds.css`.
 	 */
-	private static function ver( string $relative ): string {
+	public static function asset_version( string $relative ): string {
 		$path = WPCC_PLUGIN_DIR . $relative;
 		$mtime = is_readable( $path ) ? filemtime( $path ) : false;
 
@@ -44,18 +44,18 @@ final class Assets {
 		}
 
 		// Design tokens → CDS component layer (the Experience Layer substrate).
-		wp_enqueue_style( 'wpcc-tokens', WPCC_PLUGIN_URL . 'assets/css/wpcc-tokens.css', [], self::ver( 'assets/css/wpcc-tokens.css' ) );
-		wp_enqueue_style( 'wpcc-cds', WPCC_PLUGIN_URL . 'assets/css/wpcc-cds.css', [ 'wpcc-tokens' ], self::ver( 'assets/css/wpcc-cds.css' ) );
-		wp_enqueue_style( 'wpcc-admin', WPCC_PLUGIN_URL . 'assets/css/admin.css', [ 'wpcc-cds' ], self::ver( 'assets/css/admin.css' ) );
+		wp_enqueue_style( 'wpcc-tokens', WPCC_PLUGIN_URL . 'assets/css/wpcc-tokens.css', [], self::asset_version( 'assets/css/wpcc-tokens.css' ) );
+		wp_enqueue_style( 'wpcc-cds', WPCC_PLUGIN_URL . 'assets/css/wpcc-cds.css', [ 'wpcc-tokens' ], self::asset_version( 'assets/css/wpcc-cds.css' ) );
+		wp_enqueue_style( 'wpcc-admin', WPCC_PLUGIN_URL . 'assets/css/admin.css', [ 'wpcc-cds' ], self::asset_version( 'assets/css/admin.css' ) );
 
 		// Shared runtime (window.WPCC.*) → CDS runtime (mode toggle, ⌘K, render helpers).
 		// These load in the HEAD (in_footer = false), NOT the footer: the admin views
 		// embed inline <script> in the page body that reference window.WPCC at parse
 		// time (e.g. the Command Center Home). A footer-loaded runtime would not yet
 		// exist when those body scripts run, leaving the page stuck on "Loading…".
-		wp_enqueue_script( 'wpcc-admin-runtime', WPCC_PLUGIN_URL . 'assets/js/wpcc-admin-runtime.js', [], self::ver( 'assets/js/wpcc-admin-runtime.js' ), false );
-		wp_enqueue_script( 'wpcc-cds', WPCC_PLUGIN_URL . 'assets/js/wpcc-cds.js', [ 'wpcc-admin-runtime' ], self::ver( 'assets/js/wpcc-cds.js' ), false );
-		wp_enqueue_script( 'wpcc-admin', WPCC_PLUGIN_URL . 'assets/js/admin.js', [ 'wpcc-cds' ], self::ver( 'assets/js/admin.js' ), true );
+		wp_enqueue_script( 'wpcc-admin-runtime', WPCC_PLUGIN_URL . 'assets/js/wpcc-admin-runtime.js', [], self::asset_version( 'assets/js/wpcc-admin-runtime.js' ), false );
+		wp_enqueue_script( 'wpcc-cds', WPCC_PLUGIN_URL . 'assets/js/wpcc-cds.js', [ 'wpcc-admin-runtime' ], self::asset_version( 'assets/js/wpcc-cds.js' ), false );
+		wp_enqueue_script( 'wpcc-admin', WPCC_PLUGIN_URL . 'assets/js/admin.js', [ 'wpcc-cds' ], self::asset_version( 'assets/js/admin.js' ), true );
 
 		// Default lens by context: Engineer for developer mode, Builder otherwise.
 		// (localStorage overrides this per-browser; this is only the first-load default.)

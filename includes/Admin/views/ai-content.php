@@ -52,6 +52,27 @@ $approval_url = esc_url( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=appro
 // directly; client/enterprise submit for approval). The outcome is still taken from
 // the apply API response (defensive) — the UI never assumes from the label.
 $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
+
+/*
+ * Whether this site can actually generate right now.
+ *
+ * The Content screen used to consist of two review tabs and nothing else. Its empty
+ * state read "No suggestions yet. Generate some from a post or page." — a true sentence
+ * that named no page, linked nowhere, and did not mention that the thing to look for is
+ * a row action called "✨ WPCC AI". SEO and Alt Text both have a Review tab where you
+ * pick items and press Generate; Content was the only built-in tool with no way to start
+ * from its own screen, so an independent tester enabled it, opened it, found four stale
+ * drafts and concluded there was no generation path at all.
+ *
+ * The Review tab below is that missing step, built the same way as the other two: pick
+ * eligible content, press Generate, land on Suggestions. It introduces NO backend — it
+ * drives the EXISTING POST /admin/proposals generate branch, one post per call, which is
+ * the same governed route the row action already used.
+ */
+$has_provider  = \WPCommandCenter\Admin\AdoptionStatus::ai_configured();
+// One source of truth for "too little to work from" — the same number the generators
+// use server-side, so the badge here and the notice after generation cannot disagree.
+$thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 ?>
 <div class="wrap wpcc-wrap wpcc-aic">
 	<h1><?php esc_html_e( 'Content', 'ai-command-center' ); ?></h1>
@@ -61,7 +82,8 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'ai-command-center' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>
+		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-review"><?php esc_html_e( 'Review', 'ai-command-center' ); ?></a>
+		<a href="#" class="nav-tab" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'ai-command-center' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>
 		<a href="#" class="nav-tab" id="wpcc-aic-tab-applied"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-applied"></span></a>
 	</h2>
 
@@ -69,8 +91,72 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	// / wpcc_content_bulk query args on redirect; rendered client-side, escaped). ?>
 	<div id="wpcc-aic-entry-notice" class="notice inline" role="status" aria-live="polite" style="display:none;margin:10px 0;"></div>
 
+	<!-- ============ REVIEW TAB (pick content → generate) ============ -->
+	<div id="wpcc-aic-panel-review">
+		<?php if ( ! $has_provider ) : ?>
+			<?php // Honest precondition. A tool that is on but has no key generates nothing,
+			// and saying so here beats letting someone select five posts and press a button
+			// that can only fail. ?>
+			<div class="notice notice-warning inline" style="margin:12px 0;max-width:1100px;">
+				<p>
+					<strong><?php esc_html_e( 'No AI provider key yet.', 'ai-command-center' ); ?></strong>
+					<?php esc_html_e( 'Content is switched on, but generating a title or excerpt needs your own provider key. Nothing on your site has changed, and adding a key alone will not change anything either — you choose what to generate, and every suggestion still needs your approval.', 'ai-command-center' ); ?>
+					<a href="<?php echo esc_url( $ai_url ); ?>"><?php esc_html_e( 'Add a key on Built-in AI › Providers', 'ai-command-center' ); ?></a>
+				</p>
+			</div>
+		<?php endif; ?>
+
+		<p style="margin:12px 0;max-width:900px;">
+			<span class="description"><?php esc_html_e( 'Pick the posts or pages you want a suggestion for, choose whether to draft a title or an excerpt, then generate. Each suggestion is saved as a draft for you to review — nothing is applied to your site here.', 'ai-command-center' ); ?></span>
+		</p>
+
+		<div class="wpcc-aic-filters" id="wpcc-aic-rv-controls">
+			<label for="wpcc-aic-rv-kind"><?php esc_html_e( 'Generate:', 'ai-command-center' ); ?></label>
+			<select id="wpcc-aic-rv-kind">
+				<option value="title"><?php esc_html_e( 'Titles', 'ai-command-center' ); ?></option>
+				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'ai-command-center' ); ?></option>
+			</select>
+
+			<label for="wpcc-aic-rv-type"><?php esc_html_e( 'From:', 'ai-command-center' ); ?></label>
+			<select id="wpcc-aic-rv-type">
+				<option value="posts"><?php esc_html_e( 'Posts', 'ai-command-center' ); ?></option>
+				<option value="pages"><?php esc_html_e( 'Pages', 'ai-command-center' ); ?></option>
+			</select>
+
+			<label><input type="checkbox" id="wpcc-aic-rv-selectall"> <?php esc_html_e( 'Select all on this page', 'ai-command-center' ); ?></label>
+
+			<button type="button" class="button button-primary" id="wpcc-aic-rv-generate" disabled<?php echo $has_provider ? '' : ' title="' . esc_attr__( 'Add a provider key first.', 'ai-command-center' ) . '"'; ?>><?php esc_html_e( 'Generate suggestions', 'ai-command-center' ); ?></button>
+			<span class="description"><?php
+				printf(
+					/* translators: %d: maximum items per generation run. */
+					esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'ai-command-center' ),
+					25
+				);
+			?></span>
+			<span id="wpcc-aic-rv-status" role="status" aria-live="polite" style="margin-left:auto;color:#646970;"></span>
+		</div>
+
+		<div id="wpcc-aic-rv-notice" class="notice inline" role="status" aria-live="polite" style="display:none;margin:8px 0;max-width:1100px;"></div>
+
+		<table class="widefat striped wpcc-aic-sg-table">
+			<thead>
+				<tr>
+					<th scope="col" style="width:34px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'ai-command-center' ); ?></span></th>
+					<th scope="col" style="width:30%;"><?php esc_html_e( 'Content', 'ai-command-center' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Current value', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:160px;"><?php esc_html_e( 'Source content', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:140px;"><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th>
+				</tr>
+			</thead>
+			<tbody id="wpcc-aic-rv-rows">
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></td></tr>
+			</tbody>
+		</table>
+		<div id="wpcc-aic-rv-pager" class="wpcc-aic-pager"></div>
+	</div>
+
 	<!-- ============ SUGGESTIONS TAB ============ -->
-	<div id="wpcc-aic-panel-suggestions">
+	<div id="wpcc-aic-panel-suggestions" style="display:none;">
 		<div class="wpcc-aic-filters">
 			<label for="wpcc-aic-kind"><?php esc_html_e( 'Show:', 'ai-command-center' ); ?></label>
 			<select id="wpcc-aic-kind">
@@ -149,6 +235,8 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 .wpcc-aic-edited { display:inline-block;font-size:11px;border-radius:8px;padding:1px 6px;background:#cce5d6;color:#1a4731;margin-left:6px; }
 .wpcc-aic-rowmsg { font-size:12px;color:#646970;margin-top:4px; }
 .wpcc-aic-field { display:inline-block;font-size:11px;border-radius:10px;padding:1px 8px;background:#dcdcde;color:#1d2327; }
+.wpcc-aic-thin { display:inline-block;font-size:11px;border-radius:10px;padding:1px 8px;background:#fcf0d6;color:#8a6a00;cursor:help; }
+.wpcc-aic-echo { font-size:11px;color:#8a6a00;margin-top:4px;max-width:46ch; }
 .wpcc-aic-tabcount { display:inline-block;margin-left:6px;padding:0 7px;border-radius:9px;background:#dcdcde;color:#1d2327;font-size:11px;line-height:18px;vertical-align:2px; }
 .wpcc-aic-segbar { display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 6px; }
 .wpcc-aic-toast { position:fixed;right:24px;bottom:24px;z-index:99999;max-width:400px;background:#1d2327;color:#fff;border-radius:6px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,.25);font-size:13px; }
@@ -175,6 +263,11 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	const NONCE  = <?php echo wp_json_encode( $nonce ); ?>;
 	const MODE   = <?php echo wp_json_encode( $security_mode ); ?>; // developer | client | enterprise
 	const IS_DEV = ( MODE === 'developer' );
+	const HAS_PROVIDER = <?php echo wp_json_encode( (bool) $has_provider ); ?>;
+	// The generators' own threshold, passed down so the badge here and the server-side
+	// notice after generation are the same judgement rather than two similar ones.
+	const THIN_WORDS = <?php echo (int) $thin_words; ?>;
+	const MAX_GEN = 25; // mirrors the row/bulk entry point's cap
 	const LIMIT  = 20;
 	const TITLE_MAX = 60, EXCERPT_MAX = 320; // advisory char-count targets
 	// operation_id + per-field target_type used on EVERY proposal read/write below.
@@ -213,7 +306,15 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		saveFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Save edited suggestion for %s', 'ai-command-center' ) ); ?>,
 		/* translators: %s: the post or page title. */
 		dismissFor:   <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Dismiss suggestion for %s', 'ai-command-center' ) ); ?>,
-		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from a post or page.', 'ai-command-center' ) ); ?>,
+		/*
+		 * The old text here was "No suggestions yet. Generate some from a post or page."
+		 * It was true and it was useless: it named no screen, linked nowhere, and the
+		 * thing it was pointing at is a row action labelled "✨ WPCC AI" that a first-time
+		 * customer has no reason to look for. An empty state on the tool's own screen
+		 * should point at the tool's own first step.
+		 */
+		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions waiting. Open the Review tab to pick a post or page and generate one.', 'ai-command-center' ) ); ?>,
+		noSugGo:  <?php echo wp_json_encode( esc_html__( 'Go to Review', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
 		ccTitle:  <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d current length */
@@ -259,7 +360,42 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		genSkipped:    <?php echo wp_json_encode( esc_html__( 'Nothing was generated for the selected items.', 'ai-command-center' ) ); ?>,
 		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open Built-in AI › Providers', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'ai-command-center' ) ); ?>
+		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'ai-command-center' ) ); ?>,
+
+		// ---- Review tab (pick content → generate) ----
+		rvNone:      <?php echo wp_json_encode( esc_html__( 'Nothing here to generate for yet.', 'ai-command-center' ) ); ?>,
+		rvNoneHint:  <?php echo wp_json_encode( esc_html__( 'Publish or draft a post or page first, then come back.', 'ai-command-center' ) ); ?>,
+		rvNotSet:    <?php echo wp_json_encode( esc_html__( '(not set)', 'ai-command-center' ) ); ?>,
+		rvReady:     <?php echo wp_json_encode( esc_html__( 'Ready', 'ai-command-center' ) ); ?>,
+		rvHasDraft:  <?php echo wp_json_encode( esc_html__( 'Draft waiting', 'ai-command-center' ) ); ?>,
+		rvHasDraftT: <?php echo wp_json_encode( esc_html__( 'A suggestion for this field is already waiting on the Suggestions tab.', 'ai-command-center' ) ); ?>,
+		/* translators: %s: number of words in the post's content. */
+		rvWords:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s words', 'ai-command-center' ) ); ?>,
+		rvThin:      <?php echo wp_json_encode( esc_html__( 'Thin', 'ai-command-center' ) ); ?>,
+		rvThinT:     <?php echo wp_json_encode( esc_html__( 'There is little content here to work from, so a suggestion may stay close to what you already have. It will still generate.', 'ai-command-center' ) ); ?>,
+		/* translators: %1$s: number done, %2$s: total to do. */
+		rvProgress:  <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Generating %1$s of %2$s…', 'ai-command-center' ) ); ?>,
+		/* translators: %s: number of suggestions created. */
+		rvDone:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s ready to review.', 'ai-command-center' ) ); ?>,
+		rvDoneGo:    <?php echo wp_json_encode( esc_html__( 'Review suggestions', 'ai-command-center' ) ); ?>,
+		rvNothing:   <?php echo wp_json_encode( esc_html__( 'Nothing was generated.', 'ai-command-center' ) ); ?>,
+		/* translators: %s: number of items whose source content was thin. */
+		rvThinNote:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s had little content to work from, so those suggestions may stay close to what is already there. Adding more body content usually produces a stronger suggestion.', 'ai-command-center' ) ); ?>,
+		rvNoProvider:<?php echo wp_json_encode( esc_html__( 'No provider key, so nothing was generated and nothing on your site changed.', 'ai-command-center' ) ); ?>,
+		rvGenBusy:   <?php echo wp_json_encode( esc_html__( 'Generating…', 'ai-command-center' ) ); ?>,
+		rvGenLabel:  <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		rvSelectFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select %s', 'ai-command-center' ) ); ?>,
+
+		// ---- Regenerate (ask for another draft) ----
+		regen:        <?php echo wp_json_encode( esc_html__( 'Regenerate', 'ai-command-center' ) ); ?>,
+		regenBusy:    <?php echo wp_json_encode( esc_html__( 'Asking again…', 'ai-command-center' ) ); ?>,
+		regenOk:      <?php echo wp_json_encode( esc_html__( 'New suggestion ready', 'ai-command-center' ) ); ?>,
+		regenFail:    <?php echo wp_json_encode( esc_html__( 'Couldn’t get another suggestion — your current one is unchanged.', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the post or page title. */
+		regenFor:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Ask for a different suggestion for %s', 'ai-command-center' ) ); ?>,
+		// Shown when the returned draft simply restates what is already there.
+		echoNote:     <?php echo wp_json_encode( esc_html__( 'This matches your current value. With little content to work from, the AI stays close to what you have rather than inventing something about the page.', 'ai-command-center' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );
@@ -309,6 +445,235 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 		return p.final_payload[ field ] !== ( pl[ field ] != null ? pl[ field ] : '' );
 	}
 
+	// ---------- REVIEW TAB: pick eligible content → generate governed DRAFTS ----------
+	//
+	// This tab introduces NO backend. Candidates come from WordPress core's own REST
+	// routes (context=edit so the RAW excerpt is available — excerpt.rendered is
+	// auto-generated from the body when a post has no excerpt of its own, which would
+	// have shown a "current excerpt" that does not exist). Generation calls the EXISTING
+	// POST /admin/proposals generate branch once per post, the same governed route the
+	// row action uses. It creates drafts and nothing else.
+	let rvOffset = 0, rvTotal = 0, rvHasMore = false, rvBusy = false;
+	let rvRows = [];      // candidates currently rendered
+	let rvOpenDrafts = {}; // "<postId>:<kind>" -> true, for items already awaiting review
+
+	function rvKind() { const s = $( 'wpcc-aic-rv-kind' ); return s ? s.value : 'title'; }
+	function rvType() { const s = $( 'wpcc-aic-rv-type' ); return s ? s.value : 'posts'; }
+
+	// Word count of the source body, matched to the server's own measure so the "Thin"
+	// badge and the post-generation notice agree.
+	function rvWordCount( html ) {
+		const text = String( html || '' ).replace( /<[^>]*>/g, ' ' ).replace( /&[a-z#0-9]+;/gi, ' ' );
+		const t = text.replace( /\s+/g, ' ' ).trim();
+		return t ? t.split( ' ' ).length : 0;
+	}
+
+	function rvSelected() {
+		return Array.prototype.slice.call( document.querySelectorAll( '#wpcc-aic-rv-rows input.wpcc-aic-rv-cb:checked' ) )
+			.map( ( c ) => parseInt( c.getAttribute( 'data-id' ), 10 ) ).filter( ( n ) => n > 0 );
+	}
+
+	function rvRefreshButton() {
+		const btn = $( 'wpcc-aic-rv-generate' );
+		if ( ! btn ) { return; }
+		const n = rvSelected().length;
+		btn.disabled = rvBusy || ! HAS_PROVIDER || n === 0;
+		btn.textContent = ( n > 0 && ! rvBusy ) ? ( STR.rvGenLabel + ' (' + n + ')' ) : ( rvBusy ? STR.rvGenBusy : STR.rvGenLabel );
+	}
+
+	// Which candidates already have a draft or a pending approval for this field, so the
+	// row can say so instead of letting the customer generate a duplicate the server
+	// would only skip.
+	function rvLoadOpenDrafts( kind ) {
+		const tt = ( kind === 'excerpt' ) ? TT_EXCERPT : TT_TITLE;
+		rvOpenDrafts = {};
+		return Promise.all( [ 'draft', 'pending_approval' ].map( ( st ) =>
+			api( '/proposals?status=' + st + '&operation_id=' + encodeURIComponent( OP ) + '&target_type=' + encodeURIComponent( tt ) + '&limit=100' )
+		) ).then( ( results ) => {
+			results.forEach( ( res ) => {
+				const list = ( res.ok && res.data && res.data.proposals ) || [];
+				list.forEach( ( p ) => { rvOpenDrafts[ parseInt( p.target_id, 10 ) + ':' + kind ] = true; } );
+			} );
+		} ).catch( () => {} );
+	}
+
+	function renderReview() {
+		const kind = rvKind();
+		if ( ! rvRows.length ) {
+			setHtml( 'wpcc-aic-rv-rows', '<tr><td colspan="5"><strong>' + esc( STR.rvNone ) + '</strong><div class="wpcc-aic-meta">' + esc( STR.rvNoneHint ) + '</div></td></tr>' );
+			setHtml( 'wpcc-aic-rv-pager', '' );
+			rvRefreshButton();
+			return;
+		}
+		setHtml( 'wpcc-aic-rv-rows', rvRows.map( ( m ) => {
+			const id = m.id;
+			const title = ( m.title && ( m.title.raw || m.title.rendered ) ) || ( '#' + id );
+			const editLink = EDIT + '?post=' + encodeURIComponent( id ) + '&action=edit';
+			const current = ( kind === 'excerpt' )
+				? ( ( m.excerpt && m.excerpt.raw != null ) ? m.excerpt.raw : '' )
+				: title;
+			const body = ( m.content && ( m.content.raw != null ? m.content.raw : m.content.rendered ) ) || '';
+			const words = rvWordCount( body );
+			const thin = words < THIN_WORDS;
+			const taken = !! rvOpenDrafts[ id + ':' + kind ];
+			const curCell = ( current && String( current ).trim() )
+				? esc( current )
+				: '<em class="wpcc-aic-none">' + esc( STR.rvNotSet ) + '</em>';
+			const wordCell = esc( STR.rvWords.replace( '%s', words ) )
+				+ ( thin ? ' <span class="wpcc-aic-thin" title="' + esc( STR.rvThinT ) + '">' + esc( STR.rvThin ) + '</span>' : '' );
+			const status = taken
+				? '<span class="wpcc-aic-field" title="' + esc( STR.rvHasDraftT ) + '">' + esc( STR.rvHasDraft ) + '</span>'
+				: '<span class="wpcc-aic-meta">' + esc( STR.rvReady ) + '</span>';
+			return '<tr>' +
+				'<td><input type="checkbox" class="wpcc-aic-rv-cb" data-id="' + esc( id ) + '"' + ( taken ? ' disabled' : '' ) +
+					' aria-label="' + esc( rowLabel( STR.rvSelectFor, title, id ) ) + '"></td>' +
+				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong>' +
+					'<div class="wpcc-aic-meta">' + esc( m.type || '' ) + '</div></td>' +
+				'<td class="wpcc-aic-meta">' + curCell + '</td>' +
+				'<td class="wpcc-aic-meta">' + wordCell + '</td>' +
+				'<td>' + status + '</td>' +
+				'</tr>';
+		} ).join( '' ) );
+		renderRvPager();
+		rvRefreshButton();
+	}
+
+	function renderRvPager() {
+		if ( rvTotal <= LIMIT && rvOffset === 0 ) { setHtml( 'wpcc-aic-rv-pager', '' ); return; }
+		const prevDis = rvOffset <= 0 ? ' disabled' : ''; const nextDis = rvHasMore ? '' : ' disabled';
+		setHtml( 'wpcc-aic-rv-pager',
+			'<button type="button" class="button" id="wpcc-aic-rv-prev"' + prevDis + '>' + esc( STR.prev ) + '</button>' +
+			'<button type="button" class="button" id="wpcc-aic-rv-next"' + nextDis + '>' + esc( STR.next ) + '</button>' );
+		const p = $( 'wpcc-aic-rv-prev' ), n = $( 'wpcc-aic-rv-next' );
+		if ( p ) { p.addEventListener( 'click', () => { if ( rvOffset > 0 ) { rvOffset = Math.max( 0, rvOffset - LIMIT ); loadReview(); } } ); }
+		if ( n ) { n.addEventListener( 'click', () => { if ( rvHasMore ) { rvOffset += LIMIT; loadReview(); } } ); }
+	}
+
+	function loadReview() {
+		setHtml( 'wpcc-aic-rv-rows', '<tr><td colspan="5">' + esc( STR.loading ) + '</td></tr>' );
+		const sa = $( 'wpcc-aic-rv-selectall' ); if ( sa ) { sa.checked = false; }
+		const kind = rvKind();
+		const page = Math.floor( rvOffset / LIMIT ) + 1;
+		// context=edit gives excerpt.raw / content.raw — the values actually stored,
+		// rather than the rendered ones WordPress synthesizes for display.
+		const path = '/' + rvType() + '?context=edit&status=publish,draft,pending,future,private'
+			+ '&per_page=' + LIMIT + '&page=' + page + '&_fields=id,title,type,status,excerpt,content&orderby=modified&order=desc';
+		Promise.all( [ coreGet( path ), rvLoadOpenDrafts( kind ) ] )
+			.then( ( r ) => {
+				const res = r[0];
+				const list = Array.isArray( res.data ) ? res.data : [];
+				if ( ! res.ok ) {
+					setHtml( 'wpcc-aic-rv-rows', '<tr><td colspan="5" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' );
+					return;
+				}
+				rvRows = list;
+				rvHasMore = list.length >= LIMIT;
+				rvTotal = rvOffset + list.length + ( rvHasMore ? 1 : 0 );
+				renderReview();
+			} )
+			.catch( () => { setHtml( 'wpcc-aic-rv-rows', '<tr><td colspan="5" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); } );
+	}
+
+	function rvNotice( cls, msg, linkGo ) {
+		const el = $( 'wpcc-aic-rv-notice' ); if ( ! el ) { return; }
+		el.className = 'notice inline ' + cls;
+		let html = '<p>' + esc( msg );
+		if ( linkGo ) { html += ' <a href="#" data-rv-go="suggestions">' + esc( STR.rvDoneGo ) + '</a>'; }
+		html += '</p>';
+		el.innerHTML = html;
+		el.style.display = '';
+	}
+
+	/**
+	 * Generate one draft per selected post, sequentially.
+	 *
+	 * Sequential rather than parallel: each call is one provider request, and firing
+	 * twenty at once is a good way to be rate-limited into failures that look like the
+	 * product is broken. Progress is reported as it goes, because a button that goes
+	 * quiet for thirty seconds reads as a hang.
+	 */
+	function rvGenerate() {
+		if ( rvBusy ) { return; }
+		const ids = rvSelected().slice( 0, MAX_GEN );
+		if ( ! ids.length ) { return; }
+		const kind = rvKind();
+		rvBusy = true; rvRefreshButton();
+		const status = $( 'wpcc-aic-rv-status' );
+		const el = $( 'wpcc-aic-rv-notice' ); if ( el ) { el.style.display = 'none'; }
+
+		let created = 0, thin = 0, noProvider = false, failed = 0;
+		// Why items did not produce a suggestion, tallied so the summary can say so.
+		// "Nothing was generated." on its own leaves the customer to guess, and the
+		// commonest answer is the reassuring one — a draft is already waiting.
+		const reasons = {};
+
+		const step = ( i ) => {
+			if ( i >= ids.length ) {
+				rvBusy = false;
+				if ( status ) { status.textContent = ''; }
+				const topReason = Object.keys( reasons ).sort( ( a, b ) => reasons[ b ] - reasons[ a ] )[ 0 ] || '';
+				if ( noProvider ) {
+					rvNotice( 'notice-warning', STR.rvNoProvider, false );
+				} else if ( created > 0 ) {
+					let msg = STR.rvDone.replace( '%s', created );
+					if ( thin > 0 ) { msg += ' ' + STR.rvThinNote.replace( '%s', thin ); }
+					// Partial runs explain the remainder too.
+					if ( topReason ) { msg += ' ' + STR.skipWhy.replace( '%1$s', skipReasonLabel( topReason ) ); }
+					rvNotice( 'notice-success', msg, true );
+				} else if ( topReason === 'has_open_proposal' ) {
+					rvNotice( 'notice-info', STR.genExists, true );
+				} else if ( topReason ) {
+					rvNotice( 'notice-warning', STR.rvNothing + ' ' + STR.skipWhy.replace( '%1$s', skipReasonLabel( topReason ) ), false );
+				} else if ( failed > 0 ) {
+					rvNotice( 'notice-error', STR.genFailed, false );
+				} else {
+					rvNotice( 'notice-warning', STR.rvNothing, false );
+				}
+				updateTabCounts();
+				loadReview();
+				return;
+			}
+			if ( status ) { status.textContent = STR.rvProgress.replace( '%1$s', i + 1 ).replace( '%2$s', ids.length ); }
+			api( '/proposals', {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { generate: { kind: kind, post_id: ids[ i ] } } )
+			} ).then( ( res ) => {
+				const d = ( res.ok && res.data ) || {};
+				created += ( d.created && d.created.length ) || 0;
+				// The server's own judgement of the source content — not re-derived here.
+				if ( d.source && d.source.thin ) { thin++; }
+				if ( d.failed && d.failed.length ) { failed++; }
+				const skipped = ( d.skipped && d.skipped[0] && d.skipped[0].reason ) || '';
+				if ( skipped ) {
+					reasons[ skipped ] = ( reasons[ skipped ] || 0 ) + 1;
+					if ( skipped === 'no_provider' ) { noProvider = true; }
+				}
+				// A non-2xx (tool switched off, edition-gated) is a failure to report,
+				// not a silent nothing.
+				if ( ! res.ok ) { failed++; }
+				step( i + 1 );
+			} ).catch( () => { failed++; step( i + 1 ); } );
+		};
+		step( 0 );
+	}
+
+	// Review tab wiring.
+	document.addEventListener( 'change', function ( e ) {
+		const t = e.target;
+		if ( t.id === 'wpcc-aic-rv-kind' || t.id === 'wpcc-aic-rv-type' ) { rvOffset = 0; loadReview(); return; }
+		if ( t.id === 'wpcc-aic-rv-selectall' ) {
+			document.querySelectorAll( '#wpcc-aic-rv-rows input.wpcc-aic-rv-cb:not([disabled])' ).forEach( ( c ) => { c.checked = t.checked; } );
+			rvRefreshButton();
+			return;
+		}
+		if ( t.classList && t.classList.contains( 'wpcc-aic-rv-cb' ) ) { rvRefreshButton(); }
+	} );
+	document.addEventListener( 'click', function ( e ) {
+		if ( e.target && e.target.id === 'wpcc-aic-rv-generate' ) { e.preventDefault(); rvGenerate(); return; }
+		const go = e.target.closest ? e.target.closest( '[data-rv-go]' ) : null;
+		if ( go ) { e.preventDefault(); switchTab( go.getAttribute( 'data-rv-go' ) ); }
+	} );
+
 	// ---------- SUGGESTIONS TAB: review / edit / Save / Apply / Dismiss DRAFTS ----------
 	let sgOffset = 0, sgHasMore = false, sgReturned = 0, sgTotal = 0;
 
@@ -352,16 +717,28 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			const editor = ( field === 'excerpt' )
 				? '<textarea class="wpcc-aic-ed" rows="3" aria-label="' + esc( STR.fieldExcerpt ) + '">' + esc( sg ) + '</textarea>'
 				: '<input type="text" class="wpcc-aic-et" aria-label="' + esc( STR.fieldTitle ) + '" value="' + esc( sg ) + '">';
+			/*
+			 * When the suggestion restates what is already there.
+			 *
+			 * A tester generated a title for a nearly-empty page and got their own title
+			 * back, with nothing to say why. That IS the right answer for a page with two
+			 * sentences on it — the prompt forbids inventing claims about content the
+			 * model has not seen — but presented silently it reads as the feature not
+			 * working, and the tempting "fix" is to let the model make things up.
+			 */
+			const echoed = String( sg ).trim() !== '' && String( sg ).trim() === String( cur ).trim();
+			const echoNote = echoed ? '<div class="wpcc-aic-echo">' + esc( STR.echoNote ) + '</div>' : '';
 			// proposal_id is an OPAQUE DOM key only (edit/apply/dismiss); never displayed.
 			return '<tr data-id="' + esc( p.proposal_id ) + '" data-tid="' + esc( tid ) + '" data-field="' + esc( field ) + '">' +
 				'<td><strong><a href="' + esc( editLink ) + '">' + esc( title ) + '</a></strong><div class="wpcc-aic-meta">' + esc( c.type || '' ) + '</div></td>' +
 				'<td><span class="wpcc-aic-field">' + esc( fieldLabel( field ) ) + '</span></td>' +
 				'<td class="wpcc-aic-meta">' + curCell + '</td>' +
 				'<td>' + prov + editor +
-					'<div class="wpcc-aic-cc"></div>' +
+					'<div class="wpcc-aic-cc"></div>' + echoNote +
 				'</td>' +
 				'<td><button type="button" class="button button-primary button-small wpcc-aic-apply" aria-label="' + esc( rowLabel( IS_DEV ? STR.applyDevFor : STR.applyGateFor, title, tid ) ) + '">' + esc( IS_DEV ? STR.applyDev : STR.applyGate ) + '</button> ' +
 					'<button type="button" class="button button-small wpcc-aic-save" aria-label="' + esc( rowLabel( STR.saveFor, title, tid ) ) + '">' + esc( STR.save ) + '</button> ' +
+					'<button type="button" class="button button-small wpcc-aic-regen"' + ( HAS_PROVIDER ? '' : ' disabled' ) + ' aria-label="' + esc( rowLabel( STR.regenFor, title, tid ) ) + '">' + esc( STR.regen ) + '</button> ' +
 					'<button type="button" class="button button-small wpcc-aic-dismiss" aria-label="' + esc( rowLabel( STR.dismissFor, title, tid ) ) + '">' + esc( STR.dismiss ) + '</button>' +
 					'<div class="wpcc-aic-rowmsg" role="status"></div></td>' +
 				'</tr>';
@@ -387,7 +764,12 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 				if ( ! res.ok ) { setHtml( 'wpcc-aic-sg-rows', '<tr><td colspan="5" style="color:#b32d2e;">' + esc( STR.error ) + '</td></tr>' ); return; }
 				const d = res.data || {}, list = d.proposals || [];
 				sgTotal = d.total_count || 0; sgReturned = d.returned || list.length; sgHasMore = !! d.has_more;
-				if ( ! list.length ) { setHtml( 'wpcc-aic-sg-rows', '<tr><td colspan="5">' + esc( STR.noSug ) + '</td></tr>' ); setHtml( 'wpcc-aic-sg-pager', '' ); $( 'wpcc-aic-sg-status' ).textContent = ''; return; }
+				if ( ! list.length ) {
+					// An empty state that names the next step and can take you there.
+					setHtml( 'wpcc-aic-sg-rows', '<tr><td colspan="5">' + esc( STR.noSug ) +
+						' <a href="#" data-rv-go="review">' + esc( STR.noSugGo ) + '</a></td></tr>' );
+					setHtml( 'wpcc-aic-sg-pager', '' ); $( 'wpcc-aic-sg-status' ).textContent = ''; return;
+				}
 				const ids = list.map( ( p ) => parseInt( p.target_id, 10 ) ).filter( ( n ) => n > 0 );
 				const csv = ids.join( ',' );
 				Promise.all( [
@@ -438,6 +820,40 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 			persistRow( id, row, tid, field )
 				.then( ( res ) => { if ( msg ) { msg.textContent = res.ok ? STR.saved : ( ( res.data && res.data.message ) || STR.error ); } } )
 				.catch( () => { if ( msg ) { msg.textContent = STR.error; } } );
+		} else if ( t.classList.contains( 'wpcc-aic-regen' ) ) {
+			/*
+			 * Ask for a different suggestion.
+			 *
+			 * The current draft is NOT removed first. The server creates the replacement,
+			 * and only then retires the one being replaced — so a provider error, a
+			 * timeout, or an unparseable response leaves the customer exactly where they
+			 * were, with the suggestion they already had. The button disables itself for
+			 * the duration so a second click cannot start a concurrent run against the
+			 * same draft.
+			 */
+			if ( t.disabled ) { return; }
+			t.disabled = true;
+			const prevLabel = t.textContent;
+			t.textContent = STR.regenBusy;
+			if ( msg ) { msg.textContent = ''; }
+			api( '/proposals', {
+				method: 'POST', headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify( { generate: { kind: field, post_id: tid, replacing: id } } )
+			} ).then( ( res ) => {
+				const d = ( res.ok && res.data ) || {};
+				if ( d.created && d.created.length ) {
+					// The row is rebuilt from the replacement draft rather than patched in
+					// place, so its proposal id, provenance and char count all stay true.
+					loadSuggestions();
+					updateTabCounts();
+					return;
+				}
+				t.disabled = false; t.textContent = prevLabel;
+				if ( msg ) { msg.textContent = STR.regenFail; }
+			} ).catch( () => {
+				t.disabled = false; t.textContent = prevLabel;
+				if ( msg ) { msg.textContent = STR.regenFail; }
+			} );
 		} else if ( t.classList.contains( 'wpcc-aic-dismiss' ) ) {
 			api( '/proposals/' + encodeURIComponent( id ) + '/dismiss', { method: 'POST' } )
 				.then( ( res ) => { if ( res.ok ) { row.parentNode.removeChild( row ); updateTabCounts(); } else if ( msg ) { msg.textContent = ( res.data && res.data.message ) || STR.error; } } )
@@ -675,16 +1091,20 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 	}
 
 	function switchTab( which ) {
+		$( 'wpcc-aic-panel-review' ).style.display = ( which === 'review' ) ? '' : 'none';
 		$( 'wpcc-aic-panel-suggestions' ).style.display = ( which === 'suggestions' ) ? '' : 'none';
 		$( 'wpcc-aic-panel-applied' ).style.display = ( which === 'applied' ) ? '' : 'none';
+		$( 'wpcc-aic-tab-review' ).classList.toggle( 'nav-tab-active', which === 'review' );
 		$( 'wpcc-aic-tab-suggestions' ).classList.toggle( 'nav-tab-active', which === 'suggestions' );
 		$( 'wpcc-aic-tab-applied' ).classList.toggle( 'nav-tab-active', which === 'applied' );
-		if ( which === 'suggestions' ) { sgOffset = 0; loadSuggestions(); }
+		if ( which === 'review' ) { rvOffset = 0; loadReview(); }
+		else if ( which === 'suggestions' ) { sgOffset = 0; loadSuggestions(); }
 		else if ( which === 'applied' ) { switchApSeg( 'applied' ); }
 		updateTabCounts();
 	}
 
 	// ---------- wiring ----------
+	$( 'wpcc-aic-tab-review' ).addEventListener( 'click', function ( e ) { e.preventDefault(); switchTab( 'review' ); } );
 	$( 'wpcc-aic-tab-suggestions' ).addEventListener( 'click', function ( e ) { e.preventDefault(); switchTab( 'suggestions' ); } );
 	$( 'wpcc-aic-tab-applied' ).addEventListener( 'click', function ( e ) { e.preventDefault(); switchTab( 'applied' ); } );
 	if ( $( 'wpcc-aic-kind' ) ) { $( 'wpcc-aic-kind' ).addEventListener( 'change', function () { sgOffset = 0; loadSuggestions(); } ); }
@@ -774,8 +1194,17 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
 				sp.get( 'r' ) || ''
 			);
 		}
-		// Default tab = Suggestions; ?tab=suggestions is the explicit contextual landing.
-		loadSuggestions();
+		/*
+		 * Landing tab.
+		 *
+		 * A contextual entry point (a row action, or a bulk run) has just created a
+		 * suggestion, so it lands on Suggestions — that is what the customer asked for
+		 * and where the result is. Otherwise the screen opens on Review, its own first
+		 * step, rather than on a list that is empty until someone has already found the
+		 * generation path somewhere else.
+		 */
+		const cameFromEntryPoint = !! ( code || sp.get( 'wpcc_content_bulk' ) || sp.get( 'tab' ) === 'suggestions' );
+		switchTab( cameFromEntryPoint ? 'suggestions' : 'review' );
 	} )();
 } )();
 </script>

@@ -88,38 +88,72 @@
 		return out;
 	}
 
-	/**
-	 * Score one destination against a query, or -1 for no match.
-	 *
-	 * Ranking, best first:
-	 *   0  the label starts with the query        ("app" → Approvals)
-	 *   1  a word inside the label starts with it ("tok" → … › Access tokens)
-	 *   2  the label contains it anywhere
-	 *   3  only a hidden keyword matches          ("undo" → Changes)
-	 *
-	 * Multi-word queries must match every word somewhere ("access token" finds
-	 * Access tokens; "token access" finds it too). Keywords are never displayed —
-	 * they exist so the words a customer actually types reach the screen they
-	 * mean, without turning the list into a glossary.
-	 */
-	function score( item, words ) {
-		var label = item.label.toLowerCase();
-		var hay   = label + ' ' + item.keywords;
-		var best  = 0;
+	function escapeRe( s ) { return s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ); }
 
+	/** Does `word` begin a word inside `hay`? Never a mid-word or scattered hit. */
+	function startsWord( hay, word ) {
+		return new RegExp( '(^|[^a-z0-9])' + escapeRe( word ) ).test( hay );
+	}
+
+	/**
+	 * Score one destination against a query. Lower is better; -1 is no match.
+	 *
+	 * The ladder, best first:
+	 *   0  the whole query IS the label                 ("changes" → Changes)
+	 *   1  the whole query IS one of its aliases        ("security mode" → Protection)
+	 *   2  every word begins a word in the label        ("tok" → … › Access tokens)
+	 *   3  the label starts with the query              ("app" → Approvals)
+	 *   4  the label contains the query somewhere       (contiguous, not scattered)
+	 *   5  every word begins a word in the aliases      ("undo" → Changes)
+	 *   6  an alias contains it somewhere
+	 *
+	 * Every tier is a CONTIGUOUS match: exact, word-start, or substring. Nothing
+	 * here matches characters merely appearing in order across a label, which is
+	 * what makes a fuzzy palette answer "token" with "Marketing". A word that
+	 * appears nowhere excludes the destination outright.
+	 *
+	 * Multi-word queries must match every word somewhere, and take the WORST tier
+	 * any one of them earned — so "access token" and "token access" both land on
+	 * Access tokens, and neither is flattered by its better half.
+	 *
+	 * Aliases are never displayed. They exist so the words a customer actually
+	 * types reach the screen they mean. A partial alias hit always ranks below
+	 * every hit on a real name, so a keyword can never flood out the screen
+	 * actually called that. The one exception is deliberate: a query that IS an
+	 * alias in full ("security mode") is a synonym someone chose for this screen,
+	 * so it outranks a fragment of some other screen's name — but never a
+	 * destination whose own name is exactly what was typed.
+	 */
+	function score( item, words, query ) {
+		var label   = item.label.toLowerCase();
+		var aliases = item.keywords;
+		var hay     = label + ' ' + aliases;
+
+		// Whole-query tiers first: these compare the query against the whole name,
+		// which per-word scoring cannot express.
+		if ( label === query ) { return 0; }
+		// The last segment of a breadcrumb is the screen's own name — "Settings ›
+		// Connections › Access tokens" IS "Access tokens" to the person typing it.
+		var leaf = label.split( '›' ).pop().trim();
+		if ( leaf === query ) { return 0; }
+		if ( aliases && aliases.split( /\s*,\s*|\s{2,}/ ).indexOf( query ) !== -1 ) { return 1; }
+
+		var best = 2;
 		for ( var i = 0; i < words.length; i++ ) {
 			var w = words[ i ];
 			if ( hay.indexOf( w ) === -1 ) { return -1; }
 
 			var rank;
-			if ( label.indexOf( w ) === 0 ) {
-				rank = 0;
-			} else if ( new RegExp( '(^|[^a-z0-9])' + w.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ) ).test( label ) ) {
-				rank = 1;
-			} else if ( label.indexOf( w ) !== -1 ) {
+			if ( startsWord( label, w ) ) {
 				rank = 2;
-			} else {
+			} else if ( label.indexOf( w ) === 0 ) {
 				rank = 3;
+			} else if ( label.indexOf( w ) !== -1 ) {
+				rank = 4;
+			} else if ( startsWord( aliases, w ) ) {
+				rank = 5;
+			} else {
+				rank = 6;
 			}
 			if ( rank > best ) { best = rank; }
 		}
@@ -153,7 +187,7 @@
 		} else {
 			var words = q.split( /\s+/ );
 			matches = all
-				.map( function ( o, i ) { return { o: o, s: score( o, words ), i: i }; } )
+				.map( function ( o, i ) { return { o: o, s: score( o, words, q ), i: i }; } )
 				.filter( function ( r ) { return r.s !== -1; } )
 				// Ties keep map order, which is navigation order — so equally good
 				// matches come back in the order the product itself lists them.
@@ -373,8 +407,29 @@
 					if ( prev && prev.focus ) { try { prev.focus(); } catch ( e ) {} }
 					resolve( value );
 				}
+				/*
+				 * Escape cancels, and Tab cannot leave the dialog.
+				 *
+				 * The dialog is aria-modal, which tells assistive tech that the rest of
+				 * the page is inert — but nothing was actually stopping Tab from walking
+				 * out of it into the page behind, which for a keyboard user meant the
+				 * focus ring vanishing into a form they had just been warned about. With
+				 * exactly two focusable controls the trap is simply: wrap at the ends.
+				 */
 				function onKey( e ) {
-					if ( 'Escape' === e.key ) { e.preventDefault(); done( false ); }
+					if ( 'Escape' === e.key ) { e.preventDefault(); done( false ); return; }
+					if ( 'Tab' !== e.key ) { return; }
+					var focusable = host.querySelectorAll( 'button:not([disabled])' );
+					if ( ! focusable.length ) { return; }
+					var first = focusable[ 0 ];
+					var last = focusable[ focusable.length - 1 ];
+					if ( e.shiftKey && document.activeElement === first ) {
+						e.preventDefault(); last.focus();
+					} else if ( ! e.shiftKey && document.activeElement === last ) {
+						e.preventDefault(); first.focus();
+					} else if ( ! host.contains( document.activeElement ) ) {
+						e.preventDefault(); first.focus();
+					}
 				}
 				host.querySelector( '[data-wpcc-go]' ).addEventListener( 'click', function () { done( true ); } );
 				host.querySelector( '[data-wpcc-cancel]' ).addEventListener( 'click', function () { done( false ); } );

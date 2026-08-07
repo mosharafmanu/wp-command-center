@@ -42,6 +42,22 @@ final class SecurityModeManager {
 	const RISK_CRITICAL   = 'critical';
 
 	/**
+	 * Every risk level the product recognises, least to most severe.
+	 *
+	 * Anything outside this list is not a risk level, whatever it was read from —
+	 * a stored row, a filter, an older release. Callers validating an incoming
+	 * value check against this and treat a miss as RISK_HIGH; see
+	 * OperationManager::canonical_risk(). Unknown risk is never treated as safe.
+	 */
+	const RISK_LEVELS = [
+		self::RISK_DIAGNOSTIC,
+		self::RISK_LOW,
+		self::RISK_MEDIUM,
+		self::RISK_HIGH,
+		self::RISK_CRITICAL,
+	];
+
+	/**
 	 * Return the current security mode.
 	 *
 	 * Reads wpcc_security_mode and falls back to DEFAULT_MODE (client — Standard

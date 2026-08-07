@@ -26,6 +26,7 @@ namespace WPCommandCenter\Ai\Transport;
 
 use WPCommandCenter\Ai\Contract\GenerationRequest;
 use WPCommandCenter\Ai\Contract\GenerationResult;
+use WPCommandCenter\Ai\Contract\GenerationUsage;
 use WPCommandCenter\Ai\Http\AiEndpointGuard;
 use WPCommandCenter\Ai\Http\AiHttpClient;
 use WPCommandCenter\Ai\Http\AiHttpRequest;
@@ -104,7 +105,15 @@ final class OpenAiCompatibleTransport {
 			return GenerationResult::error( 'api_error_' . $code, $this->scrub( '' !== $msg ? $msg : ( 'HTTP ' . $code ) ), $model );
 		}
 
-		return GenerationResult::ok( OpenAiCompatibleCodec::parse_text( $data ), $model );
+		// OpenAI-compatible endpoints report usage as prompt_/completion_tokens. Most
+		// return it; a few gateways omit it, which GenerationUsage keeps distinguishable
+		// from a genuine zero rather than recording a fabricated count.
+		$usage = GenerationUsage::from_provider(
+			is_array( $data ) ? ( $data['usage'] ?? null ) : null,
+			is_array( $data ) ? (string) ( $data['id'] ?? '' ) : ''
+		);
+
+		return GenerationResult::ok( OpenAiCompatibleCodec::parse_text( $data ), $model, $usage );
 	}
 
 	/** Build the request URL from the base endpoint + profile (Azure deployment/api-version aware). */

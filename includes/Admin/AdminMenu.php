@@ -167,12 +167,9 @@ final class AdminMenu {
 			return;
 		}
 
-		global $wpdb;
-		$table = $wpdb->prefix . 'wpcc_operation_requests';
-		$count = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$table} WHERE status = %s",
-			OperationManager::STATUS_PENDING_REVIEW
-		) );
+		// F-01: the canonical pending counter, shared with the Approval Center
+		// header and the MCP reports so the toolbar can never disagree with them.
+		$count = ( new OperationManager() )->count_pending_review();
 
 		if ( $count <= 0 ) {
 			return;
@@ -183,8 +180,13 @@ final class AdminMenu {
 			// The 16 px monochrome master ships in the platform's own icon gray
 			// (#a7aaad), so the admin bar's existing hover treatment lights it with the
 			// label instead of leaving a mismatched full-colour mark in the toolbar.
+			// The count span carries an id so the Approvals screen can correct it
+			// after a decision. It is rendered server-side at page load, so without
+			// one the toolbar went on advertising "1" for a request the same page
+			// had just resolved — two different answers on one screen. See
+			// updateBadge() in views/approval-center.php; nothing else writes it.
 			'title' => sprintf(
-				'<img src="%s" alt="" width="16" height="16" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:6px;" decoding="async" />%s <span style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
+				'<img src="%s" alt="" width="16" height="16" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:6px;" decoding="async" />%s <span id="wpcc-adminbar-pending-count" style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
 				esc_url( Brand::admin_16() ),
 				esc_html__( 'Approvals', 'ai-command-center' ),
 				$count

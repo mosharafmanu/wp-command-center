@@ -143,6 +143,18 @@ else
 		// of which Builders the dev env happens to enable.
 		add_filter("wpcc_ai_content_ui","__return_false",99);
 		add_filter("wpcc_alt_text_ui","__return_false",99);
+		// ...and force the in-admin toggle option off too. The two filters above are NOT
+		// sufficient on their own: BuiltinAiSettings::flag() resolves constant -> filter
+		// -> option, so a filter returning FALSE cannot switch a tool off once the option
+		// has it on — false simply falls through to the option, which wins. With
+		// wpcc_builtin_ai_tools[content] on (the T2 runner turns all three on by design),
+		// `title` and `excerpt` stayed enabled through cases (c) and (d), the panel was
+		// enqueued for THEM, and this matrix reported an SEO asset leak that did not
+		// exist. Filtering the option keeps every other workflow out of the answer
+		// without writing to the site.
+		add_filter("option_" . \WPCommandCenter\Admin\BuiltinAiSettings::OPTION, static function () {
+			return [ "seo" => false, "alt_text" => false, "content" => false ];
+		}, 99);
 		$enq = function() { return wp_script_is( "wpcc-action-panel", "enqueued" ); };
 		$reset = function() {
 			foreach (["wpcc-action-panel","wpcc-admin-runtime"] as $h) { wp_dequeue_script($h); wp_deregister_script($h); }

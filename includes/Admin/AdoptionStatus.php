@@ -71,13 +71,15 @@ final class AdoptionStatus {
 		return count( ( new AuthTokens() )->list() );
 	}
 
-	/** Number of currently-active (non-revoked, non-expired) tokens. */
+	/**
+	 * Number of currently-active (non-revoked, non-expired) tokens.
+	 *
+	 * The expiry half of that promise was missing: `status` stays 'active' on an
+	 * expired token, so this counted tokens that validate() rejects. Deferred to
+	 * AuthTokens::is_usable(), the one place the rule is stated.
+	 */
 	public static function active_token_count(): int {
-		$active = array_filter(
-			( new AuthTokens() )->list(),
-			static fn ( $t ) => ( $t['status'] ?? '' ) === 'active'
-		);
-		return count( $active );
+		return count( AuthTokens::usable_only( ( new AuthTokens() )->list() ) );
 	}
 
 	/**

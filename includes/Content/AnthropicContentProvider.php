@@ -56,10 +56,15 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 			return ContentFieldResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'ai-command-center' ), $this->id(), $model );
 		}
 
+		// `meta` is non-wire metadata: it attributes the call to a feature for the usage
+		// ledger and never reaches the provider's request body.
 		$request = new GenerationRequest(
 			$model,
 			self::MAX_TOKENS,
-			[ new GenerationMessage( 'user', [ new GenerationTextPart( $this->prompt( $kind, $content ) ) ] ) ]
+			[ new GenerationMessage( 'user', [ new GenerationTextPart( $this->prompt( $kind, $content ) ) ] ) ],
+			GenerationRequest::DEFAULT_TIMEOUT,
+			[],
+			[ 'feature' => 'ai_content' ]
 		);
 
 		$result = $this->runtime->generate( $request );

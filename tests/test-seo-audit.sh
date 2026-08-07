@@ -212,7 +212,15 @@ else
 	echo "== 5b. Tab gating (functional, via AppShell::sections) =="
 	# Experience Layer: SEO Meta is the Operate › SEO Meta tab; it appears in the
 	# shell only when the build flag is on AND the FeatureGate allows.
-	TAB_OFF="$(wpe 'remove_all_filters("wpcc_seo_meta_ui"); $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); echo isset($t["seo"])?"shown":"hidden";')"
+	#
+	# "By default" means nothing has switched SEO on — and since Phase 4 that is THREE
+	# sources, not one. BuiltinAiSettings::flag() resolves constant -> filter -> option,
+	# so dropping the filter alone leaves the in-admin toggle in charge, and on a site
+	# where SEO is switched on (the T2 runner turns all three tools on by design) the
+	# tab is correctly shown and this asserted a default that no longer existed.
+	# Filtering the option too restores the intended precondition without writing to
+	# the site.
+	TAB_OFF="$(wpe 'remove_all_filters("wpcc_seo_meta_ui"); add_filter("option_wpcc_builtin_ai_tools", function(){ return ["seo"=>false,"alt_text"=>false,"content"=>false]; }, 99); $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); echo isset($t["seo"])?"shown":"hidden";')"
 	assert_eq "tab hidden by default" "hidden" "$TAB_OFF"
 
 	TAB_ON="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); remove_all_filters("wpcc_seo_meta_ui"); echo isset($t["seo"])?"shown":"hidden";')"

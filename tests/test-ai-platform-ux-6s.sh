@@ -29,7 +29,15 @@ has "KPI grid" "wpcc-aip-kpis" "$VIEW"
 # exist nowhere in the codebase, so those assertions could not pass.
 has "recent events KPI" "Recent events" "$VIEW"
 has "pending approvals KPI" "Pending approvals" "$VIEW"
-has "token usage KPI" "Token usage & cost" "$VIEW"
+# The KPI is "Tokens used", not the old "Token usage & cost". The "& cost" half was
+# dropped deliberately when UsageLedger made the token half real: the product ships no
+# versioned provider price list, so a currency figure here would be a guess that drifts
+# out of date silently and that someone might reconcile against a real invoice. Pinning
+# the old label asserted a promise the product had deliberately stopped making.
+has "token usage KPI" "Tokens used" "$VIEW"
+# The deliberate absence is the part actually worth guarding — a future change that
+# starts printing an invented price should fail here.
+has "cost deliberately not shown" "Cost is not shown" "$VIEW"
 # Honesty anchor kept from the old design: cost is not estimated when it is not metered.
 has "cost not invented when unmetered" "Not tracked yet" "$VIEW"
 has "warnings surface" "wpcc-aip-warn" "$VIEW"

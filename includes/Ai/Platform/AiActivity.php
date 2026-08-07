@@ -8,9 +8,10 @@
  * schema/registry/runtime change; it only reads existing data, exactly as the
  * Overview home and the admin-bar badge already do.
  *
- * Honesty: it reports REAL recorded events. It never invents jobs, and it does
- * NOT fabricate token/cost numbers (per-token cost is not instrumented in the
- * runtime — surfaced as an explicit "not tracked yet", never a fake figure).
+ * Honesty: it reports REAL recorded events. It never invents jobs. Token counts come
+ * from UsageLedger — the figures the providers themselves reported, never estimated.
+ * Per-token COST remains uninstrumented and is surfaced as explicitly unavailable
+ * rather than as a fabricated figure: no versioned price list ships with the product.
  */
 
 namespace WPCommandCenter\Ai\Platform;
@@ -174,7 +175,7 @@ final class AiActivity {
 	/**
 	 * Mission-control counters (honest; cost intentionally absent — see class doc).
 	 *
-	 * @return array{events:int,generations:int,rollbacks:int,changes:int,pending_approvals:int,cost_tracked:bool}
+	 * @return array{events:int,generations:int,rollbacks:int,changes:int,pending_approvals:int,tokens_tracked:bool,total_tokens:int,cost_tracked:bool}
 	 */
 	public static function summary(): array {
 		$feed = self::feed( 100 );
@@ -184,27 +185,27 @@ final class AiActivity {
 			elseif ( 'rollback' === $f['category'] ) { $rb++; }
 			elseif ( 'change' === $f['category'] ) { $ch++; }
 		}
+		$usage = UsageLedger::summary();
+
 		return [
 			'events'            => count( $feed ),
 			'generations'      => $gen,
 			'rollbacks'        => $rb,
 			'changes'          => $ch,
 			'pending_approvals'=> self::pending_approvals(),
-			'cost_tracked'     => false, // honest: per-token cost is not instrumented.
+			// Tokens ARE instrumented now — the transports keep the usage block the
+			// providers return. Cost still is not, and deliberately: no versioned price
+			// list ships with the product, so a figure here would be a guess.
+			'tokens_tracked'   => $usage['tracked'],
+			'total_tokens'     => $usage['total_tokens'],
+			'cost_tracked'     => false, // honest: per-token COST is not instrumented.
 		];
 	}
 
 	/** Pending human-approval requests (read-only count; same source as the admin-bar badge). */
 	public static function pending_approvals(): int {
-		global $wpdb;
-		$table = $wpdb->prefix . 'wpcc_operation_requests';
-		// Guard: table may not exist on a fresh install.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
-		if ( $exists !== $table ) {
-			return 0;
-		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE status = %s", OperationManager::STATUS_PENDING_REVIEW ) );
+		// F-01: one canonical counter behind every pending figure. It carries the
+		// fresh-install table guard this method used to hold on its own.
+		return ( new OperationManager() )->count_pending_review();
 	}
 }

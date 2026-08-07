@@ -245,9 +245,98 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 		<div style="display:grid;gap:10px;">
 			<div class="wpcc-aip-kpi"><div class="v"><?php echo (int) $wpcc_act['events']; ?></div><div class="l"><?php esc_html_e( 'Recent events', 'ai-command-center' ); ?></div></div>
 			<div class="wpcc-aip-kpi"><div class="v" style="color:<?php echo (int) $wpcc_act['pending_approvals'] ? '#d63638' : '#0a7a33'; ?>;"><?php echo (int) $wpcc_act['pending_approvals']; ?></div><div class="l"><?php esc_html_e( 'Pending approvals', 'ai-command-center' ); ?></div></div>
-			<div class="wpcc-aip-kpi" title="<?php esc_attr_e( 'Per-token usage and cost are not metered yet — they arrive when the AI runtime is instrumented. No estimated figure is shown to avoid misleading you.', 'ai-command-center' ); ?>"><div class="v" style="font-size:15px;color:#646970;"><?php esc_html_e( 'Not tracked yet', 'ai-command-center' ); ?></div><div class="l"><?php esc_html_e( 'Token usage & cost', 'ai-command-center' ); ?></div></div>
+			<?php
+			/*
+			 * Token usage.
+			 *
+			 * This panel said "Not tracked yet" even to a customer who had just run real
+			 * generations and would be billed for them. The providers were reporting the
+			 * numbers all along — the transports decoded the response, took the text and
+			 * discarded the usage block. They now keep it, and UsageLedger aggregates it.
+			 *
+			 * Cost stays absent on purpose. Nothing in the product maintains a versioned
+			 * provider price list, so any figure here would be a guess that drifts out of
+			 * date silently and that someone might reconcile against a real invoice.
+			 * Tokens are a fact the provider stated; a price would not be.
+			 */
+			$wpcc_usage = \WPCommandCenter\Ai\Platform\UsageLedger::summary();
+			?>
+			<div class="wpcc-aip-kpi">
+				<?php if ( $wpcc_usage['tracked'] ) : ?>
+					<div class="v"><?php echo esc_html( number_format_i18n( $wpcc_usage['total_tokens'] ) ); ?></div>
+					<div class="l"><?php esc_html_e( 'Tokens used', 'ai-command-center' ); ?></div>
+					<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5;">
+						<?php
+						printf(
+							/* translators: %1$s: input token count, %2$s: output token count. */
+							esc_html__( '%1$s in · %2$s out', 'ai-command-center' ),
+							esc_html( number_format_i18n( $wpcc_usage['input'] ) ),
+							esc_html( number_format_i18n( $wpcc_usage['output'] ) )
+						);
+						echo '<br />';
+						printf(
+							/* translators: %s: number of generation calls. */
+							esc_html( _n( 'across %s generation', 'across %s generations', $wpcc_usage['calls'], 'ai-command-center' ) ),
+							esc_html( number_format_i18n( $wpcc_usage['calls'] ) )
+						);
+						if ( $wpcc_usage['partial'] ) {
+							echo '<br />';
+							printf(
+								/* translators: %s: number of calls whose provider reported no usage. */
+								esc_html( _n( '%s call reported no usage, so this is a minimum.', '%s calls reported no usage, so this is a minimum.', $wpcc_usage['unreported_calls'], 'ai-command-center' ) ),
+								esc_html( number_format_i18n( $wpcc_usage['unreported_calls'] ) )
+							);
+						}
+						?>
+						<br /><?php esc_html_e( 'Cost is not shown — no price list ships with the plugin, and an estimate could be wrong.', 'ai-command-center' ); ?>
+					</div>
+				<?php else : ?>
+					<div class="v" style="font-size:15px;color:#646970;"><?php esc_html_e( 'Nothing generated yet', 'ai-command-center' ); ?></div>
+					<div class="l"><?php esc_html_e( 'Tokens used', 'ai-command-center' ); ?></div>
+					<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5;">
+						<?php esc_html_e( 'Token counts appear here after your first Built-in AI generation. Cost is not shown — no price list ships with the plugin.', 'ai-command-center' ); ?>
+					</div>
+				<?php endif; ?>
+			</div>
 		</div>
 	</div>
+
+	<?php if ( $wpcc_usage['tracked'] ) : ?>
+		<?php $wpcc_usage_rows = \WPCommandCenter\Ai\Platform\UsageLedger::breakdown(); ?>
+		<details style="max-width:760px;margin:0 0 4px;">
+			<summary style="cursor:pointer;font-size:12px;font-weight:600;color:#2271b1;"><?php esc_html_e( 'Token usage by feature and model', 'ai-command-center' ); ?></summary>
+			<div style="overflow-x:auto;">
+				<table class="widefat striped" style="margin-top:8px;">
+					<caption class="screen-reader-text"><?php esc_html_e( 'Token usage broken down by feature, provider and model', 'ai-command-center' ); ?></caption>
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'Feature', 'ai-command-center' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Provider', 'ai-command-center' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Model', 'ai-command-center' ); ?></th>
+							<th scope="col" style="text-align:right;"><?php esc_html_e( 'Calls', 'ai-command-center' ); ?></th>
+							<th scope="col" style="text-align:right;"><?php esc_html_e( 'In', 'ai-command-center' ); ?></th>
+							<th scope="col" style="text-align:right;"><?php esc_html_e( 'Out', 'ai-command-center' ); ?></th>
+							<th scope="col" style="text-align:right;"><?php esc_html_e( 'Total', 'ai-command-center' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $wpcc_usage_rows as $wpcc_ur ) : ?>
+							<tr>
+								<td><?php echo esc_html( \WPCommandCenter\Ai\Platform\ConnectionStore::FEATURES[ $wpcc_ur['feature'] ] ?? $wpcc_ur['feature'] ); ?></td>
+								<td><?php echo esc_html( $wpcc_ur['provider'] ); ?></td>
+								<td><code><?php echo esc_html( $wpcc_ur['model'] ); ?></code></td>
+								<td style="text-align:right;"><?php echo esc_html( number_format_i18n( (int) $wpcc_ur['calls'] ) ); ?></td>
+								<td style="text-align:right;"><?php echo esc_html( number_format_i18n( (int) $wpcc_ur['input'] ) ); ?></td>
+								<td style="text-align:right;"><?php echo esc_html( number_format_i18n( (int) $wpcc_ur['output'] ) ); ?></td>
+								<td style="text-align:right;"><strong><?php echo esc_html( number_format_i18n( (int) $wpcc_ur['total'] ) ); ?></strong></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+			<p class="muted" style="font-size:11px;margin:6px 0 0;"><?php esc_html_e( 'Counts as the provider reported them. Token counts only — no prompt or generated text is stored to produce this.', 'ai-command-center' ); ?></p>
+		</details>
+	<?php endif; ?>
 
 	<?php endif; ?>
 	<!-- ===== Quick action ===== -->
@@ -452,7 +541,7 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 							<input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" />
 							<input type="password" name="wpcc_key" autocomplete="off" spellcheck="false" style="font-family:monospace;max-width:240px;" placeholder="<?php echo $has_key ? esc_attr__( '•••••• (replace key)', 'ai-command-center' ) : esc_attr__( 'API key', 'ai-command-center' ); ?>" />
 							<button type="submit" name="wpcc_conn_action" value="update_key" class="button button-small"><?php echo $has_key ? esc_html__( 'Update key', 'ai-command-center' ) : esc_html__( 'Save key', 'ai-command-center' ); ?></button>
-							<?php if ( $has_key ) : ?><button type="submit" name="wpcc_conn_action" value="clear_key" class="button button-small button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Remove this connection’s key?', 'ai-command-center' ) ); ?>');"><?php esc_html_e( 'Remove key', 'ai-command-center' ); ?></button><?php endif; ?>
+							<?php if ( $has_key ) : ?><button type="submit" name="wpcc_conn_action" value="clear_key" class="button button-small button-link-delete wpcc-conn-confirm" data-confirm="clear_key" data-conn-name="<?php echo esc_attr( $c['name'] ); ?>"><?php esc_html_e( 'Remove key', 'ai-command-center' ); ?></button><?php endif; ?>
 						</form>
 						<?php else : ?><p class="muted" style="font-size:12px;margin-top:8px;"><?php esc_html_e( 'Key defined in wp-config.php (constant) — read-only.', 'ai-command-center' ); ?></p><?php endif; ?>
 					</details>
@@ -463,7 +552,21 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 						<?php if ( $runtime && ! $is_def && $has_key ) : ?><form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="set_default" class="button button-small"><?php esc_html_e( 'Set default', 'ai-command-center' ); ?></button></form><?php endif; ?>
 						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><input type="hidden" name="wpcc_enabled" value="<?php echo $c['enabled'] ? '0' : '1'; ?>" /><button type="submit" name="wpcc_conn_action" value="set_enabled" class="button button-small"><?php echo $c['enabled'] ? esc_html__( 'Disable', 'ai-command-center' ) : esc_html__( 'Enable', 'ai-command-center' ); ?></button></form>
 						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="duplicate" class="button button-small"><?php esc_html_e( 'Duplicate', 'ai-command-center' ); ?></button></form>
-						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="delete" class="button button-small button-link-delete" onclick="return confirm('<?php echo esc_js( __( 'Delete this connection and its key?', 'ai-command-center' ) ); ?>');"><?php esc_html_e( 'Delete', 'ai-command-center' ); ?></button></form>
+						<?php
+					/*
+					 * Which built-in tools currently generate through this connection. A
+					 * delete confirmation that cannot name the consequence is just a
+					 * speed bump; naming the tools that stop working is the whole point
+					 * of asking.
+					 */
+					$wpcc_routed = [];
+					foreach ( $wpcc_routes as $wpcc_feat => $wpcc_rcid ) {
+						if ( $wpcc_rcid === $cid && isset( ConnectionStore::FEATURES[ $wpcc_feat ] ) ) {
+							$wpcc_routed[] = ConnectionStore::FEATURES[ $wpcc_feat ];
+						}
+					}
+					?>
+					<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="delete" class="button button-small button-link-delete wpcc-conn-confirm" data-confirm="delete" data-conn-name="<?php echo esc_attr( $c['name'] ); ?>" data-has-key="<?php echo $has_key ? '1' : '0'; ?>" data-routed="<?php echo esc_attr( implode( ', ', $wpcc_routed ) ); ?>"><?php esc_html_e( 'Delete', 'ai-command-center' ); ?></button></form>
 					</div>
 				</div>
 			<?php endforeach; ?>
@@ -698,4 +801,89 @@ unset( $wpcc_m );
 	// Progressive enhancement: JS active → start collapsed as a wizard.
 	wiz.classList.remove('open');
 })();
+
+/*
+ * Destructive connection actions — the product's own confirmation, not the browser's.
+ *
+ * Deleting a connection used to go through window.confirm(). A native dialog renders as
+ * "localhost says:", ignores the design system, and — the part that actually matters
+ * here — can only carry one line of text. So the question a customer was asked before
+ * removing a stored provider key was "Delete this connection and its key?", which names
+ * neither the connection nor what stops working. WPCC.cds.confirm is the dialog the rest
+ * of the product already uses for destructive decisions (token revoke, undo, bulk
+ * approve/reject); it can say which connection, that the key is destroyed, which tools
+ * were routed through it, and — the reassuring half — what is NOT destroyed.
+ *
+ * No-JS keeps working: without JS the submit is never intercepted and the form posts
+ * straight through to the same nonce-checked, capability-checked handler.
+ */
+( function () {
+	var buttons = document.querySelectorAll( '.wpcc-conn-confirm' );
+	if ( ! buttons.length || ! window.WPCC || ! WPCC.cds || ! WPCC.cds.confirm ) { return; }
+
+	var i18n = <?php echo wp_json_encode( [
+		'deleteTitle'  => __( 'Delete this connection?', 'ai-command-center' ),
+		/* translators: %s: the connection name. */
+		'deleteBody'   => __( '“%s” will be removed and its stored API key deleted. This cannot be undone — you would need to paste the key again to restore it.', 'ai-command-center' ),
+		/* translators: %s: comma-separated list of tool names. */
+		'deleteRouted' => __( 'These tools generate through it and will stop until you point them at another connection: %s.', 'ai-command-center' ),
+		'deleteKeeps'  => __( 'Your existing suggestions, applied changes and audit history are not affected — nothing already recorded is erased.', 'ai-command-center' ),
+		'deleteGo'     => __( 'Delete connection', 'ai-command-center' ),
+		'keyTitle'     => __( 'Remove this key?', 'ai-command-center' ),
+		/* translators: %s: the connection name. */
+		'keyBody'      => __( 'The stored API key for “%s” will be deleted. The connection stays, but it cannot generate anything until you add a key again.', 'ai-command-center' ),
+		'keyGo'        => __( 'Remove key', 'ai-command-center' ),
+		'cancel'       => __( 'Cancel', 'ai-command-center' ),
+	] ); ?>;
+
+	Array.prototype.forEach.call( buttons, function ( btn ) {
+		btn.addEventListener( 'click', function ( e ) {
+			e.preventDefault();
+			// A double-click must not open two dialogs, nor queue two deletes. Once a
+			// decision is in flight or already taken, every further click is ignored.
+			if ( btn.dataset.wpccPending === '1' || btn.dataset.wpccDone === '1' ) { return; }
+			btn.dataset.wpccPending = '1';
+
+			var isDelete = ( btn.dataset.confirm === 'delete' );
+			var name = btn.dataset.connName || '';
+			var body;
+			if ( isDelete ) {
+				body = i18n.deleteBody.replace( '%s', name );
+				if ( btn.dataset.routed ) { body += ' ' + i18n.deleteRouted.replace( '%s', btn.dataset.routed ); }
+				body += ' ' + i18n.deleteKeeps;
+			} else {
+				body = i18n.keyBody.replace( '%s', name );
+			}
+
+			WPCC.cds.confirm( {
+				title: isDelete ? i18n.deleteTitle : i18n.keyTitle,
+				body: body,
+				confirmLabel: isDelete ? i18n.deleteGo : i18n.keyGo,
+				cancelLabel: i18n.cancel,
+				danger: true
+			} ).then( function ( ok ) {
+				btn.dataset.wpccPending = '';
+				if ( ! ok ) { return; } // cancelled: the connection is untouched and still listed.
+				var form = btn.closest ? btn.closest( 'form' ) : null;
+				if ( ! form ) { return; }
+				btn.dataset.wpccDone = '1';
+				/*
+				 * Carry the action in a hidden field rather than re-clicking the button.
+				 * A submit button contributes its name/value only when it is the one that
+				 * submitted the form, and a DISABLED button contributes nothing at all —
+				 * so "disable to prevent a double submit" and "this button's value is the
+				 * action" are in direct conflict. A hidden input settles it: the value is
+				 * posted regardless, and the button can be disabled immediately.
+				 */
+				var hidden = document.createElement( 'input' );
+				hidden.type = 'hidden';
+				hidden.name = btn.name;
+				hidden.value = btn.value;
+				form.appendChild( hidden );
+				btn.disabled = true;
+				form.submit();
+			} );
+		} );
+	} );
+} )();
 </script>

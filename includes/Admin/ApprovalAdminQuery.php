@@ -61,16 +61,17 @@ final class ApprovalAdminQuery {
 		$requests = $wpdb->prefix . 'wpcc_operation_requests';
 		$queue    = $wpdb->prefix . 'wpcc_operation_queue';
 
-		$pending = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$requests} WHERE status = %s",
-			OperationManager::STATUS_PENDING_REVIEW
-		) );
+		// F-01: pending figures come from the canonical counter on the manager
+		// that owns the table and the status constants — the same one the
+		// admin-bar badge and the MCP reports read.
+		$manager = new OperationManager();
 
-		$pending_critical = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$requests} WHERE status = %s AND risk_level = %s",
-			OperationManager::STATUS_PENDING_REVIEW,
-			SecurityModeManager::RISK_CRITICAL
-		) );
+		$pending = $manager->count_pending_review();
+
+		$pending_critical = $manager->count_requests( [
+			'status'     => OperationManager::STATUS_PENDING_REVIEW,
+			'risk_level' => SecurityModeManager::RISK_CRITICAL,
+		] );
 
 		$resolved = (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM {$requests} WHERE status != %s",

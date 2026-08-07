@@ -160,6 +160,9 @@ else
 
 		// --- Propose-only round-trip via the EXISTING generator (stub provider, no network) ---
 		// Mirrors test-seo-generate.sh: prove the handler core creates a DRAFT and writes NO meta.
+		// Explicit opt-in: the generators refuse output from a provider the product does
+		// not ship, so a stub cannot silently become a customer-facing draft.
+		if ( ! defined( "WPCC_ALLOW_TEST_AI_PROVIDER" ) ) { define( "WPCC_ALLOW_TEST_AI_PROVIDER", true ); }
 		if ( \WPCommandCenter\Operations\SeoProvider::NONE !== \WPCommandCenter\Operations\SeoProvider::detect() ) {
 			$prov = \WPCommandCenter\Operations\SeoProvider::detect();
 			$store = new \WPCommandCenter\Proposals\ProposalStore();
@@ -233,6 +236,9 @@ if command -v wp >/dev/null 2>&1; then
 		add_filter("wpcc_seo_meta_ui","__return_true"); wp_set_current_user($aid);
 
 		// Test subclass injects a stub-provider generator (deterministic; no network).
+		// Explicit opt-in: the generators refuse output from a provider the product does
+		// not ship, so a stub cannot silently become a customer-facing draft.
+		if ( ! defined( "WPCC_ALLOW_TEST_AI_PROVIDER" ) ) { define( "WPCC_ALLOW_TEST_AI_PROVIDER", true ); }
 		$ra = new class extends \WPCommandCenter\Admin\SeoRowActions {
 			public $genFactory;
 			protected function make_generator(): \WPCommandCenter\Seo\SeoMetaGenerator { return ($this->genFactory)(); }

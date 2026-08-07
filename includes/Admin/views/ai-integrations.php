@@ -652,8 +652,20 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		</div>
 
 		<?php
-		$wpcc_cfg_mcp_url   = rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE . '/mcp' );
-		$wpcc_cfg_tok_count = is_array( $wpcc_all_tokens ) ? count( $wpcc_all_tokens ) : 0;
+		$wpcc_cfg_mcp_url = rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE . '/mcp' );
+
+		/*
+		 * "Ready" means usable, not merely on record.
+		 *
+		 * This counted every row in the manifest, so a site with one working token
+		 * and three revoked or expired ones was told "4 access tokens ready" — and
+		 * the same number gates the configuration and connection-test cards below,
+		 * so a site whose only token had expired was shown a setup flow it could not
+		 * complete. AuthTokens::is_usable() is the same rule validate() enforces at
+		 * request time and the same one the status badge prints.
+		 */
+		$wpcc_usable_tokens = AuthTokens::usable_only( is_array( $wpcc_all_tokens ) ? $wpcc_all_tokens : [] );
+		$wpcc_cfg_tok_count = count( $wpcc_usable_tokens );
 		?>
 
 		<?php
@@ -863,19 +875,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				// screen that exists to audit them.
 				// "Usable" must mean the same thing the status badge means. The stored
 				// `status` stays 'active' on an expired token — expiry is computed from
-				// `expires_at` (see AuthTokens::status_badge) — so filtering on status
-				// alone offered expired tokens as "Use in config", where they would
-				// silently fail against the assistant. Mirror the canonical rule.
-				$wpcc_usable_tokens = array_values( array_filter(
-					is_array( $wpcc_all_tokens ) ? $wpcc_all_tokens : [],
-					static function ( $t ) {
-						if ( ( $t['status'] ?? '' ) !== 'active' ) {
-							return false;
-						}
-						$expires = $t['expires_at'] ?? null;
-						return null === $expires || (int) $expires >= time();
-					}
-				) );
+				// `expires_at` — so filtering on status alone offered expired tokens as
+				// "Use in config", where they would silently fail against the assistant.
+				// $wpcc_usable_tokens is resolved once, above, from the canonical rule in
+				// AuthTokens::is_usable(); this table and the "N access tokens ready"
+				// count must never be able to disagree about what a usable token is.
 				?>
 				<?php if ( ! empty( $wpcc_usable_tokens ) ) : ?>
 					<h2 style="margin: 18px 0 10px; font-size: 13px; font-weight: 600;"><?php esc_html_e( 'Your tokens', 'ai-command-center' ); ?></h2>
