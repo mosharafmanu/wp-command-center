@@ -14,9 +14,9 @@ Engineering is complete. What remains is independent certification and submissio
 |---|---|
 | Branch | `release/v1-finalization` |
 | **Source-freeze commit** | `8200074867a9d2c43a4de0e10cc46241049acb8a` (`8200074`) — *the artifact was built from this tree* |
-| **Tag target** | the documentation commit that added §5.7, i.e. the commit immediately after `8200074` |
+| **Tag target** | the branch tip — the **last documentation-only commit** on `release/v1-finalization` (the freeze commit is followed only by commits that touch nothing but this file) |
 | `main` | `13549c2` — **untouched, not merged** |
-| Commits ahead of `main` | 125 (124 at the source freeze + 1 documentation commit) |
+| Commits ahead of `main` | 124 at the source freeze, plus the documentation commits that follow it |
 | Uncommitted | none tracked. `RESUME-HANDOFF.md` is deliberately untracked and disposable. |
 | Remote | **11 commits unpushed**. Push before submitting. |
 | Plugin directory | `wp-content/plugins/ai-command-center/` |
