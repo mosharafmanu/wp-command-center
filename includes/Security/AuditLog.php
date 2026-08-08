@@ -151,6 +151,7 @@ final class AuditLog {
 			return;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- append-only audit log opened for locking (flock). WP_Filesystem has no locking primitive, so concurrent requests could interleave writes.
 		$handle = fopen( $file, 'c' );
 
 		if ( false === $handle ) {
@@ -160,6 +161,7 @@ final class AuditLog {
 		// Coordinate with concurrent record() appends (advisory lock on the
 		// same inode). Blocks until the in-flight append releases LOCK_EX.
 		if ( ! flock( $handle, LOCK_EX ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 			fclose( $handle );
 			return;
 		}
@@ -171,11 +173,13 @@ final class AuditLog {
 			$target = trailingslashit( $dir ) . 'audit-' . gmdate( 'Ymd-His' ) . '-' . substr( md5( uniqid( '', true ) ), 0, 6 ) . '.log';
 
 			if ( ! file_exists( $target ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic temp-then-replace. WP_Filesystem::move() gives no atomicity guarantee and is not atomic at all over its FTP/SSH transports; snapshot and audit integrity depend on a reader seeing either the whole old file or the whole new one.
 				@rename( $file, $target );
 			}
 		}
 
 		flock( $handle, LOCK_UN );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		$this->prune_segments( $dir );
@@ -194,7 +198,7 @@ final class AuditLog {
 		rsort( $segments, SORT_STRING ); // Newest first.
 
 		foreach ( array_slice( $segments, self::MAX_SEGMENTS ) as $stale ) {
-			@unlink( $stale );
+			wp_delete_file( $stale );
 		}
 	}
 
@@ -202,12 +206,33 @@ final class AuditLog {
 	 * Build an actor descriptor for an audit entry. If `$actor` is empty,
 	 * fall back to the currently logged-in admin user (or 'unknown').
 	 *
-	 * @param array<string, mixed> $actor
+	 * The parameter is deliberately untyped. This is a public entry point that
+	 * several callers reach with a caller-supplied `$context['actor']` they do not
+	 * validate — OperationQueue::enqueue() forwards it straight here. When that
+	 * value arrived as a scalar the TypeError was fatal, and because
+	 * OperationManager::approve_request() marks the request APPROVED before it
+	 * enqueues, the throw left the request approved, never queued, and with no
+	 * audit entry: a silently stuck approval and a missing audit record. Audit
+	 * must never be the reason a governed change is lost, so a malformed actor is
+	 * normalised into an honest descriptor instead of aborting the write.
+	 *
+	 * Well-formed array actors are returned exactly as before.
+	 *
+	 * @param mixed $actor Array descriptor, or a scalar label from a lax caller.
 	 * @return array<string, mixed>
 	 */
-	public static function resolve_actor( array $actor ): array {
-		if ( ! empty( $actor ) ) {
+	public static function resolve_actor( $actor ): array {
+		if ( is_array( $actor ) && ! empty( $actor ) ) {
 			return $actor;
+		}
+
+		// A scalar is recorded as an unverified caller-supplied label. It is
+		// deliberately NOT promoted to a trusted type — nothing authenticated it.
+		if ( is_scalar( $actor ) && '' !== (string) $actor ) {
+			return [
+				'type'  => 'unknown',
+				'label' => sanitize_text_field( (string) $actor ),
+			];
 		}
 
 		$user_id = get_current_user_id();
@@ -253,7 +278,7 @@ final class AuditLog {
 		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
 
 		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the audit log directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the audit log directory.', 'ai-command-center' ) );
 		}
 
 		$this->protect_directory( $dir );

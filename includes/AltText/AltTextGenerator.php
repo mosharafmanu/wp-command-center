@@ -18,6 +18,7 @@
 namespace WPCommandCenter\AltText;
 
 use WPCommandCenter\Ai\CapabilityGate;
+use WPCommandCenter\Ai\ProviderProvenance;
 use WPCommandCenter\Proposals\ProposalStore;
 
 defined( 'ABSPATH' ) || exit;
@@ -63,6 +64,16 @@ final class AltTextGenerator {
 				$skipped[] = [ 'attachment_id' => $id, 'reason' => 'no_provider' ];
 			}
 			return $this->envelope( $batch_id, '', '', $created, $skipped, $failed );
+		}
+
+		// Provenance: only a provider the product actually ships may produce a draft a
+		// customer will review. The resolver is an injectable test seam, and a stub
+		// driven through it writes real, indistinguishable drafts.
+		if ( ! ProviderProvenance::accepts( $provider->id() ) ) {
+			foreach ( $ids as $id ) {
+				$skipped[] = [ 'attachment_id' => $id, 'reason' => ProviderProvenance::REASON ];
+			}
+			return $this->envelope( $batch_id, $provider->id(), '', $created, $skipped, $failed );
 		}
 
 		// Capability gate: alt text requires vision. Inert for Anthropic (vision=yes);

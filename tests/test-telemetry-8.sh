@@ -29,7 +29,7 @@ has "audit hook is behavior-neutral (fires AFTER write)" "do_action\( 'wpcc_audi
 has "subscriber self-guards (never throws into runtime)" "catch \( \\\\Throwable" "$SUB"
 has "recorder never throws into runtime" "catch \( \\\\Throwable" "$REC"
 hasnt "DB_VERSION invariant untouched (telemetry table decoupled)" "DB_VERSION = '2\.[0-9]" "$STORE"
-has "schema still 2.5.0" "DB_VERSION = '2.5.0'" "$SCHEMA"
+has "schema still 2.6.0" "DB_VERSION = '2.6.0'" "$SCHEMA"
 has "telemetry table self-provisions (additive)" "CREATE TABLE IF NOT EXISTS" "$STORE"
 
 echo "== 3. Honesty — unknown, never invented =="
@@ -45,7 +45,7 @@ has "indexed for dashboards" "KEY provider" "$STORE"
 has "prune for growth control" "function prune" "$STORE"
 
 echo "== 5. Functional (wp eval-file) =="
-PHPF="$(mktemp -t wpcc8.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc8.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Telemetry\TelemetryStore as S;

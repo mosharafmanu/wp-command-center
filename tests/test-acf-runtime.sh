@@ -54,7 +54,12 @@ assert_true "json: has json_path" "$(echo "$JSONS"|jq -r 'if .json_path then "tr
 
 echo "== 9. Value Get =="
 VAL_GET=$(api_post -d '{"action":"acf_value_get","post_id":1,"field_key":"nonexistent"}' "$WPCC_BASE/operations/acf_manage/run")
-assert_contains "val: get" "$VAL_GET" "acf_value_get"
+# V1 Phase 7: acf_value_get must never answer a success-shaped value:null when it
+# cannot actually read the field — that was indistinguishable from a field which
+# genuinely has no value. Which refusal comes back depends on the fixture: a site
+# without post 1 fails object resolution first, a site with it fails on the unknown
+# field. Both are honest; a bare null is not.
+assert_true "val: get" "$(echo "$VAL_GET" | jq -r 'if (.code == "wpcc_acf_field_not_found" or .code == "wpcc_invalid_object") then "true" else "false" end')"
 
 echo "== 10. Group Create =="
 GRP_NAME="wpcc_test_acf_$(date +%s)"
@@ -107,11 +112,17 @@ fi
 
 echo "== 17. Validation — Invalid Action =="
 BAD=$(api_post -d '{"action":"bad"}' "$WPCC_BASE/operations/acf_manage/run")
-assert_contains "val: bad" "$BAD" "Invalid ACF action"
+# The pre-approval guard refuses an unknown action BEFORE the approval gate, but it
+# answers in the RUNTIME'S own code and phrasing (see InvalidActionContract) — the
+# earlier generic `wpcc_invalid_action` was a regression, not the contract.
+assert_contains "val: bad" "$BAD" "wpcc_invalid_acf_action"
+assert_contains "val: bad msg" "$BAD" "Invalid ACF action"
 
 echo "== 18. Validation — Not Found =="
 NF=$(api_post -d '{"action":"acf_group_get","group_id":"nonexistent_key"}' "$WPCC_BASE/operations/acf_manage/run")
-assert_contains "val: nf" "$NF" "error"
+# Structured WP_Error over REST ({code,message,data.status}), not the legacy
+# in-band {error:true} envelope this once asserted.
+assert_contains "val: nf" "$NF" "wpcc_acf_group_not_found"
 
 echo "== 19. MCP Discovery =="
 MCP_TOOLS=$(mcp '{"jsonrpc":"2.0","method":"tools/list","id":1}')

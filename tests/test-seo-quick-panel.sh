@@ -105,7 +105,13 @@ has  "reads security mode from config"          "ROOT.mode"                    "
 has  "approval-required pre-signal (gated)"     "approvalRequired"             "$JS"
 has  "outcome read from response status"        "st === 'applied'"             "$JS"
 has  "gated outcome = pending_approval"         "pending_approval"             "$JS"
-has  "Undo only with a change_id"               "applied && !! changeId"       "$JS"
+# The guard, not its spelling. This asserted the literal `applied && !! changeId`
+# until 074224d rewrote it as `applied && changeId` — functionally identical,
+# since ST.changeId is '' when absent — and the suite failed for a refactor that
+# changed no behaviour. Both guards are checked instead: the footer only offers
+# Undo when a change_id came back, and undoAction() refuses to fire without one.
+has  "Undo offered only with a change_id"       "applied && changeId"          "$JS"
+has  "Undo refuses to run without a change_id"  "! ST.changeId ) { return"     "$JS"
 has  "Undo reuses change_history rollback"      "/rollback"                    "$JS"
 lacks "JS no direct seo_manage execution"       "seo_manage"                   "$JS"
 lacks "JS no OperationExecutor reference"       "OperationExecutor"            "$JS"
@@ -137,6 +143,18 @@ else
 		// of which Builders the dev env happens to enable.
 		add_filter("wpcc_ai_content_ui","__return_false",99);
 		add_filter("wpcc_alt_text_ui","__return_false",99);
+		// ...and force the in-admin toggle option off too. The two filters above are NOT
+		// sufficient on their own: BuiltinAiSettings::flag() resolves constant -> filter
+		// -> option, so a filter returning FALSE cannot switch a tool off once the option
+		// has it on — false simply falls through to the option, which wins. With
+		// wpcc_builtin_ai_tools[content] on (the T2 runner turns all three on by design),
+		// `title` and `excerpt` stayed enabled through cases (c) and (d), the panel was
+		// enqueued for THEM, and this matrix reported an SEO asset leak that did not
+		// exist. Filtering the option keeps every other workflow out of the answer
+		// without writing to the site.
+		add_filter("option_" . \WPCommandCenter\Admin\BuiltinAiSettings::OPTION, static function () {
+			return [ "seo" => false, "alt_text" => false, "content" => false ];
+		}, 99);
 		$enq = function() { return wp_script_is( "wpcc-action-panel", "enqueued" ); };
 		$reset = function() {
 			foreach (["wpcc-action-panel","wpcc-admin-runtime"] as $h) { wp_dequeue_script($h); wp_deregister_script($h); }
@@ -197,8 +215,8 @@ echo "== 7. Invariants unchanged (no new route/op/cap/tool/schema) =="
 if command -v wp >/dev/null 2>&1; then
 	assert_eq "OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 	assert_eq "capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-	assert_eq "catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
-	assert_eq "DB_VERSION 2.5.0"    "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+	assert_eq "catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+	assert_eq "DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 else
 	echo "  SKIP: wp-cli not available — invariant checks skipped."
 fi

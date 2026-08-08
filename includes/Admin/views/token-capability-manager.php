@@ -12,11 +12,19 @@
  *   - Capabilities: the 23-capability catalogue and which operations each unlocks.
  *   - Operation Map: the 34-entry operation→capability map + read-only allowlist.
  *
- * This step is READ-ONLY: there are NO create/revoke/delete or capability
- * assign/remove controls (those arrive in STEP 107.3 / 107.4). All API output is
- * escaped client-side via escHtml. The view honestly surfaces that a token with
- * system.admin (a full-access token) is unrestricted regardless of individual
- * capabilities.
+ * The write controls arrived in STEP 107.3 (capability assign/remove) and 107.4
+ * (token create/revoke/delete); the docblock above describing this view as
+ * read-only had been wrong ever since. All API output is escaped client-side via
+ * escHtml. The view honestly surfaces that a token with system.admin (a
+ * full-access token) is unrestricted regardless of individual capabilities.
+ *
+ * Creating a token is a DIALOG, not a form sitting open above the list. The
+ * default state of a screen for reviewing and revoking access must not be "one
+ * click from minting a new key" — and the choice that matters most, how much
+ * the token may do, needs room to explain itself rather than two unlabelled
+ * options in a dropdown. Read-only is the default here; the warning shown for
+ * full access names this site's actual protection mode, so it stays true rather
+ * than merely reassuring.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -33,44 +41,186 @@ $tab        = in_array( $tab, $valid_tabs, true ) ? $tab : 'tokens';
 $view_id = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 
 $tab_url = static function ( string $t ) use ( $page ): string {
-	return esc_url( add_query_arg( [ 'page' => $page, 'tab' => $t ], admin_url( 'admin.php' ) ) );
+	// Returns the RAW url; every call site escapes at the point of output. Escaping
+	// inside the closure was correct but invisible to static analysis, so each echo
+	// read as unescaped output.
+	return add_query_arg( [ 'page' => $page, 'tab' => $t ], admin_url( 'admin.php' ) );
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-tokens">
-	<h1><?php esc_html_e( 'Access', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Access', 'ai-command-center' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'Create access tokens for your AI agents and see exactly what each one can do, based on its scope and capabilities. The token secret is shown once at creation; revoke any token instantly. Capabilities are assigned through the same audited engine as the agent API.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'A token is how an assistant reaches this site. Create one for each assistant you connect, and see exactly what it is allowed to do. The token is shown once when you create it — copy it then. You can revoke any token instantly.', 'ai-command-center' ); ?>
 	</p>
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo $tab_url( 'tokens' ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'ai-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-token-detail" data-token-id="<?php echo esc_attr( $view_id ); ?>">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading token…', 'wp-command-center' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading token…', 'ai-command-center' ); ?></p>
 		</div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo $tab_url( 'tokens' ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'capabilities' ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'wp-command-center' ); ?></a>
-			<a href="<?php echo $tab_url( 'operations' ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'capabilities' ) ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'operations' ) ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'ai-command-center' ); ?></a>
 		</h2>
 
 		<div id="wpcc-tokens-panel">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'wp-command-center' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
 		</div>
 	<?php endif; ?>
+</div>
+
+<?php
+/*
+ * Token creation dialog.
+ *
+ * Creation gets its OWN dialog rather than reusing the shared "Please confirm"
+ * modal below. Those are different jobs: the shared modal restates a decision
+ * the customer has already expressed elsewhere on the page ("Remove the
+ * capability X?"), while creating a token is where the decision is MADE — the
+ * name, the access level and the expiry are all chosen here. Routing creation
+ * through a generic confirm produced the worst of both: a form the customer
+ * could submit by accident, followed by a modal that said "Please confirm"
+ * without repeating a single thing they had chosen.
+ *
+ * The dialog's own "Create token" button is the explicit final action. There is
+ * no second confirmation, because a second confirmation after a deliberate form
+ * is the kind of ceremony people learn to click through.
+ */
+$wpcc_tok_protected = \WPCommandCenter\Operations\SecurityModeManager::is_protected();
+$wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
+?>
+<div id="wpcc-tok-dialog" class="wpcc-modal wpcc-tokdlg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-tokdlg-title">
+	<div class="wpcc-modal-box wpcc-tokdlg__box" role="document">
+		<h2 id="wpcc-tokdlg-title"><?php esc_html_e( 'Create an access token', 'ai-command-center' ); ?></h2>
+
+		<?php // ── The form. Hidden once the secret is on screen. ── ?>
+		<div id="wpcc-tokdlg-form">
+			<p class="description" style="margin-top:0;">
+				<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'ai-command-center' ); ?>
+			</p>
+
+			<div class="wpcc-tokdlg__field">
+				<label class="wpcc-tokdlg__label" for="wpcc-new-label"><?php esc_html_e( 'Name this token', 'ai-command-center' ); ?></label>
+				<input type="text" id="wpcc-new-label" class="regular-text" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="wpcc-tokdlg-label-hint" />
+				<p class="wpcc-tokdlg__hint" id="wpcc-tokdlg-label-hint">
+					<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'ai-command-center' ); ?>
+				</p>
+				<p class="wpcc-tokdlg__dupe" id="wpcc-tokdlg-dupe" role="status" hidden></p>
+			</div>
+
+			<fieldset class="wpcc-tokdlg__field">
+				<legend class="wpcc-tokdlg__label"><?php esc_html_e( 'What this token may do', 'ai-command-center' ); ?></legend>
+
+				<?php
+				/*
+				 * Read-only is the DEFAULT here, and deliberately not the default on
+				 * the Assistants screen. The two screens answer different questions.
+				 * Assistants is "connect Claude and have it work", where a restricted
+				 * token refuses ordinary questions and reads as a broken product.
+				 * This screen is the access register — someone opening it is auditing
+				 * or minting a key outside the guided flow, and the least surprising
+				 * key to hand them is the one that cannot ask for changes.
+				 */
+				?>
+				<label class="wpcc-tokdlg__choice">
+					<input type="radio" name="wpcc-new-scope" value="read_only" checked />
+					<span>
+						<strong><?php esc_html_e( 'Read-only — a few basics, no changes', 'ai-command-center' ); ?></strong>
+						<em><?php esc_html_e( 'Can read a small set of site details. It can never request a change of any kind. Most ordinary questions will be refused.', 'ai-command-center' ); ?></em>
+					</span>
+				</label>
+
+				<label class="wpcc-tokdlg__choice">
+					<input type="radio" name="wpcc-new-scope" value="full" />
+					<span>
+						<strong><?php esc_html_e( 'Full access — read the site and request changes', 'ai-command-center' ); ?></strong>
+						<em><?php esc_html_e( 'Can answer questions about the whole site and ask to change it. This is what a connected assistant normally needs.', 'ai-command-center' ); ?></em>
+					</span>
+				</label>
+			</fieldset>
+
+			<div class="wpcc-tokdlg__field">
+				<label class="wpcc-tokdlg__label" for="wpcc-new-expires"><?php esc_html_e( 'Stop working after', 'ai-command-center' ); ?></label>
+				<?php
+				// 30 days is the default; Never remains available as a deliberate
+				// choice rather than an inherited one. See the note in
+				// ai-integrations.php — both forms behave the same way.
+				?>
+				<select id="wpcc-new-expires">
+					<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'ai-command-center' ); ?></option>
+					<option value="90d"><?php esc_html_e( '90 days', 'ai-command-center' ); ?></option>
+					<option value="1y"><?php esc_html_e( '1 year', 'ai-command-center' ); ?></option>
+					<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'ai-command-center' ); ?></option>
+				</select>
+			</div>
+
+			<?php
+			// Shown only when Full access is selected — a warning that is always on
+			// screen is wallpaper. It has to be true, so it names the actual mode.
+			?>
+			<?php
+			// Full access AND never expires: a permanent key to everything, with no
+			// expiry to fall back on if it leaks. Shown only when both are chosen.
+			?>
+			<p class="wpcc-tokdlg__warn wpcc-tokdlg__warn--danger" id="wpcc-tokdlg-longlived" hidden>
+				<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'ai-command-center' ); ?>
+			</p>
+
+			<p class="wpcc-tokdlg__warn<?php echo esc_attr( $wpcc_tok_protected ? '' : ' wpcc-tokdlg__warn--danger' ); ?>" id="wpcc-tokdlg-warn" hidden>
+				<?php if ( $wpcc_tok_protected ) : ?>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %s: the site's protection mode, e.g. "Standard protection". */
+							__( 'Full access lets this token ask to change anything on the site. This site is on %s, so nothing is actually changed until you approve it in Approvals.', 'ai-command-center' ),
+							$wpcc_tok_mode
+						)
+					);
+					?>
+				<?php else : ?>
+					<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'ai-command-center' ); ?>
+				<?php endif; ?>
+			</p>
+
+			<div id="wpcc-tokdlg-result" class="wpcc-cap-result" style="display:none;" role="status" aria-live="polite"></div>
+
+			<p class="wpcc-modal-actions">
+				<button type="button" class="button" id="wpcc-tokdlg-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-create"><?php esc_html_e( 'Create token', 'ai-command-center' ); ?></button>
+			</p>
+		</div>
+
+		<?php // ── The one-time secret. Replaces the form in place, so the customer stays put. ── ?>
+		<div id="wpcc-tokdlg-secret" hidden>
+			<p class="wpcc-tokdlg__ready" id="wpcc-tokdlg-ready"></p>
+			<p class="wpcc-tokdlg__hint">
+				<?php esc_html_e( 'This is the only time it will be shown. Copy it now and paste it into your assistant — if you lose it, revoke this token and create another.', 'ai-command-center' ); ?>
+			</p>
+			<div class="wpcc-tokdlg__secretrow">
+				<input type="text" id="wpcc-tokdlg-value" class="large-text code" readonly />
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-copy"><?php esc_html_e( 'Copy', 'ai-command-center' ); ?></button>
+			</div>
+			<p class="wpcc-tokdlg__copied" id="wpcc-tokdlg-copied" role="status" hidden><?php esc_html_e( 'Copied to your clipboard.', 'ai-command-center' ); ?></p>
+			<p class="wpcc-modal-actions">
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-done"><?php esc_html_e( 'Done', 'ai-command-center' ); ?></button>
+			</p>
+		</div>
+	</div>
 </div>
 
 <?php // STEP 107.3/107.4 — one shared confirm modal for capability writes AND token lifecycle. ?>
 <div id="wpcc-cap-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-cap-modal-title" aria-describedby="wpcc-cap-modal-msg">
 	<div class="wpcc-modal-box" role="document">
-		<h2 id="wpcc-cap-modal-title"><?php esc_html_e( 'Please confirm', 'wp-command-center' ); ?></h2>
+		<h2 id="wpcc-cap-modal-title"><?php esc_html_e( 'Please confirm', 'ai-command-center' ); ?></h2>
 		<p id="wpcc-cap-modal-msg"></p>
 		<div id="wpcc-cap-modal-result" class="wpcc-cap-result" style="display:none;" role="status" aria-live="polite"></div>
 		<p class="wpcc-modal-actions">
-			<button type="button" class="button button-primary" id="wpcc-cap-modal-confirm"><?php esc_html_e( 'Confirm', 'wp-command-center' ); ?></button>
-			<button type="button" class="button" id="wpcc-cap-modal-cancel"><?php esc_html_e( 'Cancel', 'wp-command-center' ); ?></button>
+			<button type="button" class="button button-primary" id="wpcc-cap-modal-confirm"><?php esc_html_e( 'Confirm', 'ai-command-center' ); ?></button>
+			<button type="button" class="button" id="wpcc-cap-modal-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
 		</p>
 	</div>
 </div>
@@ -92,6 +242,8 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 .wpcc-deny  { color:#b32d2e; }
 .wpcc-admin-note { background:#f0f6fc;border:1px solid #72aee6;border-radius:4px;padding:10px 14px;margin:10px 0;max-width:1000px;font-size:13px; }
 .wpcc-empty { background:#fff;border:1px solid #dcdcde;border-radius:4px;padding:18px;max-width:1000px;color:#50575e; }
+
+.wpcc-token-filter { display:inline-flex; align-items:center; gap:6px; margin:0 0 10px; font-size:12px; color:var(--wpcc-text-secondary); }
 .wpcc-reason { font-size:11px;color:#646970; }
 .wpcc-cap-manage { background:#f6f7f7;border:1px solid #dcdcde;border-radius:4px;padding:12px 14px;margin:10px 0 18px;max-width:1000px; }
 .wpcc-cap-assigned-row { display:flex;align-items:center;gap:8px;margin:4px 0; }
@@ -105,6 +257,29 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 .wpcc-cap-result.success { background:#edfaef;border:1px solid #00a32a; }
 .wpcc-cap-result.error   { background:#fce9e9;border:1px solid #d63638; }
 .wpcc-cap-result.info    { background:#f0f6fc;border:1px solid #72aee6; }
+
+/* Token creation dialog. */
+.wpcc-tokdlg__box { max-width:560px; }
+.wpcc-tokdlg__field { margin:0 0 18px;border:0;padding:0; }
+.wpcc-tokdlg__label { display:block;margin:0 0 6px;font-weight:600;font-size:13px;color:#1d2327; }
+.wpcc-tokdlg__hint { margin:6px 0 0;font-size:12px;line-height:1.6;color:#646970;max-width:64ch; }
+.wpcc-tokdlg__dupe { margin:8px 0 0;font-size:12px;line-height:1.6;color:#8a6100;
+	background:#fcf9e8;border:1px solid #f0e2a6;border-radius:6px;padding:8px 10px;max-width:64ch; }
+.wpcc-tokdlg__choice { display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin:0 0 8px;
+	border:1px solid #dcdcde;border-radius:8px;cursor:pointer; }
+.wpcc-tokdlg__choice:has(input:checked) { border-color:#2271b1;background:#f6fafd; }
+.wpcc-tokdlg__choice input { margin-top:3px;flex:0 0 auto; }
+.wpcc-tokdlg__choice strong { display:block;font-size:13px;color:#1d2327; }
+.wpcc-tokdlg__choice em { display:block;margin-top:4px;font-style:normal;font-size:12px;line-height:1.6;color:#646970; }
+.wpcc-tokdlg__warn { margin:0 0 18px;font-size:12px;line-height:1.6;color:#3c434a;
+	background:#f0f6fc;border:1px solid #c5d9ed;border-radius:6px;padding:10px 12px;max-width:64ch; }
+.wpcc-tokdlg__warn--danger { color:#8a2424;background:#fcf0f0;border-color:#eec2c2; }
+.wpcc-tokdlg__ready { margin:0 0 8px;font-size:14px;font-weight:600;color:#1d2327; }
+.wpcc-tokdlg__secretrow { display:flex;gap:8px;align-items:center;margin:12px 0 0; }
+.wpcc-tokdlg__secretrow input { flex:1 1 auto;font-family:Menlo,Consolas,monospace;font-size:12px; }
+.wpcc-tokdlg__copied { margin:8px 0 0;font-size:12px;color:#0a7c2f; }
+.wpcc-modal-actions { display:flex;gap:8px;justify-content:flex-end;align-items:center; }
+.wpcc-modal-actions .button { margin-left:0; }
 </style>
 
 <script>
@@ -118,98 +293,97 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		page:    <?php echo wp_json_encode( $page ); ?>
 	};
 	var i18n = {
-		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'wp-command-center' ) ); ?>,
-		emptyTokens: <?php echo wp_json_encode( __( 'No API tokens yet. Use the form above to create one and connect an AI agent.', 'wp-command-center' ) ); ?>,
-		emptyCaps:   <?php echo wp_json_encode( __( 'No capabilities are defined.', 'wp-command-center' ) ); ?>,
-		emptyOps:    <?php echo wp_json_encode( __( 'No operations are mapped.', 'wp-command-center' ) ); ?>,
-		notFound:    <?php echo wp_json_encode( __( 'Token not found. It may have been deleted.', 'wp-command-center' ) ); ?>,
-		none:        <?php echo wp_json_encode( __( 'None', 'wp-command-center' ) ); ?>,
-		never:       <?php echo wp_json_encode( __( 'Never', 'wp-command-center' ) ); ?>,
-		view:        <?php echo wp_json_encode( __( 'View', 'wp-command-center' ) ); ?>,
-		allow:       <?php echo wp_json_encode( __( 'Allowed', 'wp-command-center' ) ); ?>,
-		deny:        <?php echo wp_json_encode( __( 'Denied', 'wp-command-center' ) ); ?>,
-		colLabel:    <?php echo wp_json_encode( __( 'Label', 'wp-command-center' ) ); ?>,
-		colToken:    <?php echo wp_json_encode( __( 'Token', 'wp-command-center' ) ); ?>,
-		colScope:    <?php echo wp_json_encode( __( 'Scope', 'wp-command-center' ) ); ?>,
-		colStatus:   <?php echo wp_json_encode( __( 'Status', 'wp-command-center' ) ); ?>,
-		colAccess:   <?php echo wp_json_encode( __( 'Operation access', 'wp-command-center' ) ); ?>,
-		colLastUsed: <?php echo wp_json_encode( __( 'Last used', 'wp-command-center' ) ); ?>,
-		colCap:      <?php echo wp_json_encode( __( 'Capability', 'wp-command-center' ) ); ?>,
-		colUnlocks:  <?php echo wp_json_encode( __( 'Unlocks operations', 'wp-command-center' ) ); ?>,
-		colOp:       <?php echo wp_json_encode( __( 'Operation', 'wp-command-center' ) ); ?>,
-		colReqCap:   <?php echo wp_json_encode( __( 'Required capability', 'wp-command-center' ) ); ?>,
-		colReadOnly: <?php echo wp_json_encode( __( 'Read-only scope', 'wp-command-center' ) ); ?>,
-		colAccessOp: <?php echo wp_json_encode( __( 'Access', 'wp-command-center' ) ); ?>,
-		yes:         <?php echo wp_json_encode( __( 'Yes', 'wp-command-center' ) ); ?>,
-		no:          <?php echo wp_json_encode( __( 'No', 'wp-command-center' ) ); ?>,
+		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'ai-command-center' ) ); ?>,
+		emptyTokens: <?php echo wp_json_encode( __( 'No access tokens yet. Create one above, then paste it into your assistant to connect it.', 'ai-command-center' ) ); ?>,
+		emptyActive: <?php echo wp_json_encode( __( 'No active tokens. Create one above, or show revoked tokens to review past access.', 'ai-command-center' ) ); ?>,
+		/* translators: %1$d and %2$d are both the number of revoked or expired tokens */
+		showRevoked: <?php echo wp_json_encode( /* translators: %1$d: number */ __( 'Show %1$d revoked or expired token(s)', 'ai-command-center' ) ); ?>,
+		emptyCaps:   <?php echo wp_json_encode( __( 'No capabilities are defined.', 'ai-command-center' ) ); ?>,
+		emptyOps:    <?php echo wp_json_encode( __( 'No operations are mapped.', 'ai-command-center' ) ); ?>,
+		notFound:    <?php echo wp_json_encode( __( 'Token not found. It may have been deleted.', 'ai-command-center' ) ); ?>,
+		none:        <?php echo wp_json_encode( __( 'None', 'ai-command-center' ) ); ?>,
+		never:       <?php echo wp_json_encode( __( 'Never', 'ai-command-center' ) ); ?>,
+		view:        <?php echo wp_json_encode( __( 'View', 'ai-command-center' ) ); ?>,
+		allow:       <?php echo wp_json_encode( __( 'Allowed', 'ai-command-center' ) ); ?>,
+		deny:        <?php echo wp_json_encode( __( 'Denied', 'ai-command-center' ) ); ?>,
+		colLabel:    <?php echo wp_json_encode( __( 'Label', 'ai-command-center' ) ); ?>,
+		colToken:    <?php echo wp_json_encode( __( 'Token', 'ai-command-center' ) ); ?>,
+		colScope:    <?php echo wp_json_encode( __( 'Scope', 'ai-command-center' ) ); ?>,
+		colStatus:   <?php echo wp_json_encode( __( 'Status', 'ai-command-center' ) ); ?>,
+		colAccess:   <?php echo wp_json_encode( __( 'Operation access', 'ai-command-center' ) ); ?>,
+		colLastUsed: <?php echo wp_json_encode( __( 'Last used', 'ai-command-center' ) ); ?>,
+		colCap:      <?php echo wp_json_encode( __( 'Capability', 'ai-command-center' ) ); ?>,
+		colUnlocks:  <?php echo wp_json_encode( __( 'Unlocks operations', 'ai-command-center' ) ); ?>,
+		colOp:       <?php echo wp_json_encode( __( 'Operation', 'ai-command-center' ) ); ?>,
+		colReqCap:   <?php echo wp_json_encode( __( 'Required capability', 'ai-command-center' ) ); ?>,
+		colReadOnly: <?php echo wp_json_encode( __( 'Read-only scope', 'ai-command-center' ) ); ?>,
+		colAccessOp: <?php echo wp_json_encode( __( 'Access', 'ai-command-center' ) ); ?>,
+		yes:         <?php echo wp_json_encode( __( 'Yes', 'ai-command-center' ) ); ?>,
+		no:          <?php echo wp_json_encode( __( 'No', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d allowed operations, %2$d total operations */
-		accessFmt:   <?php echo wp_json_encode( __( '%1$d / %2$d operations', 'wp-command-center' ) ); ?>,
-		dLabel:      <?php echo wp_json_encode( __( 'Label', 'wp-command-center' ) ); ?>,
-		dPreview:    <?php echo wp_json_encode( __( 'Token preview', 'wp-command-center' ) ); ?>,
-		dScope:      <?php echo wp_json_encode( __( 'Scope', 'wp-command-center' ) ); ?>,
-		dStatus:     <?php echo wp_json_encode( __( 'Status', 'wp-command-center' ) ); ?>,
-		dCaps:       <?php echo wp_json_encode( __( 'Assigned capabilities', 'wp-command-center' ) ); ?>,
-		dCreated:    <?php echo wp_json_encode( __( 'Created', 'wp-command-center' ) ); ?>,
-		dExpires:    <?php echo wp_json_encode( __( 'Expires', 'wp-command-center' ) ); ?>,
-		dLastUsed:   <?php echo wp_json_encode( __( 'Last used', 'wp-command-center' ) ); ?>,
-		dAccess:     <?php echo wp_json_encode( __( 'Operation access', 'wp-command-center' ) ); ?>,
-		matrixTitle: <?php echo wp_json_encode( __( 'Operation access matrix', 'wp-command-center' ) ); ?>,
-		adminNote:   <?php echo wp_json_encode( __( 'This token has system.admin (full access). It can run every operation regardless of individual capabilities.', 'wp-command-center' ) ); ?>,
-		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted (system.admin)', 'wp-command-center' ) ); ?>,
-		reasonAdmin: <?php echo wp_json_encode( __( 'system.admin', 'wp-command-center' ) ); ?>,
-		reasonScope: <?php echo wp_json_encode( __( 'blocked by read-only scope', 'wp-command-center' ) ); ?>,
-		reasonMiss:  <?php echo wp_json_encode( __( 'missing capability', 'wp-command-center' ) ); ?>,
-		reasonHas:   <?php echo wp_json_encode( __( 'capability assigned', 'wp-command-center' ) ); ?>,
-		auditTitle:  <?php echo wp_json_encode( __( 'Capability audit trail', 'wp-command-center' ) ); ?>,
-		auditEmpty:  <?php echo wp_json_encode( __( 'No capability changes recorded for this token yet.', 'wp-command-center' ) ); ?>,
-		colWhen:     <?php echo wp_json_encode( __( 'When', 'wp-command-center' ) ); ?>,
-		colEvent:    <?php echo wp_json_encode( __( 'Event', 'wp-command-center' ) ); ?>,
-		colCapEvt:   <?php echo wp_json_encode( __( 'Capability', 'wp-command-center' ) ); ?>,
-		colActor:    <?php echo wp_json_encode( __( 'Actor', 'wp-command-center' ) ); ?>,
-		unknownActor:<?php echo wp_json_encode( __( 'unknown', 'wp-command-center' ) ); ?>,
-		manageTitle: <?php echo wp_json_encode( __( 'Manage capabilities', 'wp-command-center' ) ); ?>,
-		manageHelp:  <?php echo wp_json_encode( __( 'Assigning or removing a capability runs through the same audited engine, security mode, and approval gates as the agent API.', 'wp-command-center' ) ); ?>,
-		noAssigned:  <?php echo wp_json_encode( __( 'No capabilities assigned. A read-only-scope token without capabilities can run nothing until one is assigned.', 'wp-command-center' ) ); ?>,
-		addLabel:    <?php echo wp_json_encode( __( 'Add capability', 'wp-command-center' ) ); ?>,
-		assignBtn:   <?php echo wp_json_encode( __( 'Assign', 'wp-command-center' ) ); ?>,
-		removeBtn:   <?php echo wp_json_encode( __( 'Remove', 'wp-command-center' ) ); ?>,
-		allAssigned: <?php echo wp_json_encode( __( 'All assignable capabilities are already granted.', 'wp-command-center' ) ); ?>,
-		adminLocked: <?php echo wp_json_encode( __( 'Capability editing is disabled for this token because system.admin already grants every operation.', 'wp-command-center' ) ); ?>,
+		accessFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d operations', 'ai-command-center' ) ); ?>,
+		dLabel:      <?php echo wp_json_encode( __( 'Label', 'ai-command-center' ) ); ?>,
+		dPreview:    <?php echo wp_json_encode( __( 'Token preview', 'ai-command-center' ) ); ?>,
+		dScope:      <?php echo wp_json_encode( __( 'Scope', 'ai-command-center' ) ); ?>,
+		dStatus:     <?php echo wp_json_encode( __( 'Status', 'ai-command-center' ) ); ?>,
+		dCaps:       <?php echo wp_json_encode( __( 'Assigned capabilities', 'ai-command-center' ) ); ?>,
+		dCreated:    <?php echo wp_json_encode( __( 'Created', 'ai-command-center' ) ); ?>,
+		dExpires:    <?php echo wp_json_encode( __( 'Expires', 'ai-command-center' ) ); ?>,
+		dLastUsed:   <?php echo wp_json_encode( __( 'Last used', 'ai-command-center' ) ); ?>,
+		dAccess:     <?php echo wp_json_encode( __( 'Operation access', 'ai-command-center' ) ); ?>,
+		matrixTitle: <?php echo wp_json_encode( __( 'Operation access matrix', 'ai-command-center' ) ); ?>,
+		adminNote:   <?php echo wp_json_encode( __( 'This token has system.admin (full access). It can run every operation regardless of individual capabilities.', 'ai-command-center' ) ); ?>,
+		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted (system.admin)', 'ai-command-center' ) ); ?>,
+		reasonAdmin: <?php echo wp_json_encode( __( 'system.admin', 'ai-command-center' ) ); ?>,
+		reasonScope: <?php echo wp_json_encode( __( 'blocked by read-only scope', 'ai-command-center' ) ); ?>,
+		reasonMiss:  <?php echo wp_json_encode( __( 'missing capability', 'ai-command-center' ) ); ?>,
+		reasonHas:   <?php echo wp_json_encode( __( 'capability assigned', 'ai-command-center' ) ); ?>,
+		auditTitle:  <?php echo wp_json_encode( __( 'Capability audit trail', 'ai-command-center' ) ); ?>,
+		auditEmpty:  <?php echo wp_json_encode( __( 'No capability changes recorded for this token yet.', 'ai-command-center' ) ); ?>,
+		colWhen:     <?php echo wp_json_encode( __( 'When', 'ai-command-center' ) ); ?>,
+		colEvent:    <?php echo wp_json_encode( __( 'Event', 'ai-command-center' ) ); ?>,
+		colCapEvt:   <?php echo wp_json_encode( __( 'Capability', 'ai-command-center' ) ); ?>,
+		colActor:    <?php echo wp_json_encode( __( 'Actor', 'ai-command-center' ) ); ?>,
+		unknownActor:<?php echo wp_json_encode( __( 'unknown', 'ai-command-center' ) ); ?>,
+		manageTitle: <?php echo wp_json_encode( __( 'Manage capabilities', 'ai-command-center' ) ); ?>,
+		manageHelp:  <?php echo wp_json_encode( __( 'Assigning or removing a capability runs through the same audited engine, security mode, and approval gates as the agent API.', 'ai-command-center' ) ); ?>,
+		noAssigned:  <?php echo wp_json_encode( __( 'No capabilities assigned. A read-only-scope token without capabilities can run nothing until one is assigned.', 'ai-command-center' ) ); ?>,
+		addLabel:    <?php echo wp_json_encode( __( 'Add capability', 'ai-command-center' ) ); ?>,
+		assignBtn:   <?php echo wp_json_encode( __( 'Assign', 'ai-command-center' ) ); ?>,
+		removeBtn:   <?php echo wp_json_encode( __( 'Remove', 'ai-command-center' ) ); ?>,
+		allAssigned: <?php echo wp_json_encode( __( 'All assignable capabilities are already granted.', 'ai-command-center' ) ); ?>,
+		adminLocked: <?php echo wp_json_encode( __( 'Capability editing is disabled for this token because system.admin already grants every operation.', 'ai-command-center' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmAssign: <?php echo wp_json_encode( __( 'Assign the capability "%s" to this token?', 'wp-command-center' ) ); ?>,
+		confirmAssign: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Assign the capability "%s" to this token?', 'ai-command-center' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmRemove: <?php echo wp_json_encode( __( 'Remove the capability "%s" from this token?', 'wp-command-center' ) ); ?>,
-		working:     <?php echo wp_json_encode( __( 'Working…', 'wp-command-center' ) ); ?>,
-		doneReload:  <?php echo wp_json_encode( __( 'Done. Reloading…', 'wp-command-center' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This change needs administrator approval and has been sent to the Approval Center.', 'wp-command-center' ) ); ?>,
-		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'wp-command-center' ) ); ?>,
-		genericFail: <?php echo wp_json_encode( __( 'The change could not be completed.', 'wp-command-center' ) ); ?>,
-		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'wp-command-center' ) ); ?>,
-		createHelp:  <?php echo wp_json_encode( __( 'AI agents authenticate to the REST API with a bearer token. The secret is shown once on creation.', 'wp-command-center' ) ); ?>,
-		fLabel:      <?php echo wp_json_encode( __( 'Label', 'wp-command-center' ) ); ?>,
-		fScope:      <?php echo wp_json_encode( __( 'Scope', 'wp-command-center' ) ); ?>,
-		fExpires:    <?php echo wp_json_encode( __( 'Expires', 'wp-command-center' ) ); ?>,
-		createBtn:   <?php echo wp_json_encode( __( 'Create token', 'wp-command-center' ) ); ?>,
-		scopeRead:   <?php echo wp_json_encode( __( 'Read-only', 'wp-command-center' ) ); ?>,
-		scopeFull:   <?php echo wp_json_encode( __( 'Full access', 'wp-command-center' ) ); ?>,
-		expNever:    <?php echo wp_json_encode( __( 'Never', 'wp-command-center' ) ); ?>,
-		exp30:       <?php echo wp_json_encode( __( '30 days', 'wp-command-center' ) ); ?>,
-		exp90:       <?php echo wp_json_encode( __( '90 days', 'wp-command-center' ) ); ?>,
-		exp1y:       <?php echo wp_json_encode( __( '1 year', 'wp-command-center' ) ); ?>,
-		labelReq:    <?php echo wp_json_encode( __( 'Enter a label for this token first.', 'wp-command-center' ) ); ?>,
-		newTokenLbl: <?php echo wp_json_encode( __( 'New token (copy it now — it will not be shown again):', 'wp-command-center' ) ); ?>,
-		colActions:  <?php echo wp_json_encode( __( 'Actions', 'wp-command-center' ) ); ?>,
-		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'wp-command-center' ) ); ?>,
-		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'wp-command-center' ) ); ?>,
+		confirmRemove: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Remove the capability "%s" from this token?', 'ai-command-center' ) ); ?>,
+		working:     <?php echo wp_json_encode( __( 'Working…', 'ai-command-center' ) ); ?>,
+		doneReload:  <?php echo wp_json_encode( __( 'Done. Reloading…', 'ai-command-center' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This change needs your approval. It has been sent to Approvals.', 'ai-command-center' ) ); ?>,
+		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'ai-command-center' ) ); ?>,
+		// Says what happened, that nothing changed, and what to do next. "The
+		// change could not be completed." left the customer to guess all three.
+		genericFail: <?php echo wp_json_encode( __( 'That did not go through, so nothing has changed. Check your connection and try again — if it keeps happening, look under Settings › Advanced › Diagnostics.', 'ai-command-center' ) ); ?>,
+		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'ai-command-center' ) ); ?>,
+		createHelp:  <?php echo wp_json_encode( __( 'A token is how one assistant reaches this site. You choose what it may do and when it stops working; it is shown once, when you create it.', 'ai-command-center' ) ); ?>,
+		createBtn:   <?php echo wp_json_encode( __( 'Create token', 'ai-command-center' ) ); ?>,
+		creating:    <?php echo wp_json_encode( __( 'Creating…', 'ai-command-center' ) ); ?>,
+		labelReq:    <?php echo wp_json_encode( __( 'Give this token a name first — you will need it to tell your tokens apart later.', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the name the customer gave the token. */
+		tokenReady:  <?php echo wp_json_encode( /* translators: %s: value */ __( '“%s” is ready', 'ai-command-center' ) ); ?>,
+		/* translators: %s: the name of an existing active token. */
+		dupeWarn:    <?php echo wp_json_encode( /* translators: %s: value */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'ai-command-center' ) ); ?>,
+		colActions:  <?php echo wp_json_encode( __( 'Actions', 'ai-command-center' ) ); ?>,
+		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'ai-command-center' ) ); ?>,
+		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'ai-command-center' ) ); ?>,
 		/* translators: %s: token label */
-		confirmRevoke: <?php echo wp_json_encode( __( 'Revoke the token "%s"? Any AI agent using it loses access immediately.', 'wp-command-center' ) ); ?>,
+		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any assistant using it loses access immediately.', 'ai-command-center' ) ); ?>,
 		/* translators: %s: token label */
-		confirmDelete: <?php echo wp_json_encode( __( 'Permanently delete the token "%s"? This cannot be undone.', 'wp-command-center' ) ); ?>,
-		tokenCreated:  <?php echo wp_json_encode( __( 'Token created.', 'wp-command-center' ) ); ?>,
-		prev:          <?php echo wp_json_encode( __( '← Previous', 'wp-command-center' ) ); ?>,
-		next:          <?php echo wp_json_encode( __( 'Next →', 'wp-command-center' ) ); ?>,
+		confirmDelete: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Permanently delete the token "%s"? This cannot be undone.', 'ai-command-center' ) ); ?>,
+		prev:          <?php echo wp_json_encode( __( '← Previous', 'ai-command-center' ) ); ?>,
+		next:          <?php echo wp_json_encode( __( 'Next →', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d first row on page, %2$d last row on page, %3$d total */
-		pageInfo:      <?php echo wp_json_encode( __( 'Tokens %1$d–%2$d of %3$d', 'wp-command-center' ) ); ?>
+		pageInfo:      <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Tokens %1$d–%2$d of %3$d', 'ai-command-center' ) ); ?>
 	};
 
 	function escHtml( s ) {
@@ -256,34 +430,51 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	function fail( id ) { setHtml( id, '<div class="wpcc-empty">' + escHtml( i18n.loadFail ) + '</div>' ); }
 
 	// ── Tokens list + lifecycle (STEP 107.4) ─────────────────────────────────
-	function renderTokens( tokens ) {
-		var h = '<div id="wpcc-new-token" class="wpcc-cap-result info" style="display:none;" role="status" aria-live="polite"></div>';
+	// Presentation-only filter state. No request changes; the same payload is
+	// simply rendered without the dead tokens unless asked for.
+	var showRevoked = false;
+	var lastTokens  = [];
 
-		// Create form (reuses AuthTokens::create server-side; secret shown once).
+	function renderTokens( tokens ) {
+		lastTokens = tokens;
+		var h = '';
+
+		/*
+		 * The create CONTROL, not the create form.
+		 *
+		 * This panel used to render the whole form — label box, scope dropdown,
+		 * expiry dropdown and a primary "Create token" button — permanently open
+		 * above the token list. The default state of a page whose job is to review
+		 * and revoke access was therefore "one click away from minting a new key",
+		 * with the scope sitting in a dropdown that explained neither of its two
+		 * options. The form now lives in a dialog the customer opens on purpose.
+		 */
 		h += '<div class="wpcc-cap-manage wpcc-create-token">' +
 			'<h2 style="margin-top:0;">' + escHtml( i18n.createTitle ) + '</h2>' +
 			'<p class="description">' + escHtml( i18n.createHelp ) + '</p>' +
-			'<div class="wpcc-cap-add">' +
-				'<label for="wpcc-new-label">' + escHtml( i18n.fLabel ) + '</label>' +
-				'<input type="text" id="wpcc-new-label" class="regular-text" autocomplete="off" />' +
-				'<label for="wpcc-new-scope">' + escHtml( i18n.fScope ) + '</label>' +
-				'<select id="wpcc-new-scope">' +
-					'<option value="read_only">' + escHtml( i18n.scopeRead ) + '</option>' +
-					'<option value="full">' + escHtml( i18n.scopeFull ) + '</option>' +
-				'</select>' +
-				'<label for="wpcc-new-expires">' + escHtml( i18n.fExpires ) + '</label>' +
-				'<select id="wpcc-new-expires">' +
-					'<option value="never">' + escHtml( i18n.expNever ) + '</option>' +
-					'<option value="30d">' + escHtml( i18n.exp30 ) + '</option>' +
-					'<option value="90d">' + escHtml( i18n.exp90 ) + '</option>' +
-					'<option value="1y">' + escHtml( i18n.exp1y ) + '</option>' +
-				'</select>' +
-				'<button type="button" class="button button-primary" id="wpcc-create-token">' + escHtml( i18n.createBtn ) + '</button>' +
-			'</div>' +
+			'<button type="button" class="button button-primary" id="wpcc-create-token" aria-haspopup="dialog">' + escHtml( i18n.createBtn ) + '</button>' +
 			'</div>';
 
 		if ( ! tokens.length ) {
 			return h + '<div class="wpcc-empty">' + escHtml( i18n.emptyTokens ) + '</div>';
+		}
+
+		// Revoked and expired tokens are history, not access. A site that has been
+		// running for a while accumulates them (208 on the test install), and
+		// listing them by default buried the two tokens that actually work behind
+		// screens of dead ones. They are one checkbox away, never deleted.
+		var revokedCount = tokens.filter( function ( t ) { return t.effective_status !== 'active'; } ).length;
+		var shown = showRevoked ? tokens : tokens.filter( function ( t ) { return t.effective_status === 'active'; } );
+
+		if ( revokedCount > 0 ) {
+			h += '<label class="wpcc-token-filter">' +
+				'<input type="checkbox" id="wpcc-show-revoked"' + ( showRevoked ? ' checked' : '' ) + '> ' +
+				escHtml( sprintf2( i18n.showRevoked, revokedCount, revokedCount ) ) +
+			'</label>';
+		}
+
+		if ( ! shown.length ) {
+			return h + '<div class="wpcc-empty">' + escHtml( i18n.emptyActive ) + '</div>';
 		}
 
 		h += '<table class="widefat striped wpcc-tokens-table"><thead><tr>' +
@@ -294,7 +485,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 			'<th>' + escHtml( i18n.colAccess ) + '</th>' +
 			'<th>' + escHtml( i18n.colLastUsed ) + '</th>' +
 			'<th>' + escHtml( i18n.colActions ) + '</th></tr></thead><tbody>';
-		tokens.forEach( function( t ) {
+		shown.forEach( function( t ) {
 			var access = t.is_admin
 				? escHtml( i18n.unrestricted )
 				: escHtml( sprintf2( i18n.accessFmt, t.allowed_operations, t.total_operations ) );
@@ -570,49 +761,40 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 	}
 
 	// ── Token lifecycle (STEP 107.4) — create / revoke / delete ──────────────
-	// Reuses the same confirm modal + apiFetch. revoke/delete reuse doWrite (which
-	// reloads on success); create preserves the one-time secret instead of a full
-	// reload, then re-renders the list in place.
-	function bannerMsg( cls, text ) {
-		var b = document.getElementById( 'wpcc-new-token' );
-		if ( ! b ) { return; }
-		b.className = 'wpcc-cap-result ' + cls;
-		b.style.display = 'block';
-		b.textContent = text;
-	}
-	function showNewToken( secret ) {
-		var b = document.getElementById( 'wpcc-new-token' );
-		if ( ! b ) { return; }
-		b.className = 'wpcc-cap-result info';
-		b.style.display = 'block';
-		b.textContent = '';
-		var strong = document.createElement( 'strong' );
-		strong.textContent = i18n.newTokenLbl + ' ';
-		var inp = document.createElement( 'input' );
-		inp.type = 'text'; inp.readOnly = true; inp.className = 'large-text code'; inp.value = secret;
-		inp.addEventListener( 'focus', function() { inp.select(); } );
-		b.appendChild( strong );
-		b.appendChild( inp );
-	}
+	// Revoke/delete reuse doWrite (confirm modal, reloads on success). Create now
+	// owns its own dialog below, which is also where the one-time secret is shown
+	// — so the banner-in-the-list plumbing that used to carry it is gone.
 	// S2.1 — server-side token pagination state.
 	var tokPg = { limit: 20, offset: 0, total: 0, returned: 0, hasMore: false };
 
 	// Fetch ONE page of tokens from the server (canonical envelope: items + paging).
 	// The UI renders only the returned page — it never loads every token.
-	function loadTokensPage( secret ) {
+	function loadTokensPage() {
 		apiFetch( '/tokens?limit=' + tokPg.limit + '&offset=' + tokPg.offset ).then( function( r ) {
 			if ( ! r.ok || ! r.body ) { return fail( 'wpcc-tokens-panel' ); }
 			tokPg.total    = r.body.total_count || 0;
 			tokPg.returned = r.body.returned || ( r.body.items ? r.body.items.length : 0 );
 			tokPg.hasMore  = !! r.body.has_more;
 			setHtml( 'wpcc-tokens-panel', renderTokens( r.body.items || [] ) + renderTokensPager() );
+			bindRevokedToggle();
 			wireTokens();
 			wireTokensPager();
-			if ( secret ) { showNewToken( secret ); }
 		} ).catch( function() { fail( 'wpcc-tokens-panel' ); } );
 	}
-	// Create flow re-renders the current page in place (keeps the one-time secret).
-	function reloadTokensPanel( secret ) { loadTokensPage( secret ); }
+
+	function bindRevokedToggle() {
+		var cb = document.getElementById( 'wpcc-show-revoked' );
+		if ( ! cb ) { return; }
+		cb.addEventListener( 'change', function () {
+			showRevoked = cb.checked;
+			setHtml( 'wpcc-tokens-panel', renderTokens( lastTokens ) + renderTokensPager() );
+			// Re-bind the row actions and pager: setHtml replaces the panel, so the
+			// listeners attached to the previous DOM are gone with it.
+			wireTokens();
+			wireTokensPager();
+			bindRevokedToggle();
+		} );
+	}
 
 	function renderTokensPager() {
 		if ( tokPg.total <= tokPg.limit && tokPg.offset === 0 ) { return ''; }
@@ -633,32 +815,187 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		if ( prev ) { prev.addEventListener( 'click', function() { if ( tokPg.offset > 0 ) { tokPg.offset = Math.max( 0, tokPg.offset - tokPg.limit ); loadTokensPage(); } } ); }
 		if ( next ) { next.addEventListener( 'click', function() { if ( tokPg.hasMore ) { tokPg.offset += tokPg.limit; loadTokensPage(); } } ); }
 	}
-	function createToken() {
-		var labelEl = document.getElementById( 'wpcc-new-label' );
-		var label   = labelEl ? labelEl.value : '';
-		if ( ! label || ! label.trim() ) { bannerMsg( 'error', i18n.labelReq ); if ( labelEl ) { labelEl.focus(); } return; }
-		var scope   = ( document.getElementById( 'wpcc-new-scope' )   || {} ).value || 'read_only';
-		var expires = ( document.getElementById( 'wpcc-new-expires' ) || {} ).value || 'never';
-		openModal( i18n.createTitle + ' — ' + label, function() {
-			modalOk.disabled = true;
-			showResult( 'info', i18n.working );
-			apiFetch( '/tokens', { method: 'POST', body: JSON.stringify( { label: label, scope: scope, expires: expires } ) } ).then( function( r ) {
-				if ( r.status === 403 ) { showResult( 'error', i18n.nonceFail ); return; }
-				var body = r.body || {};
-				if ( body.success && body.token ) {
-					showResult( 'success', i18n.tokenCreated );
-					var secret = body.token;
-					setTimeout( function() { closeModal(); reloadTokensPanel( secret ); }, 500 );
-					return;
-				}
-				var msg = ( body.errors && body.errors[0] && body.errors[0].message ) ? body.errors[0].message : i18n.genericFail;
-				showResult( 'error', msg );
-			} ).catch( function() { showResult( 'error', i18n.genericFail ); } );
+	// ── Create dialog ────────────────────────────────────────────────────────
+	// Built once, outside the token list, so re-rendering the list (paging, the
+	// revoked filter, a successful create) never rebuilds it and never drops its
+	// listeners. The old inline form was re-created on every render, which is why
+	// every render also had to re-wire it.
+	var dlg = {
+		root:    document.getElementById( 'wpcc-tok-dialog' ),
+		form:    document.getElementById( 'wpcc-tokdlg-form' ),
+		secret:  document.getElementById( 'wpcc-tokdlg-secret' ),
+		label:   document.getElementById( 'wpcc-new-label' ),
+		expires: document.getElementById( 'wpcc-new-expires' ),
+		dupe:    document.getElementById( 'wpcc-tokdlg-dupe' ),
+		warn:    document.getElementById( 'wpcc-tokdlg-warn' ),
+		longLived: document.getElementById( 'wpcc-tokdlg-longlived' ),
+		result:  document.getElementById( 'wpcc-tokdlg-result' ),
+		create:  document.getElementById( 'wpcc-tokdlg-create' ),
+		cancel:  document.getElementById( 'wpcc-tokdlg-cancel' ),
+		value:   document.getElementById( 'wpcc-tokdlg-value' ),
+		ready:   document.getElementById( 'wpcc-tokdlg-ready' ),
+		copy:    document.getElementById( 'wpcc-tokdlg-copy' ),
+		copied:  document.getElementById( 'wpcc-tokdlg-copied' ),
+		done:    document.getElementById( 'wpcc-tokdlg-done' )
+	};
+	var dlgPrev    = null;
+	var dlgWorking = false;   // in-flight guard: one create per opening, always.
+	var dlgSecret  = null;
+
+	function dlgScope() {
+		var el = dlg.root.querySelector( 'input[name="wpcc-new-scope"]:checked' );
+		return el ? el.value : 'read_only';
+	}
+	function dlgSyncScope() {
+		// The full-access warning appears only when full access is actually chosen.
+		var isFull = dlgScope() === 'full';
+		dlg.warn.hidden = ! isFull;
+		// The long-lived-credential warning needs BOTH full access and no expiry.
+		if ( dlg.longLived ) {
+			dlg.longLived.hidden = ! ( isFull && dlg.expires && dlg.expires.value === 'never' );
+		}
+	}
+	function dlgCheckDupe() {
+		// Warn, do not block. Two assistants legitimately share a name; what is
+		// unsafe is discovering three identical rows later and not knowing which
+		// one to revoke. Say it now, while the name can still be changed.
+		var v = ( dlg.label.value || '' ).trim().toLowerCase();
+		var hit = null;
+		if ( v ) {
+			for ( var i = 0; i < lastTokens.length; i++ ) {
+				var t = lastTokens[ i ];
+				if ( t.effective_status === 'active' && String( t.label || '' ).trim().toLowerCase() === v ) { hit = t.label; break; }
+			}
+		}
+		if ( hit ) {
+			dlg.dupe.textContent = i18n.dupeWarn.replace( '%s', hit );
+			dlg.dupe.hidden = false;
+		} else {
+			dlg.dupe.hidden = true;
+			dlg.dupe.textContent = '';
+		}
+	}
+	function dlgFocusable() {
+		return Array.prototype.filter.call(
+			dlg.root.querySelectorAll( 'button, input, select, textarea, [href]' ),
+			function ( el ) { return ! el.disabled && el.offsetParent !== null; }
+		);
+	}
+	function dlgOpen() {
+		dlgPrev    = document.activeElement;
+		dlgWorking = false;
+		dlgSecret  = null;
+		dlg.form.hidden   = false;
+		dlg.secret.hidden = true;
+		dlg.label.value   = '';
+		dlg.expires.value = '30d';
+		var ro = dlg.root.querySelector( 'input[name="wpcc-new-scope"][value="read_only"]' );
+		if ( ro ) { ro.checked = true; }
+		dlg.result.style.display = 'none';
+		dlg.result.textContent   = '';
+		dlg.copied.hidden = true;
+		dlg.create.disabled = false;
+		dlg.create.textContent = i18n.createBtn;
+		dlgSyncScope();
+		dlgCheckDupe();
+		dlg.root.style.display = 'flex';
+		dlg.label.focus();
+	}
+	function dlgClose() {
+		dlg.root.style.display = 'none';
+		if ( dlgPrev && dlgPrev.focus ) { dlgPrev.focus(); }
+		// A created token means the list behind the dialog is out of date.
+		if ( dlgSecret ) { dlgSecret = null; loadTokensPage(); }
+	}
+	function dlgResult( cls, text ) {
+		dlg.result.className = 'wpcc-cap-result ' + cls;
+		dlg.result.textContent = text;
+		dlg.result.style.display = 'block';
+	}
+	function dlgSubmit() {
+		if ( dlgWorking ) { return; }
+
+		var label = ( dlg.label.value || '' ).trim();
+		if ( ! label ) { dlgResult( 'error', i18n.labelReq ); dlg.label.focus(); return; }
+
+		dlgWorking = true;
+		dlg.create.disabled = true;
+		dlg.create.textContent = i18n.creating;
+		dlgResult( 'info', i18n.working );
+
+		apiFetch( '/tokens', {
+			method: 'POST',
+			body: JSON.stringify( { label: label, scope: dlgScope(), expires: dlg.expires.value } )
+		} ).then( function ( r ) {
+			if ( r.status === 403 ) { dlgFail( i18n.nonceFail ); return; }
+			var body = r.body || {};
+			if ( body.success && body.token ) {
+				dlgSecret = body.token;
+				dlg.value.value = body.token;
+				dlg.ready.textContent = i18n.tokenReady.replace( '%s', label );
+				dlg.form.hidden   = true;
+				dlg.secret.hidden = false;
+				dlg.copy.focus();
+				return;
+			}
+			var msg = ( body.errors && body.errors[0] && body.errors[0].message ) ? body.errors[0].message : i18n.genericFail;
+			dlgFail( msg );
+		} ).catch( function () { dlgFail( i18n.genericFail ); } );
+	}
+	function dlgFail( msg ) {
+		// Re-arm on failure only. A success never re-arms, because the dialog has
+		// moved on to showing a secret that cannot be shown twice.
+		dlgWorking = false;
+		dlg.create.disabled = false;
+		dlg.create.textContent = i18n.createBtn;
+		dlgResult( 'error', msg );
+	}
+	function dlgCopy() {
+		var text = dlg.value.value;
+		function ok() { dlg.copied.hidden = false; }
+		if ( navigator.clipboard && navigator.clipboard.writeText ) {
+			navigator.clipboard.writeText( text ).then( ok ).catch( function () { dlg.value.select(); } );
+		} else {
+			dlg.value.select();
+			try { document.execCommand( 'copy' ); ok(); } catch ( e ) {}
+		}
+	}
+
+	if ( dlg.root ) {
+		dlg.create.addEventListener( 'click', dlgSubmit );
+		dlg.cancel.addEventListener( 'click', dlgClose );
+		dlg.done.addEventListener( 'click', dlgClose );
+		dlg.copy.addEventListener( 'click', dlgCopy );
+		dlg.label.addEventListener( 'input', dlgCheckDupe );
+		dlg.expires.addEventListener( 'change', dlgSyncScope );
+		dlg.value.addEventListener( 'focus', function () { dlg.value.select(); } );
+		Array.prototype.forEach.call( dlg.root.querySelectorAll( 'input[name="wpcc-new-scope"]' ), function ( r ) {
+			r.addEventListener( 'change', dlgSyncScope );
+		} );
+		// Enter in the name field means "create", not "do nothing".
+		dlg.label.addEventListener( 'keydown', function ( e ) {
+			if ( e.key === 'Enter' ) { e.preventDefault(); dlgSubmit(); }
+		} );
+		dlg.root.addEventListener( 'keydown', function ( e ) {
+			if ( dlg.root.style.display === 'none' ) { return; }
+			if ( e.key === 'Escape' ) { e.preventDefault(); dlgClose(); return; }
+			if ( e.key !== 'Tab' ) { return; }
+			var f = dlgFocusable();
+			if ( ! f.length ) { return; }
+			var first = f[0], last = f[ f.length - 1 ];
+			if ( e.shiftKey && document.activeElement === first ) { e.preventDefault(); last.focus(); }
+			else if ( ! e.shiftKey && document.activeElement === last ) { e.preventDefault(); first.focus(); }
+		} );
+		// Backdrop cancels — but never while a secret the customer has not copied
+		// is on screen, because that secret cannot be recovered.
+		dlg.root.addEventListener( 'click', function ( e ) {
+			if ( e.target === dlg.root && ! dlgSecret ) { dlgClose(); }
 		} );
 	}
+
 	function wireTokens() {
 		var createBtn = document.getElementById( 'wpcc-create-token' );
-		if ( createBtn ) { createBtn.addEventListener( 'click', createToken ); }
+		if ( createBtn ) { createBtn.addEventListener( 'click', dlgOpen ); }
 		Array.prototype.forEach.call( document.querySelectorAll( '.wpcc-token-revoke' ), function( btn ) {
 			btn.addEventListener( 'click', function() {
 				doWrite( 'POST', '/tokens/' + encodeURIComponent( btn.getAttribute( 'data-id' ) ) + '/revoke', null, btn.getAttribute( 'data-label' ), i18n.confirmRevoke );

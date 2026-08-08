@@ -95,7 +95,7 @@ echo "== 5. Snapshot protection: large-file guard + atomic write + hash fidelity
 SNAP=$(wpe '
 // Snapshot is READ-ONLY on the source; use an existing allowed plugin file
 // (PathGuard permits themes/plugins/mu-plugins only).
-$rel = "plugins/wp-command-center/readme.txt";
+$rel = "plugins/ai-command-center/readme.txt";
 $src = WP_CONTENT_DIR . "/" . $rel;
 $m = new \WPCommandCenter\Rollback\SnapshotManager();
 $ok = $m->create($rel, "105.6 test");
@@ -135,9 +135,9 @@ echo "== 7. Invariants: no op_map / capability / DB / MCP-tool-count change =="
 M=$(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/agent/manifest")
 assert_eq "operation_map stays 34" "34" "$(pj "$M" '.capability_management.operation_map | keys | length')"
 assert_eq "capabilities stay 23"   "23" "$(pj "$M" '.capability_management.capabilities | length')"
-assert_eq "DB_VERSION 2.5.0"       "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "DB_VERSION 2.6.0"       "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 TOOLS=$(curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' "$WPCC_BASE/mcp" | jq -r '.result.tools | length')
-assert_eq "MCP tool count stays 40" "40" "$TOOLS"
+assert_eq "MCP tool count stays 42" "42" "$TOOLS"
 
 echo
 echo "== Summary =="

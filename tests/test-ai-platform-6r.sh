@@ -66,7 +66,7 @@ has "custom openai-compatible present" "'custom-openai'" "$PCAT"
 has "openrouter present" "'openrouter'" "$PCAT"
 
 echo "== 6. Functional (wp eval-file) =="
-PHPF="$(mktemp -t wpcc6r.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc6r.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\Dialect as D;

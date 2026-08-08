@@ -22,7 +22,7 @@ final class MediaRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$action = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $action, MediaRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_media_action', __( 'Invalid media action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_media_action', InvalidAction::message( 'media', $action, MediaRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {
@@ -44,7 +44,7 @@ final class MediaRuntimeManager {
 			MediaRegistry::ACTION_SNAPSHOT_RESTORE    => $this->snapshot_restore( $payload, $context ),
 			MediaRegistry::ACTION_SNAPSHOT_VERIFY     => $this->snapshot_verify( $payload ),
 			MediaRegistry::ACTION_SNAPSHOT_LIST       => $this->snapshot_list( $payload ),
-			default => $this->error( 'wpcc_unknown_media_action', __( 'Unknown media action.', 'wp-command-center' ) ),
+			default => $this->error( 'wpcc_unknown_media_action', __( 'Unknown media action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -63,7 +63,7 @@ final class MediaRuntimeManager {
 	private function snapshot_restore( array $payload, array $context ): array {
 		$snapshot_id = (string) ( $payload['snapshot_id'] ?? '' );
 		if ( '' === $snapshot_id ) {
-			return $this->error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'ai-command-center' ) );
 		}
 		$result = ( new MediaSnapshot() )->restore( $snapshot_id );
 		if ( is_wp_error( $result ) ) {
@@ -75,7 +75,7 @@ final class MediaRuntimeManager {
 	private function snapshot_verify( array $payload ): array {
 		$snapshot_id = (string) ( $payload['snapshot_id'] ?? '' );
 		if ( '' === $snapshot_id ) {
-			return $this->error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_snapshot_id', __( 'snapshot_id is required.', 'ai-command-center' ) );
 		}
 		$result = ( new MediaSnapshot() )->verify( $snapshot_id );
 		if ( is_wp_error( $result ) ) {
@@ -99,7 +99,7 @@ final class MediaRuntimeManager {
 		$media_id = (int) ( $payload['media_id'] ?? 0 );
 		$post     = get_post( $media_id );
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 		$file = get_attached_file( $media_id );
 		$meta = wp_get_attachment_metadata( $media_id );
@@ -167,7 +167,7 @@ final class MediaRuntimeManager {
 		$post     = get_post( $media_id );
 
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'media.get', [ 'media_id' => $media_id ] );
@@ -176,9 +176,11 @@ final class MediaRuntimeManager {
 	}
 
 	private function search_media( array $payload ): array {
-		$search = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
+		// Accept the schema-advertised `search` plus common aliases the caller may
+		// reach for (query/s), so a reasonable parameter name never dead-ends.
+		$search = sanitize_text_field( (string) ( $payload['search'] ?? $payload['query'] ?? $payload['s'] ?? '' ) );
 		if ( '' === $search ) {
-			return $this->error( 'wpcc_media_empty_search', __( 'Search term is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_empty_search', __( "media_search requires a 'search' parameter (the keyword to look for; aliases: query, s).", 'ai-command-center' ) );
 		}
 
 		$query = new \WP_Query( [
@@ -206,7 +208,7 @@ final class MediaRuntimeManager {
 		$post_id    = (int) ( $payload['attach_to_post_id'] ?? 0 );
 
 		if ( '' === $source_url ) {
-			return $this->error( 'wpcc_missing_url', __( 'Source URL is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_url', __( 'Source URL is required.', 'ai-command-center' ) );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -225,7 +227,7 @@ final class MediaRuntimeManager {
 
 		$attach_id = media_handle_sideload( $file_array, $post_id, $title );
 		if ( is_wp_error( $attach_id ) ) {
-			@unlink( $tmp );
+			wp_delete_file( $tmp );
 			return $this->error( 'wpcc_upload_failed', $attach_id->get_error_message() );
 		}
 
@@ -262,7 +264,7 @@ final class MediaRuntimeManager {
 		$post     = get_post( $media_id );
 
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 
 		// At least one updatable field must be supplied.
@@ -274,7 +276,7 @@ final class MediaRuntimeManager {
 			}
 		}
 		if ( ! $has_field ) {
-			return $this->error( 'wpcc_media_no_fields', __( 'Provide at least one of: title, alt, caption, description.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_no_fields', __( 'Provide at least one of: title, alt, caption, description.', 'ai-command-center' ) );
 		}
 
 		// PROGRAM-4 / P4.2 — capture the prior state of ONLY the metadata fields this call
@@ -332,10 +334,10 @@ final class MediaRuntimeManager {
 		$post       = get_post( $media_id );
 
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 		if ( '' === $source_url ) {
-			return $this->error( 'wpcc_missing_url', __( 'Source URL is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_url', __( 'Source URL is required.', 'ai-command-center' ) );
 		}
 
 		$before = $this->format_media( $post );
@@ -363,9 +365,9 @@ final class MediaRuntimeManager {
 
 		// The downloaded source must be a real image.
 		if ( false === getimagesize( $tmp ) ) {
-			@unlink( $tmp );
+			wp_delete_file( $tmp );
 			$this->discard_replace_snapshot( $rollback_id, $snapshot['id'] );
-			return $this->error( 'wpcc_replace_not_image', __( 'The source file is not a valid image.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_replace_not_image', __( 'The source file is not a valid image.', 'ai-command-center' ) );
 		}
 
 		// Replace IN PLACE at the original path so the attachment ID and URL are
@@ -376,18 +378,18 @@ final class MediaRuntimeManager {
 		$old_meta  = wp_get_attachment_metadata( $media_id );
 
 		if ( ! $orig_path || ! @copy( $tmp, $orig_path ) ) {
-			@unlink( $tmp );
+			wp_delete_file( $tmp );
 			$this->discard_replace_snapshot( $rollback_id, $snapshot['id'] );
-			return $this->error( 'wpcc_replace_failed', __( 'Failed to write the replacement file.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_replace_failed', __( 'Failed to write the replacement file.', 'ai-command-center' ) );
 		}
-		@unlink( $tmp );
+		wp_delete_file( $tmp );
 
 		// Remove the previous generated size files, then regenerate from new bytes.
 		if ( is_array( $old_meta ) && ! empty( $old_meta['sizes'] ) ) {
 			$dir = trailingslashit( dirname( $orig_path ) );
 			foreach ( $old_meta['sizes'] as $size ) {
 				if ( ! empty( $size['file'] ) ) {
-					@unlink( $dir . $size['file'] );
+					wp_delete_file( $dir . $size['file'] );
 				}
 			}
 		}
@@ -411,7 +413,7 @@ final class MediaRuntimeManager {
 		$post     = get_post( $media_id );
 
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 
 		$before      = $this->format_media( $post );
@@ -421,7 +423,7 @@ final class MediaRuntimeManager {
 
 		$result = wp_delete_attachment( $media_id, $force );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_media_delete_failed', __( 'Failed to delete media.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_delete_failed', __( 'Failed to delete media.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'media.deleted', [ 'media_id' => $media_id, 'title' => $before['title'] ?? '', 'force' => $force ] );
@@ -432,7 +434,7 @@ final class MediaRuntimeManager {
 	private function restore_media( array $payload, array $context ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'ai-command-center' ) );
 		}
 
 		$rollbacks = get_option( 'wpcc_media_rollbacks', [] );
@@ -448,10 +450,10 @@ final class MediaRuntimeManager {
 		}
 
 		if ( null === $record ) {
-			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 		}
 		if ( $record['rollback_applied'] ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 		}
 
 		$media_id = $record['media_id'];
@@ -501,7 +503,7 @@ final class MediaRuntimeManager {
 		$post_id  = (int) ( $payload['post_id'] ?? 0 );
 
 		if ( ! get_post( $post_id ) ) {
-			return $this->error( 'wpcc_post_not_found', __( 'Post not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_post_not_found', __( 'Post not found.', 'ai-command-center' ) );
 		}
 
 		$existing_thumb = get_post_thumbnail_id( $post_id );
@@ -520,7 +522,7 @@ final class MediaRuntimeManager {
 	private function featured_remove( array $payload, array $context ): array {
 		$post_id  = (int) ( $payload['post_id'] ?? 0 );
 		if ( ! get_post( $post_id ) ) {
-			return $this->error( 'wpcc_post_not_found', __( 'Post not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_post_not_found', __( 'Post not found.', 'ai-command-center' ) );
 		}
 
 		$thumb_id    = get_post_thumbnail_id( $post_id );
@@ -541,7 +543,7 @@ final class MediaRuntimeManager {
 		$post     = get_post( $media_id );
 
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/image.php';
@@ -556,7 +558,7 @@ final class MediaRuntimeManager {
 	public function rollback( array $payload, array $context = [] ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'ai-command-center' ) );
 		}
 
 		$rollbacks = get_option( 'wpcc_media_rollbacks', [] );
@@ -572,10 +574,10 @@ final class MediaRuntimeManager {
 		}
 
 		if ( null === $record ) {
-			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 		}
 		if ( $record['rollback_applied'] ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 		}
 
 		$media_id = $record['media_id'];

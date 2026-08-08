@@ -18,11 +18,27 @@ final class WooCommerceRuntimeManager {
 
 	public function run( array $payload, array $context = [] ): array {
 		if ( ! class_exists( 'WooCommerce' ) ) {
-			return $this->error( 'wpcc_woo_inactive', __( 'WooCommerce is not active.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_woo_inactive', __( 'WooCommerce is not active.', 'ai-command-center' ) );
 		}
 		$action = (string) ( $payload['action'] ?? '' );
+		if ( 'woo_describe' === $action ) {
+			$actions = [];
+			foreach ( WooCommerceRegistry::ACTIONS as $act ) {
+				$actions[] = [ 'action' => $act, 'risk' => WooCommerceRegistry::get_risk( $act ), 'requires_approval' => WooCommerceRegistry::requires_approval( $act ) ];
+			}
+			return [ 'action' => 'woo_describe', 'runtime' => 'woocommerce_manage', 'actions' => $actions ];
+		}
 		if ( ! in_array( $action, WooCommerceRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_woo_action', __( 'Invalid WooCommerce action.', 'wp-command-center' ) );
+			return $this->error(
+				'wpcc_invalid_woo_action',
+				sprintf(
+					/* translators: 1: invalid action, 2: comma-separated valid actions */
+					__( 'Invalid WooCommerce action "%1$s". Valid actions: %2$s. Call action="woo_describe" for details.', 'ai-command-center' ),
+					$action,
+					implode( ', ', WooCommerceRegistry::ACTIONS )
+				),
+				[ 'valid_actions' => WooCommerceRegistry::ACTIONS ]
+			);
 		}
 		return match ( $action ) {
 			WooCommerceRegistry::ACTION_PRODUCT_LIST      => $this->product_list( $payload ),
@@ -65,7 +81,7 @@ final class WooCommerceRuntimeManager {
 			WooCommerceRegistry::ACTION_COUPON_CREATE     => $this->coupon_create( $payload, $context ),
 			WooCommerceRegistry::ACTION_COUPON_UPDATE     => $this->coupon_update( $payload, $context ),
 			WooCommerceRegistry::ACTION_COUPON_DELETE     => $this->coupon_delete( $payload, $context ),
-			default => $this->error( 'wpcc_unknown_woo_action', __( 'Unknown WooCommerce action.', 'wp-command-center' ) ),
+			default => $this->error( 'wpcc_unknown_woo_action', __( 'Unknown WooCommerce action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -87,14 +103,16 @@ final class WooCommerceRuntimeManager {
 
 	private function product_get( array $payload ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$this->audit->record( 'product.get', [ 'product_id' => $p->get_id() ] );
 		return [ 'action' => 'product_get', 'product' => $this->format_product( $p ) ];
 	}
 
 	private function product_search( array $payload ): array {
-		$s = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
-		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( 'Search term is required.', 'wp-command-center' ) );
+		// term_search, media_search, code_search, search_manage and user_search all
+		// accept `query`; this one accepted only `search`. Same rule everywhere.
+		$s = sanitize_text_field( (string) ( $payload['search'] ?? $payload['query'] ?? '' ) );
+		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( "product_search requires a 'search' (or 'query') parameter.", 'ai-command-center' ) );
 		$result = wc_get_products( [ 's' => $s, 'limit' => 50, 'paginate' => true ] );
 		$items = []; foreach ( $result->products as $p ) $items[] = $this->format_product( $p );
 		return [ 'action' => 'product_search', 'items' => $items, 'total' => $result->total ];
@@ -102,7 +120,7 @@ final class WooCommerceRuntimeManager {
 
 	private function product_create( array $payload, array $context ): array {
 		$name = sanitize_text_field( (string) ( $payload['name'] ?? '' ) );
-		if ( '' === $name ) return $this->error( 'wpcc_missing_name', __( 'Product name is required.', 'wp-command-center' ) );
+		if ( '' === $name ) return $this->error( 'wpcc_missing_name', __( 'Product name is required.', 'ai-command-center' ) );
 
 		$type = sanitize_key( (string) ( $payload['type'] ?? 'simple' ) );
 		$p    = match ( $type ) {
@@ -123,7 +141,7 @@ final class WooCommerceRuntimeManager {
 
 	private function product_update( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$id = $p->get_id();
 
 		// PROGRAM-4 / P4.6 — capture ONLY the fields this call touches, BEFORE the write
@@ -191,7 +209,7 @@ final class WooCommerceRuntimeManager {
 
 	private function product_delete( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = $this->format_product( $p );
 		$this->store_rollback( $p->get_id(), 'product_delete', $before, $context );
 		$name = $p->get_name();
@@ -202,7 +220,7 @@ final class WooCommerceRuntimeManager {
 
 	private function product_publish( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = $p->get_status();
 		$p->set_status( 'publish' );
 		$p->save();
@@ -213,7 +231,7 @@ final class WooCommerceRuntimeManager {
 
 	private function product_unpublish( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = $p->get_status();
 		$p->set_status( 'draft' );
 		$p->save();
@@ -224,12 +242,12 @@ final class WooCommerceRuntimeManager {
 
 	private function product_duplicate( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		if ( ! class_exists( '\WC_Admin_Duplicate_Product' ) ) {
 			require_once WC_ABSPATH . 'includes/admin/class-wc-admin-duplicate-product.php';
 		}
 		$duplicate = ( new \WC_Admin_Duplicate_Product() )->product_duplicate( $p );
-		if ( ! $duplicate || ! $duplicate->get_id() ) return $this->error( 'wpcc_duplicate_failed', __( 'Failed to duplicate product.', 'wp-command-center' ) );
+		if ( ! $duplicate || ! $duplicate->get_id() ) return $this->error( 'wpcc_duplicate_failed', __( 'Failed to duplicate product.', 'ai-command-center' ) );
 		$dup_id = $duplicate->get_id();
 		$this->store_rollback( $dup_id, 'product_create', [], $context );
 		return [ 'action' => 'product_duplicate', 'product_id' => $dup_id, 'original_id' => $p->get_id() ];
@@ -239,15 +257,34 @@ final class WooCommerceRuntimeManager {
 
 	private function stock_get( array $payload ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		return [ 'action' => 'stock_get', 'product_id' => $p->get_id(), 'stock_quantity' => $p->get_stock_quantity(), 'stock_status' => $p->get_stock_status(), 'manage_stock' => $p->get_manage_stock() ];
 	}
 
 	private function stock_update( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = [ 'stock' => $p->get_stock_quantity(), 'status' => $p->get_stock_status() ];
-		$qty = (int) ( $payload['quantity'] ?? 0 );
+
+		/*
+		 * A missing quantity used to fall back to 0 — and because this method also
+		 * force-enables stock management, that turned "I could not read your
+		 * quantity" into "this product is now out of stock", silently, with a
+		 * success response. A shop owner whose assistant sent WooCommerce's own
+		 * field name (`stock_quantity`) had the product stop selling.
+		 *
+		 * The value is required. Both spellings are accepted because the WooCommerce
+		 * REST API calls it stock_quantity and assistants copy that.
+		 */
+		$qty_raw = $payload['quantity'] ?? ( $payload['stock_quantity'] ?? null );
+		if ( null === $qty_raw || '' === $qty_raw || ! is_numeric( $qty_raw ) ) {
+			return $this->error(
+				'wpcc_missing_stock_quantity',
+				__( 'A stock quantity is required — pass quantity (or stock_quantity) as a number.', 'ai-command-center' )
+			);
+		}
+
+		$qty = (int) $qty_raw;
 		$p->set_manage_stock( true );
 		$p->set_stock_quantity( $qty );
 		$p->save();
@@ -277,15 +314,29 @@ final class WooCommerceRuntimeManager {
 
 	private function price_get( array $payload ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		return [ 'action' => 'price_get', 'product_id' => $p->get_id(), 'regular_price' => $p->get_regular_price(), 'sale_price' => $p->get_sale_price(), 'price' => $p->get_price() ];
 	}
 
 	private function price_update( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = [ 'regular' => $p->get_regular_price(), 'sale' => $p->get_sale_price() ];
-		$p->set_regular_price( (string) ( $payload['regular_price'] ?? '' ) );
+
+		/*
+		 * Same defect, worse consequence: an absent price wrote an empty string,
+		 * which in WooCommerce removes the price altogether and makes the product
+		 * unpurchasable. Required, not defaulted.
+		 */
+		$price_raw = $payload['regular_price'] ?? ( $payload['price'] ?? null );
+		if ( null === $price_raw || '' === trim( (string) $price_raw ) || ! is_numeric( $price_raw ) ) {
+			return $this->error(
+				'wpcc_missing_regular_price',
+				__( 'A regular price is required — pass regular_price as a number.', 'ai-command-center' )
+			);
+		}
+
+		$p->set_regular_price( (string) $price_raw );
 		$p->save();
 		$this->store_rollback( $p->get_id(), 'price_update', $before, $context );
 		$this->audit->record( 'price.updated', [ 'product_id' => $p->get_id() ] );
@@ -294,9 +345,31 @@ final class WooCommerceRuntimeManager {
 
 	private function sale_price_update( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = [ 'regular' => $p->get_regular_price(), 'sale' => $p->get_sale_price() ];
-		$p->set_sale_price( (string) ( $payload['sale_price'] ?? '' ) );
+
+		/*
+		 * Unlike stock and regular price, an EMPTY sale price is a legitimate
+		 * request — it is how you end a sale. So the rule here is narrower: an
+		 * explicit empty value clears the sale, but the key being absent altogether
+		 * is a malformed call and must not silently cancel a running promotion.
+		 */
+		if ( ! array_key_exists( 'sale_price', $payload ) ) {
+			return $this->error(
+				'wpcc_missing_sale_price',
+				__( 'A sale price is required — pass sale_price as a number, or an empty value to end the sale.', 'ai-command-center' )
+			);
+		}
+
+		$sale_raw = (string) $payload['sale_price'];
+		if ( '' !== trim( $sale_raw ) && ! is_numeric( $sale_raw ) ) {
+			return $this->error(
+				'wpcc_invalid_sale_price',
+				__( 'The sale price must be a number, or empty to end the sale.', 'ai-command-center' )
+			);
+		}
+
+		$p->set_sale_price( $sale_raw );
 		$p->save();
 		$this->store_rollback( $p->get_id(), 'price_update', $before, $context );
 		$this->audit->record( 'price.updated', [ 'product_id' => $p->get_id() ] );
@@ -313,7 +386,7 @@ final class WooCommerceRuntimeManager {
 
 	private function category_assign( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = $p->get_category_ids();
 		if ( is_numeric( $payload['category_id'] ?? null ) )
 			$p->set_category_ids( array_merge( $before, [ (int) $payload['category_id'] ] ) );
@@ -326,7 +399,7 @@ final class WooCommerceRuntimeManager {
 
 	private function category_remove( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$before = $p->get_category_ids();
 		$cid = (int) ( $payload['category_id'] ?? 0 );
 		$p->set_category_ids( array_diff( $before, [ $cid ] ) );
@@ -345,10 +418,10 @@ final class WooCommerceRuntimeManager {
 
 	private function attribute_assign( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$name = sanitize_text_field( (string) ( $payload['attribute_name'] ?? '' ) );
 		$val  = sanitize_text_field( (string) ( $payload['value'] ?? '' ) );
-		if ( '' === $name ) return $this->error( 'wpcc_missing_attribute', __( 'Attribute name is required.', 'wp-command-center' ) );
+		if ( '' === $name ) return $this->error( 'wpcc_missing_attribute', __( 'Attribute name is required.', 'ai-command-center' ) );
 		$before = $p->get_attributes();
 		$attrs = $p->get_attributes();
 		$attrs[ sanitize_title( $name ) ] = [ 'name' => $name, 'value' => $val, 'is_visible' => true, 'is_variation' => false, 'is_taxonomy' => false ];
@@ -360,7 +433,7 @@ final class WooCommerceRuntimeManager {
 
 	private function attribute_remove( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+		if ( ! $p ) return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		$slug = sanitize_title( (string) ( $payload['attribute_name'] ?? '' ) );
 		$before = $p->get_attributes();
 		$attrs = $p->get_attributes();
@@ -375,7 +448,7 @@ final class WooCommerceRuntimeManager {
 
 	private function variation_list( array $payload ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p || ! $p->is_type( 'variable' ) ) return $this->error( 'wpcc_not_variable', __( 'Product is not variable.', 'wp-command-center' ) );
+		if ( ! $p || ! $p->is_type( 'variable' ) ) return $this->error( 'wpcc_not_variable', __( 'Product is not variable.', 'ai-command-center' ) );
 		$vars = $p->get_available_variations();
 		$items = []; foreach ( $vars as $v ) $items[] = [ 'id' => $v['variation_id'], 'attributes' => $v['attributes'] ?? [], 'price' => $v['display_price'] ?? 0 ];
 		return [ 'action' => 'variation_list', 'product_id' => $p->get_id(), 'variations' => $items, 'total' => count( $items ) ];
@@ -383,13 +456,13 @@ final class WooCommerceRuntimeManager {
 
 	private function variation_get( array $payload ): array {
 		$v = wc_get_product( (int) ( $payload['variation_id'] ?? 0 ) );
-		if ( ! $v || ! $v->is_type( 'variation' ) ) return $this->error( 'wpcc_variation_not_found', __( 'Variation not found.', 'wp-command-center' ) );
+		if ( ! $v || ! $v->is_type( 'variation' ) ) return $this->error( 'wpcc_variation_not_found', __( 'Variation not found.', 'ai-command-center' ) );
 		return [ 'action' => 'variation_get', 'variation' => $this->format_product( $v ) ];
 	}
 
 	private function variation_create( array $payload, array $context ): array {
 		$p = wc_get_product( (int) ( $payload['product_id'] ?? 0 ) );
-		if ( ! $p || ! $p->is_type( 'variable' ) ) return $this->error( 'wpcc_not_variable', __( 'Parent must be a variable product.', 'wp-command-center' ) );
+		if ( ! $p || ! $p->is_type( 'variable' ) ) return $this->error( 'wpcc_not_variable', __( 'Parent must be a variable product.', 'ai-command-center' ) );
 		$v = new \WC_Product_Variation();
 		$v->set_parent_id( $p->get_id() );
 		if ( isset( $payload['regular_price'] ) ) $v->set_regular_price( (string) $payload['regular_price'] );
@@ -403,7 +476,7 @@ final class WooCommerceRuntimeManager {
 
 	private function variation_update( array $payload, array $context ): array {
 		$v = wc_get_product( (int) ( $payload['variation_id'] ?? 0 ) );
-		if ( ! $v || ! $v->is_type( 'variation' ) ) return $this->error( 'wpcc_variation_not_found', __( 'Variation not found.', 'wp-command-center' ) );
+		if ( ! $v || ! $v->is_type( 'variation' ) ) return $this->error( 'wpcc_variation_not_found', __( 'Variation not found.', 'ai-command-center' ) );
 		if ( isset( $payload['regular_price'] ) ) $v->set_regular_price( (string) $payload['regular_price'] );
 		if ( isset( $payload['stock_quantity'] ) ) { $v->set_manage_stock( true ); $v->set_stock_quantity( (int) $payload['stock_quantity'] ); }
 		$v->save();
@@ -413,7 +486,7 @@ final class WooCommerceRuntimeManager {
 
 	private function variation_delete( array $payload, array $context ): array {
 		$v = wc_get_product( (int) ( $payload['variation_id'] ?? 0 ) );
-		if ( ! $v || ! $v->is_type( 'variation' ) ) return $this->error( 'wpcc_variation_not_found', __( 'Variation not found.', 'wp-command-center' ) );
+		if ( ! $v || ! $v->is_type( 'variation' ) ) return $this->error( 'wpcc_variation_not_found', __( 'Variation not found.', 'ai-command-center' ) );
 		$before = $this->format_product( $v );
 		$this->store_rollback( $v->get_id(), 'variation_delete', $before, $context );
 		$v->delete( true );
@@ -435,13 +508,13 @@ final class WooCommerceRuntimeManager {
 
 	private function order_get( array $payload ): array {
 		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
-		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'ai-command-center' ) );
 		return [ 'action' => 'order_get', 'order' => $this->format_order( $o ) ];
 	}
 
 	private function order_search( array $payload ): array {
 		$s = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
-		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( 'Search term is required.', 'wp-command-center' ) );
+		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( 'Search term is required.', 'ai-command-center' ) );
 		$query = new \WC_Order_Query( [ 'limit' => 50, 'return' => 'ids' ] );
 		$ids = $query->get_orders();
 		$items = []; foreach ( $ids as $id ) { $o = wc_get_order( $id ); if ( false !== stripos( $o->get_billing_email() . $o->get_billing_first_name(), $s ) ) $items[] = $this->format_order( $o ); }
@@ -454,7 +527,7 @@ final class WooCommerceRuntimeManager {
 
 	private function order_update( array $payload, array $context ): array {
 		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
-		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'ai-command-center' ) );
 
 		$before = [ 'customer_note' => $o->get_customer_note(), 'billing' => [] ];
 		foreach ( self::ORDER_BILLING_FIELDS as $f ) { $before['billing'][ $f ] = $o->{"get_billing_$f"}(); }
@@ -478,9 +551,9 @@ final class WooCommerceRuntimeManager {
 
 	private function order_note_add( array $payload, array $context ): array {
 		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
-		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'ai-command-center' ) );
 		$note = sanitize_textarea_field( (string) ( $payload['note'] ?? '' ) );
-		if ( '' === $note ) return $this->error( 'wpcc_empty_note', __( 'A note is required.', 'wp-command-center' ) );
+		if ( '' === $note ) return $this->error( 'wpcc_empty_note', __( 'A note is required.', 'ai-command-center' ) );
 		$is_customer = ! empty( $payload['customer_note'] );
 
 		$note_id = $o->add_order_note( $note, $is_customer ? 1 : 0, false );
@@ -492,11 +565,11 @@ final class WooCommerceRuntimeManager {
 
 	private function order_status_change( array $payload, array $context ): array {
 		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
-		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'ai-command-center' ) );
 		$status = sanitize_key( (string) ( $payload['status'] ?? '' ) );
 		$status = str_starts_with( $status, 'wc-' ) ? substr( $status, 3 ) : $status;
 		if ( ! array_key_exists( 'wc-' . $status, wc_get_order_statuses() ) ) {
-			return $this->error( 'wpcc_invalid_order_status', sprintf( __( 'Invalid order status: %s', 'wp-command-center' ), esc_html( $status ) ) );
+			return $this->error( 'wpcc_invalid_order_status', sprintf( /* translators: %s: value */ __( 'Invalid order status: %s', 'ai-command-center' ), esc_html( $status ) ) );
 		}
 
 		$before = [ 'status' => $o->get_status() ];
@@ -509,9 +582,9 @@ final class WooCommerceRuntimeManager {
 
 	private function refund_create( array $payload, array $context ): array {
 		$o = wc_get_order( (int) ( $payload['order_id'] ?? 0 ) );
-		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'wp-command-center' ) );
+		if ( ! $o ) return $this->error( 'wpcc_order_not_found', __( 'Order not found.', 'ai-command-center' ) );
 		$amount = isset( $payload['amount'] ) ? (string) $payload['amount'] : (string) $o->get_remaining_refund_amount();
-		if ( (float) $amount <= 0 ) return $this->error( 'wpcc_invalid_refund_amount', __( 'Refund amount must be greater than zero.', 'wp-command-center' ) );
+		if ( (float) $amount <= 0 ) return $this->error( 'wpcc_invalid_refund_amount', __( 'Refund amount must be greater than zero.', 'ai-command-center' ) );
 
 		$refund = wc_create_refund( [
 			'order_id' => $o->get_id(),
@@ -533,9 +606,9 @@ final class WooCommerceRuntimeManager {
 			$u = get_user_by( 'email', sanitize_email( (string) $payload['email'] ) );
 			$id = $u ? (int) $u->ID : 0;
 		}
-		if ( $id <= 0 ) return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'wp-command-center' ) );
-		try { $c = new \WC_Customer( $id ); } catch ( \Exception $e ) { return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'wp-command-center' ) ); }
-		if ( ! $c->get_id() ) return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'wp-command-center' ) );
+		if ( $id <= 0 ) return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'ai-command-center' ) );
+		try { $c = new \WC_Customer( $id ); } catch ( \Exception $e ) { return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'ai-command-center' ) ); }
+		if ( ! $c->get_id() ) return $this->error( 'wpcc_customer_not_found', __( 'Customer not found.', 'ai-command-center' ) );
 
 		$this->audit->record( 'customer.get', [ 'customer_id' => $id ] );
 		return [ 'action' => 'customer_get', 'customer' => $this->format_customer( $c ) ];
@@ -543,7 +616,7 @@ final class WooCommerceRuntimeManager {
 
 	private function customer_search( array $payload ): array {
 		$s = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
-		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( 'Search term is required.', 'wp-command-center' ) );
+		if ( '' === $s ) return $this->error( 'wpcc_empty_search', __( 'Search term is required.', 'ai-command-center' ) );
 		$users = get_users( [ 'search' => '*' . $s . '*', 'search_columns' => [ 'user_login', 'user_email', 'display_name' ], 'number' => 50, 'fields' => [ 'ID' ] ] );
 		$items = [];
 		foreach ( $users as $u ) {
@@ -579,13 +652,13 @@ final class WooCommerceRuntimeManager {
 
 	private function coupon_get( array $payload ): array {
 		$c = new \WC_Coupon( (int) ( $payload['coupon_id'] ?? 0 ) );
-		if ( ! $c->get_id() ) return $this->error( 'wpcc_coupon_not_found', __( 'Coupon not found.', 'wp-command-center' ) );
+		if ( ! $c->get_id() ) return $this->error( 'wpcc_coupon_not_found', __( 'Coupon not found.', 'ai-command-center' ) );
 		return [ 'action' => 'coupon_get', 'coupon' => $this->format_coupon( $c ) ];
 	}
 
 	private function coupon_create( array $payload, array $context ): array {
 		$code = sanitize_text_field( (string) ( $payload['code'] ?? '' ) );
-		if ( '' === $code ) return $this->error( 'wpcc_missing_code', __( 'Coupon code is required.', 'wp-command-center' ) );
+		if ( '' === $code ) return $this->error( 'wpcc_missing_code', __( 'Coupon code is required.', 'ai-command-center' ) );
 		$c = new \WC_Coupon();
 		$c->set_code( $code );
 		$c->set_discount_type( sanitize_key( (string) ( $payload['discount_type'] ?? 'fixed_cart' ) ) );
@@ -598,7 +671,7 @@ final class WooCommerceRuntimeManager {
 
 	private function coupon_update( array $payload, array $context ): array {
 		$c = new \WC_Coupon( (int) ( $payload['coupon_id'] ?? 0 ) );
-		if ( ! $c->get_id() ) return $this->error( 'wpcc_coupon_not_found', __( 'Coupon not found.', 'wp-command-center' ) );
+		if ( ! $c->get_id() ) return $this->error( 'wpcc_coupon_not_found', __( 'Coupon not found.', 'ai-command-center' ) );
 		if ( isset( $payload['amount'] ) ) $c->set_amount( (float) $payload['amount'] );
 		if ( isset( $payload['discount_type'] ) ) $c->set_discount_type( sanitize_key( (string) $payload['discount_type'] ) );
 		$c->save();
@@ -608,7 +681,7 @@ final class WooCommerceRuntimeManager {
 
 	private function coupon_delete( array $payload, array $context ): array {
 		$c = new \WC_Coupon( (int) ( $payload['coupon_id'] ?? 0 ) );
-		if ( ! $c->get_id() ) return $this->error( 'wpcc_coupon_not_found', __( 'Coupon not found.', 'wp-command-center' ) );
+		if ( ! $c->get_id() ) return $this->error( 'wpcc_coupon_not_found', __( 'Coupon not found.', 'ai-command-center' ) );
 		$before = $this->format_coupon( $c );
 		$this->store_rollback( $c->get_id(), 'coupon_delete', $before, $context );
 		$c->delete( true );
@@ -645,12 +718,12 @@ final class WooCommerceRuntimeManager {
 
 	public function rollback( array $payload, array $context = [] ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
-		if ( '' === $rollback_id ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'wp-command-center' ) );
+		if ( '' === $rollback_id ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'ai-command-center' ) );
 		$rollbacks = get_option( 'wpcc_woo_rollbacks', [] );
 		$rec = null; $idx = null;
 		foreach ( $rollbacks as $i => $r ) { if ( $r['id'] === $rollback_id ) { $rec = $r; $idx = $i; break; } }
-		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
-		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
+		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 		$entity_id = $rec['entity_id'];
 		$action    = $rec['action'];
 		$etype     = $rec['entity_type'] ?? 'product';
@@ -689,7 +762,7 @@ final class WooCommerceRuntimeManager {
 				}
 				elseif ( 'order_status_change' === $action ) {
 					$o = wc_get_order( $entity_id );
-					if ( $o && isset( $before['status'] ) ) $o->update_status( (string) $before['status'], __( 'Rolled back by WP Command Center.', 'wp-command-center' ), true );
+					if ( $o && isset( $before['status'] ) ) $o->update_status( (string) $before['status'], __( 'Rolled back by WP Command Center.', 'ai-command-center' ), true );
 				}
 				elseif ( 'order_note_add' === $action ) {
 					if ( ! empty( $before['note_id'] ) ) wp_delete_comment( (int) $before['note_id'], true );
@@ -724,7 +797,7 @@ final class WooCommerceRuntimeManager {
 	private function rollback_product_delta( array $rec, int $idx, array $rollbacks, array $context ): array {
 		$id = (int) $rec['entity_id'];
 		if ( ! wc_get_product( $id ) ) {
-			return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_product_not_found', __( 'Product not found.', 'ai-command-center' ) );
 		}
 
 		$o = RollbackDelta::restore( new WooProductAccessor(), $id, $rec['fields'] );
@@ -854,7 +927,7 @@ final class WooCommerceRuntimeManager {
 		return $out;
 	}
 
-	private function error( string $code, string $message ): array {
-		return [ 'error' => true, 'code' => $code, 'message' => $message ];
+	private function error( string $code, string $message, array $extra = [] ): array {
+		return array_merge( [ 'error' => true, 'code' => $code, 'message' => $message ], $extra );
 	}
 }

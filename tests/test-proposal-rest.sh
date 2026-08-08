@@ -18,6 +18,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
+
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -26,7 +33,7 @@ assert_eq() { local d="$1" e="$2" a="$3"; [ "$e" = "$a" ] && pass "$d" || fail "
 echo "STEP 110 Task 5 — Proposal REST contract"
 
 # ── Dynamic contract battery (dispatched through the REST server) ────────────
-BATT="$(mktemp /tmp/wpcc-rest-batt-XXXXXX.php)"
+BATT="$(mktemp -d)/wpcc-rest-batt.php"
 cat > "$BATT" <<'PHP'
 <?php
 $admin = get_users( [ 'role' => 'administrator', 'number' => 1 ] );
@@ -157,8 +164,15 @@ assert_eq "only Schema + ProposalStore write-reference wpcc_proposals (code)" \
 
 # REST proposal handlers delegate (ProposalApplyService present for apply path).
 RA_CODE="$(grep -vE '^[[:space:]]*(\*|/\*|//)' includes/Admin/AdminRestApi.php)"
+# Here-string, NOT `printf ... | grep -q`. Same trap already documented in tests/run.sh:
+# under `set -o pipefail`, grep -q exits the moment it matches — and this match is near
+# the top of 46 KB of code — which SIGPIPEs the still-writing printf. printf exits 141,
+# pipefail propagates it, and the pipeline reports failure for a string it had ALREADY
+# matched. Measured here: the piped form returned no/no/yes/yes across four runs of the
+# same unchanged file, while the here-string returned yes every time. A here-string has
+# no pipe and no writer to kill, so it cannot race.
 assert_eq "REST apply path delegates to ProposalApplyService" "yes" \
-  "$(printf '%s\n' "$RA_CODE" | grep -q 'ProposalApplyService' && echo yes || echo no)"
+  "$(grep -q 'ProposalApplyService' <<<"$RA_CODE" && echo yes || echo no)"
 
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

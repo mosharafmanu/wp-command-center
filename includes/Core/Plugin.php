@@ -25,8 +25,37 @@ final class Plugin {
 
 	private function __construct() {}
 
+	/**
+	 * Warn when this single-site plugin is running network-activated.
+	 *
+	 * V1 creates its tables and settings for one site. Network activation leaves
+	 * every other site in the network without them while still showing the menu, so
+	 * the Command Center looks installed where it cannot work. New activations are
+	 * refused outright in Activator::activate(); this covers a network that was
+	 * already in that state.
+	 */
+	public function network_activation_notice(): void {
+		if ( ! is_multisite() || ! function_exists( 'is_plugin_active_for_network' ) ) {
+			return;
+		}
+		if ( ! is_plugin_active_for_network( WPCC_PLUGIN_BASENAME ) || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-warning"><p><strong>%s</strong> %s</p></div>',
+			esc_html__( 'WP Command Center is network activated.', 'ai-command-center' ),
+			esc_html__( 'This version supports one site at a time. Its tables and settings exist only for the site it was set up on, so other sites in this network will show an empty Command Center. Deactivate it for the network and activate it on each site that should have one.', 'ai-command-center' )
+		);
+	}
+
 	public function run(): void {
 		Schema::maybe_upgrade();
+
+		// A network that was already network-activated before this build cannot be
+		// caught by the activation hook, so say so where an administrator will see
+		// it rather than letting the sub-sites look configured when they are not.
+		add_action( 'admin_notices', [ $this, 'network_activation_notice' ] );
 
 		add_filter( 'cron_schedules', [ $this, 'add_cron_schedules' ] );
 		add_action( \WPCommandCenter\Operations\OperationWorker::CRON_HOOK, [ new \WPCommandCenter\Operations\OperationWorker(), 'handle_cron' ] );
@@ -58,6 +87,11 @@ final class Plugin {
 		if ( is_admin() ) {
 			( new AdminMenu() )->init();
 			( new Assets() )->init();
+			// Put this plugin's screens into WordPress's own ⌘K palette. Navigate-only,
+			// same destinations and same capability gate as the admin menu; without it
+			// the palette's fuzzy matcher had no product-owned answer to rank and
+			// offered Marketing rows for "token". See CommandPaletteIntegration.
+			( new \WPCommandCenter\Admin\CommandPaletteIntegration() )->init();
 			// Per-feature classes retain their no-JS admin-post fallback handlers + Bulk
 			// Actions; their row links are consolidated into the single AI Assist entry.
 			( new \WPCommandCenter\Admin\SeoRowActions() )->init();
@@ -75,7 +109,7 @@ final class Plugin {
 	public function add_cron_schedules( array $schedules ): array {
 		$schedules['wpcc_five_minutes'] = [
 			'interval' => 300,
-			'display'  => __( 'Every 5 Minutes', 'wp-command-center' ),
+			'display'  => __( 'Every 5 Minutes', 'ai-command-center' ),
 		];
 		return $schedules;
 	}

@@ -58,7 +58,7 @@ has "search hidden by default" 'id="wpcc-w-model-search" style="display:none;' "
 has "free-text model input present as fallback" 'id="wpcc-w-model" name="wpcc_model_custom"' "$V"
 
 echo "== 9. Functional: metadata correctness across providers =="
-PHPF="$(mktemp -t wizmeta.XXXXXX.php)"
+PHPF="$(mktemp -d)/wizmeta.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\ProviderCatalog as PC;

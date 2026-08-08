@@ -62,7 +62,7 @@ echo "== 4. Enablement UI — CDS, governed, honest, escaped =="
 has "renders enablement card"            "wpcc-bai-tools-h" "$TOOLS_VIEW"
 has "uses CDS card"                      "wpcc-cds-card" "$TOOLS_VIEW"
 has "nonce field present"                "wp_nonce_field\( BuiltinAiSettings::NONCE" "$TOOLS_VIEW"
-has "honest Anthropic note"              "Generation runs on Anthropic" "$TOOLS_VIEW"
+has "honest provider note"               "Generation runs on the provider you select" "$TOOLS_VIEW"
 has "config-controlled shown as Locked"  "Locked" "$TOOLS_VIEW"
 has "escapes labels"                     "esc_html" "$TOOLS_VIEW"
 lacks "no provider key rendered"         "api_key|->key\(\)|secret" "$TOOLS_VIEW"
@@ -74,15 +74,18 @@ has "8 readiness items present"          "function checklist" "$RDY"
 has "security-mode item"                 "'security_mode'" "$RDY"
 has "provider-connected item"            "'provider_connected'" "$RDY"
 has "provider-tested item"               "'provider_tested'" "$RDY"
-has "generation-supported (honest)"      "Generation runs on Anthropic" "$RDY"
+has "generation-supported (honest)"      "Generation runs on the provider you select" "$TOOLS_VIEW"
 has "tool-enabled item"                  "'tool_enabled'" "$RDY"
 has "test-content item"                  "'test_content'" "$RDY"
 has "can_run_first_workflow()"           "function can_run_first_workflow" "$RDY"
 has "next_action() single focus"         "function next_action" "$RDY"
 lacks "readiness performs no writes"     "update_option|->run\(|wp_insert_post" "$RDY"
-has "Home uses real readiness state"     "DesignPartnerReadiness::can_run_first_workflow" "$HOME_VIEW"
-has "Home shows one next action"         "wpcc-firstvalue" "$HOME_VIEW"
-has "Home progressive disclosure"        "Show all readiness steps" "$HOME_VIEW"
+# Home now derives its next step from the two things that actually gate a first
+# governed change — protection mode and real assistant connection — instead of
+# built-in-AI readiness, which is optional and off by default.
+has "Home uses real connection state"    "ConnectionStatus::get" "$HOME_VIEW"
+has "Home shows one next action"         "wpcc-home__next" "$HOME_VIEW"
+has "Home progressive disclosure"        "wpcc-home__limits" "$HOME_VIEW"
 lacks "Home fabricates no demo content"  "wp_insert_post" "$HOME_VIEW"
 
 echo
@@ -135,9 +138,9 @@ else
 	INV="$(wpe '$i=(new WPCommandCenter\Admin\DashboardAdminQuery())->overview()["invariants"]; echo $i["operation_map"].",".$i["capabilities"].",".$i["catalogue"].",".$i["mcp_tools"].",".$i["db_version"];')"
 	assert_eq "OPERATION_MAP 34" "34" "$(echo "$INV"|cut -d, -f1)"
 	assert_eq "CAPABILITIES 23"  "23" "$(echo "$INV"|cut -d, -f2)"
-	assert_eq "catalogue 40"     "40" "$(echo "$INV"|cut -d, -f3)"
-	assert_eq "MCP tools 40"     "40" "$(echo "$INV"|cut -d, -f4)"
-	assert_eq "DB_VERSION 2.5.0 (no schema change)" "2.5.0" "$(echo "$INV"|cut -d, -f5)"
+	assert_eq "catalogue 42"     "42" "$(echo "$INV"|cut -d, -f3)"
+	assert_eq "MCP tools 42"     "42" "$(echo "$INV"|cut -d, -f4)"
+	assert_eq "DB_VERSION 2.6.0 (no schema change)" "2.6.0" "$(echo "$INV"|cut -d, -f5)"
 fi
 
 echo

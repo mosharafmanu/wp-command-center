@@ -71,13 +71,15 @@ final class AdoptionStatus {
 		return count( ( new AuthTokens() )->list() );
 	}
 
-	/** Number of currently-active (non-revoked, non-expired) tokens. */
+	/**
+	 * Number of currently-active (non-revoked, non-expired) tokens.
+	 *
+	 * The expiry half of that promise was missing: `status` stays 'active' on an
+	 * expired token, so this counted tokens that validate() rejects. Deferred to
+	 * AuthTokens::is_usable(), the one place the rule is stated.
+	 */
 	public static function active_token_count(): int {
-		$active = array_filter(
-			( new AuthTokens() )->list(),
-			static fn ( $t ) => ( $t['status'] ?? '' ) === 'active'
-		);
-		return count( $active );
+		return count( AuthTokens::usable_only( ( new AuthTokens() )->list() ) );
 	}
 
 	/**
@@ -112,37 +114,37 @@ final class AdoptionStatus {
 		return [
 			[
 				'key'   => 'security_mode',
-				'label' => __( 'Choose a safety mode', 'wp-command-center' ),
+				'label' => __( 'Choose a safety mode', 'ai-command-center' ),
 				'done'  => ! $self_approve, // "done" for a client site = NOT self-approving.
 				'hint'  => $self_approve
-					? __( 'Currently Developer mode: AI writes apply with no approval. Switch to Client mode before working on a client site.', 'wp-command-center' )
-					: __( 'A human-approval mode is active. Writes wait for your review.', 'wp-command-center' ),
+					? __( 'Currently Developer mode: AI writes apply with no approval. Switch to Client mode before working on a client site.', 'ai-command-center' )
+					: __( 'A human-approval mode is active. Writes wait for your review.', 'ai-command-center' ),
 				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=security' ),
 			],
 			[
 				'key'   => 'ai_key',
-				'label' => __( 'Add an AI provider key (optional)', 'wp-command-center' ),
+				'label' => __( 'Add an AI provider key (optional)', 'ai-command-center' ),
 				'done'  => $ai_configured,
 				'hint'  => $ai_configured
-					? __( 'An Anthropic key is configured. AI features can be used once their surface is enabled.', 'wp-command-center' )
-					: __( 'No key yet. AI stays off until you add one — WPCC works without it.', 'wp-command-center' ),
-				'url'   => admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' ),
+					? __( 'An Anthropic key is configured. AI features can be used once their surface is enabled.', 'ai-command-center' )
+					: __( 'No key yet. AI stays off until you add one — WPCC works without it.', 'ai-command-center' ),
+				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' ),
 			],
 			[
 				'key'   => 'token',
-				'label' => __( 'Create an access token for your AI agent', 'wp-command-center' ),
+				'label' => __( 'Create an access token for your AI agent', 'ai-command-center' ),
 				'done'  => $tokens > 0,
 				'hint'  => $tokens > 0
 					/* translators: %d: number of active tokens */
-					? sprintf( _n( '%d active token.', '%d active tokens.', $tokens, 'wp-command-center' ), $tokens )
-					: __( 'No tokens yet. Create one to let Claude or another agent connect over MCP/REST.', 'wp-command-center' ),
-				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=access' ),
+					? sprintf( _n( '%d active token.', '%d active tokens.', $tokens, 'ai-command-center' ), $tokens )
+					: __( 'No tokens yet. Create one to let Claude or another agent connect over MCP/REST.', 'ai-command-center' ),
+				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=tokens' ),
 			],
 			[
 				'key'   => 'review',
-				'label' => __( 'Know where to review & undo changes', 'wp-command-center' ),
+				'label' => __( 'Know where to review & undo changes', 'ai-command-center' ),
 				'done'  => false, // informational; never auto-checks.
-				'hint'  => __( 'Approvals live under Activity → Approvals. Every change and its undo live under History → Changes.', 'wp-command-center' ),
+				'hint'  => __( 'Requests waiting on you live under Approvals. Every change and its undo live under Changes.', 'ai-command-center' ),
 				'url'   => admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ),
 			],
 		];

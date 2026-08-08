@@ -29,16 +29,16 @@ final class ConnectionController {
 		$this->store = new ConnectionStore();
 	}
 
-	/** @return array{type:string,message:string}|null */
+	/** @return array{type:string,message:string,action:string,connection:string}|null */
 	public function handle_post(): ?array {
 		if ( ! isset( $_POST['wpcc_conn_action'] ) ) {
 			return null;
 		}
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return $this->n( 'error', __( 'You do not have permission to change AI settings.', 'wp-command-center' ) );
+			return $this->n( 'error', __( 'You do not have permission to change AI settings.', 'ai-command-center' ) );
 		}
 		if ( ! check_admin_referer( self::NONCE ) ) {
-			return $this->n( 'error', __( 'Security check failed. Please try again.', 'wp-command-center' ) );
+			return $this->n( 'error', __( 'Security check failed. Please try again.', 'ai-command-center' ) );
 		}
 		$action = sanitize_key( wp_unslash( (string) $_POST['wpcc_conn_action'] ) );
 		$id     = isset( $_POST['wpcc_conn_id'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['wpcc_conn_id'] ) ) : '';
@@ -54,14 +54,14 @@ final class ConnectionController {
 			case 'delete':      return $this->delete( $id );
 			case 'test':        return $this->test( $id );
 			case 'save_routes': return $this->save_routes();
-			default:            return $this->n( 'error', __( 'Unknown action.', 'wp-command-center' ) );
+			default:            return $this->n( 'error', __( 'Unknown action.', 'ai-command-center' ) );
 		}
 	}
 
 	private function create(): array {
 		$provider = isset( $_POST['wpcc_provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['wpcc_provider'] ) ) : '';
 		if ( ! ProviderCatalog::is_valid( $provider ) ) {
-			return $this->n( 'error', __( 'Choose a provider.', 'wp-command-center' ) );
+			return $this->n( 'error', __( 'Choose a provider.', 'ai-command-center' ) );
 		}
 		$name  = $this->str( 'wpcc_name', 60 );
 		$model = $this->model_value( $provider );
@@ -88,12 +88,12 @@ final class ConnectionController {
 		}
 		$this->store->sync_runtime();
 		$this->audit( 'ai.connection.created', [ 'connection' => $id, 'provider' => $provider ] );
-		return $this->n( 'success', __( 'Connection created.', 'wp-command-center' ) );
+		return $this->n( 'success', __( 'Connection created.', 'ai-command-center' ), 'create', $id );
 	}
 
 	private function update( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'wp-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
 		$endpoint = $this->endpoint_value( (string) $conn['provider'] );
 		if ( is_array( $endpoint ) ) { return $endpoint; }
 		$fields = [
@@ -105,70 +105,70 @@ final class ConnectionController {
 		];
 		$this->store->update( $id, $fields );
 		$this->audit( 'ai.connection.updated', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Connection saved.', 'wp-command-center' ) );
+		return $this->n( 'success', __( 'Connection saved.', 'ai-command-center' ), 'update', $id );
 	}
 
 	private function update_key( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'wp-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
 		if ( $this->store->credentials()->is_constant_backed( $conn ) ) {
-			return $this->n( 'warning', __( 'This key is defined in wp-config.php (a constant) and cannot be changed here.', 'wp-command-center' ) );
+			return $this->n( 'warning', __( 'This key is defined in wp-config.php (a constant) and cannot be changed here.', 'ai-command-center' ) );
 		}
 		$raw = $this->raw_key();
-		if ( '' === $raw ) { return $this->n( 'error', __( 'Please paste an API key, or use Remove key.', 'wp-command-center' ) ); }
+		if ( '' === $raw ) { return $this->n( 'error', __( 'Please paste an API key, or use Remove key.', 'ai-command-center' ) ); }
 		$k = $this->clean_key( $raw );
 		if ( is_array( $k ) ) { return $k; }
 		$this->store->credentials()->set_secret( $id, $k );
 		$this->store->record_test( $id, false, 'untested' );
 		$this->store->sync_runtime();
 		$this->audit( 'ai.connection.key.updated', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'API key saved. It is stored on this site and never shown again.', 'wp-command-center' ) );
+		return $this->n( 'success', __( 'API key saved. It is stored on this site and never shown again.', 'ai-command-center' ), 'update_key', $id );
 	}
 
 	private function clear_key( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'wp-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
 		if ( $this->store->credentials()->is_constant_backed( $conn ) ) {
-			return $this->n( 'warning', __( 'The active key is a constant in wp-config.php and cannot be removed here.', 'wp-command-center' ) );
+			return $this->n( 'warning', __( 'The active key is a constant in wp-config.php and cannot be removed here.', 'ai-command-center' ) );
 		}
 		$this->store->credentials()->clear_secret( $id );
 		$this->audit( 'ai.connection.key.cleared', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'API key removed.', 'wp-command-center' ) );
+		return $this->n( 'success', __( 'API key removed.', 'ai-command-center' ), 'clear_key', $id );
 	}
 
 	private function set_default( string $id ): array {
 		if ( ! $this->store->set_default( $id ) ) {
-			return $this->n( 'error', __( 'This connection cannot be the default — WP Command Center cannot use its provider for AI features yet.', 'wp-command-center' ) );
+			return $this->n( 'error', __( 'This connection cannot be the default — WP Command Center cannot use its provider for AI features yet.', 'ai-command-center' ) );
 		}
 		$this->audit( 'ai.connection.default.set', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Default connection updated.', 'wp-command-center' ) );
+		return $this->n( 'success', __( 'Default connection updated.', 'ai-command-center' ), 'set_default', $id );
 	}
 
 	private function set_enabled( string $id ): array {
 		$enabled = ! empty( $_POST['wpcc_enabled'] );
 		$this->store->set_enabled( $id, $enabled );
 		$this->audit( 'ai.connection.enabled', [ 'connection' => $id, 'enabled' => $enabled ] );
-		return $this->n( 'success', $enabled ? __( 'Connection enabled.', 'wp-command-center' ) : __( 'Connection disabled.', 'wp-command-center' ) );
+		return $this->n( 'success', $enabled ? __( 'Connection enabled.', 'ai-command-center' ) : __( 'Connection disabled.', 'ai-command-center' ), 'set_enabled', $id );
 	}
 
 	private function duplicate( string $id ): array {
 		$new = $this->store->duplicate( $id );
-		if ( '' === $new ) { return $this->n( 'error', __( 'Connection not found.', 'wp-command-center' ) ); }
+		if ( '' === $new ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
 		$this->audit( 'ai.connection.duplicated', [ 'from' => $id, 'connection' => $new ] );
-		return $this->n( 'success', __( 'Connection duplicated (without its key — add a key to the copy).', 'wp-command-center' ) );
+		return $this->n( 'success', __( 'Connection duplicated (without its key — add a key to the copy).', 'ai-command-center' ), 'duplicate', $new );
 	}
 
 	private function delete( string $id ): array {
 		$this->store->delete( $id );
 		$this->audit( 'ai.connection.deleted', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Connection deleted.', 'wp-command-center' ) );
+		return $this->n( 'success', __( 'Connection deleted.', 'ai-command-center' ) );
 	}
 
 	private function test( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'wp-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
 		if ( ! $this->store->testable( $conn ) ) {
-			return $this->n( 'warning', __( 'A connection test is not available for this provider yet.', 'wp-command-center' ) );
+			return $this->n( 'warning', __( 'A connection test is not available for this provider yet.', 'ai-command-center' ) );
 		}
 		$key    = $this->store->credentials()->secret( $conn );
 		$t0     = microtime( true );
@@ -178,10 +178,10 @@ final class ConnectionController {
 		$code   = sanitize_text_field( (string) ( $result['code'] ?? 'error' ) );
 		$this->store->record_test( $id, $ok, $code, [ 'latency_ms' => $ms, 'models' => (int) ( $result['models'] ?? 0 ), 'models_list' => is_array( $result['models_list'] ?? null ) ? $result['models_list'] : [] ] );
 		$this->audit( 'ai.connection.test', [ 'connection' => $id, 'dialect' => $conn['dialect'], 'result' => $code ] );
-		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'wp-command-center' ) ); }
+		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'ai-command-center' ), 'test', $id ); }
 		$detail = sanitize_text_field( (string) ( $result['message'] ?? '' ) );
 		/* translators: %s: secret-free error detail */
-		return $this->n( 'error', sprintf( __( 'Connection failed: %s', 'wp-command-center' ), '' !== $detail ? $detail : $code ) );
+		return $this->n( 'error', sprintf( __( 'Connection failed: %s', 'ai-command-center' ), '' !== $detail ? $detail : $code ), 'test', $id );
 	}
 
 	private function save_routes(): array {
@@ -195,11 +195,21 @@ final class ConnectionController {
 				$this->audit( 'ai.connection.route.set', [ 'feature' => $f, 'connection' => $cid ] );
 			}
 		}
+		/*
+		 * "0 feature routes saved." is a sentence that reports a number and
+		 * communicates nothing. Pressing Save with nothing changed is a normal
+		 * thing to do — often to confirm the current routing IS what is saved —
+		 * and the honest answer to it is that there was nothing to change, not a
+		 * count of zero dressed up as a result.
+		 */
+		if ( 0 === $changed ) {
+			return $this->n( 'success', __( 'Routing is unchanged — every feature already points where you selected.', 'ai-command-center' ), 'save_routes' );
+		}
 		return $this->n( 'success', sprintf(
 			/* translators: %d: number of feature routes updated */
-			_n( '%d feature route saved.', '%d feature routes saved.', $changed, 'wp-command-center' ),
+			_n( '%d feature route saved.', '%d feature routes saved.', $changed, 'ai-command-center' ),
 			$changed
-		) );
+		), 'save_routes' );
 	}
 
 	/* ---------------- input helpers ---------------- */
@@ -212,7 +222,7 @@ final class ConnectionController {
 	private function clean_key( string $raw ) {
 		$key = sanitize_text_field( $raw );
 		if ( strlen( $key ) < 8 || ! preg_match( '/^[A-Za-z0-9._\-]+$/', $key ) ) {
-			return $this->n( 'error', __( 'That does not look like a valid API key.', 'wp-command-center' ) );
+			return $this->n( 'error', __( 'That does not look like a valid API key.', 'ai-command-center' ) );
 		}
 		return $key;
 	}
@@ -248,7 +258,7 @@ final class ConnectionController {
 		if ( '' === $raw ) {
 			// Required for providers that need a custom endpoint (Azure/local/custom).
 			if ( ! empty( $def['needs_endpoint'] ) ) {
-				return $this->n( 'error', __( 'This provider needs a base URL / endpoint.', 'wp-command-center' ) );
+				return $this->n( 'error', __( 'This provider needs a base URL / endpoint.', 'ai-command-center' ) );
 			}
 			return ''; // store empty → normalize() fills the default.
 		}
@@ -257,7 +267,7 @@ final class ConnectionController {
 		}
 		$url = esc_url_raw( $raw, [ 'http', 'https' ] );
 		if ( '' === $url ) {
-			return $this->n( 'error', __( 'Enter a valid http(s) base URL.', 'wp-command-center' ) );
+			return $this->n( 'error', __( 'Enter a valid http(s) base URL.', 'ai-command-center' ) );
 		}
 		return $url;
 	}
@@ -280,7 +290,29 @@ final class ConnectionController {
 		( new AuditLog() )->record( $action, $context );
 	}
 
-	private function n( string $type, string $message ): array {
-		return [ 'type' => $type, 'message' => $message ];
+	/**
+	 * Notice envelope.
+	 *
+	 * `action` and `connection` are OPTIONAL context, added so the view can say what
+	 * just happened to WHICH connection instead of announcing "Connection created."
+	 * above a list the customer then has to search. They are additive: the two keys
+	 * every caller already reads — `type` and `message` — are unchanged, and a view
+	 * that ignores the context behaves exactly as before.
+	 *
+	 * Nothing here alters what an action DOES. This is reporting, not behaviour.
+	 *
+	 * @param string $type    'success' | 'error' | 'warning'.
+	 * @param string $message Human-readable, secret-free.
+	 * @param string $action  Which action produced this, when it is worth reporting.
+	 * @param string $id      Connection the action applied to, when there is one.
+	 * @return array{type:string,message:string,action:string,connection:string}
+	 */
+	private function n( string $type, string $message, string $action = '', string $id = '' ): array {
+		return [
+			'type'       => $type,
+			'message'    => $message,
+			'action'     => $action,
+			'connection' => $id,
+		];
 	}
 }

@@ -14,7 +14,7 @@ final class MenuRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$a = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $a, MenuRegistry::ACTIONS, true ) ) {
-			return $this->err( 'wpcc_invalid_menu_action', __( 'Invalid menu action.', 'wp-command-center' ) );
+			return $this->err( 'wpcc_invalid_menu_action', InvalidAction::message( 'menu', $a, MenuRegistry::ACTIONS ) );
 		}
 		return match ( $a ) {
 			MenuRegistry::A_MENU_LIST       => $this->menu_list(),
@@ -53,14 +53,14 @@ final class MenuRuntimeManager {
 
 	private function menu_get( array $p ): array {
 		$menu = wp_get_nav_menu_object( (int) ( $p['menu_id'] ?? 0 ) );
-		if ( ! $menu ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'wp-command-center' ) );
+		if ( ! $menu ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'ai-command-center' ) );
 		$items = wp_get_nav_menu_items( $menu->term_id );
 		return [ 'action' => 'menu_get', 'menu' => $this->summarize( $menu ), 'items' => array_map( [ $this, 'summarize_item' ], $items ?: [] ), 'total_items' => count( $items ?: [] ) ];
 	}
 
 	private function menu_create( array $p, array $cx ): array {
 		$name = sanitize_text_field( (string) ( $p['name'] ?? '' ) );
-		if ( '' === $name ) return $this->err( 'wpcc_missing_name', __( 'Menu name is required.', 'wp-command-center' ) );
+		if ( '' === $name ) return $this->err( 'wpcc_missing_name', __( 'Menu name is required.', 'ai-command-center' ) );
 		$id = wp_create_nav_menu( $name );
 		if ( is_wp_error( $id ) ) return $this->err( 'wpcc_menu_create_failed', $id->get_error_message() );
 		$loc = sanitize_key( (string) ( $p['location'] ?? '' ) );
@@ -73,7 +73,7 @@ final class MenuRuntimeManager {
 	private function menu_update( array $p, array $cx ): array {
 		$id = (int) ( $p['menu_id'] ?? 0 );
 		$m = wp_get_nav_menu_object( $id );
-		if ( ! $m ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'wp-command-center' ) );
+		if ( ! $m ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'ai-command-center' ) );
 		$before = $this->summarize( $m );
 		if ( isset( $p['name'] ) ) wp_update_term( $id, 'nav_menu', [ 'name' => sanitize_text_field( (string) $p['name'] ) ] );
 		$this->store_rollback( (string) $id, 'menu_update', $before, $cx );
@@ -84,7 +84,7 @@ final class MenuRuntimeManager {
 	private function menu_delete( array $p, array $cx ): array {
 		$id = (int) ( $p['menu_id'] ?? 0 );
 		$m = wp_get_nav_menu_object( $id );
-		if ( ! $m ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'wp-command-center' ) );
+		if ( ! $m ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'ai-command-center' ) );
 		$before = [ 'name' => $m->name, 'items' => array_map( [ $this, 'summarize_item' ], wp_get_nav_menu_items( $id ) ?: [] ) ];
 		$this->store_rollback( (string) $id, 'menu_delete', $before, $cx );
 		wp_delete_nav_menu( $id );
@@ -95,7 +95,7 @@ final class MenuRuntimeManager {
 	private function menu_duplicate( array $p, array $cx ): array {
 		$id = (int) ( $p['menu_id'] ?? 0 );
 		$m = wp_get_nav_menu_object( $id );
-		if ( ! $m ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'wp-command-center' ) );
+		if ( ! $m ) return $this->err( 'wpcc_menu_not_found', __( 'Menu not found.', 'ai-command-center' ) );
 		$new_id = wp_create_nav_menu( $m->name . ' (Copy)' );
 		$items = wp_get_nav_menu_items( $id );
 		$id_map = [];
@@ -140,13 +140,13 @@ final class MenuRuntimeManager {
 
 	private function menu_item_get( array $p ): array {
 		$item = get_post( (int) ( $p['item_id'] ?? 0 ) );
-		if ( ! $item || 'nav_menu_item' !== $item->post_type ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'wp-command-center' ) );
+		if ( ! $item || 'nav_menu_item' !== $item->post_type ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'ai-command-center' ) );
 		return [ 'action' => 'menu_item_get', 'item' => $this->summarize_item( $item ) ];
 	}
 
 	private function menu_item_add( array $p, array $cx ): array {
 		$menu_id = (int) ( $p['menu_id'] ?? 0 ); $title = sanitize_text_field( (string) ( $p['title'] ?? '' ) ); $url = esc_url_raw( (string) ( $p['url'] ?? '' ) );
-		if ( '' === $title ) return $this->err( 'wpcc_missing_title', __( 'Title is required.', 'wp-command-center' ) );
+		if ( '' === $title ) return $this->err( 'wpcc_missing_title', __( 'Title is required.', 'ai-command-center' ) );
 		$parent = (int) ( $p['parent_id'] ?? 0 );
 		$args = [ 'menu-item-title' => $title, 'menu-item-url' => $url ?: '#', 'menu-item-status' => 'publish', 'menu-item-parent-id' => $parent ];
 		$item_id = wp_update_nav_menu_item( $menu_id, 0, $args );
@@ -158,7 +158,7 @@ final class MenuRuntimeManager {
 
 	private function menu_item_update( array $p, array $cx ): array {
 		$item = get_post( (int) ( $p['item_id'] ?? 0 ) );
-		if ( ! $item || 'nav_menu_item' !== $item->post_type ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'wp-command-center' ) );
+		if ( ! $item || 'nav_menu_item' !== $item->post_type ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'ai-command-center' ) );
 		$before = $this->summarize_item( $item );
 		$menu_terms = wp_get_object_terms( $item->ID, 'nav_menu' );
 		$menu_id = ( ! is_wp_error( $menu_terms ) && ! empty( $menu_terms ) ) ? (int) $menu_terms[0]->term_id : 0;
@@ -174,7 +174,7 @@ final class MenuRuntimeManager {
 
 	private function menu_item_remove( array $p, array $cx ): array {
 		$item = get_post( (int) ( $p['item_id'] ?? 0 ) );
-		if ( ! $item || 'nav_menu_item' !== $item->post_type ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'wp-command-center' ) );
+		if ( ! $item || 'nav_menu_item' !== $item->post_type ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'ai-command-center' ) );
 		$before = $this->summarize_item( $item );
 		$this->store_rollback( (string) $item->ID, 'menu_item_remove', $before, $cx );
 		wp_delete_post( $item->ID, true );
@@ -185,7 +185,7 @@ final class MenuRuntimeManager {
 	private function menu_item_move( array $p, array $cx ): array {
 		$item_id = (int) ( $p['item_id'] ?? 0 ); $new_parent = (int) ( $p['new_parent_id'] ?? 0 );
 		$item = get_post( $item_id );
-		if ( ! $item ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'wp-command-center' ) );
+		if ( ! $item ) return $this->err( 'wpcc_item_not_found', __( 'Menu item not found.', 'ai-command-center' ) );
 		$old_parent = (int) get_post_meta( $item_id, '_menu_item_menu_item_parent', true );
 		update_post_meta( $item_id, '_menu_item_menu_item_parent', $new_parent );
 		$this->store_rollback( (string) $item_id, 'menu_item_move', [ 'old_parent' => $old_parent, 'new_parent' => $new_parent ], $cx );
@@ -277,11 +277,11 @@ final class MenuRuntimeManager {
 
 	public function rollback( array $p, array $cx = [] ): array {
 		$rid = (string) ( $p['rollback_id'] ?? '' );
-		if ( '' === $rid ) return $this->err( 'wpcc_missing_rb_id', __( 'Rollback ID required.', 'wp-command-center' ) );
+		if ( '' === $rid ) return $this->err( 'wpcc_missing_rb_id', __( 'Rollback ID required.', 'ai-command-center' ) );
 		$rollbacks = get_option( 'wpcc_menu_rollbacks', [] ); $rec = null; $idx = null;
 		foreach ( $rollbacks as $i => $r ) { if ( $r['id'] === $rid ) { $rec = $r; $idx = $i; break; } }
-		if ( ! $rec ) return $this->err( 'wpcc_rb_not_found', __( 'Not found.', 'wp-command-center' ) );
-		if ( $rec['rollback_applied'] ) return $this->err( 'wpcc_rb_already', __( 'Already applied.', 'wp-command-center' ) );
+		if ( ! $rec ) return $this->err( 'wpcc_rb_not_found', __( 'Not found.', 'ai-command-center' ) );
+		if ( $rec['rollback_applied'] ) return $this->err( 'wpcc_rb_already', __( 'Already applied.', 'ai-command-center' ) );
 		$act = $rec['action']; $eid = $rec['entity_id'];
 		if ( in_array( $act, [ 'menu_create', 'menu_import' ] ) ) wp_delete_nav_menu( (int) $eid );
 		elseif ( 'menu_delete' === $act ) { $b = $rec['before_state']; $mid = wp_create_nav_menu( $b['name'] ?? 'Restored' ); foreach ( $b['items'] ?? [] as $item ) wp_update_nav_menu_item( $mid, 0, [ 'menu-item-title' => $item['title'], 'menu-item-url' => $item['url'] ?? '#', 'menu-item-status' => 'publish' ] ); }

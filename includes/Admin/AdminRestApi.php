@@ -504,7 +504,7 @@ final class AdminRestApi {
 
 		$proposal = ( new ProposalAdminQuery() )->get( $id );
 		if ( null === $proposal ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_proposal_not_found', 'message' => __( 'Proposal not found.', 'wp-command-center' ) ], 404 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_proposal_not_found', 'message' => __( 'Proposal not found.', 'ai-command-center' ) ], 404 );
 		}
 		return new \WP_REST_Response( $proposal, 200 );
 	}
@@ -561,24 +561,47 @@ final class AdminRestApi {
 	 * { created, skipped, failed, … } envelope the SEO/Alt generate routes return,
 	 * so one client (the Governed Action Panel) consumes every generator identically.
 	 *
-	 * @param array $generate { kind: 'title'|'excerpt', post_id: int }
+	 * Regeneration ("give me a different suggestion") rides the SAME branch via an
+	 * optional `replacing` proposal id — still no new route. The generator validates
+	 * that the id is a DRAFT for exactly this post and field, and retires it only after
+	 * the replacement has been created, so a failed retry leaves the customer's current
+	 * suggestion untouched. A proposal already submitted for approval or applied is
+	 * never replaceable: that would route around a decision already in flight.
+	 *
+	 * @param array $generate { kind: 'title'|'excerpt', post_id: int, replacing?: string }
 	 */
 	private function proposals_generate_content( array $generate ): \WP_REST_Response {
-		$kind    = sanitize_key( (string) ( $generate['kind'] ?? '' ) );
-		$post_id = (int) ( $generate['post_id'] ?? 0 );
+		$kind      = sanitize_key( (string) ( $generate['kind'] ?? '' ) );
+		$post_id   = (int) ( $generate['post_id'] ?? 0 );
+		$replacing = sanitize_text_field( (string) ( $generate['replacing'] ?? '' ) );
 
 		$feature = [ 'title' => 'title_generator', 'excerpt' => 'excerpt_generator' ][ $kind ] ?? '';
 		if ( '' === $feature ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_generate_kind', 'message' => __( 'Unsupported content generation kind.', 'wp-command-center' ) ], 400 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_generate_kind', 'message' => __( 'Unsupported content generation kind.', 'ai-command-center' ) ], 400 );
 		}
 		if ( ! FeatureGate::allows( $feature ) ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_feature_unavailable', 'message' => __( 'This feature is not available in the current edition.', 'wp-command-center' ) ], 403 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_feature_unavailable', 'message' => __( 'This feature is not available in the current edition.', 'ai-command-center' ) ], 403 );
+		}
+		/*
+		 * The Content tool must actually be switched on.
+		 *
+		 * Every other Content surface asks this — the row action, the bulk action, the
+		 * tab itself — but this branch checked only the edition gate, so a tool a site
+		 * had deliberately turned off could still be driven through the REST route. The
+		 * switch that the admin screen presents as "Content is off" should mean it
+		 * everywhere, not just where the buttons happen to be hidden.
+		 */
+		if ( ! BuiltinAiSettings::is_on( 'content' ) ) {
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_tool_disabled', 'message' => __( 'The Content tool is switched off for this site.', 'ai-command-center' ) ], 403 );
 		}
 		if ( $post_id <= 0 ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_post_id', 'message' => __( 'A valid post id is required.', 'wp-command-center' ) ], 400 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_post_id', 'message' => __( 'A valid post id is required.', 'ai-command-center' ) ], 400 );
 		}
 
-		$result = ( new ContentFieldGenerator() )->generate( $post_id, $kind, [ 'actor' => $this->admin_actor() ] );
+		$result = ( new ContentFieldGenerator() )->generate( $post_id, $kind, [
+			'actor'     => $this->admin_actor(),
+			'replacing' => $replacing,
+		] );
 		return new \WP_REST_Response( $result, 200 );
 	}
 
@@ -736,7 +759,7 @@ final class AdminRestApi {
 						'warning'               => $destructive['warning'],
 						'message'               => sprintf(
 							/* translators: %s: confirmation phrase */
-							__( 'This is a destructive approval. Type the phrase "%s" and a reason to confirm.', 'wp-command-center' ),
+							__( 'This is a destructive approval. Type the phrase "%s" and a reason to confirm.', 'ai-command-center' ),
 							$destructive['phrase']
 						),
 					], 200 );
@@ -865,7 +888,7 @@ final class AdminRestApi {
 
 		if ( null === $detail ) {
 			return new \WP_REST_Response(
-				[ 'success' => false, 'code' => 'wpcc_request_not_found', 'message' => __( 'Operation request not found.', 'wp-command-center' ) ],
+				[ 'success' => false, 'code' => 'wpcc_request_not_found', 'message' => __( 'Operation request not found.', 'ai-command-center' ) ],
 				404
 			);
 		}
@@ -905,7 +928,7 @@ final class AdminRestApi {
 				'diff_kind' => 'patch_unavailable',
 				'available' => false,
 				'summary'   => null,
-				'html'      => '<p class="description">' . esc_html__( 'The diff for this patch is no longer available (its snapshot has been cleaned up).', 'wp-command-center' ) . '</p>',
+				'html'      => '<p class="description">' . esc_html__( 'The diff for this patch is no longer available (its snapshot has been cleaned up).', 'ai-command-center' ) . '</p>',
 			];
 		}
 
@@ -983,7 +1006,7 @@ final class AdminRestApi {
 
 		if ( ! $row ) {
 			return new \WP_REST_Response(
-				[ 'success' => false, 'code' => 'wpcc_result_not_found', 'message' => __( 'Operation result not found.', 'wp-command-center' ) ],
+				[ 'success' => false, 'code' => 'wpcc_result_not_found', 'message' => __( 'Operation result not found.', 'ai-command-center' ) ],
 				404
 			);
 		}
@@ -1050,8 +1073,8 @@ final class AdminRestApi {
 			if ( is_wp_error( $patch ) || empty( $patch['files'] ) ) {
 				// Snapshot rotated/cleaned or no file records — degrade, never error.
 				return $this->diff_payload( $change_id, 'patch_unavailable', false, null,
-					'<p class="description">' . esc_html__( 'The diff for this change is no longer available (its snapshot has been cleaned up). The change metadata is shown above.', 'wp-command-center' ) . '</p>',
-					__( 'Diff snapshot unavailable.', 'wp-command-center' )
+					'<p class="description">' . esc_html__( 'The diff for this change is no longer available (its snapshot has been cleaned up). The change metadata is shown above.', 'ai-command-center' ) . '</p>',
+					__( 'Diff snapshot unavailable.', 'ai-command-center' )
 				);
 			}
 
@@ -1067,8 +1090,8 @@ final class AdminRestApi {
 
 		if ( 'none' === $kind ) {
 			return $this->diff_payload( $change_id, 'none', false, null,
-				'<p class="description">' . esc_html__( 'This change is not reversible and has no recorded diff.', 'wp-command-center' ) . '</p>',
-				__( 'No diff for this change.', 'wp-command-center' )
+				'<p class="description">' . esc_html__( 'This change is not reversible and has no recorded diff.', 'ai-command-center' ) . '</p>',
+				__( 'No diff for this change.', 'ai-command-center' )
 			);
 		}
 
@@ -1076,7 +1099,7 @@ final class AdminRestApi {
 		// before/after content, so present a structured "what changed" summary
 		// rather than a synthesized diff.
 		return $this->diff_payload( $change_id, 'metadata', false, null, $this->render_change_metadata( $change ),
-			__( 'Field-level change — previous value is restorable, but no textual diff is stored.', 'wp-command-center' )
+			__( 'Field-level change — previous value is restorable, but no textual diff is stored.', 'ai-command-center' )
 		);
 	}
 
@@ -1091,7 +1114,7 @@ final class AdminRestApi {
 		$counts = is_array( $change['counts'] ?? null ) ? $change['counts'] : [];
 		$html  .= '<p>' . esc_html( sprintf(
 			/* translators: 1: created, 2: updated, 3: skipped, 4: errors */
-			__( 'Created %1$d · Updated %2$d · Skipped %3$d · Errors %4$d', 'wp-command-center' ),
+			__( 'Created %1$d · Updated %2$d · Skipped %3$d · Errors %4$d', 'ai-command-center' ),
 			(int) ( $counts['created'] ?? 0 ),
 			(int) ( $counts['updated'] ?? 0 ),
 			(int) ( $counts['skipped'] ?? 0 ),
@@ -1107,7 +1130,7 @@ final class AdminRestApi {
 			}
 			$html .= '</tbody></table>';
 		} else {
-			$html .= '<p class="description">' . esc_html__( 'No field-level detail was recorded for this change.', 'wp-command-center' ) . '</p>';
+			$html .= '<p class="description">' . esc_html__( 'No field-level detail was recorded for this change.', 'ai-command-center' ) . '</p>';
 		}
 
 		$html .= '</div>';
@@ -1281,6 +1304,16 @@ final class AdminRestApi {
 			'operation_id'        => $r['operation_id'],
 			'operation'           => $operation['title'] ?? $r['operation_id'],
 			'action'              => $action,
+			// Plain-language decision line. The Decided tab and Home already carried
+			// these; Pending — the one screen where the decision is actually made —
+			// did not, because it is shaped here rather than by ApprovalAdminQuery.
+			// Purely additive presentation strings: every existing field above is
+			// untouched, so nothing that reads this envelope by ID is affected.
+			'headline'            => ActionLabels::describe( (string) $r['operation_id'], (string) $action, $payload, (string) ( $operation['title'] ?? '' ) ),
+			'area'                => ActionLabels::area( ActionLabels::runtime_of( (string) $r['operation_id'] ) ),
+			// Same reasoning as ApprovalAdminQuery::preview(): the pending list is
+			// where the decision is actually made, so it has to show what will change.
+			'preview'             => ApprovalAdminQuery::preview_for( $payload ),
 			'risk_level'          => $risk,
 			'status'              => $r['status'],
 			'reason'              => $payload['reason'] ?? '',
@@ -1467,12 +1500,45 @@ final class AdminRestApi {
 		$scope   = sanitize_key( (string) $request->get_param( 'scope' ) );
 		$expires = sanitize_key( (string) $request->get_param( 'expires' ) );
 
-		$expires_at = match ( $expires ) {
-			'30d'   => time() + 30 * DAY_IN_SECONDS,
-			'90d'   => time() + 90 * DAY_IN_SECONDS,
-			'1y'    => time() + YEAR_IN_SECONDS,
-			default => null,
-		};
+		/*
+		 * Expiry is validated against the offered set instead of falling through
+		 * to "never".
+		 *
+		 * The `default => null` arm meant every unrecognised value — a typo, a
+		 * stale client, '60d' — silently produced a token that never expires. On
+		 * a control whose whole purpose is to LIMIT how long a key lives, the
+		 * failure mode of a bad input has to be a refusal, not the most permissive
+		 * option available. An omitted value is still an explicit "never".
+		 */
+		$windows = [
+			'30d' => 30 * DAY_IN_SECONDS,
+			'90d' => 90 * DAY_IN_SECONDS,
+			'1y'  => YEAR_IN_SECONDS,
+		];
+
+		/*
+		 * An OMITTED expiry defaults to 30 days, not to "never".
+		 *
+		 * The route used to treat a missing value as an unlimited lifetime, so the
+		 * least deliberate request produced the most permissive credential. On this
+		 * control fail-closed means the shorter life. "never" is still honoured —
+		 * it just has to be asked for, exactly as it does in the UI.
+		 */
+		if ( '' === $expires ) {
+			$expires = '30d';
+		}
+
+		if ( 'never' !== $expires && ! isset( $windows[ $expires ] ) ) {
+			return new \WP_REST_Response( [
+				'success' => false,
+				'errors'  => [ [
+					'code'    => 'wpcc_invalid_expiry',
+					'message' => __( 'Choose when this token should stop working, then try again.', 'ai-command-center' ),
+				] ],
+			], 400 );
+		}
+
+		$expires_at = isset( $windows[ $expires ] ) ? time() + $windows[ $expires ] : null;
 
 		$result = ( new AuthTokens() )->create( $label, $scope, $expires_at, get_current_user_id() );
 

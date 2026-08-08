@@ -54,7 +54,7 @@ final class BulkRuntimeManager {
 
 	public function run(array $p,array $cx=[]):array{
 		$a=(string)($p['action']??'');
-		if(!in_array($a,BulkRegistry::ACTIONS,true))return $this->err('invalid',__('Invalid action.','wp-command-center'));
+		if(!in_array($a,BulkRegistry::ACTIONS,true))return $this->err('wpcc_invalid_bulk_action',InvalidAction::message('bulk',$a,BulkRegistry::ACTIONS));
 		$result=match($a){
 			BulkRegistry::A_BULK_CONTENT=>$this->bulk_content($p,$cx),
 			BulkRegistry::A_BULK_PUBLISH=>$this->bulk_status($p,'publish',$cx),
@@ -104,6 +104,12 @@ final class BulkRuntimeManager {
 	private function bulk_content(array $p,array $cx):array{
 		$ids=(array)($p['ids']??[]);$fields=$p['fields']??[];$results=[];
 		if(count($ids)>self::MAX_ITEMS)return$this->err('too_many_items',$this->cap_msg());
+		// A bulk edit with no targets used to report success ("updated: 0") and still
+		// record an `applied` change, so the Changes screen filled up with entries
+		// that changed nothing. Every other operation rejects a call missing its
+		// essential input; this one now does too.
+		if(!$ids)return$this->err('wpcc_missing_bulk_ids',__('ids is required — provide the IDs to update.','ai-command-center'));
+		if(!$fields)return$this->err('wpcc_missing_bulk_fields',__('fields is required — provide what to change (post_title and/or post_content).','ai-command-center'));
 		$acc=new ContentFieldAccessor();$batch=wp_generate_uuid4();$items=0;
 		foreach($ids as $id){
 			$id=(int)$id;$post=get_post($id);if(!$post)continue;
@@ -123,6 +129,9 @@ final class BulkRuntimeManager {
 	private function bulk_status(array $p,string $status,array $cx):array{
 		$ids=(array)($p['ids']??[]);$results=[];
 		if(count($ids)>self::MAX_ITEMS)return$this->err('too_many_items',$this->cap_msg());
+		// Same reasoning as bulk_content: no targets is a malformed request, not a
+		// successful publish/unpublish of nothing.
+		if(!$ids)return$this->err('wpcc_missing_bulk_ids',__('ids is required — provide the IDs to update.','ai-command-center'));
 		$acc=new ContentFieldAccessor();$batch=wp_generate_uuid4();$items=0;$action="bulk_$status"; // bulk_publish | bulk_draft
 		foreach($ids as $id){
 			$id=(int)$id;$post=get_post($id);if(!$post)continue;
@@ -178,7 +187,7 @@ final class BulkRuntimeManager {
 	private function bulk_acf(array $p,array $cx):array{
 		if(!function_exists('acf_get_field_groups')||!function_exists('update_field'))return['updated'=>0,'results'=>[],'rollback_id'=>''];
 		$ids=(array)($p['post_ids']??[]);$field=sanitize_text_field((string)($p['field_key']??$p['field_name']??''));$value=$p['value']??null;$results=[];
-		if(''===$field)return$this->err('missing_field',__('Field key required.','wp-command-center'));
+		if(''===$field)return$this->err('missing_field',__('Field key required.','ai-command-center'));
 		if(count($ids)>self::MAX_ITEMS)return$this->err('too_many_items',$this->cap_msg());
 		$acc=new BulkAcfAccessor($field);$batch=wp_generate_uuid4();$items=0;
 		foreach($ids as $id){
@@ -194,7 +203,7 @@ final class BulkRuntimeManager {
 
 	private function batch_execute(array $p,array $cx):array{
 		$ops=(array)($p['operations']??[]);$results=[];$executor=new \WPCommandCenter\Operations\OperationExecutor();
-		if(count($ops)>self::MAX_ITEMS)return$this->err('too_many_items',sprintf(__('Cannot process more than %d operations in a single batch.','wp-command-center'),self::MAX_ITEMS));
+		if(count($ops)>self::MAX_ITEMS)return$this->err('too_many_items',sprintf(/* translators: %d: number */ __('Cannot process more than %d operations in a single batch.','ai-command-center'),self::MAX_ITEMS));
 		foreach($ops as $op){$r=$executor->run((string)($op['operation_id']??''),(array)($op['payload']??[]),$cx);$results[]=['operation_id'=>$op['operation_id']??'','success'=>$r['success']??false];}
 		return['executed'=>count($results),'results'=>$results];
 	}
@@ -271,9 +280,9 @@ final class BulkRuntimeManager {
 	}
 
 	private function dep_message(string $type):string{
-		if('woo'===$type)return __('WooCommerce is not active; cannot reverse this bulk operation.','wp-command-center');
-		if('acf'===$type)return __('ACF is not active; cannot reverse this bulk operation.','wp-command-center');
-		return __('This bulk rollback record type cannot be reversed.','wp-command-center');
+		if('woo'===$type)return __('WooCommerce is not active; cannot reverse this bulk operation.','ai-command-center');
+		if('acf'===$type)return __('ACF is not active; cannot reverse this bulk operation.','ai-command-center');
+		return __('This bulk rollback record type cannot be reversed.','ai-command-center');
 	}
 
 	// ── Legacy (P4C.0a option-record) rollback — unchanged behavior ───────────
@@ -306,7 +315,7 @@ final class BulkRuntimeManager {
 			}
 		}elseif('bulk_acf'===$action){
 			if(!function_exists('update_field'))return$this->unsupported($this->dep_message('acf'));
-			$fk=(string)($bs['field_key']??'');if(''===$fk)return$this->unsupported(__('Rollback record is missing its ACF field key.','wp-command-center'));
+			$fk=(string)($bs['field_key']??'');if(''===$fk)return$this->unsupported(__('Rollback record is missing its ACF field key.','ai-command-center'));
 			foreach($before_map as $id=>$snap){$val=is_array($snap)?($snap['acf']??null):$snap;update_field($fk,$val,(int)$id);$fields_set['acf']=true;$restored++;}
 		}else{
 			return$this->unsupported($this->dep_message(''));
@@ -324,7 +333,7 @@ final class BulkRuntimeManager {
 		return['post_title'=>$snap];
 	}
 
-	private function cap_msg():string{ return sprintf(__('Cannot process more than %d items in a single bulk operation.','wp-command-center'),self::MAX_ITEMS); }
+	private function cap_msg():string{ return sprintf(/* translators: %d: number */ __('Cannot process more than %d items in a single bulk operation.','ai-command-center'),self::MAX_ITEMS); }
 	private function unsupported(string $m):array{return['error'=>true,'code'=>'wpcc_bulk_rollback_unsupported','message'=>$m,'reversible'=>false];}
 	private function err(string $c,string $m):array{return['error'=>true,'code'=>$c,'message'=>$m];}
 }

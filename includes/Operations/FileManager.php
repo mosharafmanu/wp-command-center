@@ -27,7 +27,7 @@ final class FileManager {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, self::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_file_action', sprintf( __( 'Invalid action: %s. Use file_read, file_tree, or file_metadata.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_file_action', InvalidAction::message( 'file', $action, self::ACTIONS ) );
 		}
 
 		$path = isset( $params['path'] ) ? (string) $params['path'] : '';
@@ -42,7 +42,7 @@ final class FileManager {
 
 	private function file_read( FileAccessApi $api, string $path, array $context, array $params = [] ): array|\WP_Error {
 		if ( '' === $path ) {
-			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'ai-command-center' ) );
 		}
 
 		// STEP 103.0A — paginated reads so large live files can be inspected in
@@ -89,7 +89,7 @@ final class FileManager {
 
 	private function file_metadata( FileAccessApi $api, string $path, array $context ): array|\WP_Error {
 		if ( '' === $path ) {
-			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_path', __( 'A file path is required.', 'ai-command-center' ) );
 		}
 
 		$result = $api->meta( $path );

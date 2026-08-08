@@ -32,7 +32,7 @@ final class UserManager {
 		$action = (string) ( $payload['action'] ?? '' );
 
 		if ( ! in_array( $action, UserRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_user_action', __( 'Invalid user action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_user_action', InvalidAction::message( 'user', $action, UserRegistry::ACTIONS ) );
 		}
 
 		return match ( $action ) {
@@ -46,7 +46,7 @@ final class UserManager {
 			UserRegistry::ACTION_RESET_PASSWORD  => $this->reset_password( $payload, $context ),
 			UserRegistry::ACTION_ASSIGN_ROLE     => $this->assign_role( $payload, $context ),
 			UserRegistry::ACTION_REMOVE_ROLE     => $this->remove_role( $payload, $context ),
-			default                              => $this->error( 'wpcc_unknown_user_action', __( 'Unknown user action.', 'wp-command-center' ) ),
+			default                              => $this->error( 'wpcc_unknown_user_action', __( 'Unknown user action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -85,7 +85,7 @@ final class UserManager {
 		$user    = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'user.get', [ 'user_id' => $user_id ] );
@@ -94,9 +94,16 @@ final class UserManager {
 	}
 
 	private function search_users( array $payload ): array {
-		$search = sanitize_text_field( (string) ( $payload['search'] ?? '' ) );
+		/*
+		 * Accept `query` as well as `search`. Every other search action in the
+		 * catalogue — term_search, media_search, search_manage, code_search — takes
+		 * `query`, so an assistant that had just used one of those got "Search term
+		 * is required." here and had no way to tell which word this one wanted.
+		 * Mirrors TermRuntimeManager::term_search(), which already accepts both.
+		 */
+		$search = sanitize_text_field( (string) ( $payload['search'] ?? $payload['query'] ?? '' ) );
 		if ( '' === $search ) {
-			return $this->error( 'wpcc_missing_search', __( 'Search term is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_search', __( "user_search requires a 'search' (or 'query') parameter — it matches username, email and display name.", 'ai-command-center' ) );
 		}
 
 		$query = new \WP_User_Query( [
@@ -128,14 +135,14 @@ final class UserManager {
 		$last     = sanitize_text_field( (string) ( $payload['last_name'] ?? '' ) );
 
 		if ( '' === $username || '' === $email || '' === $password ) {
-			return $this->error( 'wpcc_missing_user_fields', __( 'Username, email, and password are required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_user_fields', __( 'Username, email, and password are required.', 'ai-command-center' ) );
 		}
 
 		if ( username_exists( $username ) ) {
-			return $this->error( 'wpcc_username_exists', __( 'Username already exists.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_username_exists', __( 'Username already exists.', 'ai-command-center' ) );
 		}
 		if ( email_exists( $email ) ) {
-			return $this->error( 'wpcc_user_email_exists', __( 'Email already in use.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_email_exists', __( 'Email already in use.', 'ai-command-center' ) );
 		}
 
 		// Critical: flag administrator account creation in the audit log
@@ -183,7 +190,7 @@ final class UserManager {
 		$user_id = (int) ( $payload['user_id'] ?? 0 );
 		$user    = get_userdata( $user_id );
 		if ( ! $user ) {
-			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'ai-command-center' ) );
 		}
 
 		// PROGRAM-4 / P4.5 — capture the prior state of ONLY the fields this call touches,
@@ -214,7 +221,7 @@ final class UserManager {
 		}
 
 		if ( empty( $updates ) ) {
-			return $this->error( 'wpcc_no_user_updates', __( 'No fields to update.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_no_user_updates', __( 'No fields to update.', 'ai-command-center' ) );
 		}
 
 		$updates['ID'] = $user_id;
@@ -241,12 +248,12 @@ final class UserManager {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'ai-command-center' ) );
 		}
 
 		// Cannot delete yourself
 		if ( get_current_user_id() === $user_id ) {
-			return $this->error( 'wpcc_cannot_delete_self', __( 'Cannot delete your own account.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_cannot_delete_self', __( 'Cannot delete your own account.', 'ai-command-center' ) );
 		}
 
 		$before = $this->format_user( $user );
@@ -259,7 +266,7 @@ final class UserManager {
 		}
 
 		if ( ! $result ) {
-			return $this->error( 'wpcc_user_delete_failed', __( 'Failed to delete user.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_delete_failed', __( 'Failed to delete user.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'user.deleted', [
@@ -276,7 +283,7 @@ final class UserManager {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'ai-command-center' ) );
 		}
 
 		$before_roles = $user->roles;
@@ -301,7 +308,7 @@ final class UserManager {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'ai-command-center' ) );
 		}
 
 		if ( '' === $password ) {
@@ -309,7 +316,7 @@ final class UserManager {
 			$generated = true;
 		} else {
 			if ( strlen( $password ) < 8 ) {
-				return $this->error( 'wpcc_weak_password', __( 'Password must be at least 8 characters.', 'wp-command-center' ) );
+				return $this->error( 'wpcc_weak_password', __( 'Password must be at least 8 characters.', 'ai-command-center' ) );
 			}
 			$generated = false;
 		}
@@ -324,7 +331,7 @@ final class UserManager {
 		$response = [ 'action' => 'user_reset_password', 'user_id' => $user_id ];
 		if ( $generated ) {
 			$response['new_password'] = $password;
-			$response['note'] = __( 'Password was auto-generated. Save it now — it will not be shown again.', 'wp-command-center' );
+			$response['note'] = __( 'Password was auto-generated. Save it now — it will not be shown again.', 'ai-command-center' );
 		}
 
 		return $response;
@@ -336,12 +343,12 @@ final class UserManager {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'ai-command-center' ) );
 		}
 
 		$wp_roles = wp_roles();
 		if ( ! $wp_roles->is_role( $role ) ) {
-			return $this->error( 'wpcc_invalid_role', __( 'Invalid role.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_role', __( 'Invalid role.', 'ai-command-center' ) );
 		}
 
 		// Critical: flag administrator role assignment in the audit log
@@ -368,15 +375,15 @@ final class UserManager {
 		$user = get_userdata( $user_id );
 
 		if ( ! $user ) {
-			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_not_found', __( 'User not found.', 'ai-command-center' ) );
 		}
 
 		if ( ! in_array( $role, $user->roles, true ) ) {
-			return $this->error( 'wpcc_user_role_not_assigned', __( 'User does not have this role.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_user_role_not_assigned', __( 'User does not have this role.', 'ai-command-center' ) );
 		}
 
 		if ( 1 === count( $user->roles ) ) {
-			return $this->error( 'wpcc_cannot_remove_last_role', __( 'Cannot remove the last role.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_cannot_remove_last_role', __( 'Cannot remove the last role.', 'ai-command-center' ) );
 		}
 
 		$before_roles = $user->roles;
@@ -442,7 +449,7 @@ final class UserManager {
 	public function rollback( array $payload, array $context = [] ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'ai-command-center' ) );
 		}
 
 		$rollbacks = get_option( 'wpcc_user_rollbacks', [] );
@@ -458,10 +465,10 @@ final class UserManager {
 		}
 
 		if ( null === $record ) {
-			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 		}
 		if ( $record['rollback_applied'] ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 		}
 
 		$user_id = $record['user_id'];

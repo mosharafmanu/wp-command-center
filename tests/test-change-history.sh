@@ -25,6 +25,13 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
+
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
 PLUGINS_DIR="$WP_ROOT/wp-content/plugins"
 AUDIT_LOG="$WP_ROOT/wp-content/uploads/wpcc-audit/audit.log"
 
@@ -42,7 +49,7 @@ rest() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type
 wpe()  { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 # Safe, prepared change-log query helper (reads params from env, prints JSON).
-QHELPER="$(mktemp /tmp/wpcc-cl-query-XXXXXX.php)"
+QHELPER="$(mktemp -d)/wpcc-cl-query.php"
 cat > "$QHELPER" <<'PHP'
 <?php
 global $wpdb;
@@ -82,7 +89,7 @@ SAVED_TITLE="$(wpe 'echo get_option("blogname");')"
 
 echo "== 1. Foundation: schema + DB version =="
 
-assert_eq "DB version is 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "DB version is 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 assert_eq "wpcc_change_log table exists" "yes" "$(wpe 'global $wpdb;$t=$wpdb->prefix."wpcc_change_log";echo $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s",$t))?"yes":"no";')"
 assert_eq "change_log has 28 columns" "28" "$(wpe 'global $wpdb;$t=$wpdb->prefix."wpcc_change_log";echo count($wpdb->get_col("SHOW COLUMNS FROM $t"));')"
 

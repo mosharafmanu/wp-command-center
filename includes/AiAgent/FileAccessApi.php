@@ -49,15 +49,15 @@ final class FileAccessApi {
 		}
 
 		if ( is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'ai-command-center' ) );
 		}
 
 		if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'ai-command-center' ) );
 		}
 
 		if ( $this->is_binary( $real ) ) {
-			return new \WP_Error( 'wpcc_binary_file', __( 'Binary files cannot be previewed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_binary_file', __( 'Binary files cannot be previewed.', 'ai-command-center' ) );
 		}
 
 		$total_bytes = (int) filesize( $real );
@@ -69,7 +69,7 @@ final class FileAccessApi {
 			'total_lines' => $this->count_lines_capped( $real, $total_bytes ),
 			'modified'    => filemtime( $real ),
 			'extension'   => strtolower( pathinfo( $real, PATHINFO_EXTENSION ) ),
-			'writable'    => is_writable( $real ),
+			'writable'    => wp_is_writable( $real ),
 		];
 
 		$has_line = isset( $opts['line_start'] ) || isset( $opts['line_count'] )
@@ -156,6 +156,7 @@ final class FileAccessApi {
 		$eff_count = $req_count + $ctx_before + $ctx_after;
 		$end_line  = $eff_start + $eff_count - 1;
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $real, 'rb' );
 		if ( false === $handle ) {
 			return [
@@ -194,6 +195,7 @@ final class FileAccessApi {
 			$collected[] = $line;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		$returned_lines = count( $collected );
@@ -239,6 +241,7 @@ final class FileAccessApi {
 			return null;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $real, 'rb' );
 		if ( false === $handle ) {
 			return null;
@@ -247,6 +250,7 @@ final class FileAccessApi {
 		$count = 0;
 		$last  = "\n";
 		while ( ! feof( $handle ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fread -- paired with the streamed fopen above.
 			$chunk = fread( $handle, 1 << 16 );
 			if ( false === $chunk || '' === $chunk ) {
 				break;
@@ -254,6 +258,7 @@ final class FileAccessApi {
 			$count += substr_count( $chunk, "\n" );
 			$last   = substr( $chunk, -1 );
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		if ( "\n" !== $last ) {
@@ -278,18 +283,18 @@ final class FileAccessApi {
 		}
 
 		if ( is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'ai-command-center' ) );
 		}
 
 		if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'ai-command-center' ) );
 		}
 
 		return [
 			'path'     => $this->to_relative_path( $real ),
 			'size'     => filesize( $real ),
 			'modified' => filemtime( $real ),
-			'writable' => is_writable( $real ),
+			'writable' => wp_is_writable( $real ),
 			'hash'     => (string) hash_file( 'sha1', $real ),
 		];
 	}
@@ -324,7 +329,7 @@ final class FileAccessApi {
 		}
 
 		if ( ! is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_not_a_directory', __( 'The requested path is not a directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_a_directory', __( 'The requested path is not a directory.', 'ai-command-center' ) );
 		}
 
 		$entries = [];

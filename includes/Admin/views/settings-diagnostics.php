@@ -12,12 +12,19 @@
 
 defined( 'ABSPATH' ) || exit;
 
+use WPCommandCenter\Admin\DeveloperTools;
+
 $wpcc_diag_panes = [
-	'health'          => [ 'label' => __( 'Health', 'wp-command-center' ),         'view' => 'diagnostics' ],
-	'recommendations' => [ 'label' => __( 'Recommendations', 'wp-command-center' ), 'view' => 'recommendations' ],
-	'sitereport'      => [ 'label' => __( 'Site Report', 'wp-command-center' ),     'view' => 'site-intelligence' ],
-	'patches'         => [ 'label' => __( 'Patches', 'wp-command-center' ),         'view' => 'patches' ],
+	'health'          => [ 'label' => __( 'Health', 'ai-command-center' ),         'view' => 'diagnostics' ],
+	'recommendations' => [ 'label' => __( 'Recommendations', 'ai-command-center' ), 'view' => 'recommendations' ],
+	'sitereport'      => [ 'label' => __( 'Site Report', 'ai-command-center' ),     'view' => 'site-intelligence' ],
 ];
+
+// Patches edit site FILES. The operation stays available over REST/MCP under the
+// same approval policy; only this screen is hidden unless developer tools are on.
+if ( DeveloperTools::enabled() ) {
+	$wpcc_diag_panes['patches'] = [ 'label' => __( 'Patches', 'ai-command-center' ), 'view' => 'patches' ];
+}
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pane selection, no state change.
 $wpcc_diag_active = isset( $_GET['dpane'] ) ? sanitize_key( wp_unslash( $_GET['dpane'] ) ) : 'health';
@@ -25,10 +32,10 @@ if ( ! isset( $wpcc_diag_panes[ $wpcc_diag_active ] ) ) {
 	$wpcc_diag_active = 'health';
 }
 ?>
-<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Diagnostics sections', 'wp-command-center' ); ?>">
+<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Diagnostics sections', 'ai-command-center' ); ?>">
 	<?php foreach ( $wpcc_diag_panes as $key => $pane ) : ?>
 		<a class="wpcc-cds-subnav__item<?php echo $key === $wpcc_diag_active ? ' is-active' : ''; ?>"
-			href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=diagnostics&dpane=' . $key ) ); ?>"
+			href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=diagnostics&dpane=' . $key ) ); ?>"
 			<?php echo $key === $wpcc_diag_active ? 'aria-current="page"' : ''; ?>>
 			<?php echo esc_html( $pane['label'] ); ?>
 		</a>

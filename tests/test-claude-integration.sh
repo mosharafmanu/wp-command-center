@@ -16,10 +16,19 @@ echo "== 1. Claude MCP Config Generation =="
 CONFIG=$(api "$WPCC_BASE/claude/config")
 assert_true "config: has mcpServers" "$(echo "$CONFIG" | jq -r 'if .mcpServers then "true" else "false" end')"
 assert_true "config: wp-command-center server exists" "$(echo "$CONFIG" | jq -r 'if .mcpServers["wp-command-center"] then "true" else "false" end')"
-assert_contains "config: command is npx" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].command')" "npx"
+# The generated config launches the relay THIS SITE ships, rather than fetching a
+# package from npm: `bash -c "curl <site>/sdk/javascript/wpcc-mcp-relay.mjs; node …"`,
+# with the endpoint and token supplied through env. The assertions below describe that
+# contract. They previously asserted an `npx` command with the MCP URL as the last
+# argument, which the generator has not produced for some time — so the shape a
+# customer actually pastes into their client was going unverified.
+assert_contains "config: command is a shell launcher" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].command')" "bash"
 assert_true "config: args array exists" "$(echo "$CONFIG" | jq -r 'if (.mcpServers["wp-command-center"].args | type) == "array" then "true" else "false" end')"
-assert_true "config: args count >= 3" "$(if [ "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args | length')" -ge 3 ] 2>/dev/null; then echo true; else echo false; fi)"
-assert_contains "config: mcp URL in args" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args[-1]')" "/wp-command-center/v1/mcp"
+assert_contains "config: launcher fetches the relay this site ships" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args | join(" ")')" "wpcc-mcp-relay.mjs"
+assert_contains "config: launcher runs the relay with node" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args | join(" ")')" "node"
+assert_contains "config: mcp URL supplied via env" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "/wp-command-center/v1/mcp"
+# The config is a template the owner fills in — it must never embed a live token.
+assert_true "config: no live token embedded" "$(echo "$CONFIG" | grep -qE '\"WPCC_TOKEN\": *\"wpcc_[A-Za-z0-9]{20}' && echo false || echo true)"
 assert_true "config: env object exists" "$(echo "$CONFIG" | jq -r 'if (.mcpServers["wp-command-center"].env | type) == "object" then "true" else "false" end')"
 assert_contains "config: WPCC_MCP_URL env" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "/wp-command-center/v1/mcp"
 assert_contains "config: WPCC_SITE_URL env" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_SITE_URL')" "http"
@@ -155,7 +164,7 @@ assert_true "routes: claude/prompts" "$(echo "$MANIFEST" | jq -r 'any(.endpoints
 
 echo "== 17. MCP Interop — No Second Runtime =="
 # Claude config should point to the existing MCP endpoint, not a new one
-MCP_ENDPOINT=$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args[-1]')
+MCP_ENDPOINT=$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')
 MANIFEST_MCP=$(echo "$MANIFEST" | jq -r '.mcp_server.endpoint')
 assert_contains "claude: config uses same MCP endpoint as manifest" "$MCP_ENDPOINT" "wp-command-center/v1/mcp"
 assert_contains "claude: manifest mcp matches config" "$MANIFEST_MCP" "wp-command-center/v1/mcp"

@@ -61,16 +61,17 @@ final class ApprovalAdminQuery {
 		$requests = $wpdb->prefix . 'wpcc_operation_requests';
 		$queue    = $wpdb->prefix . 'wpcc_operation_queue';
 
-		$pending = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$requests} WHERE status = %s",
-			OperationManager::STATUS_PENDING_REVIEW
-		) );
+		// F-01: pending figures come from the canonical counter on the manager
+		// that owns the table and the status constants — the same one the
+		// admin-bar badge and the MCP reports read.
+		$manager = new OperationManager();
 
-		$pending_critical = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$requests} WHERE status = %s AND risk_level = %s",
-			OperationManager::STATUS_PENDING_REVIEW,
-			SecurityModeManager::RISK_CRITICAL
-		) );
+		$pending = $manager->count_pending_review();
+
+		$pending_critical = $manager->count_requests( [
+			'status'     => OperationManager::STATUS_PENDING_REVIEW,
+			'risk_level' => SecurityModeManager::RISK_CRITICAL,
+		] );
 
 		$resolved = (int) $wpdb->get_var( $wpdb->prepare(
 			"SELECT COUNT(*) FROM {$requests} WHERE status != %s",
@@ -220,6 +221,22 @@ final class ApprovalAdminQuery {
 			'action'      => 'approval_detail',
 			'request'     => $formatted,
 			'payload'     => $this->strip_payload( $payload ),
+			/*
+			 * The plain-language description of the change an undo reverses.
+			 *
+			 * "What will change" renders the payload field by field, so an undo —
+			 * whose payload is just { action, change_id, confirm } — showed its one
+			 * meaningful field as `Change id: 98ba74ef-83d0-…`. A raw UUID is not an
+			 * answer to "what will change", least of all on the screen where the
+			 * customer gives consent. ActionLabels::undo_target() already resolves
+			 * the original change to words (it is what puts "Undo a change — Update
+			 * SEO details" in the heading); resolving it once here means the view
+			 * never has to guess and never has to look anything up itself.
+			 *
+			 * Empty for every non-undo request, and empty when the original change
+			 * cannot be found — a missing original must not stop the row rendering.
+			 */
+			'undo_target' => ActionLabels::undo_target( $payload ),
 			'queue_items' => $queue_items,
 			'results'     => $results,
 			'change_set'  => $change_set,
@@ -289,11 +306,30 @@ final class ApprovalAdminQuery {
 			? (string) $row['resolved_by_label']
 			: null;
 
+		$operation_id = (string) ( $row['operation_id'] ?? '' );
+
 		return [
 			'request_id'    => (string) ( $row['request_id'] ?? '' ),
-			'operation_id'  => (string) ( $row['operation_id'] ?? '' ),
+			'operation_id'  => $operation_id,
 			'operation'     => (string) ( $operation['title'] ?? $row['operation_id'] ?? '' ),
 			'action'        => $action,
+			// V1 — plain-language decision line. Additive presentation fields: the
+			// raw operation_id/action above are unchanged, so nothing that reads
+			// this envelope by ID is affected. `headline` answers "what am I
+			// approving?"; `area` answers "where on my site?".
+			'headline'      => ActionLabels::describe( $operation_id, $action, $payload, (string) ( $operation['title'] ?? '' ) ),
+			'area'          => ActionLabels::area( ActionLabels::runtime_of( $operation_id ) ),
+			/*
+			 * The one thing a reviewer actually needs: the new value.
+			 *
+			 * The queue said WHICH setting was changing ("Tagline") but never what it
+			 * was changing TO, while Approve sat on the same row. The fastest path
+			 * through the product was therefore to approve without ever seeing the
+			 * change — which quietly defeats the promise the screen exists to keep.
+			 * A short preview means a routine edit can be judged from the list, and
+			 * anything longer still opens in full detail.
+			 */
+			'preview'       => self::preview( $payload ),
 			'risk_level'    => SecurityModeManager::effective_risk( $operation, $action ),
 			'status'        => (string) ( $row['status'] ?? '' ),
 			'reason'        => isset( $payload['reason'] ) ? (string) $payload['reason'] : '',
@@ -436,6 +472,33 @@ final class ApprovalAdminQuery {
 			}
 		}
 		return $payload;
+	}
+
+	/**
+	 * A short, human preview of what a request will set. Empty when the payload
+	 * carries nothing a person would recognise — never a guess.
+	 *
+	 * @param array<string,mixed> $payload
+	 */
+	public static function preview_for( array $payload ): string { return self::preview( $payload ); }
+
+	private static function preview( array $payload ): string {
+		foreach ( [ 'value', 'post_title', 'title', 'display_name', 'name', 'caption', 'alt_text' ] as $key ) {
+			if ( ! isset( $payload[ $key ] ) || ! is_scalar( $payload[ $key ] ) ) {
+				continue;
+			}
+			$value = trim( (string) $payload[ $key ] );
+			if ( '' === $value ) {
+				continue;
+			}
+			// Long bodies belong in the detail view, not in a list row.
+			if ( mb_strlen( $value ) > 90 ) {
+				return mb_substr( $value, 0, 90 ) . '…';
+			}
+			return $value;
+		}
+
+		return '';
 	}
 
 	private function ts( mixed $value ): ?int {

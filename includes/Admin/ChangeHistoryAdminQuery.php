@@ -35,6 +35,76 @@ final class ChangeHistoryAdminQuery {
 	];
 
 	/**
+	 * How many changes have ever been recorded on this site.
+	 *
+	 * Deliberately NOT derived from sessions(): a change written through the
+	 * approval-queue path carries no session_id, so it belongs to no session and is
+	 * invisible to a session roll-up. A caller asking "has anything ever changed
+	 * here?" must not be told "no" because the change happened to arrive without a
+	 * session. Same table, same read-only posture, no filters — just the count.
+	 */
+	public function total_changes(): int {
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_change_log';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own table, no user input, presentation read.
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
+	}
+
+	/**
+	 * The most recent changes, newest first — regardless of session.
+	 *
+	 * Home's "Recent changes" panel was built from session roll-ups, and changes
+	 * written through the approval-queue path carry no session_id, so they belong
+	 * to no session. The result was a dashboard reporting "No changes yet" on a
+	 * site with a full change log — the panel was blind to the product's own
+	 * primary flow. Read-only, same table, no new source of truth.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function recent_changes( int $limit = 5 ): array {
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_change_log';
+		$limit = max( 1, min( 50, $limit ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- own table, prepared limit, presentation read.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare( "SELECT change_id, operation_id, action, runtime, status, reversible, actor_json, target_summary, created_at FROM {$table} ORDER BY created_at DESC, id DESC LIMIT %d", $limit ),
+			ARRAY_A
+		);
+
+		$out = [];
+		foreach ( (array) $rows as $r ) {
+			$operation_id = (string) ( $r['operation_id'] ?? '' );
+			$action       = (string) ( $r['action'] ?? '' );
+			// The actor is stored as JSON on this table, not as a column pair.
+			$actor      = json_decode( (string) ( $r['actor_json'] ?? '' ), true );
+			$actor_type = is_array( $actor ) ? (string) ( $actor['type'] ?? '' ) : '';
+
+			// Reuse the human target stored with the change so the dashboard row can
+			// say WHICH setting changed, not just that a setting did.
+			$summary      = json_decode( (string) ( $r['target_summary'] ?? '' ), true );
+			$target_label = is_array( $summary ) ? trim( (string) ( $summary['label'] ?? '' ) ) : '';
+
+			$out[] = [
+				'change_id'  => (string) ( $r['change_id'] ?? '' ),
+				'headline'   => ActionLabels::describe( $operation_id, $action, [], '' )
+					. ( '' !== $target_label ? ' — ' . $target_label : '' ),
+				// area() maps a RUNTIME to a plain-language area; passing the
+				// operation id yielded "Option manage" instead of "Settings".
+				'area'       => ActionLabels::area( (string) ( $r['runtime'] ?? '' ) ),
+				'target'     => (string) ( $r['target_summary'] ?? '' ),
+				'status'     => (string) ( $r['status'] ?? '' ),
+				'reversible' => ! empty( $r['reversible'] ),
+				'actor'      => $actor_type,
+				'created_at' => (string) ( $r['created_at'] ?? '' ),
+			];
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Session-grouped roll-up, newest activity first.
 	 *
 	 * @param array<string,mixed> $filters runtime/status/since/until (all optional).
@@ -207,6 +277,7 @@ final class ChangeHistoryAdminQuery {
 	 */
 	private function format_session( array $row, array $labels ): array {
 		$session_id = (string) ( $row['session_id'] ?? '' );
+		$runtimes   = $this->split_list( $row['runtimes'] ?? '' );
 
 		return [
 			'session_id'       => $session_id,
@@ -215,7 +286,15 @@ final class ChangeHistoryAdminQuery {
 			'change_set_count' => (int) ( $row['change_set_count'] ?? 0 ),
 			'first_at'         => (int) ( $row['first_at'] ?? 0 ),
 			'last_at'          => (int) ( $row['last_at'] ?? 0 ),
-			'runtimes'         => $this->split_list( $row['runtimes'] ?? '' ),
+			'runtimes'         => $runtimes,
+			// V1 — the same runtimes named the way a site owner would name them
+			// ("Posts & pages, SEO"), so History reads as a list of things that
+			// happened rather than a list of subsystem IDs. Additive: `runtimes`
+			// above is untouched for anything matching on the raw value.
+			'areas'            => array_values( array_unique( array_map(
+				static fn ( $runtime ) => ActionLabels::area( (string) $runtime ),
+				$runtimes
+			) ) ),
 			'sources'          => $this->split_list( $row['sources'] ?? '' ),
 			'actor_summary'    => $labels[ $session_id ] ?? 'unknown',
 		];

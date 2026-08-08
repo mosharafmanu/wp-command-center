@@ -29,7 +29,12 @@ echo "= 1. GATEWAY HEALTH ="
 # ═══════════════════════════════════════════════════════════════════
 HEALTH=$(api "$WPCC_BASE/health")
 assert_eq "gateway: status ok" "ok" "$(echo "$HEALTH" | jq -r '.status')"
-assert_eq "gateway: plugin version present" "0.1.0" "$(echo "$HEALTH" | jq -r '.plugin_version')"
+# Derived from the plugin header, not hardcoded — a version bump must not make this stale.
+# Find the main plugin file rather than naming it — the file is named after the slug,
+# and a slug rename must not silently make this assertion read an empty version.
+WPCC_MAIN_FILE=$(grep -rl "^ \* Plugin Name:" "$SCRIPT_DIR/.."/*.php | head -1)
+WPCC_DECLARED_VERSION=$(grep -m1 "^ \* Version:" "$WPCC_MAIN_FILE" | sed 's/.*Version: *//;s/ *$//')
+assert_eq "gateway: plugin version matches the plugin header" "$WPCC_DECLARED_VERSION" "$(echo "$HEALTH" | jq -r '.plugin_version')"
 assert_eq "gateway: api version" "v1" "$(echo "$HEALTH" | jq -r '.api_version')"
 assert_gt "gateway: timestamp > 0" "$(echo "$HEALTH" | jq -r '.timestamp')" "0"
 
@@ -295,15 +300,23 @@ echo "= 10. AI CLIENTS (all 11 certified) ="
 # ═══════════════════════════════════════════════════════════════════
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
 assert_eq "ai: 11 total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
-assert_gt "ai: gold count > 0" "$(echo "$CLIENTS" | jq -r '.counts.gold')" "0"
+# Was: at least one client must be Gold. Certification is now awarded only from
+# an executed end-to-end run, and unearned Gold markers were withdrawn — so this
+# asserted a claim the product had deliberately stopped making. What must stay
+# true is that the counts add up to the roster, which no wording change can fake.
+assert_eq "ai: certification counts cover the whole roster" "$(echo "$CLIENTS" | jq -r '.counts.total')" \
+	"$(echo "$CLIENTS" | jq -r '[ .clients[].status ] | length')"
 
-for client_id in claude chatgpt codex gemini cursor continue opencode aider roo_code windsurf command_code; do
+for client_id in $(echo "$CLIENTS" | jq -r '.clients | keys[]'); do
 	assert_true "ai: $client_id registered" "$(echo "$CLIENTS" | jq -r --arg id "$client_id" 'if .clients[$id] then "true" else "false" end')"
 done
 
 # Claude Gold verification
 CLAUDE_CERT=$(echo "$CLIENTS" | jq -r '.clients.claude.certification_level')
-assert_eq "ai: claude is gold" "gold" "$CLAUDE_CERT"
+# Not pinned to "gold" — see above. The contract is that every client reports a
+# certification_level the registry defines.
+assert_true "ai: claude reports a known certification level" \
+	"$(echo "$CLIENTS" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if (.clients.claude.certification_level | IN($v[])) then "true" else "false" end')"
 
 # Generic config generation works for configured client
 CLAUDE_CFG=$(api "$WPCC_BASE/ai-clients/claude/config")
@@ -313,7 +326,11 @@ assert_true "ai: claude config has mcpServers" "$(echo "$CLAUDE_CFG" | jq -r 'if
 CODEX_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/codex/config")
 CODEX_CFG=$(api "$WPCC_BASE/ai-clients/codex/config")
 assert_true "ai: codex config accessible" "$( [ "$CODEX_CODE" = "200" ] && echo true || echo false )"
-assert_true "ai: codex config has mcpServers" "$(echo "$CODEX_CFG" | jq -r 'if .config.mcpServers then "true" else "false" end')"
+# Codex reads TOML from ~/.codex/config.toml keyed [mcp_servers.<name>] — it is the one
+# client in the registry that takes no JSON at all. Demanding `mcpServers` here asserted
+# the very shape that could never have worked for it.
+assert_eq "ai: codex config is TOML" "toml" "$(echo "$CODEX_CFG" | jq -r '.config.__format // "json"')"
+assert_contains "ai: codex config keys the TOML mcp_servers table" "$(echo "$CODEX_CFG" | jq -r '.config.__raw // ""')" "[mcp_servers.wp-command-center]"
 
 # Non-existent client
 UNK_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/nonexistent/config")
@@ -387,8 +404,14 @@ CLI=$(api_post -d '{"action":"wp_cli_exec","command":"plugin list --format=json"
 assert_true "probe: wp_cli_bridge" "$(echo "$CLI" | jq -r 'if .output or .result or .data then "true" else "false" end')"
 
 # Bulk manage
-C9=$(api_post -d '{"action":"bulk_content","content_ids":[],"new_status":"publish"}' "$WPCC_BASE/operations/bulk_manage/run")
-assert_true "probe: bulk_manage" "$(echo "$C9" | jq -r 'if .action then "true" else "false" end')"
+# An empty id list is refused outright (wpcc_missing_bulk_ids) rather than reported as a
+# zero-row success — a bulk write must not look like it ran when it had no targets.
+C9=$(api_post -d '{"action":"bulk_content","ids":[],"new_status":"publish"}' "$WPCC_BASE/operations/bulk_manage/run")
+assert_eq "probe: bulk_manage refuses an empty id list" "wpcc_missing_bulk_ids" "$(echo "$C9" | jq -r '.code // empty')"
+# Both required inputs are validated independently. Asserted with refusals rather than a
+# successful write so this probe never mutates the site it is certifying.
+C9B=$(api_post -d '{"action":"bulk_content","ids":[1]}' "$WPCC_BASE/operations/bulk_manage/run")
+assert_eq "probe: bulk_manage requires fields as well as ids" "wpcc_missing_bulk_fields" "$(echo "$C9B" | jq -r '.code // empty')"
 
 # Workflow manage
 C10=$(api_post -d '{"action":"workflow_list"}' "$WPCC_BASE/operations/workflow_manage/run")

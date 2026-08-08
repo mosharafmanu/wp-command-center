@@ -80,6 +80,11 @@ use WPCommandCenter\Content\ContentFieldProviderResolver;
 use WPCommandCenter\Content\ContentFieldResult;
 use WPCommandCenter\Proposals\ProposalStore;
 
+// Explicit opt-in: the generators refuse output from a provider the product does not
+// ship, so a stub cannot silently become a customer-facing draft. A test context says
+// so out loud. Nothing in the shipped plugin defines this.
+define( 'WPCC_ALLOW_TEST_AI_PROVIDER', true );
+
 // A deterministic stub provider (no network).
 class WPCC_StubContentProvider implements ContentFieldProvider {
 	public function id(): string { return 'stub'; }
@@ -132,6 +137,16 @@ $rt2 = $gen->generate( $pid, 'title' );
 echo 'TITLE_REDRAFT_SKIPPED=' . ( $rt2['skipped'][0]['reason'] ?? '' ) . "\n";
 
 // cleanup
+//
+// The drafts this suite creates are REAL rows in the real ProposalStore, and the run
+// used to delete only the post — leaving "STUB TITLE"/"STUB EXCERPT" drafts pointing at
+// a post id that no longer existed. They accumulated one pair per run and surfaced on
+// the customer-facing Content screen as though a provider had suggested them. Dismiss
+// them through the same governed path the UI uses, so a suite leaves the queue as it
+// found it.
+foreach ( array_merge( $rt['created'], $re['created'], $rt2['created'] ) as $wpcc_draft_id ) {
+	$store->dismiss( (string) $wpcc_draft_id );
+}
 wp_delete_post( $pid, true );
 PHP
 RES="$(wp --path="$WP_ROOT" eval-file "$BATT" 2>/dev/null)"; rm -f "$BATT"

@@ -41,12 +41,12 @@ final class MediaSnapshot {
 	public function capture( int $attachment_id, string $label = '' ) {
 		$post = get_post( $attachment_id );
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'ai-command-center' ) );
 		}
 
 		$files = $this->attachment_files( $attachment_id );
 		if ( empty( $files ) ) {
-			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no files on disk to snapshot.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no files on disk to snapshot.', 'ai-command-center' ) );
 		}
 
 		$id  = wp_generate_uuid4();
@@ -62,7 +62,7 @@ final class MediaSnapshot {
 			$dest       = trailingslashit( $dir ) . $store_name;
 			if ( ! @copy( $abs, $dest ) ) {
 				$this->rmdir_recursive( $dir );
-				return new \WP_Error( 'wpcc_media_snapshot_copy_failed', __( 'Failed to copy a media file into the snapshot store.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_media_snapshot_copy_failed', __( 'Failed to copy a media file into the snapshot store.', 'ai-command-center' ) );
 			}
 			$captured[] = [
 				'rel_path'   => $this->to_relative( $abs ),
@@ -245,7 +245,7 @@ final class MediaSnapshot {
 	private function snapshot_dir( string $id ) {
 		$base = $this->store_basedir();
 		if ( ! is_dir( $base ) && ! wp_mkdir_p( $base ) ) {
-			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot store.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot store.', 'ai-command-center' ) );
 		}
 		// Deny directory listing / direct access.
 		if ( ! is_file( trailingslashit( $base ) . 'index.php' ) ) {
@@ -253,7 +253,7 @@ final class MediaSnapshot {
 		}
 		$dir = trailingslashit( $base ) . $id;
 		if ( ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot directory.', 'ai-command-center' ) );
 		}
 		return $dir;
 	}
@@ -271,9 +271,10 @@ final class MediaSnapshot {
 		}
 		foreach ( (array) glob( trailingslashit( $dir ) . '*' ) as $file ) {
 			if ( is_file( $file ) ) {
-				@unlink( $file );
+				wp_delete_file( $file );
 			}
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- removes a now-empty directory this plugin created. WP_Filesystem requires credentialed initialisation that is not available on the uninstall path.
 		@rmdir( $dir );
 	}
 
@@ -293,6 +294,6 @@ final class MediaSnapshot {
 				return $r;
 			}
 		}
-		return new \WP_Error( 'wpcc_media_snapshot_not_found', __( 'Media snapshot not found.', 'wp-command-center' ) );
+		return new \WP_Error( 'wpcc_media_snapshot_not_found', __( 'Media snapshot not found.', 'ai-command-center' ) );
 	}
 }

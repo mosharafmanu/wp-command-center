@@ -6,14 +6,14 @@
 # There is NO ProposalStore service, ApplyService, Sync/Reconciler, REST route,
 # or UI yet — those are Tasks 2+. This asserts ONLY:
 #
-#   - DB_VERSION constant + stored option are 2.5.0
+#   - DB_VERSION constant + stored option are 2.6.0
 #   - wpcc_proposals exists with the full column set + indexes
 #   - dbDelta is idempotent (re-running install() does not error / re-shape)
 #   - the 2.4.0 -> 2.5.0 upgrade path creates the table on a normal load
 #     (Schema::maybe_upgrade(), not activation-only)
 #   - pre-existing tables (change_log, operation_requests) remain unaltered
 #   - platform invariants are unchanged: OPERATION_MAP 34 / caps 23 /
-#     catalogue 40 (MCP 40 == catalogue by construction); only DB_VERSION moved
+#     catalogue 42 (MCP 42 == catalogue by construction); only DB_VERSION moved
 #
 # Requires: wp-cli. (No REST token needed — schema-only.)
 # Usage: bash tests/test-proposal-store.sh
@@ -23,6 +23,13 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
+
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -36,8 +43,8 @@ echo "STEP 110 Task 1 — Proposal Store schema foundation"
 echo "WP_ROOT=$WP_ROOT"
 
 # ── 1. DB_VERSION constant + stored option ──────────────────────────────────
-assert_eq "DB_VERSION constant is 2.5.0" "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
-assert_eq "stored wpcc_db_version option is 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "DB_VERSION constant is 2.6.0" "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+assert_eq "stored wpcc_db_version option is 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 
 # ── 2. Table exists ─────────────────────────────────────────────────────────
 assert_eq "wpcc_proposals table exists" "yes" \
@@ -65,7 +72,7 @@ COLCOUNT_BEFORE="$(wpe 'global $wpdb; echo count($wpdb->get_col("DESC ".$wpdb->p
 wpe '\WPCommandCenter\Core\Schema::install();' >/dev/null
 COLCOUNT_AFTER="$(wpe 'global $wpdb; echo count($wpdb->get_col("DESC ".$wpdb->prefix."wpcc_proposals",0));')"
 assert_eq "install() is idempotent (column count stable)" "$COLCOUNT_BEFORE" "$COLCOUNT_AFTER"
-assert_eq "install() idempotent: db_version still 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "install() idempotent: db_version still 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 
 # ── 6. Upgrade path 2.4.0 -> 2.5.0 recreates the table on a normal load ──────
 # Must run in ONE wp-cli process: every wp invocation bootstraps the plugin and
@@ -89,7 +96,7 @@ IFS="|" read -r U_DROPPED U_VERB U_AFTER U_VERA U_PID U_CID <<< "$UPG"
 assert_eq "upgrade precondition: table dropped at 2.4.0"      "no"    "$U_DROPPED"
 assert_eq "upgrade precondition: version rolled back to 2.4.0" "2.4.0" "$U_VERB"
 assert_eq "upgrade: wpcc_proposals recreated by maybe_upgrade" "yes"   "$U_AFTER"
-assert_eq "upgrade: db_version advanced to 2.5.0"             "2.5.0" "$U_VERA"
+assert_eq "upgrade: db_version advanced to 2.6.0"             "2.6.0" "$U_VERA"
 assert_eq "upgrade: key column proposal_id present"          "yes"   "$U_PID"
 assert_eq "upgrade: key column change_id present"            "yes"   "$U_CID"
 
@@ -106,7 +113,7 @@ assert_contains "operation_requests keeps payload column" \
 # ── 8. Platform invariants (only DB_VERSION may move) ───────────────────────
 assert_eq "invariant: OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "invariant: capabilities == 23" "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-assert_eq "invariant: catalogue == 40" "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+assert_eq "invariant: catalogue == 42" "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Task 2 — ProposalStore persistence + lifecycle (state machine)
@@ -115,7 +122,7 @@ assert_eq "invariant: catalogue == 40" "40" "$(wpe 'echo count((new \WPCommandCe
 # that exercises ProposalStore and emits "desc<TAB>PASS|FAIL<TAB>detail" lines;
 # bash reports them through the same counters. All rows are tagged with a unique
 # batch_id and deleted at the end so the suite is self-contained.
-BATTERY="$(mktemp /tmp/wpcc-proposal-battery-XXXXXX.php)"
+BATTERY="$(mktemp -d)/wpcc-proposal-battery.php"
 cat > "$BATTERY" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PS;
@@ -247,7 +254,7 @@ done
 # ─────────────────────────────────────────────────────────────────────────────
 # Dynamic battery exercises the crossing point against a real attachment through
 # OperationExecutor and asserts audit/rollback/attribution. Self-cleaning.
-APPLY="$(mktemp /tmp/wpcc-apply-battery-XXXXXX.php)"
+APPLY="$(mktemp -d)/wpcc-apply-battery.php"
 cat > "$APPLY" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PStore;
@@ -344,7 +351,7 @@ assert_eq "ApplyService performs no write to change_log/requests" "" "$CL_WRITES
 # ─────────────────────────────────────────────────────────────────────────────
 # Task 4 — ProposalOutcome + ProposalSync + ProposalReconciler + gated apply
 # ─────────────────────────────────────────────────────────────────────────────
-SYNC="$(mktemp /tmp/wpcc-sync-battery-XXXXXX.php)"
+SYNC="$(mktemp -d)/wpcc-sync-battery.php"
 cat > "$SYNC" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PStore;

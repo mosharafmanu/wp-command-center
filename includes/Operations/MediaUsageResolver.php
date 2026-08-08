@@ -86,11 +86,13 @@ final class MediaUsageResolver {
 		//    image markup) + any referenced file URL/basename. The SQL is a
 		//    superset; content_references_id() confirms each row (and labels block
 		//    vs classic) so a loose array match never becomes a false reference.
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- content_match_clauses() returns placeholder-only clauses; values bind through prepare(), with esc_like() applied to filenames.
 		list( $where, $params ) = $this->content_match_clauses( $id, $basenames );
 		$sql  = "SELECT p.ID, p.post_status, p.post_type, p.post_content FROM {$wpdb->posts} p
 				 WHERE p.post_status NOT IN ( 'inherit', 'auto-draft' ) AND ( " . implode( ' OR ', $where ) . " ) LIMIT 200";
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $params ) );
 		foreach ( (array) $rows as $r ) {
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			$is_block = false;
 			if ( ! $this->content_references_id( (string) $r->post_content, $id, $basenames, $is_block ) ) {
 				continue;
@@ -109,6 +111,7 @@ final class MediaUsageResolver {
 		// Revisions are post_type 'revision' / post_status 'inherit', so the main
 		// content query (which excludes 'inherit') never sees them — scan them here.
 		// Always 'indirect': a revision is never the live document.
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- content_match_clauses() returns placeholder-only clauses; values bind through prepare(), with esc_like() applied to filenames.
 		list( $rwhere, $rparams ) = $this->content_match_clauses( $id, $basenames );
 		$rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT p.ID, p.post_parent, p.post_content FROM {$wpdb->posts} p
@@ -116,6 +119,7 @@ final class MediaUsageResolver {
 			$rparams
 		) );
 		foreach ( (array) $rows as $r ) {
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			$is_block = false;
 			if ( ! $this->content_references_id( (string) $r->post_content, $id, $basenames, $is_block ) ) {
 				continue;
@@ -125,6 +129,7 @@ final class MediaUsageResolver {
 
 		// 5. ACF fields — postmeta whose value is the ID (image) or a serialized
 		//    array containing it (gallery), identified by the ACF `_{key}` => field_…
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Literal LIKE patterns in static SQL with the underscore escaped; the only variable parts are bound with %d and %s.
 		//    companion meta. Excludes the core keys already handled above.
 		$rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT pm.post_id, pm.meta_key, p.post_status, p.post_type FROM {$wpdb->postmeta} pm
@@ -138,6 +143,7 @@ final class MediaUsageResolver {
 		foreach ( (array) $rows as $r ) {
 			$refs[] = [
 				'source'      => 'acf_field',
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 				'post_id'     => (int) $r->post_id,
 				'post_type'   => $r->post_type,
 				'post_status' => $r->post_status,
@@ -146,6 +152,7 @@ final class MediaUsageResolver {
 			];
 		}
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Literal LIKE patterns in static SQL with the underscore escaped; the only variable parts are bound with %d and %s.
 		// 6. ACF options pages — options_… values (with _options_… => field_… companion).
 		$rows = $wpdb->get_results( $wpdb->prepare(
 			"SELECT o.option_name FROM {$wpdb->options} o
@@ -158,6 +165,7 @@ final class MediaUsageResolver {
 			$refs[] = [ 'source' => 'acf_options', 'option_name' => $r->option_name, 'status' => 'active' ];
 		}
 
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		// 7. Site identity options (live site config).
 		if ( (int) get_option( 'site_icon' ) === $id ) {
 			$refs[] = [ 'source' => 'option', 'option_name' => 'site_icon', 'status' => 'active' ];

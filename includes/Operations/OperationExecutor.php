@@ -70,7 +70,7 @@ final class OperationExecutor {
 
 		// 1. Validation: Operation exists.
 		if ( ! $operation ) {
-			return $this->fail( $operation_id, 'operation_not_found', __( 'Operation not found in registry.', 'wp-command-center' ) );
+			return $this->fail( $operation_id, 'operation_not_found', __( 'Operation not found in registry.', 'ai-command-center' ) );
 		}
 
 		// 1b. Capability enforcement (enabled by default).
@@ -86,13 +86,257 @@ final class OperationExecutor {
 						'required'     => $validation['required_capability'],
 						'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 					] );
-					return $this->fail( $operation_id, 'wpcc_capability_denied', sprintf( __( 'Missing capability: %s', 'wp-command-center' ), $validation['required_capability'] ) );
+					return $this->fail( $operation_id, 'wpcc_capability_denied', sprintf( /* translators: %s: value */ __( 'Missing capability: %s', 'ai-command-center' ), $validation['required_capability'] ) );
 				}
 			}
 		}
 
+		/*
+		 * 1a-bis. V1 Phase 5 — accept the reasonable synonym.
+		 *
+		 * The catalogue names a post identifier `content_id`, `page_id`, `media_id` or
+		 * `object_id` depending on which runtime you are addressing. Each is sensible
+		 * alone; together they cost an assistant a wrong first call. Aliases are
+		 * normalised into the declared name BEFORE validation, so the rest of the
+		 * engine — required-parameter checks, the runtime, the audit record — only ever
+		 * sees the canonical contract, unchanged.
+		 *
+		 * Supplying the canonical name AND an alias with different values is refused
+		 * rather than guessed: choosing one would be a coin flip over which object the
+		 * customer meant to change.
+		 */
+		$vocabulary = ParameterVocabulary::normalize( $operation_id, $payload );
+		if ( null !== $vocabulary['conflict'] ) {
+			return $this->fail(
+				$operation_id,
+				'wpcc_conflicting_parameters',
+				sprintf(
+					/* translators: 1: canonical parameter name, 2: alias supplied alongside it */
+					__( 'Both %1$s and %2$s were supplied with different values, and they mean the same thing. Send one. Nothing was changed.', 'ai-command-center' ),
+					$vocabulary['conflict']['canonical'],
+					$vocabulary['conflict']['alias']
+				)
+			);
+		}
+		$payload = $vocabulary['payload'];
+
 		$is_queued    = ! empty( $context['queue_id'] );
 		$is_requested = ! empty( $context['request_id'] );
+
+		// 1b-bis. Reject an unknown action BEFORE it can reach the approval gate.
+		//
+		// Action validation used to live inside each runtime, which runs after the
+		// gate below. In a mode that gates on risk, a misspelled or hallucinated
+		// action therefore did not fail — it was filed as an approval request at the
+		// operation's WORST-CASE risk (because SecurityModeManager::effective_risk()
+		// finds no 'action_risks' entry and falls back to 'risk_level'). Asking for
+		// a nonexistent plugin action put a CRITICAL-risk item in the site owner's
+		// queue that could only ever fail once approved. Assistants typo actions;
+		// the customer should not have to triage that.
+		//
+		// This only ever rejects — it can never admit a call the runtime would have
+		// refused, so it cannot widen access. It is limited to operations whose
+		// catalogue entry declares an `action` enum; the 23 operations without one
+		// are untouched and still validate inside their runtime as before. Already
+		// approved/queued runs skip it: their action passed this check when it was
+		// first submitted.
+		if ( ! $is_queued && ! $is_requested ) {
+			$requested_action = (string) ( $payload['action'] ?? '' );
+			$declared_actions = [];
+			foreach ( (array) ( $operation['parameters'] ?? [] ) as $param ) {
+				if ( 'action' === ( $param['name'] ?? '' ) && ! empty( $param['enum'] ) ) {
+					$declared_actions = (array) $param['enum'];
+					break;
+				}
+			}
+
+			/*
+			 * A call carrying NO action reaches here too.
+			 *
+			 * The guard below caught a wrong action but not a missing one, so a
+			 * malformed tool call — arguments dropped, arguments sent as null — was
+			 * still filed as an approval request. The customer then had a pending,
+			 * often critical-risk item describing nothing, which could only ever fail
+			 * once approved. Where the catalogue declares `action` required, absence
+			 * is as invalid as a typo.
+			 */
+			$action_required = false;
+			foreach ( (array) ( $operation['parameters'] ?? [] ) as $param ) {
+				if ( 'action' === ( $param['name'] ?? '' ) && ! empty( $param['required'] ) ) {
+					$action_required = true;
+					break;
+				}
+			}
+
+			if ( '' === $requested_action && $action_required ) {
+				$audit->record( 'operation.missing_action', [
+					'operation_id' => $operation_id,
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] );
+
+				return $this->fail(
+					$operation_id,
+					'wpcc_missing_action',
+					[] !== $declared_actions
+						? sprintf(
+							/* translators: 1: operation id, 2: comma-separated list of valid actions */
+							__( 'An action is required for %1$s. Valid actions: %2$s.', 'ai-command-center' ),
+							$operation_id,
+							implode( ', ', $declared_actions )
+						)
+						: sprintf(
+							/* translators: %s: operation id */
+							__( 'An action is required for %s.', 'ai-command-center' ),
+							$operation_id
+						)
+				);
+			}
+
+			if ( '' !== $requested_action && [] !== $declared_actions
+				&& ! in_array( $requested_action, $declared_actions, true ) ) {
+				$audit->record( 'operation.invalid_action', [
+					'operation_id' => $operation_id,
+					'action'       => $requested_action,
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] );
+
+				/*
+				 * Speak in the runtime's own voice. Catching the bogus action here (so it
+				 * cannot be filed as an approval) must not change the CODE or the MESSAGE
+				 * callers have always seen — see InvalidActionContract.
+				 */
+				return $this->fail(
+					$operation_id,
+					InvalidActionContract::code_for( $operation_id ),
+					InvalidActionContract::message_for( $operation_id, $requested_action, $declared_actions )
+				);
+			}
+
+			/*
+			 * F-06 — a bulk action with an EMPTY target list, caught before it can
+			 * spend an approval decision.
+			 *
+			 * bulk_content / bulk_publish / bulk_unpublish already refuse an empty
+			 * `ids` — but inside the runtime, which runs AFTER the approval gate. So
+			 * `{"action":"bulk_publish","ids":[]}` was filed as a HIGH-risk pending
+			 * request, waited for the owner, and then failed the moment they approved
+			 * it. There is nothing for them to decide: no ID means no target, and the
+			 * runtime's own answer is already "this cannot run".
+			 *
+			 * Deliberately narrow — only the actions whose runtime ALREADY declares an
+			 * empty list invalid. bulk_media / bulk_woocommerce / bulk_acf return a
+			 * successful `updated: 0` for an empty list today, and this guard must
+			 * never reject a call the runtime would have accepted; like the guards
+			 * above it can only ever reject, never admit.
+			 *
+			 * ABSENT is left to the runtime, exactly as the missing-parameter gate
+			 * does: this fires on `ids` supplied and empty, and on `ids` omitted, both
+			 * of which the runtime answers identically with wpcc_missing_bulk_ids.
+			 * Same code, same message — the pre-approval timing must not change a
+			 * contract callers already branch on.
+			 */
+			if ( 'bulk_manage' === $operation_id
+				&& in_array( $requested_action, [ 'bulk_content', 'bulk_publish', 'bulk_unpublish' ], true )
+				&& [] === array_filter( (array) ( $payload['ids'] ?? [] ), static fn( $id ) => '' !== $id && null !== $id ) ) {
+
+				$audit->record( 'operation.missing_parameters', [
+					'operation_id' => $operation_id,
+					'action'       => $requested_action,
+					'missing'      => [ 'ids' ],
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] );
+
+				return $this->fail(
+					$operation_id,
+					'wpcc_missing_bulk_ids',
+					__( 'ids is required — provide the IDs to update.', 'ai-command-center' )
+					. ' ' . __( 'Nothing was queued for approval — a request that cannot execute should not need your decision.', 'ai-command-center' )
+				);
+			}
+		}
+
+		/*
+		 * 1b-ter. V1 Phase 2 — refuse a call that cannot possibly execute, before it
+		 * can spend a customer's approval decision.
+		 *
+		 * The action guard above covers operations that dispatch on `action`. Six do
+		 * not — content_seed, acf_seed, woo_product_seed, safe_search_replace,
+		 * media_import, safe_updates — and for those a call with none of its required
+		 * parameters sailed through to the approval queue at the operation's
+		 * worst-case risk. Measured: a parameter-less safe_search_replace sat in the
+		 * queue as CRITICAL, and approving it produced "Errors 1" and changed nothing.
+		 * The owner spent a decision on a request that never had a chance.
+		 *
+		 * Deliberately limited to operations WITHOUT a required `action`. Where an
+		 * operation dispatches on action, its other "required" parameters are only
+		 * required for SOME actions — option_manage declares option_id, but
+		 * option_rollback takes rollback_id instead — so a blanket check there would
+		 * reject valid work. That is the mistake this codebase already made once by
+		 * deriving actions from action_risks, and it is not repeated here.
+		 *
+		 * This only ever rejects, never admits: it cannot widen what a runtime would
+		 * have accepted, and the runtime remains the final authority.
+		 */
+		if ( ! $is_queued && ! $is_requested ) {
+			$declared_params = (array) ( $operation['parameters'] ?? [] );
+			$dispatches      = false;
+			$required_names  = [];
+			foreach ( $declared_params as $param ) {
+				$name = (string) ( $param['name'] ?? '' );
+				if ( '' === $name || empty( $param['required'] ) ) {
+					continue;
+				}
+				if ( 'action' === $name ) {
+					$dispatches = true;
+					break;
+				}
+				$required_names[] = $name;
+			}
+
+			if ( ! $dispatches && [] !== $required_names ) {
+				/*
+				 * ABSENT only — never merely empty.
+				 *
+				 * Treating '' and [] as missing rejected legitimate work: `replace` is a
+				 * required parameter of safe_search_replace, and replacing a string with
+				 * the EMPTY string is how you delete that text everywhere. An empty value
+				 * is a supplied value, and what it means is the runtime's judgement, not
+				 * this gate's — SearchReplace answers empties with its own specific codes
+				 * (wpcc_empty_search, wpcc_no_tables_selected), which this must not
+				 * pre-empt or flatten.
+				 *
+				 * The case this gate exists for is unaffected: a parameter-LESS call still
+				 * has no keys at all, so it is still refused before it can spend an
+				 * approval.
+				 */
+				$missing = [];
+				foreach ( $required_names as $name ) {
+					if ( ! array_key_exists( $name, $payload ) || null === $payload[ $name ] ) {
+						$missing[] = $name;
+					}
+				}
+
+				if ( [] !== $missing ) {
+					$audit->record( 'operation.missing_parameters', [
+						'operation_id' => $operation_id,
+						'missing'      => $missing,
+						'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+					] );
+
+					return $this->fail(
+						$operation_id,
+						'wpcc_missing_parameters',
+						sprintf(
+							/* translators: 1: operation id, 2: comma-separated missing parameters, 3: comma-separated required parameters */
+							__( '%1$s cannot run without %2$s. It requires: %3$s. Nothing was queued for approval — a request that cannot execute should not need your decision.', 'ai-command-center' ),
+							$operation_id,
+							implode( ', ', $missing ),
+							implode( ', ', $required_names )
+						) . ( '' !== ParameterVocabulary::hint( $operation_id ) ? ' ' . ParameterVocabulary::hint( $operation_id ) : '' )
+					);
+				}
+			}
+		}
 
 		// 1c. STEP 84 — Destructive operation guardrail.
 		// Fires in EVERY security mode (including Developer) on the fresh-call
@@ -186,13 +430,33 @@ final class OperationExecutor {
 
 		// 2. Validation: Operation is available.
 		if ( empty( $operation['available'] ) ) {
-			return $this->fail( $operation_id, 'operation_not_available', __( 'Operation is not available in the current environment.', 'wp-command-center' ) );
+			/*
+			 * Say WHAT is missing. "Operation is not available in the current
+			 * environment" told a caller nothing it could act on — and the operations
+			 * that answer at the runtime instead (elementor_manage, forms_manage) were
+			 * giving strictly better errors ("Elementor is not active"), which is a
+			 * poor reason for the gated ones to stay vague.
+			 */
+			$needs = OperationDescriptor::integration_label( $operation_id );
+
+			return $this->fail(
+				$operation_id,
+				'operation_not_available',
+				'' !== $needs
+					? sprintf(
+						/* translators: 1: operation id, 2: the integration it requires */
+						__( '%1$s requires %2$s, which is not active on this site.', 'ai-command-center' ),
+						$operation_id,
+						$needs
+					)
+					: __( 'Operation is not available in the current environment.', 'ai-command-center' )
+			);
 		}
 
 		// 3. Dispatch to handler.
 		$handler = $this->resolve_handler( $operation_id );
 		if ( ! $handler ) {
-			return $this->fail( $operation_id, 'execution_failed', __( 'Execution logic not yet implemented for this operation.', 'wp-command-center' ) );
+			return $this->fail( $operation_id, 'execution_failed', __( 'Execution logic not yet implemented for this operation.', 'ai-command-center' ) );
 		}
 
 		// PHASE 2 (B2-1 / A-1) — atomic execution claim for request-bound runs. Only
@@ -322,6 +586,56 @@ final class OperationExecutor {
 			return $this->fail( $operation_id, $error_code, $result->get_error_message() );
 		}
 
+		// STEP 89 parity in the executor (ISSUE 4 — audit integrity): some handlers
+		// report failure in-band as { error:true, code, message } rather than a
+		// WP_Error (e.g. acf_manage's invalid-action guard, media_*). Without this,
+		// such a result flows into the success path below and is recorded in the
+		// change log as "applied" — poisoning the audit trail with a change that
+		// never happened. Detect it here and route it through a truthful failure
+		// record: 'rejected' for validation-type rejections, 'failed' otherwise.
+		if ( is_array( $result ) && ! empty( $result['error'] ) && isset( $result['code'] ) && is_string( $result['code'] ) ) {
+			$error_code    = (string) $result['code'];
+			$error_message = (string) ( $result['message'] ?? __( 'Operation failed.', 'ai-command-center' ) );
+			$is_rejection  = (bool) preg_match( '/(invalid|missing|unknown|not_found|unsupported|denied|required)/', $error_code );
+			$change_status = $is_rejection ? 'rejected' : 'failed';
+
+			$res_id = $res_manager->create( array_merge( $res_base, [
+				'status'      => 'failed',
+				'error_count' => 1,
+				'error_json'  => wp_json_encode( [ 'code' => $error_code, 'message' => $error_message ] ),
+			] ) );
+
+			$audit->record( "operation.{$operation_id}.{$change_status}", array_merge( $links, [
+				'error_code'    => $error_code,
+				'error_message' => $error_message,
+				'actor'         => $actor ? AuditLog::resolve_actor( $actor ) : null,
+			] ) );
+
+			// Record the attempt truthfully (never "applied") so history is honest.
+			( new ChangeRecorder() )->record( [
+				'operation'    => $operation,
+				'operation_id' => $operation_id,
+				'payload'      => $payload,
+				'context'      => $context,
+				'links'        => $links,
+				'status'       => $change_status,
+				'result'       => [],
+				'result_ref'   => $res_id,
+				'counts'       => [ 0, 0, 0, 1 ],
+			] );
+
+			if ( $is_requested ) {
+				( new OperationManager() )->finalize_execution( (string) $context['request_id'], false );
+			}
+
+			// Everything the runtime reported beyond the bare code/message is structured
+			// detail the caller needs — a partial rollback's restored_fields and
+			// skipped_fields being the case that proved it. Pass it through.
+			$details = array_diff_key( $result, array_flip( [ 'error', 'code', 'message' ] ) );
+
+			return $this->fail( $operation_id, $error_code, $error_message, $details );
+		}
+
 		// 4. Normalize response.
 		$normalized = $this->normalize_success( $operation_id, $result );
 
@@ -330,26 +644,50 @@ final class OperationExecutor {
 		// it so /agent/context and history never expose file bodies.
 		$storable = $this->strip_for_storage( $normalized );
 
+		/*
+		 * A transactional apply that failed and rolled itself back is success-SHAPED
+		 * — no WP_Error, no in-band {error, code} — so it used to flow through here
+		 * as a completed result with error_count 0. The change log was corrected
+		 * further down from change_set_status, but the durable result row was not,
+		 * and the result row is what the Approvals screen reads.
+		 *
+		 * Measured on staging: a patch that put a syntax error in the live theme's
+		 * functions.php was caught by `php -l`, restored from the pre-apply snapshot
+		 * (correct, and the site never broke) — and the owner was then shown
+		 * "EXECUTED · COMPLETED · Created 0 · Updated 0 · Skipped 0 · Errors 0".
+		 * They would believe the edit shipped. It did not; it was reverted.
+		 *
+		 * Decide the outcome once, here, and let the result row, the audit trail,
+		 * the change record and the request status all report the same thing.
+		 */
+		$apply_failed  = 'transactional_apply_failed' === ( $normalized['result']['change_set_status'] ?? '' );
+		$change_status = $apply_failed ? 'transactional_apply_failed' : 'applied';
+
 		$res_id = $res_manager->create( array_merge( $res_base, [
-			'status'        => 'completed',
+			'status'        => $apply_failed ? 'failed' : 'completed',
 			'created_count' => count( $normalized['created'] ),
 			'updated_count' => count( $normalized['updated'] ),
 			'skipped_count' => count( $normalized['skipped'] ),
+			'error_count'   => $apply_failed ? 1 : 0,
+			'error_json'    => $apply_failed ? wp_json_encode( [
+				'code'    => 'wpcc_transactional_apply_failed',
+				'message' => __( 'The change did not apply and was rolled back. The site is unchanged.', 'ai-command-center' ),
+			] ) : null,
 			'result_json'   => wp_json_encode( $storable ),
 		] ) );
 
-		$audit->record( 'operation.result.completed', array_merge( $links, [
+		$audit->record( $apply_failed ? 'operation.result.failed' : 'operation.result.completed', array_merge( $links, [
 			'result_id'    => $res_id,
 			'operation_id' => $operation_id,
 			'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
 		] ) );
 
-		$audit->record( "operation.{$operation_id}.completed", array_merge( $links, [
+		$audit->record( "operation.{$operation_id}." . ( $apply_failed ? 'failed' : 'completed' ), array_merge( $links, [
 			'result' => $this->strip_for_storage( is_array( $result ) ? $result : [] ),
 			'actor'  => $actor ? AuditLog::resolve_actor( $actor ) : null,
 		] ) );
 
-		$audit->record( 'operation.execution.completed', array_merge( $links, [
+		$audit->record( $apply_failed ? 'operation.execution.failed' : 'operation.execution.completed', array_merge( $links, [
 			'operation_id' => $operation_id,
 			'result'       => $storable,
 			'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
@@ -360,10 +698,6 @@ final class OperationExecutor {
 		// ids, paths preserved; raw file `contents` stripped). A transactional
 		// change-set apply that failed atomically is still a success-shaped
 		// result; its status is taken from change_set_status.
-		$change_status = ( 'transactional_apply_failed' === ( $normalized['result']['change_set_status'] ?? '' ) )
-			? 'transactional_apply_failed'
-			: 'applied';
-
 		( new ChangeRecorder() )->record( [
 			'operation'    => $operation,
 			'operation_id' => $operation_id,
@@ -377,7 +711,7 @@ final class OperationExecutor {
 				count( $normalized['created'] ),
 				count( $normalized['updated'] ),
 				count( $normalized['skipped'] ),
-				0,
+				$apply_failed ? 1 : 0,
 			],
 		] );
 
@@ -385,7 +719,7 @@ final class OperationExecutor {
 		// Applies to every request-bound path (admin synchronous, queue worker, MCP),
 		// so the worker/MCP path no longer leaves the request stuck at 'approved'.
 		if ( $is_requested ) {
-			( new OperationManager() )->finalize_execution( (string) $context['request_id'], true );
+			( new OperationManager() )->finalize_execution( (string) $context['request_id'], ! $apply_failed );
 		}
 
 		return $normalized;
@@ -443,7 +777,7 @@ final class OperationExecutor {
 				'operation_id' => $operation_id,
 				'error'        => true,
 				'code'         => 'wpcc_rollback_unsupported',
-				'message'      => __( 'Operation does not support rollback.', 'wp-command-center' ),
+				'message'      => __( 'Operation does not support rollback.', 'ai-command-center' ),
 			];
 		}
 		$result = $handler->rollback( $payload, $context );
@@ -501,6 +835,10 @@ final class OperationExecutor {
 				return new WooCommerceRuntimeManager();
 			case 'acf_manage':
 				return new ACFRuntimeManager();
+			case 'term_manage':
+				return new TermRuntimeManager();
+			case 'cache_manage':
+				return new CacheRuntimeManager();
 			case 'forms_manage':
 				return new FormsRuntimeManager();
 			case 'menu_manage':
@@ -561,7 +899,18 @@ final class OperationExecutor {
 			'risk_level'         => $risk_level,
 			'security_mode'      => $mode,
 			'rollback_available' => null !== $destructive ? (bool) $destructive['backup_capable'] : true,
-			'approval_url'       => admin_url( 'admin.php?page=wpcc-approvals' ),
+			/*
+			 * V1 Phase 10 — deep-link to THIS request, not the approvals list.
+			 *
+			 * The list is where the owner had to go hunting: after asking for an undo
+			 * they landed on every pending item and had to identify their own among
+			 * them. The approvals screen already renders a single request when given
+			 * `view`, complete with its diff and its Approve control, so send them
+			 * straight there. Nothing about the decision changes — they still read it
+			 * and still approve it; they simply stop searching for it first.
+			 */
+			'approval_url'       => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals&view=' . rawurlencode( (string) $request['request_id'] ) ),
+			'approvals_list_url' => admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ),
 		];
 
 		// STEP 84 — flag destructive requests so the AI and the approval card
@@ -579,10 +928,21 @@ final class OperationExecutor {
 
 		$result['message'] = sprintf(
 			/* translators: 1: security mode label, 2: request ID, 3: approval URL */
-			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'wp-command-center' ),
-			$mode,
+			__( 'Approval required (%1$s). A site administrator must approve this request at: %3$s — or poll status with: approval_manage {action: "request_get", request_id: "%2$s"}', 'ai-command-center' ),
+			/*
+			 * The LABEL, not the raw mode id — as this format string's own translator
+			 * note has always asked for. Passing `$mode` put the internal enum into the
+			 * one sentence a customer is most likely to read: an assistant relays this
+			 * verbatim on the very first governed change, so the product's first words
+			 * about its own protection were "Approval required (client)". "client" is
+			 * a database value that means nothing to the person reading it, and it is
+			 * the opposite of the mode's actual name. `security_mode` directly above
+			 * still carries the raw id for machine consumers, so nothing that parses
+			 * the envelope loses the precise value.
+			 */
+			SecurityModeManager::label_for( $mode ),
 			$request['request_id'],
-			admin_url( 'admin.php?page=wpcc-approvals' )
+			admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' )
 		);
 
 		// One approval covers the entire change set — spell out what it touches.
@@ -590,14 +950,14 @@ final class OperationExecutor {
 			$cs = $extra['change_set'];
 			$result['message'] .= ' ' . sprintf(
 				/* translators: 1: file count, 2: paths, 3: modes, 4: added, 5: removed, 6: risk, 7: high-risk suffix */
-				__( 'This single approval applies a change set of %1$d file(s) atomically: %2$s | modes: %3$s | +%4$d/-%5$d lines | risk: %6$s%7$s. All files apply together or none do; one combined rollback is available.', 'wp-command-center' ),
+				__( 'This single approval applies a change set of %1$d file(s) atomically: %2$s | modes: %3$s | +%4$d/-%5$d lines | risk: %6$s%7$s. All files apply together or none do; one combined rollback is available.', 'ai-command-center' ),
 				(int) $cs['file_count'],
 				implode( ', ', (array) $cs['affected_paths'] ),
 				implode( ', ', (array) $cs['modes'] ),
 				(int) $cs['total_lines_added'],
 				(int) $cs['total_lines_removed'],
 				(string) $cs['risk_level'],
-				! empty( $cs['has_high_risk_paths'] ) ? __( ' (HIGH-RISK paths included)', 'wp-command-center' ) : ''
+				! empty( $cs['has_high_risk_paths'] ) ? __( ' (HIGH-RISK paths included)', 'ai-command-center' ) : ''
 			);
 		}
 
@@ -624,8 +984,8 @@ final class OperationExecutor {
 		$required_parameters = [
 			'confirm'                 => true,
 			'confirmation_phrase'     => $descriptor['phrase'],
-			'reason'                  => __( 'a human-readable reason for the deletion', 'wp-command-center' ),
-			$descriptor['target_key'] => __( 'the identifier of the target to delete', 'wp-command-center' ),
+			'reason'                  => __( 'a human-readable reason for the deletion', 'ai-command-center' ),
+			$descriptor['target_key'] => __( 'the identifier of the target to delete', 'ai-command-center' ),
 		];
 
 		return [
@@ -646,7 +1006,7 @@ final class OperationExecutor {
 				'required_parameters'   => $required_parameters,
 				'message'               => sprintf(
 					/* translators: 1: confirmation phrase, 2: target parameter name, 3: comma-separated missing fields */
-					__( 'This is a CRITICAL destructive operation. To proceed, resend the request with confirm=true, confirmation_phrase="%1$s", a non-empty reason, and the %2$s of the target. Missing: %3$s.', 'wp-command-center' ),
+					__( 'This is a CRITICAL destructive operation. To proceed, resend the request with confirm=true, confirmation_phrase="%1$s", a non-empty reason, and the %2$s of the target. Missing: %3$s.', 'ai-command-center' ),
 					$descriptor['phrase'],
 					$descriptor['target_key'],
 					implode( ', ', $missing )
@@ -682,14 +1042,24 @@ final class OperationExecutor {
 	/**
 	 * Standard result shape for failures.
 	 */
-	private function fail( string $operation_id, string $code, string $message ): array {
+	/**
+	 * @param array<string,mixed> $details Structured detail the runtime attached to the
+	 *                                     failure (e.g. a partial rollback's
+	 *                                     restored_fields/skipped_fields). Carried to the
+	 *                                     caller instead of being flattened away.
+	 */
+	private function fail( string $operation_id, string $code, string $message, array $details = [] ): array {
+		$error = [ 'code' => $code, 'message' => $message ];
+
+		if ( [] !== $details ) {
+			$error['details'] = $details;
+		}
+
 		return [
 			'operation_id' => $operation_id,
 			'success'      => false,
 			'result'       => [],
-			'errors'       => [
-				[ 'code' => $code, 'message' => $message ],
-			],
+			'errors'       => [ $error ],
 			'created'      => [],
 			'updated'      => [],
 			'skipped'      => [],
@@ -742,10 +1112,34 @@ final class OperationExecutor {
 			$base['created'] = [ (int) $result['product_id'] ];
 		}
 
-		// Extract content_id for content operations.
+		/*
+		 * Extract content_id for content operations — as CREATED or UPDATED.
+		 *
+		 * This used to file every content_id under "created", whatever the runtime
+		 * had actually done. So retitling one existing post was stored as
+		 * created_count 1 / updated_count 0, and the Approvals screen told the
+		 * owner "Created 1 · Updated 0" for a change that created nothing. On the
+		 * screen whose whole job is reporting what happened to the site, that is
+		 * the wrong fact, and it flowed on into the Changes counters and
+		 * ChangeRecorder, which reads $counts[0] as the created tally.
+		 *
+		 * The runtimes already say which it was: content_create is the only action
+		 * here that creates. content_update / publish / unpublish / schedule /
+		 * taxonomy_assign / featured_image_assign / content_rollback all act on
+		 * something that already exists.
+		 *
+		 * Only an EXPLICIT action reclassifies. A result with no action keeps the
+		 * old "created" behaviour, so runtimes with a different shape are untouched.
+		 */
 		if ( isset( $result['content_id'] ) && is_numeric( $result['content_id'] ) && $result['content_id'] > 0 ) {
-			if ( ! in_array( (int) $result['content_id'], $base['created'], true ) ) {
-				$base['created'][] = (int) $result['content_id'];
+			$content_id = (int) $result['content_id'];
+			$action     = isset( $result['action'] ) ? (string) $result['action'] : '';
+			$is_update  = '' !== $action && ! str_ends_with( $action, '_create' );
+			$bucket     = $is_update ? 'updated' : 'created';
+
+			if ( ! in_array( $content_id, $base['created'], true )
+				&& ! in_array( $content_id, $base['updated'], true ) ) {
+				$base[ $bucket ][] = $content_id;
 			}
 		}
 
@@ -765,6 +1159,18 @@ final class OperationExecutor {
 			$base['result']['rollback_available'] = true;
 			$base['rollback_id']        = $rollback_id;
 			$base['rollback_available'] = true;
+
+			/*
+			 * V1 Phase 3 — say where to take the handle, not just that one exists.
+			 *
+			 * Decorated HERE rather than on the way in, because many runtimes never
+			 * return a rollback_id themselves: it is recovered from RollbackContext a
+			 * few lines above. woocommerce_manage's price_update is one — decorating
+			 * the handler's own return silently skipped every operation of that shape.
+			 */
+			if ( ! isset( $base['result']['rollback'] ) ) {
+				$base['result']['rollback'] = RollbackContract::describe( $operation_id, $rollback_id );
+			}
 		}
 
 		return $base;

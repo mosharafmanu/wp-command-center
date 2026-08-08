@@ -22,18 +22,24 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 
 echo "STEP 110 Task 8.1 — AI Alt Text surface (Review tab)"
 
-BATT="$(mktemp /tmp/wpcc-atui-XXXXXX.php)"
+BATT="$(mktemp -d)/wpcc-atui.php"
 cat > "$BATT" <<'PHP'
 <?php
 $a=get_users(['role'=>'administrator','number'=>1]); wp_set_current_user($a?$a[0]->ID:1);
 $out=[]; $emit=function($d,$ok,$x='')use(&$out){ $out[]=$d."\t".($ok?'PASS':'FAIL')."\t".$x; };
 // Experience Layer: AI Alt Text is the Built-in AI › Alt Text tab in the App Shell
 // (added only when the build flag is on AND the FeatureGate allows ai_alt_text).
-$reg=function(){ $s=\WPCommandCenter\Admin\AppShell::sections(); return $s['wpcc-built-in-ai']['tabs']['alt_text'] ?? null; };
+$reg=function(){ $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); return $t["alt_text"] ?? null; };
 
 // 1. hidden by default
+// "Default" is all three inputs unset. The in-admin per-tool option is now one of
+// them — a falsy filter is documented as "no opinion", not an opt-out — so clearing
+// the filters alone no longer describes a default site. Saved and put back below.
+$bai_saved = get_option( 'wpcc_builtin_ai_tools', [] );
+update_option( 'wpcc_builtin_ai_tools', [] );
 remove_all_filters('wpcc_alt_text_ui');
 $emit('tab hidden by default', $reg()===null);
+update_option( 'wpcc_builtin_ai_tools', $bai_saved );
 
 // 2. visible when build flag on AND FeatureGate allows ai_alt_text
 add_filter('wpcc_alt_text_ui','__return_true');
@@ -82,7 +88,7 @@ $emit('mode-aware apply button + MODE const', strpos($html,'Approve & Apply')!==
 $emit('apply uses /proposals/{id}/apply', strpos($html,'/apply')!==false && strpos($html,'wpcc-at-apply')!==false);
 $emit('Applied tab present', strpos($html,'wpcc-at-tab-applied')!==false && strpos($html,'wpcc-at-panel-applied')!==false);
 $emit('Applied tab uses status=applied + pending_approval', strpos($html,'status=applied&operation_id=media_manage')!==false && strpos($html,'status=pending_approval&operation_id=media_manage')!==false);
-$emit('pending shows Awaiting approval + Approval Center link', strpos($html,'Awaiting approval')!==false && strpos($html,'wpcc-approval-center')!==false);
+$emit('pending shows Awaiting approval + Approvals link', strpos($html,'Awaiting approval')!==false && strpos($html,'wpcc-activity')!==false);
 $emit('Undo uses existing rollback route', strpos($html,'/history/')!==false && strpos($html,'/rollback')!==false && strpos($html,'wpcc-at-undo')!==false);
 $emit('rollback-aware Reverted state', strpos($html,'Reverted')!==false && strpos($html,'rolled_back')!==false);
 $emit('gated undo handled (sent for approval)', strpos($html,'Undo sent for approval')!==false);
@@ -148,8 +154,8 @@ rm -f "$VIEW_TMP"
 # ── Invariants ───────────────────────────────────────────────────────────────
 assert_eq "invariant: OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "invariant: capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-assert_eq "invariant: catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
-assert_eq "invariant: DB_VERSION 2.5.0"    "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+assert_eq "invariant: catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+assert_eq "invariant: DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

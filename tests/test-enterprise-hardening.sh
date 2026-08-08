@@ -138,7 +138,12 @@ assert_true "bwcompat: /ai-clients works" "$(api "$WPCC_BASE/ai-clients" | jq -r
 echo "== 12. AI Client Registry — Completeness =="
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
 assert_eq "ai: 11 clients total" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
-assert_eq "ai: 2 active" "2" "$(echo "$CLIENTS" | jq -r '.counts.active')"
+# `active` counts clients certified at Active or above. It was 2 while Claude
+# Desktop and Cursor carried unearned Gold; both markers were withdrawn, so 0 is
+# the honest answer and pinning 2 required the product to keep overstating.
+# The count must still be a real subset of the roster.
+assert_eq "ai: active count matches the clients marked active-or-above" "$(echo "$CLIENTS" | jq -r '.counts.active')" \
+	"$(echo "$CLIENTS" | jq -r '[ .clients[] | select(.status == "active" or .status == "bronze" or .status == "silver" or .status == "gold") ] | length')"
 assert_eq "ai: 0 planned" "0" "$(echo "$CLIENTS" | jq -r '.counts.planned')"
 
 # ===================================================================

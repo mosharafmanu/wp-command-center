@@ -53,12 +53,38 @@ has "edit: discovery-unavailable explained (not broken)" "doesn.t publish an acc
 has "copy-selection flag is presentation-only" "Copy selection only" "$V"
 
 echo "== 7. Generation/security/runtime byte-identical to main =="
-for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php includes/Ai/Platform/CredentialStore.php; do
-  if git -C "$ROOT" diff --quiet main -- "$f" 2>/dev/null; then pass "unchanged vs main: $(basename "$f")"; else fail "CHANGED vs main: $(basename "$f")"; fi
+# CredentialStore.php is deliberately NOT in this list any more.
+#
+# This pin exists so a discovery/routing UX change cannot quietly alter the
+# generation or credential layer. That is still worth guarding — but the V1
+# release work changes CredentialStore.php on purpose: has_secret() only ever
+# looked in its own per-connection option, so the bootstrap "Anthropic
+# (existing)" connection, which is surfaced precisely BECAUSE a pre-6R key
+# option exists, was reported as having no key. The screen said "Needs a key"
+# about a connection the runtime was reading and using on every call, and
+# nothing could be routed to it because default_id() and routes() both gate on
+# has_secret().
+#
+# A pin cannot express "unchanged except for the change we meant", so keeping
+# the file here would only ever assert something intentionally false. Its
+# behaviour is covered by tests/test-connection-state-truthfulness.sh, which
+# asserts the bridge connection's keyed/keyless states directly rather than by
+# byte-comparison. The two files below are genuinely untouched and stay pinned.
+for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php; do
+  # Compare ignoring the text domain. The i18n domain is a distribution detail that a
+  # slug rename changes in every file at once; it says nothing about whether this
+  # layer's behaviour was touched, which is what this assertion exists to guard.
+  if git -C "$ROOT" diff main -- "$f" 2>/dev/null \
+       | grep "^[+-]" | grep -v "^[+-][+-]" \
+       | grep -vq "['\"]\(wp\|ai\)-command-center['\"]"; then
+    fail "CHANGED vs main: $(basename "$f")"
+  else
+    pass "unchanged vs main (text domain aside): $(basename "$f")"
+  fi
 done
 
 echo "== 8. Functional: capture→persist→select→accept + routing eligibility =="
-PHPF="$(mktemp -t discr.XXXXXX.php)"
+PHPF="$(mktemp -d)/discr.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\ConnectionStore as CS;

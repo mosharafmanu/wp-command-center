@@ -45,8 +45,8 @@ final class RollbackManager {
 			return $real;
 		}
 
-		if ( ! is_writable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_writable', __( 'The target file is not writable.', 'wp-command-center' ) );
+		if ( ! wp_is_writable( $real ) ) {
+			return new \WP_Error( 'wpcc_not_writable', __( 'The target file is not writable.', 'ai-command-center' ) );
 		}
 
 		$contents = $this->snapshots->get_contents( $snapshot_id );
@@ -63,13 +63,13 @@ final class RollbackManager {
 			$record['path'],
 			sprintf(
 				/* translators: %s: date and time of the snapshot being restored */
-				__( 'Automatic backup before restoring snapshot from %s', 'wp-command-center' ),
+				__( 'Automatic backup before restoring snapshot from %s', 'ai-command-center' ),
 				wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $record['created_at'] )
 			)
 		);
 
 		if ( false === file_put_contents( $real, $contents, LOCK_EX ) ) {
-			return new \WP_Error( 'wpcc_restore_failed', __( 'Failed to write the restored file.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_restore_failed', __( 'Failed to write the restored file.', 'ai-command-center' ) );
 		}
 
 		clearstatcache( true, $real );

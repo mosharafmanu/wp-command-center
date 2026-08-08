@@ -59,11 +59,11 @@ final class AiSetupController {
 			return null;
 		}
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return [ 'type' => 'error', 'message' => __( 'You do not have permission to change AI settings.', 'wp-command-center' ) ];
+			return [ 'type' => 'error', 'message' => __( 'You do not have permission to change AI settings.', 'ai-command-center' ) ];
 		}
 		if ( ! check_admin_referer( self::NONCE_ACTION ) ) {
 			// check_admin_referer already wp_die()s on hard failure; this is belt-and-braces.
-			return [ 'type' => 'error', 'message' => __( 'Security check failed. Please try again.', 'wp-command-center' ) ];
+			return [ 'type' => 'error', 'message' => __( 'Security check failed. Please try again.', 'ai-command-center' ) ];
 		}
 
 		$action = sanitize_key( wp_unslash( (string) $_POST['wpcc_ai_setup_action'] ) );
@@ -78,14 +78,14 @@ final class AiSetupController {
 			case 'test_connection':
 				return $this->test_connection();
 			default:
-				return [ 'type' => 'error', 'message' => __( 'Unknown action.', 'wp-command-center' ) ];
+				return [ 'type' => 'error', 'message' => __( 'Unknown action.', 'ai-command-center' ) ];
 		}
 	}
 
 	/** Save/update the Anthropic key. Refuses to overwrite a constant-provided key. */
 	private function save_key(): array {
 		if ( AdoptionStatus::ai_key_is_constant() ) {
-			return [ 'type' => 'warning', 'message' => __( 'A key is defined in wp-config.php (constant). Remove that constant to manage the key here.', 'wp-command-center' ) ];
+			return [ 'type' => 'warning', 'message' => __( 'A key is defined in wp-config.php (constant). Remove that constant to manage the key here.', 'ai-command-center' ) ];
 		}
 
 		// Raw value only used transiently to store; never echoed or logged.
@@ -93,12 +93,12 @@ final class AiSetupController {
 		$key = sanitize_text_field( $raw );
 
 		if ( '' === $key ) {
-			return [ 'type' => 'error', 'message' => __( 'Please paste an API key, or use Remove key to clear it.', 'wp-command-center' ) ];
+			return [ 'type' => 'error', 'message' => __( 'Please paste an API key, or use Remove key to clear it.', 'ai-command-center' ) ];
 		}
 		// Light structural sanity only — do not validate against the provider here
 		// (that is the Test connection job). Keys are ASCII tokens.
 		if ( strlen( $key ) < 12 || ! preg_match( '/^[A-Za-z0-9._\-]+$/', $key ) ) {
-			return [ 'type' => 'error', 'message' => __( 'That does not look like a valid API key. Keys contain only letters, numbers, dashes, dots and underscores.', 'wp-command-center' ) ];
+			return [ 'type' => 'error', 'message' => __( 'That does not look like a valid API key. Keys contain only letters, numbers, dashes, dots and underscores.', 'ai-command-center' ) ];
 		}
 
 		update_option( self::OPTION_KEY, $key, false ); // autoload=no for a secret.
@@ -107,18 +107,18 @@ final class AiSetupController {
 
 		$this->audit( 'ai.provider.key.updated', [ 'provider' => 'anthropic' ] );
 
-		return [ 'type' => 'success', 'message' => __( 'API key saved. It is stored on this site and never shown again. Use Test connection to verify it.', 'wp-command-center' ) ];
+		return [ 'type' => 'success', 'message' => __( 'API key saved. It is stored on this site and never shown again. Use Test connection to verify it.', 'ai-command-center' ) ];
 	}
 
 	/** Remove the option-stored key (no effect on a constant-defined key). */
 	private function clear_key(): array {
 		if ( AdoptionStatus::ai_key_is_constant() ) {
-			return [ 'type' => 'warning', 'message' => __( 'The active key is defined as a constant in wp-config.php and cannot be removed from here.', 'wp-command-center' ) ];
+			return [ 'type' => 'warning', 'message' => __( 'The active key is defined as a constant in wp-config.php and cannot be removed from here.', 'ai-command-center' ) ];
 		}
 		delete_option( self::OPTION_KEY );
 		delete_option( self::OPTION_LAST_TEST );
 		$this->audit( 'ai.provider.key.cleared', [ 'provider' => 'anthropic' ] );
-		return [ 'type' => 'success', 'message' => __( 'API key removed. AI features are off until a new key is added.', 'wp-command-center' ) ];
+		return [ 'type' => 'success', 'message' => __( 'API key removed. AI features are off until a new key is added.', 'ai-command-center' ) ];
 	}
 
 	/** Persist the chosen model (preset or validated custom). Never needs a key. */
@@ -129,20 +129,20 @@ final class AiSetupController {
 			$custom = isset( $_POST['wpcc_model_custom'] ) ? sanitize_text_field( wp_unslash( $_POST['wpcc_model_custom'] ) ) : '';
 			$custom = trim( $custom );
 			if ( '' === $custom || strlen( $custom ) > 100 || ! preg_match( '/^[A-Za-z0-9._\-]+$/', $custom ) ) {
-				return [ 'type' => 'error', 'message' => __( 'Enter a valid model id (letters, numbers, dots, dashes, underscores; up to 100 chars).', 'wp-command-center' ) ];
+				return [ 'type' => 'error', 'message' => __( 'Enter a valid model id (letters, numbers, dots, dashes, underscores; up to 100 chars).', 'ai-command-center' ) ];
 			}
 			$model = $custom;
 		} elseif ( isset( self::MODEL_PRESETS[ $choice ] ) ) {
 			$model = $choice;
 		} else {
-			return [ 'type' => 'error', 'message' => __( 'Please choose a model.', 'wp-command-center' ) ];
+			return [ 'type' => 'error', 'message' => __( 'Please choose a model.', 'ai-command-center' ) ];
 		}
 
 		update_option( self::OPTION_MODEL, $model, false );
 		$this->audit( 'ai.provider.model.updated', [ 'provider' => 'anthropic', 'model' => $model ] );
 
 		/* translators: %s: model id */
-		return [ 'type' => 'success', 'message' => sprintf( __( 'Model set to %s.', 'wp-command-center' ), $model ) ];
+		return [ 'type' => 'success', 'message' => sprintf( __( 'Model set to %s.', 'ai-command-center' ), $model ) ];
 	}
 
 	/**
@@ -157,7 +157,7 @@ final class AiSetupController {
 		if ( ! $client->is_configured() ) {
 			$this->store_test( false, 'not_configured' );
 			$this->audit( 'ai.provider.test', [ 'provider' => 'anthropic', 'result' => 'not_configured' ] );
-			return [ 'type' => 'error', 'message' => __( 'No API key configured. Add a key first, then test.', 'wp-command-center' ) ];
+			return [ 'type' => 'error', 'message' => __( 'No API key configured. Add a key first, then test.', 'ai-command-center' ) ];
 		}
 
 		$model  = $client->model( self::DEFAULT_MODEL );
@@ -174,13 +174,13 @@ final class AiSetupController {
 		$this->audit( 'ai.provider.test', [ 'provider' => 'anthropic', 'result' => $code, 'model' => $model ] );
 
 		if ( $ok ) {
-			return [ 'type' => 'success', 'message' => __( 'Connection succeeded. Your AI provider key is working.', 'wp-command-center' ) ];
+			return [ 'type' => 'success', 'message' => __( 'Connection succeeded. Your AI provider key is working.', 'ai-command-center' ) ];
 		}
 
 		// $result['message'] is already redacted by the transport; safe to surface.
 		$detail = sanitize_text_field( (string) ( $result['message'] ?? '' ) );
 		/* translators: %s: short, secret-free error detail */
-		return [ 'type' => 'error', 'message' => sprintf( __( 'Connection failed: %s', 'wp-command-center' ), $detail !== '' ? $detail : $code ) ];
+		return [ 'type' => 'error', 'message' => sprintf( __( 'Connection failed: %s', 'ai-command-center' ), $detail !== '' ? $detail : $code ) ];
 	}
 
 	/** Persist a non-secret test result for display. */

@@ -100,7 +100,32 @@ assert_eq "exec: queue context -> System (Queue)"    "system|System (Queue)"    
 assert_eq "exec: workflow context -> System (Workflow)" "system|System (Workflow)"      "$(run_case "['system_via'=>'workflow']")"
 assert_eq "exec: request context -> System (Headless Request)" "system|System (Headless Request)" "$(run_case "['system_via'=>'request']")"
 assert_eq "exec: no actor, no hint -> System (never unknown)" "system|System"           "$(run_case "[]")"
-assert_eq "exec: token actor preserved"              "token|My Token"                   "$(run_case "['actor'=>['type'=>'token','id'=>'t1','label'=>'My Token']]")"
+# A token actor is ALWAYS capability-checked, whatever wpcc_enforce_capabilities
+# says for other actors — that is the point of scoping a token. The fabricated id
+# 't1' owns no capabilities, so option_manage was denied, no change row was written,
+# and the assertion silently read the PREVIOUS case's row ("system|System"). It only
+# ever passed when it inherited wpcc_enforce_capabilities=false from whichever suite
+# ran before it, which is not something this suite should depend on.
+#
+# Mint a real full-scope token so the operation is genuinely permitted, and the
+# assertion tests the invariant it was written for: a token actor's identity
+# survives into the change log. Revoked immediately afterwards.
+TOKEN_FIXTURE="$(wpe '
+  $t = new \WPCommandCenter\Security\AuthTokens();
+  $r = $t->create( "actor-attribution-fixture", "full", null, 1 );
+  // create() returns [ token, record ] — the id lives on the record. Reading
+  // $r["id"] yields "", and an empty id makes the executor skip the capability
+  // check entirely, so the assertion would pass without ever exercising a real
+  // scoped token. That is the accidental pass this fixture exists to avoid.
+  echo $r["record"]["id"];
+')"
+assert_eq "exec: token actor preserved"              "token|My Token"                   "$(run_case "['actor'=>['type'=>'token','id'=>'$TOKEN_FIXTURE','label'=>'My Token']]")"
+# Deleted, not revoked: a revoked fixture stays in the operator's token list for
+# ever, and a suite must not leave litter on the site it ran against.
+wpe "
+  \$t = new \WPCommandCenter\Security\AuthTokens();
+  \$t->delete( '$TOKEN_FIXTURE' );
+" >/dev/null 2>&1
 assert_eq "exec: admin actor preserved"              "admin|admin"                      "$(run_case "['actor'=>['type'=>'admin','user_id'=>1]]")"
 
 echo
@@ -129,7 +154,7 @@ assert_eq "capabilities stay 23"   "23" "$(pj "$MANIFEST" '.capability_managemen
 # STEP 106.1 bumped DB_VERSION to 2.4.0 (forward-only approver-attribution
 # columns on wpcc_operation_requests). The actor-attribution code this suite
 # guards is unchanged; only the schema baseline moved.
-assert_eq "DB_VERSION baseline 2.5.0" "2.5.0" "$(wpe 'echo get_option("wpcc_db_version");')"
+assert_eq "DB_VERSION baseline 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"
 
 echo
 echo "== Summary =="

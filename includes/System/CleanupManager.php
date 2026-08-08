@@ -18,14 +18,14 @@ final class CleanupManager {
 		$audit     = new AuditLog();
 
 		if ( empty( $resources ) ) {
-			return new \WP_Error( 'wpcc_invalid_cleanup_resources', __( 'Select at least one cleanup resource.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_cleanup_resources', __( 'Select at least one cleanup resource.', 'ai-command-center' ) );
 		}
 		if ( ! $dry_run && 'production' === $mode && ( empty( $params['allow_production'] ) || 'DELETE PRODUCTION DATA' !== $confirm ) ) {
 			$audit->record( 'system.cleanup.blocked', [ 'environment' => $mode, 'reason' => 'production_confirmation_required', 'actor' => AuditLog::resolve_actor( $actor ) ] );
-			return new \WP_Error( 'wpcc_production_cleanup_blocked', __( 'Production cleanup requires allow_production=true and the exact confirmation phrase.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_production_cleanup_blocked', __( 'Production cleanup requires allow_production=true and the exact confirmation phrase.', 'ai-command-center' ) );
 		}
 		if ( ! $dry_run && 'production' !== $mode && 'CLEANUP' !== $confirm ) {
-			return new \WP_Error( 'wpcc_cleanup_confirmation_required', __( 'Live cleanup requires the confirmation phrase CLEANUP.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_cleanup_confirmation_required', __( 'Live cleanup requires the confirmation phrase CLEANUP.', 'ai-command-center' ) );
 		}
 
 		$cutoff = time() - ( $days * DAY_IN_SECONDS );
@@ -49,6 +49,7 @@ final class CleanupManager {
 			'plans'          => [ "{$wpdb->prefix}wpcc_agent_plans", 'updated_at', [ 'rejected', 'superseded', 'cancelled' ] ],
 			'queue_items'    => [ "{$wpdb->prefix}wpcc_operation_queue", 'created_at', [ 'completed', 'failed', 'cancelled' ] ],
 			'recommendations'=> [ "{$wpdb->prefix}wpcc_recommendations", 'updated_at', [ 'resolved', 'dismissed' ] ],
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table and column come from a hard-coded config map keyed in-file; placeholders are generated from the bound status array.
 		];
 		[ $table, $time_field, $statuses ] = $config[ $resource ];
 		$placeholders = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
@@ -60,5 +61,6 @@ final class CleanupManager {
 		$delete = $wpdb->prepare( "DELETE FROM {$table} WHERE status IN ({$placeholders}) AND {$time_field} < %d", ...array_merge( $statuses, [ $cutoff ] ) );
 		$deleted = (int) $wpdb->query( $delete );
 		return [ 'eligible' => $eligible, 'deleted' => max( 0, $deleted ) ];
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 	}
 }

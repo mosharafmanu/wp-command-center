@@ -92,6 +92,31 @@ final class BuiltinAiSettings {
 	}
 
 	/**
+	 * The canonical build-flag precedence, by constant + filter name.
+	 *
+	 * Three places decide whether a Built-in AI surface is on: AppShell (the tabs),
+	 * AiActionRegistry (the row action on posts and media) and the RowActions classes
+	 * (the fallback handlers). Each had written the rule out separately, and two of the
+	 * three stopped at "constant OR filter" — they never learned about the in-admin
+	 * toggle Phase 4 added. Turning a tool on from the UI therefore produced a tab and
+	 * no entry point, and for Content that left the feature unusable: its tab has no
+	 * generator and says "Generate some from a post or page", while the post rows it
+	 * points at had nothing on them.
+	 *
+	 * One rule, one place. A DEFINED constant is site configuration and wins either
+	 * way; then a truthy filter; then the per-tool option.
+	 */
+	public static function flag( string $const, string $filter ): bool {
+		if ( defined( $const ) ) {
+			return (bool) constant( $const );
+		}
+		if ( (bool) apply_filters( $filter, false ) ) {
+			return true;
+		}
+		return self::enabled_by_option( $const );
+	}
+
+	/**
 	 * Whether the tool's surface is "on" at all (constant OR filter OR option) — the
 	 * same precedence AppShell::flag() applies.
 	 */
@@ -178,7 +203,7 @@ final class BuiltinAiSettings {
 			return [
 				'type'    => 'warning',
 				/* translators: %s: tool name */
-				'message' => sprintf( __( '%s is controlled by your site configuration and can’t be changed here.', 'wp-command-center' ), $label ),
+				'message' => sprintf( __( '%s is controlled by your site configuration and can’t be changed here.', 'ai-command-center' ), $label ),
 			];
 		}
 		if ( self::set( $key, $on ) ) {
@@ -189,13 +214,28 @@ final class BuiltinAiSettings {
 		}
 		if ( ! $on ) {
 			/* translators: %s: tool name */
-			return [ 'type' => 'success', 'message' => sprintf( __( '%s is now turned off.', 'wp-command-center' ), $label ) ];
+			return [ 'type' => 'success', 'message' => sprintf( __( '%s is now turned off.', 'ai-command-center' ), $label ) ];
 		}
 		if ( ! AdoptionStatus::ai_configured() ) {
 			/* translators: %s: tool name */
-			return [ 'type' => 'success', 'message' => sprintf( __( '%s is on. Connect an AI provider to start generating.', 'wp-command-center' ), $label ) ];
+			return [ 'type' => 'success', 'message' => sprintf( __( '%s is on. Connect an AI provider to start generating.', 'ai-command-center' ), $label ) ];
 		}
-		/* translators: %s: tool name */
-		return [ 'type' => 'success', 'message' => sprintf( __( '%s is on and ready.', 'wp-command-center' ), $label ) ];
+		/*
+		 * Turning a tool on succeeds and then says so — and stops.
+		 *
+		 * "SEO is on and ready." is true, and it is the end of a sentence rather
+		 * than the start of one: the customer has just switched on a feature and
+		 * is told nothing about where to go and use it. The tool does appear as a
+		 * tab in this same response, which is a change they may well not notice
+		 * on a settings page they were reading rather than watching.
+		 *
+		 * Naming the tab costs six words and no interface. The two branches above
+		 * already end by naming the next action; this one now matches them.
+		 */
+		return [
+			'type'    => 'success',
+			/* translators: 1: tool name, 2: the same tool name, as the tab that has just appeared. */
+			'message' => sprintf( __( '%1$s is on and ready — open the %2$s tab above to use it.', 'ai-command-center' ), $label, $label ),
+		];
 	}
 }

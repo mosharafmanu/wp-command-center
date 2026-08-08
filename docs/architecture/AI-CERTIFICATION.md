@@ -6,14 +6,22 @@ All AI clients that connect to WP Command Center go through a unified certificat
 
 ## Certification Levels
 
+> **Nothing currently holds a certification above Compatible.** Claude Desktop and Cursor
+> were previously listed as Gold on the strength of the shared MCP endpoint having been
+> exercised end to end. That is evidence about the endpoint, which every client shares —
+> not about any one client. The markers were withdrawn, and a level above Compatible is
+> now awarded only from a run recorded in
+> [ASSISTANT-CERTIFICATION.md](../ASSISTANT-CERTIFICATION.md).
+
+
 | Level | Name | Requirements | Who Has It |
 |---|---|---|---|
 | 0 | **Planned** | Not yet validated. Registered in the AIClientRegistry with compatibility metadata. | — |
-| 1 | **Compatible** | Uses the shared MCP runtime and has a generated configuration, but has not been individually certified end-to-end. | 9 clients |
+| 1 | **Compatible** | Uses the shared MCP runtime and has a generated configuration, but has not been individually certified end-to-end. | all 11 clients |
 | 2 | **Active** | Compatible + discovers tools and resources via `tools/list` and `resources/list`. | — |
-| 3 | **Certified Bronze** | Active + discovery validated end-to-end (7 resources, 15 tools). | — |
+| 3 | **Certified Bronze** | Active + discovery validated end-to-end (7 resources, 42 tools). | — |
 | 4 | **Certified Silver** | Bronze + capabilities, approvals, and queue workflow validated. | — |
-| 5 | **Certified Gold** | Silver + rollback, audit, timeline, security (protected files, token auth, redaction), and stress testing (30 rapid requests with 0 failures). | Claude Desktop, Cursor |
+| 5 | **Certified Gold** | Silver + rollback, audit, timeline, security (protected files, token auth, redaction), and stress testing (30 rapid requests with 0 failures). | — |
 
 ## Certification Process
 
@@ -22,7 +30,7 @@ To certify a new AI client:
 ### Phase 1: Bronze (Discovery)
 1. Verify the client can `initialize` via MCP
 2. Verify `resources/list` returns 7 resources
-3. Verify `tools/list` returns 15 tools
+3. Verify `tools/list` returns 42 tools
 4. Verify `resources/read` works for each resource URI
 
 ### Phase 2: Silver (Operations)

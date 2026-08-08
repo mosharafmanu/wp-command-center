@@ -38,18 +38,24 @@ VIEW_PHP="$(awk '/<script>/{s=1} /<\/script>/{s=0;next} !s' "$VIEW" | grep -vE '
 # ── Tab gating: OFF by default, ON via the dev switch ────────────────────────
 # Experience Layer: Governed Drafts (Dev) is the Operate › drafts tab in the 5-C
 # App Shell, present only when the dev switch is on (and proposal_store allowed).
+# Assert the GATE, not a tab key. This previously looked for an Activity tab that no
+# longer exists in any configuration, so it passed vacuously and proved nothing about
+# the default. remove_all_filters() also drops any dev mu-plugin override, so this
+# measures the shipped default on a developer machine too.
 DEFAULT_REG="$(wpe '
 remove_all_filters("wpcc_proposals_dev_ui");
-$s=\WPCommandCenter\Admin\AppShell::sections();
-echo isset($s["wpcc-activity"]["tabs"]["drafts"])?"yes":"no";
+echo \WPCommandCenter\Admin\AppShell::proposals_ui_enabled() ? "yes" : "no";
 ')"
 assert_eq "tab OFF by default (real users)" "no" "$DEFAULT_REG"
 
+# The dev-only Drafts surface is a PANE under Settings > Advanced, gated by
+# AppShell::proposals_ui_enabled(); it was an Activity tab in an earlier layout, which
+# is what this used to look for. Assert the gate itself — that is the property that
+# matters (real users never see this surface unless the site switches it on).
 FILTER_REG="$(wpe '
 add_filter("wpcc_proposals_dev_ui","__return_true");
-$s=\WPCommandCenter\Admin\AppShell::sections();
+echo \WPCommandCenter\Admin\AppShell::proposals_ui_enabled() ? "yes" : "no";
 remove_all_filters("wpcc_proposals_dev_ui");
-echo isset($s["wpcc-activity"]["tabs"]["drafts"])?"yes":"no";
 ')"
 assert_eq "tab ON when dev switch enabled" "yes" "$FILTER_REG"
 
@@ -78,14 +84,16 @@ assert_absent "no approve action control" "$VIEW_SRC" "wpcc-p-approve"
 assert_absent "no reject action control"  "$VIEW_SRC" "wpcc-p-reject"
 assert_absent "no rollback action control" "$VIEW_SRC" "wpcc-p-rollback"
 # Cross-links instead of duplicated controls.
-assert_has "cross-links to Approval Center" "$VIEW_SRC" "wpcc-approval-center"
-assert_has "cross-links to Change History"  "$VIEW_SRC" "wpcc-change-history"
+# Canonical destinations, not the legacy wpcc-approval-center / wpcc-change-history
+# aliases: the view links straight to the Approvals tab and the Changes tab.
+assert_has "cross-links to Approval Center" "$VIEW_SRC" "page=wpcc-activity&wpcc_tab=approvals"
+assert_has "cross-links to Change History"  "$VIEW_SRC" "page=wpcc-history&wpcc_tab=changes"
 
 # ── Invariants (only DB_VERSION may have moved earlier; nothing here) ─────────
 assert_eq "invariant: OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "invariant: capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-assert_eq "invariant: catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
-assert_eq "invariant: DB_VERSION 2.5.0"    "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+assert_eq "invariant: catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+assert_eq "invariant: DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

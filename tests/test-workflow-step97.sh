@@ -19,6 +19,13 @@ PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$PLUGIN_DIR/wpcc-env.sh"
 WP_PATH="$SCRIPT_DIR/../../../.."
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_PATH"
+
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -127,7 +134,7 @@ echo "== 10. Structured errors =="
 assert_eq "execute missing workflow" "nf" "$(wf '{"action":"workflow_execute","workflow_id":"does_not_exist"}' | jq -r '.code')"
 assert_eq "rollback missing execution_id" "missing_execution_id" "$(wf '{"action":"workflow_rollback"}' | jq -r '.code')"
 assert_eq "rollback unknown execution" "execution_not_found" "$(wf '{"action":"workflow_rollback","execution_id":"nope-123"}' | jq -r '.code')"
-assert_eq "invalid action" "invalid" "$(wf '{"action":"workflow_bogus"}' | jq -r '.code')"
+assert_eq "invalid action" "wpcc_invalid_workflow_action" "$(wf '{"action":"workflow_bogus"}' | jq -r '.code')"
 
 echo
 echo "================================================"

@@ -44,13 +44,13 @@ final class SeoRuntimeManager {
 		$action = (string) ( $payload['action'] ?? '' );
 
 		if ( ! in_array( $action, SeoRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_seo_action', __( 'Invalid SEO action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_seo_action', InvalidAction::message( 'SEO', $action, SeoRegistry::ACTIONS ) );
 		}
 
 		// Every action needs an SEO provider except none-specific reporting.
 		$provider = SeoProvider::detect();
 		if ( SeoProvider::NONE === $provider && SeoRegistry::ACTION_VALIDATE !== $action ) {
-			return $this->error( 'wpcc_seo_no_provider', __( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_seo_no_provider', __( 'No supported SEO plugin (Rank Math or Yoast SEO) is active.', 'ai-command-center' ) );
 		}
 
 		return match ( $action ) {
@@ -59,14 +59,14 @@ final class SeoRuntimeManager {
 			SeoRegistry::ACTION_VALIDATE => $this->seo_validate( $payload, $provider ),
 			SeoRegistry::ACTION_ANALYZE  => $this->seo_analyze( $payload, $provider ),
 			SeoRegistry::ACTION_RESTORE  => $this->seo_restore( $payload, $provider, $context ),
-			default                      => $this->error( 'wpcc_invalid_seo_action', __( 'Invalid SEO action.', 'wp-command-center' ) ),
+			default                      => $this->error( 'wpcc_invalid_seo_action', __( 'Invalid SEO action.', 'ai-command-center' ) ),
 		};
 	}
 
 	private function seo_get( array $payload, string $provider ): array {
 		$post = $this->resolve_post( $payload );
 		if ( is_string( $post ) ) {
-			return $this->error( $post, __( 'Content not found.', 'wp-command-center' ) );
+			return $this->error( $post, __( 'Content not found.', 'ai-command-center' ) );
 		}
 
 		$this->audit->record( 'seo.get', [ 'post_id' => $post->ID, 'provider' => $provider ] );
@@ -82,12 +82,12 @@ final class SeoRuntimeManager {
 	private function seo_update( array $payload, string $provider, array $context ): array {
 		$post = $this->resolve_post( $payload );
 		if ( is_string( $post ) ) {
-			return $this->error( $post, __( 'Content not found.', 'wp-command-center' ) );
+			return $this->error( $post, __( 'Content not found.', 'ai-command-center' ) );
 		}
 
 		$fields = $this->extract_fields( $payload );
 		if ( empty( $fields ) ) {
-			return $this->error( 'wpcc_seo_no_fields', __( 'Provide at least one SEO field to update.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_seo_no_fields', __( 'Provide at least one SEO field to update.', 'ai-command-center' ) );
 		}
 
 		// Structural validation before writing.
@@ -130,7 +130,7 @@ final class SeoRuntimeManager {
 		if ( empty( $fields ) ) {
 			$post = $this->resolve_post( $payload );
 			if ( is_string( $post ) ) {
-				return $this->error( $post, __( 'Provide fields or a valid content_id to validate.', 'wp-command-center' ) );
+				return $this->error( $post, __( 'Provide fields or a valid content_id to validate.', 'ai-command-center' ) );
 			}
 			$fields = SeoProvider::read( $post->ID, SeoProvider::NONE === $provider ? SeoProvider::YOAST : $provider );
 		}
@@ -148,7 +148,7 @@ final class SeoRuntimeManager {
 	private function seo_analyze( array $payload, string $provider ): array {
 		$post = $this->resolve_post( $payload );
 		if ( is_string( $post ) ) {
-			return $this->error( $post, __( 'Content not found.', 'wp-command-center' ) );
+			return $this->error( $post, __( 'Content not found.', 'ai-command-center' ) );
 		}
 
 		$seo     = SeoProvider::read( $post->ID, $provider );
@@ -158,17 +158,82 @@ final class SeoRuntimeManager {
 		$content = strtolower( wp_strip_all_tags( (string) $post->post_content ) );
 		$haystk  = strtolower( $title . ' ' . get_the_title( $post ) );
 
+		$title_len = mb_strlen( $title );
+		$desc_len  = mb_strlen( $desc );
+
 		$checks = [];
-		$checks[] = $this->check( 'title_present', '' !== $title, __( 'An SEO title is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'title_length', '' !== $title && mb_strlen( $title ) <= self::TITLE_MAX, sprintf( __( 'SEO title is within %d characters (is %d).', 'wp-command-center' ), self::TITLE_MAX, mb_strlen( $title ) ) );
-		$checks[] = $this->check( 'description_present', '' !== $desc, __( 'A meta description is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'description_length', mb_strlen( $desc ) >= self::DESC_MIN && mb_strlen( $desc ) <= self::DESC_MAX, sprintf( __( 'Meta description is %d–%d characters (is %d).', 'wp-command-center' ), self::DESC_MIN, self::DESC_MAX, mb_strlen( $desc ) ) );
-		$checks[] = $this->check( 'focus_keyword_present', '' !== $kw, __( 'A focus keyword is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'focus_keyword_in_title', '' !== $kw && str_contains( $haystk, $kw ), __( 'Focus keyword appears in the title.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'focus_keyword_in_description', '' !== $kw && str_contains( strtolower( $desc ), $kw ), __( 'Focus keyword appears in the meta description.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'focus_keyword_in_content', '' !== $kw && str_contains( $content, $kw ), __( 'Focus keyword appears in the content.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'canonical_set', '' !== (string) $seo['canonical'], __( 'A canonical URL is set.', 'wp-command-center' ) );
-		$checks[] = $this->check( 'open_graph_set', '' !== (string) $seo['og_title'] || '' !== (string) $seo['og_description'], __( 'Open Graph metadata is set.', 'wp-command-center' ) );
+		$checks[] = $this->check(
+			'title_present',
+			'' !== $title,
+			__( 'An SEO title is set.', 'ai-command-center' ),
+			__( 'No SEO title is set. Add one so search results do not fall back to the post title.', 'ai-command-center' )
+		);
+		$checks[] = $this->check(
+			'title_length',
+			'' !== $title && $title_len <= self::TITLE_MAX,
+			sprintf( /* translators: 1: maximum characters allowed, 2: actual length */ __( 'SEO title is within %1$d characters (is %2$d).', 'ai-command-center' ), self::TITLE_MAX, $title_len ),
+			'' === $title
+				? sprintf( /* translators: %d: maximum characters allowed */ __( 'No SEO title to measure; the recommended maximum is %d characters.', 'ai-command-center' ), self::TITLE_MAX )
+				: sprintf( /* translators: 1: actual length, 2: maximum characters allowed */ __( 'SEO title is %1$d characters, longer than the recommended %2$d. Shorten it or search engines may truncate it.', 'ai-command-center' ), $title_len, self::TITLE_MAX ),
+			[ 'measured' => $title_len, 'max' => self::TITLE_MAX, 'unit' => 'characters' ]
+		);
+		$checks[] = $this->check(
+			'description_present',
+			'' !== $desc,
+			__( 'A meta description is set.', 'ai-command-center' ),
+			__( 'No meta description is set. Add one so search engines do not compose their own.', 'ai-command-center' )
+		);
+		$checks[] = $this->check(
+			'description_length',
+			$desc_len >= self::DESC_MIN && $desc_len <= self::DESC_MAX,
+			sprintf( /* translators: 1: minimum characters, 2: maximum characters, 3: actual length */ __( 'Meta description is %1$d–%2$d characters (is %3$d).', 'ai-command-center' ), self::DESC_MIN, self::DESC_MAX, $desc_len ),
+			$desc_len < self::DESC_MIN
+				? sprintf( /* translators: 1: actual length, 2: minimum characters */ __( 'Meta description is %1$d characters, shorter than the recommended minimum of %2$d. Add more detail.', 'ai-command-center' ), $desc_len, self::DESC_MIN )
+				: sprintf( /* translators: 1: actual length, 2: maximum characters */ __( 'Meta description is %1$d characters, longer than the recommended %2$d. Shorten it or it may be truncated.', 'ai-command-center' ), $desc_len, self::DESC_MAX ),
+			[ 'measured' => $desc_len, 'min' => self::DESC_MIN, 'max' => self::DESC_MAX, 'unit' => 'characters' ]
+		);
+		$checks[] = $this->check(
+			'focus_keyword_present',
+			'' !== $kw,
+			__( 'A focus keyword is set.', 'ai-command-center' ),
+			__( 'No focus keyword is set, so the keyword checks below cannot be assessed.', 'ai-command-center' )
+		);
+		$checks[] = $this->check(
+			'focus_keyword_in_title',
+			'' !== $kw && str_contains( $haystk, $kw ),
+			__( 'Focus keyword appears in the title.', 'ai-command-center' ),
+			'' === $kw
+				? __( 'No focus keyword is set, so this cannot be checked against the title.', 'ai-command-center' )
+				: __( 'Focus keyword does not appear in the SEO title or the post title.', 'ai-command-center' )
+		);
+		$checks[] = $this->check(
+			'focus_keyword_in_description',
+			'' !== $kw && str_contains( strtolower( $desc ), $kw ),
+			__( 'Focus keyword appears in the meta description.', 'ai-command-center' ),
+			'' === $kw
+				? __( 'No focus keyword is set, so this cannot be checked against the meta description.', 'ai-command-center' )
+				: __( 'Focus keyword does not appear in the meta description.', 'ai-command-center' )
+		);
+		$checks[] = $this->check(
+			'focus_keyword_in_content',
+			'' !== $kw && str_contains( $content, $kw ),
+			__( 'Focus keyword appears in the content.', 'ai-command-center' ),
+			'' === $kw
+				? __( 'No focus keyword is set, so this cannot be checked against the content.', 'ai-command-center' )
+				: __( 'Focus keyword does not appear in the content.', 'ai-command-center' )
+		);
+		$checks[] = $this->check(
+			'canonical_set',
+			'' !== (string) $seo['canonical'],
+			__( 'A canonical URL is set.', 'ai-command-center' ),
+			__( 'No canonical URL is set. This is normal unless this content is duplicated elsewhere.', 'ai-command-center' )
+		);
+		$checks[] = $this->check(
+			'open_graph_set',
+			'' !== (string) $seo['og_title'] || '' !== (string) $seo['og_description'],
+			__( 'Open Graph metadata is set.', 'ai-command-center' ),
+			__( 'No Open Graph title or description is set, so social shares fall back to the page content.', 'ai-command-center' )
+		);
 
 		$passed = count( array_filter( $checks, static fn( $c ) => $c['passed'] ) );
 		$score  = (int) round( ( $passed / count( $checks ) ) * 100 );
@@ -189,7 +254,7 @@ final class SeoRuntimeManager {
 	private function seo_restore( array $payload, string $provider, array $context ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'ai-command-center' ) );
 		}
 
 		// Slice 4c — current store: resolve the per-post snapshot by rollback_id
@@ -205,10 +270,10 @@ final class SeoRuntimeManager {
 		if ( $post_id > 0 ) {
 			$record = get_post_meta( $post_id, $meta_key, true );
 			if ( ! is_array( $record ) ) {
-				return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+				return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 			}
 			if ( ! empty( $record['rollback_applied'] ) ) {
-				return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+				return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 			}
 
 			// Phase 3 (F-1) — field-scoped, drift-aware restore for v2 delta records.
@@ -241,10 +306,10 @@ final class SeoRuntimeManager {
 			}
 		}
 		if ( null === $idx ) {
-			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 		}
 		if ( ! empty( $rollbacks[ $idx ]['rollback_applied'] ) ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
 		}
 
 		$record = $rollbacks[ $idx ];
@@ -333,8 +398,8 @@ final class SeoRuntimeManager {
 
 		$code = 'conflict' === $status ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
 		$msg  = 'conflict' === $status
-			? sprintf( __( 'Rollback skipped: every targeted SEO field (%s) changed since this update was applied. No fields were restored.', 'wp-command-center' ), implode( ', ', $skipped ) )
-			: sprintf( __( 'Partial rollback: restored %1$s; skipped %2$s because they changed since this update was applied (drift).', 'wp-command-center' ), implode( ', ', $restored ), implode( ', ', $skipped ) );
+			? sprintf( /* translators: %s: value */ __( 'Rollback skipped: every targeted SEO field (%s) changed since this update was applied. No fields were restored.', 'ai-command-center' ), implode( ', ', $skipped ) )
+			: sprintf( /* translators: %1$s: value, %2$s: value */ __( 'Partial rollback: restored %1$s; skipped %2$s because they changed since this update was applied (drift).', 'ai-command-center' ), implode( ', ', $restored ), implode( ', ', $skipped ) );
 
 		return [
 			'error'           => true,
@@ -398,23 +463,23 @@ final class SeoRuntimeManager {
 		$issues = [];
 
 		if ( isset( $fields['title'] ) && mb_strlen( (string) $fields['title'] ) > self::TITLE_MAX ) {
-			$issues[] = [ 'field' => 'title', 'severity' => 'warning', 'message' => sprintf( __( 'SEO title exceeds %d characters and may be truncated.', 'wp-command-center' ), self::TITLE_MAX ) ];
+			$issues[] = [ 'field' => 'title', 'severity' => 'warning', 'message' => sprintf( /* translators: %d: number */ __( 'SEO title exceeds %d characters and may be truncated.', 'ai-command-center' ), self::TITLE_MAX ) ];
 		}
 		if ( isset( $fields['description'] ) && '' !== (string) $fields['description'] ) {
 			$len = mb_strlen( (string) $fields['description'] );
 			if ( $len > self::DESC_MAX ) {
-				$issues[] = [ 'field' => 'description', 'severity' => 'warning', 'message' => sprintf( __( 'Meta description exceeds %d characters and may be truncated.', 'wp-command-center' ), self::DESC_MAX ) ];
+				$issues[] = [ 'field' => 'description', 'severity' => 'warning', 'message' => sprintf( /* translators: %d: number */ __( 'Meta description exceeds %d characters and may be truncated.', 'ai-command-center' ), self::DESC_MAX ) ];
 			} elseif ( $len < self::DESC_MIN ) {
-				$issues[] = [ 'field' => 'description', 'severity' => 'info', 'message' => sprintf( __( 'Meta description is under the recommended %d characters.', 'wp-command-center' ), self::DESC_MIN ) ];
+				$issues[] = [ 'field' => 'description', 'severity' => 'info', 'message' => sprintf( /* translators: %d: number */ __( 'Meta description is under the recommended %d characters.', 'ai-command-center' ), self::DESC_MIN ) ];
 			}
 		}
 		if ( isset( $fields['canonical'] ) && '' !== (string) $fields['canonical'] && ! wp_http_validate_url( (string) $fields['canonical'] ) ) {
-			$issues[] = [ 'field' => 'canonical', 'severity' => 'error', 'message' => __( 'Canonical URL is not a valid URL.', 'wp-command-center' ) ];
+			$issues[] = [ 'field' => 'canonical', 'severity' => 'error', 'message' => __( 'Canonical URL is not a valid URL.', 'ai-command-center' ) ];
 		}
 		if ( isset( $fields['robots'] ) ) {
 			foreach ( (array) $fields['robots'] as $d ) {
 				if ( ! in_array( strtolower( trim( (string) $d ) ), SeoProvider::ROBOTS_DIRECTIVES, true ) ) {
-					$issues[] = [ 'field' => 'robots', 'severity' => 'error', 'message' => sprintf( __( 'Unknown robots directive: %s', 'wp-command-center' ), esc_html( (string) $d ) ) ];
+					$issues[] = [ 'field' => 'robots', 'severity' => 'error', 'message' => sprintf( /* translators: %s: value */ __( 'Unknown robots directive: %s', 'ai-command-center' ), esc_html( (string) $d ) ) ];
 				}
 			}
 		}
@@ -422,8 +487,25 @@ final class SeoRuntimeManager {
 		return $issues;
 	}
 
-	private function check( string $name, bool $passed, string $detail ): array {
-		return [ 'check' => $name, 'passed' => $passed, 'detail' => $detail ];
+	/**
+	 * One analysis check.
+	 *
+	 * Takes BOTH outcomes. Every check used to carry a single sentence written as
+	 * the passing statement, and that sentence was shown whatever the result — so a
+	 * failing check asserted the opposite of its own verdict ("SEO title is within
+	 * 60 characters (is 62)." with passed:false). The detail now always agrees with
+	 * `passed`, and the measured value and threshold travel alongside it so a caller
+	 * can act without re-deriving them.
+	 *
+	 * @param array<string,mixed> $measured Optional measured/threshold context.
+	 * @return array<string,mixed>
+	 */
+	private function check( string $name, bool $passed, string $pass_detail, string $fail_detail = '', array $measured = [] ): array {
+		return array_merge( [
+			'check'  => $name,
+			'passed' => $passed,
+			'detail' => $passed ? $pass_detail : ( '' !== $fail_detail ? $fail_detail : $pass_detail ),
+		], $measured );
 	}
 
 	/**

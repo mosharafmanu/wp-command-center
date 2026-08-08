@@ -3,6 +3,11 @@ set -uo pipefail; SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; so
 PASS=0; FAIL=0; pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }; fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; if [ "$e" = "$a" ]; then pass "$d"; else fail "$d (expected '$e', got '$a')"; fi; }
 assert_true() { local d="$1" a="$2"; if [ "$a" = "true" ]; then pass "$d"; else fail "$d"; fi; }
+# Errors are WP_Error REST responses ({code,message,data.status}), not an in-band
+# {"error":true} payload. Assert the SPECIFIC code.
+assert_code() { local d="$1" body="$2" want="$3"; local got
+  got=$(echo "$body" | jq -r '.code // empty' 2>/dev/null)
+  if [ "$got" = "$want" ]; then pass "$d"; else fail "$d (expected code '$want', got '${got:-none}')"; fi; }
 assert_contains() { local d="$1" h="$2" n="$3"; if [[ "$h" == *"$n"* ]]; then pass "$d"; else fail "$d"; fi; }
 api() { curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$@"; }; api_post() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" "$@"; }
 mcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp"; }
@@ -99,7 +104,7 @@ echo "== 16. Validation =="
 BAD=$(api_post -d '{"action":"bad"}' "$WPCC_BASE/operations/menu_manage/run")
 assert_contains "val: bad" "$BAD" "Invalid menu action"
 NF=$(api_post -d '{"action":"menu_get","menu_id":99999}' "$WPCC_BASE/operations/menu_manage/run")
-assert_contains "val: nf" "$NF" "error"
+assert_code "val: nf" "$NF" "wpcc_menu_not_found"
 
 echo "== 17. MCP =="
 MCP_TOOLS=$(mcp '{"jsonrpc":"2.0","method":"tools/list","id":1}')

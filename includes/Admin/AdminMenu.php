@@ -22,6 +22,10 @@ final class AdminMenu {
 
 	public function init(): void {
 		add_action( 'admin_menu', [ $this, 'register_menu' ] );
+		// The Plugins screen offered only "Deactivate" — at the exact moment a
+		// customer activates the plugin, it gave them no way in. They had to notice
+		// a new sidebar item had appeared. One link closes the gap.
+		add_filter( 'plugin_action_links_' . WPCC_PLUGIN_BASENAME, [ $this, 'plugin_action_links' ] );
 		add_action( 'admin_bar_menu', [ $this, 'admin_bar_badge' ], 100 );
 		// The legacy-slug redirect MUST run on admin_menu (priority 0), NOT admin_init.
 		// Core requires wp-admin/includes/menu.php — which fires `admin_menu` and then,
@@ -33,26 +37,51 @@ final class AdminMenu {
 		add_action( 'admin_menu', [ $this, 'redirect_legacy_slugs' ], 0 );
 	}
 
+	/**
+	 * Add a first-run entry point to this plugin's row on the Plugins screen.
+	 *
+	 * @param array<int|string,string> $links
+	 * @return array<int|string,string>
+	 */
+	public function plugin_action_links( array $links ): array {
+		// Label it for what the customer needs next, not "Settings" — on a fresh
+		// install the next thing is starting, not configuring.
+		$label = \WPCommandCenter\Admin\ConnectionStatus::ever_connected()
+			? __( 'Open', 'ai-command-center' )
+			: __( 'Get started', 'ai-command-center' );
+
+		array_unshift( $links, sprintf(
+			'<a href="%s"><strong>%s</strong></a>',
+			esc_url( admin_url( 'admin.php?page=' . AppShell::HOME_SLUG ) ),
+			esc_html( $label )
+		) );
+
+		return $links;
+	}
+
 	public function register_menu(): void {
 		add_menu_page(
-			__( 'WP Command Center', 'wp-command-center' ),
-			__( 'Command Center', 'wp-command-center' ),
+			__( 'WP Command Center', 'ai-command-center' ),
+			// The sidebar is where the product is identified globally, among every
+			// other plugin's menu, so it carries the full name. The shell header no
+			// longer repeats it — it names the area you are on instead.
+			__( 'WP Command Center', 'ai-command-center' ),
 			self::CAPABILITY,
 			AppShell::HOME_SLUG,
 			[ $this, 'render_overview' ],
-			'dashicons-shield-alt',
+			Brand::menu_icon(),
 			65
 		);
 
-		// Submenu order mirrors the product-language IA (UX Master Blueprint §2):
-		// Home · Built-in AI · Connect · Activity · History · Settings. Home reuses
-		// the parent slug. Architecture words never appear in the menu.
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Home', 'wp-command-center' ), __( 'Home', 'wp-command-center' ), self::CAPABILITY, AppShell::HOME_SLUG, [ $this, 'render_overview' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Built-in AI', 'wp-command-center' ), __( 'Built-in AI', 'wp-command-center' ), self::CAPABILITY, AppShell::BUILTIN_SLUG, [ $this, 'render_builtin' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Connect', 'wp-command-center' ), __( 'Connect', 'wp-command-center' ), self::CAPABILITY, AppShell::CONNECT_SLUG, [ $this, 'render_connect' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Activity', 'wp-command-center' ), __( 'Activity', 'wp-command-center' ), self::CAPABILITY, AppShell::ACTIVITY_SLUG, [ $this, 'render_activity' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'History', 'wp-command-center' ), __( 'History', 'wp-command-center' ), self::CAPABILITY, AppShell::HISTORY_SLUG, [ $this, 'render_history' ] );
-		add_submenu_page( AppShell::HOME_SLUG, __( 'Settings', 'wp-command-center' ), __( 'Settings', 'wp-command-center' ), self::CAPABILITY, AppShell::SETTINGS_SLUG, [ $this, 'render_settings' ] );
+		// Four destinations, ordered by the customer's actual sequence of thoughts:
+		// Home (what now?) · Approvals (decide) · Changes (what happened?) · Settings.
+		// Home reuses the parent slug. "Connect" was retired from the top level: it is
+		// a one-time task, so Home owns the setup journey and Settings › Connections
+		// keeps it permanently available. Every retired slug redirects.
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Home', 'ai-command-center' ), __( 'Home', 'ai-command-center' ), self::CAPABILITY, AppShell::HOME_SLUG, [ $this, 'render_overview' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Approvals', 'ai-command-center' ), __( 'Approvals', 'ai-command-center' ), self::CAPABILITY, AppShell::ACTIVITY_SLUG, [ $this, 'render_activity' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Changes', 'ai-command-center' ), __( 'Changes', 'ai-command-center' ), self::CAPABILITY, AppShell::HISTORY_SLUG, [ $this, 'render_history' ] );
+		add_submenu_page( AppShell::HOME_SLUG, __( 'Settings', 'ai-command-center' ), __( 'Settings', 'ai-command-center' ), self::CAPABILITY, AppShell::SETTINGS_SLUG, [ $this, 'render_settings' ] );
 	}
 
 	/**
@@ -82,7 +111,7 @@ final class AdminMenu {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				: ( isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '' );
 			if ( in_array( $section, [ 'tokens', 'api-tokens', 'api_tokens' ], true ) ) {
-				$this->redirect_to( AppShell::SETTINGS_SLUG, 'access' );
+				$this->redirect_to( AppShell::SETTINGS_SLUG, 'connections', [ 'cpane' => 'tokens' ] );
 				return;
 			}
 		}
@@ -138,12 +167,9 @@ final class AdminMenu {
 			return;
 		}
 
-		global $wpdb;
-		$table = $wpdb->prefix . 'wpcc_operation_requests';
-		$count = (int) $wpdb->get_var( $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$table} WHERE status = %s",
-			OperationManager::STATUS_PENDING_REVIEW
-		) );
+		// F-01: the canonical pending counter, shared with the Approval Center
+		// header and the MCP reports so the toolbar can never disagree with them.
+		$count = ( new OperationManager() )->count_pending_review();
 
 		if ( $count <= 0 ) {
 			return;
@@ -151,9 +177,18 @@ final class AdminMenu {
 
 		$wp_admin_bar->add_node( [
 			'id'    => 'wpcc-pending-approvals',
+			// The 16 px monochrome master ships in the platform's own icon gray
+			// (#a7aaad), so the admin bar's existing hover treatment lights it with the
+			// label instead of leaving a mismatched full-colour mark in the toolbar.
+			// The count span carries an id so the Approvals screen can correct it
+			// after a decision. It is rendered server-side at page load, so without
+			// one the toolbar went on advertising "1" for a request the same page
+			// had just resolved — two different answers on one screen. See
+			// updateBadge() in views/approval-center.php; nothing else writes it.
 			'title' => sprintf(
-				'%s <span style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
-				esc_html__( 'AI Requests', 'wp-command-center' ),
+				'<img src="%s" alt="" width="16" height="16" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:6px;" decoding="async" />%s <span id="wpcc-adminbar-pending-count" style="background:#d63638;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px;margin-left:4px;">%d</span>',
+				esc_url( Brand::admin_16() ),
+				esc_html__( 'Approvals', 'ai-command-center' ),
 				$count
 			),
 			'href'  => admin_url( 'admin.php?page=' . AppShell::ACTIVITY_SLUG . '&wpcc_tab=approvals' ),
@@ -162,14 +197,6 @@ final class AdminMenu {
 
 	public function render_overview(): void {
 		( new AppShell() )->render( AppShell::HOME_SLUG );
-	}
-
-	public function render_builtin(): void {
-		( new AppShell() )->render( AppShell::BUILTIN_SLUG );
-	}
-
-	public function render_connect(): void {
-		( new AppShell() )->render( AppShell::CONNECT_SLUG );
 	}
 
 	public function render_activity(): void {

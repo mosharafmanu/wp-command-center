@@ -130,7 +130,9 @@ assert_true "get: result metadata has counts" "$(pj "$G" '(.change.result.update
 echo
 echo "== 6. history_get: not found =="
 NF=$(ch '{"action":"history_get","change_id":"00000000-0000-0000-0000-000000000000"}')
-assert_true "get: not found is in-band error" "$(pj "$NF" '.error == true')"
+# A missing change is a WP_Error response ({code,message,data.status}), not an in-band
+# {"error":true} payload. Assert the specific code.
+assert_eq "get: not found returns wpcc_change_not_found" "wpcc_change_not_found" "$(pj "$NF" '.code')"
 assert_eq "get: not found code" "wpcc_change_not_found" "$(pj "$NF" '.code')"
 
 echo

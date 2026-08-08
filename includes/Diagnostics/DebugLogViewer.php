@@ -23,25 +23,27 @@ final class DebugLogViewer {
 		$path = $this->get_log_path();
 
 		if ( ! file_exists( $path ) ) {
-			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'ai-command-center' ) );
 		}
 
 		if ( ! is_readable( $path ) ) {
-			return new \WP_Error( 'wpcc_unreadable_debug_log', __( 'debug.log exists but is not readable.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_unreadable_debug_log', __( 'debug.log exists but is not readable.', 'ai-command-center' ) );
 		}
 
 		$size = filesize( $path );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $path, 'rb' );
 
 		if ( false === $handle ) {
-			return new \WP_Error( 'wpcc_open_failed', __( 'Failed to open debug.log.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_open_failed', __( 'Failed to open debug.log.', 'ai-command-center' ) );
 		}
 
 		$read_bytes = min( $size, self::MAX_READ_BYTES );
 
 		fseek( $handle, -$read_bytes, SEEK_END );
 		$contents = stream_get_contents( $handle );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		$truncated = $read_bytes < $size;
@@ -71,11 +73,11 @@ final class DebugLogViewer {
 		$path = $this->get_log_path();
 
 		if ( ! file_exists( $path ) ) {
-			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'ai-command-center' ) );
 		}
 
-		if ( ! is_writable( $path ) ) {
-			return new \WP_Error( 'wpcc_unwritable_debug_log', __( 'debug.log exists but is not writable.', 'wp-command-center' ) );
+		if ( ! wp_is_writable( $path ) ) {
+			return new \WP_Error( 'wpcc_unwritable_debug_log', __( 'debug.log exists but is not writable.', 'ai-command-center' ) );
 		}
 
 		return false !== file_put_contents( $path, '' );

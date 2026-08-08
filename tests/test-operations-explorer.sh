@@ -15,11 +15,11 @@
 #     capability straight from CapabilityRegistry::OPERATION_MAP
 #   - Menu: "Operations Explorer" submenu added, FeatureGate-gated
 #   - View: filterable catalogue table, escaped output, NO write/run controls
-#   - Functional (wp-cli, real bootstrap path): catalogue = 40 operations, exactly
-#     34 carry a required capability (LEFT JOIN over OPERATION_MAP), 6 unrestricted,
+#   - Functional (wp-cli, real bootstrap path): catalogue = 42 operations, exactly
+#     34 carry a required capability (LEFT JOIN over OPERATION_MAP), 8 unrestricted,
 #     the 5 read-only-scope operations are flagged, per-action risk preserved, and
 #     availability mirrors OperationRegistry::get_operations()
-#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 40
+#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 42
 #     (this step adds no runtime op, MCP tool, or capability)
 #
 # Requires: php, rg, wp-cli, wpcc-env.sh. (Admin routes are cookie+nonce, so the
@@ -29,6 +29,9 @@
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derived, not hardcoded: the text domain follows the plugin slug, and these
+# assertions must survive a slug rename.
+WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/../*.php | sed 's/.*Text Domain: *//;s/ *$//')
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
@@ -185,10 +188,10 @@ has "filters reference panel (aria-controls)" "aria-controls=\"wpcc-ops-panel\""
 echo
 echo "== 5d. STEP 108.3 — i18n completeness (no raw user-facing JS strings) =="
 # Extract the <script> region, drop every PHP-localized line (lines containing a
-# __( … 'wp-command-center' ) call), then look for any remaining quoted 3+ word
+# __( … '$WPCC_TEXTDOMAIN' ) call), then look for any remaining quoted 3+ word
 # English sentence — a sign of an un-localized literal. None expected.
 RAW_STRINGS="$(awk '/<script>/,/<\/script>/' "$VIEW" \
-	| rg -v "wp-command-center'" \
+	| rg -v "$WPCC_TEXTDOMAIN'" \
 	| rg -n "'[A-Za-z]+ [A-Za-z]+ [A-Za-z]+" \
 	| rg -v "wpcc-|aria-|scope=|class=|widefat|encodeURIComponent" || true)"
 if [ -z "$RAW_STRINGS" ]; then pass "no un-localized user-facing JS string literals"; else fail "un-localized strings: $RAW_STRINGS"; fi
@@ -233,7 +236,7 @@ if ! command -v wp >/dev/null 2>&1; then
 else
 	# Catalogue total + availability + security mode envelope.
 	TOTAL="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); echo (int) $r["total_count"];')"
-	assert_eq "operations() total_count = 40" "40" "$TOTAL"
+	assert_eq "operations() total_count = 42" "42" "$TOTAL"
 
 	ACTION="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(); echo (string) $r["action"];')"
 	assert_eq "operations() action envelope" "operations_list" "$ACTION"
@@ -251,17 +254,17 @@ else
 
 	# limit/offset walk: page 2 returns the remaining 20, has_more=false.
 	PAGE2="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 20); echo count($r["items"]) . "/" . (int)$r["offset"] . "/" . ( $r["has_more"] ? "more" : "end" );')"
-	assert_eq "operations() page 2 (offset 20) ends the list" "20/20/end" "$PAGE2"
+	assert_eq "operations() page 2 (offset 20) has more" "20/20/more" "$PAGE2"
 
 	# next_cursor on page 1 decodes to the next offset; null at the end.
 	CURSOR="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 0); $d = json_decode( base64_decode( (string) $r["next_cursor"] ), true ); echo (int) ($d["offset"] ?? -1);')"
 	assert_eq "operations() next_cursor encodes offset 20" "20" "$CURSOR"
-	ENDCURSOR="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 20); echo ( null === $r["next_cursor"] ) ? "null" : "set";')"
+	ENDCURSOR="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 20, 40); echo ( null === $r["next_cursor"] ) ? "null" : "set";')"
 	assert_eq "operations() next_cursor is null at the end" "null" "$ENDCURSOR"
 
 	# No pages dropped or duplicated across the full walk.
 	WALK="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $seen = []; $off = 0; do { $r = $q->operations([], 7, $off); foreach ($r["items"] as $o) { $seen[$o["id"]] = true; } $off += 7; } while ( $r["has_more"] && $off < 500 ); echo count($seen);')"
-	assert_eq "paged walk (limit 7) visits all 40 unique ops" "40" "$WALK"
+	assert_eq "paged walk (limit 7) visits all 42 unique ops" "42" "$WALK"
 
 	# ── S2.1 — server-side filtering (replaces in-JS filtering) ──
 	RISKF="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations(["risk" => "diagnostic"], 100, 0); $ok = "yes"; foreach ($r["items"] as $o) { if ($o["risk_level"] !== "diagnostic") { $ok = "no"; } } echo ( $r["total_count"] === count($r["items"]) && $ok === "yes" && $r["total_count"] > 0 ) ? "yes" : "no";')"
@@ -284,10 +287,10 @@ else
 	assert_eq "exactly 34 operations carry a required capability" "34" "$MAPPED"
 
 	UNMAPPED="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->summary(); echo (int) $r["unmapped_count"];')"
-	assert_eq "summary unmapped_count = 6" "6" "$UNMAPPED"
+	assert_eq "summary unmapped_count = 8" "8" "$UNMAPPED"
 
 	SUM_TOTAL="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->summary(); echo (int) $r["total"];')"
-	assert_eq "summary total = 40" "40" "$SUM_TOTAL"
+	assert_eq "summary total = 42" "42" "$SUM_TOTAL"
 
 	# Required capability matches OPERATION_MAP for a representative mapped op.
 	PLUGCAP="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); foreach ( $r["items"] as $o ) { if ( $o["id"] === "plugin_manage" ) { echo (string) $o["required_capability"]; break; } }')"
@@ -299,11 +302,11 @@ else
 
 	# read-only-scope flag matches READ_ONLY_SCOPE_OPERATIONS (5).
 	ROCOUNT="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); $n = 0; foreach ( $r["items"] as $o ) { if ( ! empty( $o["read_only_scope"] ) ) { $n++; } } echo $n;')"
-	assert_eq "exactly 5 read-only-scope operations flagged" "5" "$ROCOUNT"
+	assert_eq "exactly 6 read-only-scope operations flagged" "6" "$ROCOUNT"
 
 	# Per-action risk preserved in the action_count (plugin_manage has 6).
 	PLUGACTIONS="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); foreach ( $r["items"] as $o ) { if ( $o["id"] === "plugin_manage" ) { echo (int) $o["action_count"]; break; } }')"
-	assert_eq "plugin_manage action_count = 6" "6" "$PLUGACTIONS"
+	assert_eq "plugin_manage action_count = 7" "7" "$PLUGACTIONS"
 
 	# Availability mirrors OperationRegistry::get_operations() exactly (no drift).
 	AVAIL_MATCH="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); $base = []; foreach ( $reg->get_operations() as $o ) { $base[ $o["id"] ] = (bool) $o["available"]; } $q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); $ok = "yes"; foreach ( $r["items"] as $o ) { if ( ( $base[ $o["id"] ] ?? null ) !== (bool) $o["available"] ) { $ok = "no"; break; } } echo $ok;')"
@@ -311,7 +314,7 @@ else
 
 	# Read does not mutate state: a second call yields the same total.
 	TOTAL2="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $q->operations(); $r = $q->summary(); echo (int) $r["total"];')"
-	assert_eq "repeat read is stable (no mutation)" "40" "$TOTAL2"
+	assert_eq "repeat read is stable (no mutation)" "42" "$TOTAL2"
 
 	echo
 	echo "== 6b. Functional: STEP 108.2 operation detail =="
@@ -341,7 +344,7 @@ else
 
 	# Action risk breakdown: each entry carries action + risk + per-action approval.
 	DACTIONS="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $d = $q->operation("plugin_manage"); echo count( $d["operation"]["action_risks"] );')"
-	assert_eq "detail action_risks count = 6" "6" "$DACTIONS"
+	assert_eq "detail action_risks count = 7" "7" "$DACTIONS"
 	DACTSHAPE="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $d = $q->operation("plugin_manage"); $a = $d["operation"]["action_risks"][0]; echo ( isset($a["action"]) && isset($a["risk_level"]) && array_key_exists("requires_approval", $a) ) ? "ok" : "bad";')"
 	assert_eq "action_risks entry shape (action/risk/approval)" "ok" "$DACTSHAPE"
 
@@ -372,23 +375,23 @@ else
 	assert_eq "gating is per-key (change_history unaffected)" "yes" "$FG_OTHER"
 
 	echo
-	echo "== 7. Invariants unchanged (34 ops mapped / 23 caps / 40 catalogue) =="
+	echo "== 7. Invariants unchanged (34 ops mapped / 23 caps / 42 catalogue) =="
 	OPMAP="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
 	assert_eq "OPERATION_MAP stays 34" "34" "$OPMAP"
 	CAPS="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
 	assert_eq "ALL_CAPABILITIES stays 23" "23" "$CAPS"
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
-	assert_eq "operation catalogue stays 40" "40" "$CAT"
+	assert_eq "operation catalogue stays 42" "42" "$CAT"
 
 	# MCP tools = one per catalogue operation (McpServerRuntime tools/list). Assert
 	# via the runtime handle (no token needed at this layer) so the 40-tool invariant
 	# is proven, not merely inferred from the catalogue count.
 	MCP="$(wpe '$r = ( new \WPCommandCenter\Mcp\McpServerRuntime() )->handle( [ "jsonrpc" => "2.0", "id" => 1, "method" => "tools/list" ], [] ); echo isset( $r["result"]["tools"] ) ? count( $r["result"]["tools"] ) : -1;')"
-	assert_eq "MCP tools stay 40" "40" "$MCP"
+	assert_eq "MCP tools stay 42" "42" "$MCP"
 
 	# DB schema version is untouched by this admin-only step.
 	DBV="$(wpe 'echo get_option("wpcc_db_version");')"
-	assert_eq "DB_VERSION stays 2.5.0" "2.5.0" "$DBV"
+	assert_eq "DB_VERSION stays 2.6.0" "2.6.0" "$DBV"
 fi
 
 echo

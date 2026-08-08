@@ -9,6 +9,12 @@ fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; if [ "$e" = "$a" ]; then pass "$d"; else fail "$d (expected '$e', got '$a')"; fi; }
 assert_true() { local d="$1" a="$2"; if [ "$a" = "true" ]; then pass "$d"; else fail "$d"; fi; }
 assert_contains() { local d="$1" h="$2" n="$3"; if [[ "$h" == *"$n"* ]]; then pass "$d"; else fail "$d"; fi; }
+# Errors are WP_Error REST responses ({code,message,data.status}), not the retired
+# in-band {"error":true} shape. Assert the SPECIFIC code — stronger than the old
+# substring check for the word "error", which no longer appears in a response at all.
+assert_code() { local d="$1" body="$2" want="$3"; local got
+  got=$(echo "$body" | jq -r '.code // empty' 2>/dev/null)
+  if [ "$got" = "$want" ]; then pass "$d"; else fail "$d (expected code '$want', got '${got:-none}')"; fi; }
 api() { curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$@"; }
 api_post() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" "$@"; }
 mcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp"; }
@@ -173,7 +179,7 @@ assert_contains "val: not found" "$NF" "Product not found"
 
 echo "== 25. Validation — Missing Name ==="
 NONAME=$(api_post -d '{"action":"product_create"}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "val: no name" "$NONAME" "error"
+assert_code "val: no name" "$NONAME" "wpcc_missing_name"
 
 echo "== 26. MCP Discovery ==="
 MCP_TOOLS=$(mcp '{"jsonrpc":"2.0","method":"tools/list","id":1}')
@@ -228,7 +234,7 @@ assert_contains "order: search" "$OSEARCH" "order_search"
 
 echo "== 34. Empty Search Blocked ==="
 EMPTY=$(api_post -d '{"action":"product_search","search":""}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "val: empty search" "$EMPTY" "error"
+assert_code "val: empty search" "$EMPTY" "wpcc_empty_search"
 
 echo "== 35. Rollback Endpoint ==="
 RB=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d '{"rollback_id":"nonexistent"}' "$WPCC_BASE/operations/woocommerce_manage/rollback")
@@ -298,31 +304,31 @@ assert_contains "filter: status" "$PSTAT" "product_list"
 
 echo "== 48. Price Update — Not Found =="
 PRI_NF=$(api_post -d '{"action":"price_update","product_id":99999999,"regular_price":"10"}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "price: not found" "$PRI_NF" "error"
+assert_code "price: not found" "$PRI_NF" "wpcc_product_not_found"
 
 echo "== 49. Stock Update — Not Found =="
 STK_NF=$(api_post -d '{"action":"stock_update","product_id":99999999,"quantity":10}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "stock: not found" "$STK_NF" "error"
+assert_code "stock: not found" "$STK_NF" "wpcc_product_not_found"
 
 echo "== 50. Order Get — Not Found =="
 ORD_NF=$(api_post -d '{"action":"order_get","order_id":99999999}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "order: not found" "$ORD_NF" "error"
+assert_code "order: not found" "$ORD_NF" "wpcc_order_not_found"
 
 echo "== 51. Coupon Get — Not Found =="
 COU_NF=$(api_post -d '{"action":"coupon_get","coupon_id":99999999}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "coupon: not found" "$COU_NF" "error"
+assert_code "coupon: not found" "$COU_NF" "wpcc_coupon_not_found"
 
 echo "== 52. Category Assign — Not Found =="
 CAT_NF=$(api_post -d '{"action":"product_category_assign","product_id":99999999,"category_id":1}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "cat: not found" "$CAT_NF" "error"
+assert_code "cat: not found" "$CAT_NF" "wpcc_product_not_found"
 
 echo "== 53. Attribute Assign — Not Found =="
 ATT_NF=$(api_post -d '{"action":"product_attribute_assign","product_id":99999999,"attribute_name":"Color"}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "att: not found" "$ATT_NF" "error"
+assert_code "att: not found" "$ATT_NF" "wpcc_product_not_found"
 
 echo "== 54. Product Delete — Not Found =="
 DEL_NF=$(api_post -d '{"action":"product_delete","product_id":99999999}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "del: not found" "$DEL_NF" "error"
+assert_code "del: not found" "$DEL_NF" "wpcc_product_not_found"
 
 echo "== 55. Manifest — Operation Count =="
 OPS_COUNT=$(echo "$MANIFEST" | jq -r '.operations | length')
@@ -379,7 +385,7 @@ assert_contains "def: action" "$PDEF" "product_list"
 
 echo "== 65. Variation Get — Not Found =="
 VGNF=$(api_post -d '{"action":"variation_get","variation_id":99999999}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "vg: not found" "$VGNF" "error"
+assert_code "vg: not found" "$VGNF" "wpcc_variation_not_found"
 
 echo "== 66. Order List — Default =="
 OD=$(api_post -d '{"action":"order_list"}' "$WPCC_BASE/operations/woocommerce_manage/run")
@@ -467,7 +473,7 @@ assert_contains "unp: handled" "$UNP2" "product_unpublish"
 
 echo "== 79. Coupon Create — Missing Code =="
 CC_NA=$(api_post -d '{"action":"coupon_create","amount":10}' "$WPCC_BASE/operations/woocommerce_manage/run")
-assert_contains "cc: missing code" "$CC_NA" "error"
+assert_code "cc: missing code" "$CC_NA" "wpcc_missing_code"
 
 echo "== 80. Product Search — Empty =="
 PS_EMPTY=$(api_post -d '{"action":"product_search","search":"zzz_nonexistent_product_zzz"}' "$WPCC_BASE/operations/woocommerce_manage/run")

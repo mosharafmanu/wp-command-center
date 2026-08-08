@@ -30,14 +30,32 @@ has "explainer answers what-does-token-do" "What does the access token do" "$EXP
 has "explainer answers what-talks-to-what" "What talks to what" "$EXPL"
 has "explainer has a jargon-free flow line" "function flow_line" "$EXPL"
 has "Connect screen renders the explainer" "AgentExplainer::faq\(\)" "$CONNECT"
-has "Connect screen H1 is plain language" "esc_html_e\( 'AI Clients'" "$CONNECT"
-has "Connect screen still explains a client in plain words" "An AI client is an assistant" "$CONNECT"
+# The invariant is that this screen's H1 is the SAME plain word the navigation
+# uses for it, not any one particular word. It was pinned to the literal "AI
+# Clients" while the tab leading here said "Assistants", so the test defended the
+# disagreement it should have caught.
+has "Connect screen H1 matches its navigation label" "esc_html_e\( 'Assistants'" "$CONNECT"
+hasnt "Connect screen H1 drops the old jargon term" "esc_html_e\( 'AI Clients'" "$CONNECT"
+# Was pinned to "Connect Claude, Cursor, Codex..." — a sentence that lived ONLY
+# inside the retired `if ( false )` hero, so it had not rendered to a customer in
+# months and the assertion was defending dead code. It broke the moment that block
+# was deleted, which is the one time it should have stayed silent.
+#
+# The screen still names assistants in plain words, but the naming is now the
+# registry-driven picker rather than a hardcoded sentence, so assert the live
+# thing: the picker exists and asks the customer to choose one.
+has "Connect screen offers a plain-words assistant picker" "Choose your assistant" "$CONNECT"
+has "Connect screen tells the customer to pick one"        "Pick the assistant you" "$CONNECT"
 hasnt "Connect screen no longer leads with MCP-protocol jargon" "via the MCP protocol. All clients share" "$CONNECT"
 
 echo "== 3. First success — no-setup quick win (Phase D) =="
-has "no-AI quick win present" "no AI or setup needed" "$HOME_F"
-has "quick win runs a site report" "Run a site report" "$HOME_F"
-has "quick win is read-only/non-destructive" "Nothing is changed" "$HOME_F"
+# V1: the "run a site report" quick win was removed from Home. It competed with
+# the one action that actually starts the product (connect an assistant) and
+# pointed at Diagnostics, a surface V1 de-emphasises. The report still exists
+# at Settings > Diagnostics; it is simply no longer a second front-door CTA.
+hasnt "no competing quick-win CTA" "no AI or setup needed" "$HOME_F"
+hasnt "no second primary CTA on Home" "Run a site report" "$HOME_F"
+has "Home itself stays read-only" "READ-ONLY" "$HOME_F"
 
 echo "== 4. Approval & undo discoverability (Phase E) =="
 has "approvals link in how-it-works" "Approvals →" "$HOME_F"
@@ -46,7 +64,10 @@ has "changes/undo link in how-it-works" "Changes →" "$HOME_F"
 echo "== 5. Honest after-key guidance (Phase A/D) =="
 has "after-key next steps present" "What happens next" "$AISETUP"
 has "honest: key alone does not enable AI" "does not turn AI features on by itself" "$AISETUP"
-has "after-key points to AI Clients" "AI Clients" "$AISETUP"
+# What matters is that the after-key guidance sends the reader to the screen
+# where assistants are connected — identified by its link, which cannot drift
+# with wording the way the label can.
+has "after-key points at the assistants screen" "cpane=assistants" "$AISETUP"
 
 echo "== 6. STOP-condition guard — no architecture edits =="
 hasnt "no schema edit marker" "PROGRAM-5C" "$ROOT/includes/Core/Schema.php"

@@ -29,42 +29,42 @@ $view_id = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view
 $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' ) ) );
 ?>
 <div class="wrap wpcc-wrap wpcc-operations">
-	<h1><?php esc_html_e( 'Capabilities', 'wp-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Capabilities', 'ai-command-center' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'Every operation the platform exposes, with its risk tier, the capability it requires, whether it needs approval in the current security mode, and whether it is available on this site right now. Read-only — this page does not run operations.', 'wp-command-center' ); ?>
+		<?php esc_html_e( 'Every operation the platform exposes, with its risk tier, the capability it requires, whether it needs approval in the current security mode, and whether it is available on this site right now. Read-only — this page does not run operations.', 'ai-command-center' ); ?>
 	</p>
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo $list_url; ?>">&larr; <?php esc_html_e( 'Back to all operations', 'wp-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $list_url ); ?>">&larr; <?php esc_html_e( 'Back to all operations', 'ai-command-center' ); ?></a>
 		</p>
 		<div id="wpcc-op-detail" data-op-id="<?php echo esc_attr( $view_id ); ?>">
-			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operation…', 'wp-command-center' ); ?></span></div>
+			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operation…', 'ai-command-center' ); ?></span></div>
 		</div>
 	<?php else : ?>
 		<div id="wpcc-ops-summary" class="wpcc-ops-summary" role="status" aria-live="polite"></div>
 
 		<div class="wpcc-ops-filters">
-			<label class="screen-reader-text" for="wpcc-ops-search"><?php esc_html_e( 'Filter operations', 'wp-command-center' ); ?></label>
-			<input type="search" id="wpcc-ops-search" class="regular-text wpcc-cds-field" placeholder="<?php esc_attr_e( 'Filter by name, id, or capability…', 'wp-command-center' ); ?>" aria-controls="wpcc-ops-panel" />
+			<label class="screen-reader-text" for="wpcc-ops-search"><?php esc_html_e( 'Filter operations', 'ai-command-center' ); ?></label>
+			<input type="search" id="wpcc-ops-search" class="regular-text wpcc-cds-field" placeholder="<?php esc_attr_e( 'Filter by name, id, or capability…', 'ai-command-center' ); ?>" aria-controls="wpcc-ops-panel" />
 
-			<label class="screen-reader-text" for="wpcc-ops-risk"><?php esc_html_e( 'Filter by risk', 'wp-command-center' ); ?></label>
+			<label class="screen-reader-text" for="wpcc-ops-risk"><?php esc_html_e( 'Filter by risk', 'ai-command-center' ); ?></label>
 			<select id="wpcc-ops-risk" class="wpcc-cds-field" aria-controls="wpcc-ops-panel">
-				<option value=""><?php esc_html_e( 'All risk levels', 'wp-command-center' ); ?></option>
-				<option value="diagnostic"><?php esc_html_e( 'Diagnostic', 'wp-command-center' ); ?></option>
-				<option value="low"><?php esc_html_e( 'Low', 'wp-command-center' ); ?></option>
-				<option value="medium"><?php esc_html_e( 'Medium', 'wp-command-center' ); ?></option>
-				<option value="high"><?php esc_html_e( 'High', 'wp-command-center' ); ?></option>
-				<option value="critical"><?php esc_html_e( 'Critical', 'wp-command-center' ); ?></option>
+				<option value=""><?php esc_html_e( 'All risk levels', 'ai-command-center' ); ?></option>
+				<option value="diagnostic"><?php esc_html_e( 'Diagnostic', 'ai-command-center' ); ?></option>
+				<option value="low"><?php esc_html_e( 'Low', 'ai-command-center' ); ?></option>
+				<option value="medium"><?php esc_html_e( 'Medium', 'ai-command-center' ); ?></option>
+				<option value="high"><?php esc_html_e( 'High', 'ai-command-center' ); ?></option>
+				<option value="critical"><?php esc_html_e( 'Critical', 'ai-command-center' ); ?></option>
 			</select>
 
-			<label><input type="checkbox" id="wpcc-ops-available" /> <?php esc_html_e( 'Available only', 'wp-command-center' ); ?></label>
+			<label><input type="checkbox" id="wpcc-ops-available" /> <?php esc_html_e( 'Available only', 'ai-command-center' ); ?></label>
 		</div>
 
 		<div id="wpcc-ops-count" class="wpcc-ops-count" role="status" aria-live="polite"></div>
 
 		<div id="wpcc-ops-panel">
-			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operations…', 'wp-command-center' ); ?></span></div>
+			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operations…', 'ai-command-center' ); ?></span></div>
 		</div>
 
 		<div id="wpcc-ops-pager" class="wpcc-ops-pager"></div>
@@ -80,6 +80,10 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 .wpcc-ops-pager { display:flex;align-items:center;gap:var(--wpcc-space-4);margin:var(--wpcc-space-5) 0;max-width:1100px; }
 .wpcc-ops-pager .wpcc-pageinfo { font-size:var(--wpcc-fs-small);color:var(--wpcc-text-secondary); }
 .wpcc-ops-table { max-width:1100px;margin-top:var(--wpcc-space-2); }
+/* The operations matrix is a wide table by nature. Below ~700px it used to make
+   the DOCUMENT scroll horizontally, which moves the whole admin under the
+   customer instead of just the table. Contain it here. */
+#wpcc-ops-panel { overflow-x:auto; -webkit-overflow-scrolling:touch; }
 .wpcc-ops-table .wpcc-op-id { font-family:var(--wpcc-font-mono);font-size:var(--wpcc-fs-caption);color:var(--wpcc-text-secondary); }
 .wpcc-ops-table .wpcc-op-desc { color:var(--wpcc-text-muted);font-size:var(--wpcc-fs-small); }
 .wpcc-op-detail-table { max-width:820px;margin:var(--wpcc-space-3) 0 var(--wpcc-space-7); }
@@ -107,63 +111,63 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		page:    <?php echo wp_json_encode( $page ); ?>
 	};
 	var i18n = {
-		loadFail:   <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'wp-command-center' ) ); ?>,
-		empty:      <?php echo wp_json_encode( __( 'No operations match your filters.', 'wp-command-center' ) ); ?>,
-		notFound:   <?php echo wp_json_encode( __( 'Operation not found. It may have been removed.', 'wp-command-center' ) ); ?>,
-		colOp:      <?php echo wp_json_encode( __( 'Operation', 'wp-command-center' ) ); ?>,
-		colRisk:    <?php echo wp_json_encode( __( 'Risk', 'wp-command-center' ) ); ?>,
-		colCap:     <?php echo wp_json_encode( __( 'Required capability', 'wp-command-center' ) ); ?>,
-		colApproval:<?php echo wp_json_encode( __( 'Approval', 'wp-command-center' ) ); ?>,
-		colAvail:   <?php echo wp_json_encode( __( 'Availability', 'wp-command-center' ) ); ?>,
-		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted', 'wp-command-center' ) ); ?>,
-		readOnly:   <?php echo wp_json_encode( __( 'read-only scope', 'wp-command-center' ) ); ?>,
-		required:   <?php echo wp_json_encode( __( 'Required', 'wp-command-center' ) ); ?>,
-		notReq:     <?php echo wp_json_encode( __( 'Not required', 'wp-command-center' ) ); ?>,
-		available:  <?php echo wp_json_encode( __( 'Available', 'wp-command-center' ) ); ?>,
-		unavailable:<?php echo wp_json_encode( __( 'Unavailable', 'wp-command-center' ) ); ?>,
-		statTotal:  <?php echo wp_json_encode( __( 'Operations', 'wp-command-center' ) ); ?>,
-		statAvail:  <?php echo wp_json_encode( __( 'Available', 'wp-command-center' ) ); ?>,
-		statApprove:<?php echo wp_json_encode( __( 'Need approval', 'wp-command-center' ) ); ?>,
-		statUnrest: <?php echo wp_json_encode( __( 'Unrestricted', 'wp-command-center' ) ); ?>,
-		statMode:   <?php echo wp_json_encode( __( 'Security mode', 'wp-command-center' ) ); ?>,
-		view:       <?php echo wp_json_encode( __( 'Details', 'wp-command-center' ) ); ?>,
+		loadFail:   <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'ai-command-center' ) ); ?>,
+		empty:      <?php echo wp_json_encode( __( 'No operations match your filters.', 'ai-command-center' ) ); ?>,
+		notFound:   <?php echo wp_json_encode( __( 'Operation not found. It may have been removed.', 'ai-command-center' ) ); ?>,
+		colOp:      <?php echo wp_json_encode( __( 'Operation', 'ai-command-center' ) ); ?>,
+		colRisk:    <?php echo wp_json_encode( __( 'Risk', 'ai-command-center' ) ); ?>,
+		colCap:     <?php echo wp_json_encode( __( 'Required capability', 'ai-command-center' ) ); ?>,
+		colApproval:<?php echo wp_json_encode( __( 'Approval', 'ai-command-center' ) ); ?>,
+		colAvail:   <?php echo wp_json_encode( __( 'Availability', 'ai-command-center' ) ); ?>,
+		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted', 'ai-command-center' ) ); ?>,
+		readOnly:   <?php echo wp_json_encode( __( 'read-only scope', 'ai-command-center' ) ); ?>,
+		required:   <?php echo wp_json_encode( __( 'Required', 'ai-command-center' ) ); ?>,
+		notReq:     <?php echo wp_json_encode( __( 'Not required', 'ai-command-center' ) ); ?>,
+		available:  <?php echo wp_json_encode( __( 'Available', 'ai-command-center' ) ); ?>,
+		unavailable:<?php echo wp_json_encode( __( 'Unavailable', 'ai-command-center' ) ); ?>,
+		statTotal:  <?php echo wp_json_encode( __( 'Operations', 'ai-command-center' ) ); ?>,
+		statAvail:  <?php echo wp_json_encode( __( 'Available', 'ai-command-center' ) ); ?>,
+		statApprove:<?php echo wp_json_encode( __( 'Need approval', 'ai-command-center' ) ); ?>,
+		statUnrest: <?php echo wp_json_encode( __( 'Unrestricted', 'ai-command-center' ) ); ?>,
+		statMode:   <?php echo wp_json_encode( __( 'Security mode', 'ai-command-center' ) ); ?>,
+		view:       <?php echo wp_json_encode( __( 'Details', 'ai-command-center' ) ); ?>,
 		/* translators: %1$d shown operations, %2$d total operations */
-		countFmt:   <?php echo wp_json_encode( __( 'Showing %1$d of %2$d operations', 'wp-command-center' ) ); ?>,
-		prev:       <?php echo wp_json_encode( __( '← Previous', 'wp-command-center' ) ); ?>,
-		next:       <?php echo wp_json_encode( __( 'Next →', 'wp-command-center' ) ); ?>,
+		countFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( 'Showing %1$d of %2$d operations', 'ai-command-center' ) ); ?>,
+		prev:       <?php echo wp_json_encode( __( '← Previous', 'ai-command-center' ) ); ?>,
+		next:       <?php echo wp_json_encode( __( 'Next →', 'ai-command-center' ) ); ?>,
 		// Detail panel.
-		secOverview:   <?php echo wp_json_encode( __( 'Overview', 'wp-command-center' ) ); ?>,
-		secAuth:       <?php echo wp_json_encode( __( 'Authorization', 'wp-command-center' ) ); ?>,
-		secApproval:   <?php echo wp_json_encode( __( 'Approval', 'wp-command-center' ) ); ?>,
-		secAvail:      <?php echo wp_json_encode( __( 'Availability', 'wp-command-center' ) ); ?>,
-		secParams:     <?php echo wp_json_encode( __( 'Parameters', 'wp-command-center' ) ); ?>,
-		secActions:    <?php echo wp_json_encode( __( 'Action risk breakdown', 'wp-command-center' ) ); ?>,
-		dId:           <?php echo wp_json_encode( __( 'Operation id', 'wp-command-center' ) ); ?>,
-		dRisk:         <?php echo wp_json_encode( __( 'Worst-case risk', 'wp-command-center' ) ); ?>,
-		dReqCap:       <?php echo wp_json_encode( __( 'Required capability', 'wp-command-center' ) ); ?>,
-		dReadOnly:     <?php echo wp_json_encode( __( 'Read-only scope', 'wp-command-center' ) ); ?>,
-		dAdminUnlock:  <?php echo wp_json_encode( __( 'system.admin override', 'wp-command-center' ) ); ?>,
-		adminUnlocks:  <?php echo wp_json_encode( __( 'A token with system.admin can run this operation regardless of individual capabilities.', 'wp-command-center' ) ); ?>,
-		unrestrictedNote: <?php echo wp_json_encode( __( 'This operation requires no capability assignment — it is unrestricted (read-only or low-risk).', 'wp-command-center' ) ); ?>,
-		readOnlyYes:   <?php echo wp_json_encode( __( 'A read-only-scope token may call this operation.', 'wp-command-center' ) ); ?>,
-		readOnlyNo:    <?php echo wp_json_encode( __( 'Requires a full-scope token (read-only tokens cannot call it).', 'wp-command-center' ) ); ?>,
+		secOverview:   <?php echo wp_json_encode( __( 'Overview', 'ai-command-center' ) ); ?>,
+		secAuth:       <?php echo wp_json_encode( __( 'Authorization', 'ai-command-center' ) ); ?>,
+		secApproval:   <?php echo wp_json_encode( __( 'Approval', 'ai-command-center' ) ); ?>,
+		secAvail:      <?php echo wp_json_encode( __( 'Availability', 'ai-command-center' ) ); ?>,
+		secParams:     <?php echo wp_json_encode( __( 'Parameters', 'ai-command-center' ) ); ?>,
+		secActions:    <?php echo wp_json_encode( __( 'Action risk breakdown', 'ai-command-center' ) ); ?>,
+		dId:           <?php echo wp_json_encode( __( 'Operation id', 'ai-command-center' ) ); ?>,
+		dRisk:         <?php echo wp_json_encode( __( 'Worst-case risk', 'ai-command-center' ) ); ?>,
+		dReqCap:       <?php echo wp_json_encode( __( 'Required capability', 'ai-command-center' ) ); ?>,
+		dReadOnly:     <?php echo wp_json_encode( __( 'Read-only scope', 'ai-command-center' ) ); ?>,
+		dAdminUnlock:  <?php echo wp_json_encode( __( 'system.admin override', 'ai-command-center' ) ); ?>,
+		adminUnlocks:  <?php echo wp_json_encode( __( 'A token with system.admin can run this operation regardless of individual capabilities.', 'ai-command-center' ) ); ?>,
+		unrestrictedNote: <?php echo wp_json_encode( __( 'This operation requires no capability assignment — it is unrestricted (read-only or low-risk).', 'ai-command-center' ) ); ?>,
+		readOnlyYes:   <?php echo wp_json_encode( __( 'A read-only-scope token may call this operation.', 'ai-command-center' ) ); ?>,
+		readOnlyNo:    <?php echo wp_json_encode( __( 'Requires a full-scope token (read-only tokens cannot call it).', 'ai-command-center' ) ); ?>,
 		/* translators: %s: security mode label */
-		approvalGated: <?php echo wp_json_encode( __( 'In %s, this operation requires administrator approval before it runs.', 'wp-command-center' ) ); ?>,
+		approvalGated: <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation requires administrator approval before it runs.', 'ai-command-center' ) ); ?>,
 		/* translators: %s: security mode label */
-		approvalFree:  <?php echo wp_json_encode( __( 'In %s, this operation runs immediately (no approval required).', 'wp-command-center' ) ); ?>,
-		approvalDeclared: <?php echo wp_json_encode( __( 'The operation declares that it can require approval; the actual gate depends on the security mode and the specific action.', 'wp-command-center' ) ); ?>,
-		availYes:      <?php echo wp_json_encode( __( 'Available on this site right now.', 'wp-command-center' ) ); ?>,
-		availNo:       <?php echo wp_json_encode( __( 'Not available on this site. Availability reflects the live environment — a required plugin, integration, or WP-CLI may be inactive or missing.', 'wp-command-center' ) ); ?>,
-		noParams:      <?php echo wp_json_encode( __( 'This operation declares no parameters.', 'wp-command-center' ) ); ?>,
-		noActions:     <?php echo wp_json_encode( __( 'This operation declares no per-action risk breakdown; the worst-case risk above applies.', 'wp-command-center' ) ); ?>,
-		colName:       <?php echo wp_json_encode( __( 'Name', 'wp-command-center' ) ); ?>,
-		colType:       <?php echo wp_json_encode( __( 'Type', 'wp-command-center' ) ); ?>,
-		colReq:        <?php echo wp_json_encode( __( 'Required', 'wp-command-center' ) ); ?>,
-		colDesc:       <?php echo wp_json_encode( __( 'Description', 'wp-command-center' ) ); ?>,
-		colAction:     <?php echo wp_json_encode( __( 'Action', 'wp-command-center' ) ); ?>,
-		colValues:     <?php echo wp_json_encode( __( 'Allowed values', 'wp-command-center' ) ); ?>,
-		yes:           <?php echo wp_json_encode( __( 'Yes', 'wp-command-center' ) ); ?>,
-		no:            <?php echo wp_json_encode( __( 'No', 'wp-command-center' ) ); ?>
+		approvalFree:  <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation runs immediately (no approval required).', 'ai-command-center' ) ); ?>,
+		approvalDeclared: <?php echo wp_json_encode( __( 'The operation declares that it can require approval; the actual gate depends on the security mode and the specific action.', 'ai-command-center' ) ); ?>,
+		availYes:      <?php echo wp_json_encode( __( 'Available on this site right now.', 'ai-command-center' ) ); ?>,
+		availNo:       <?php echo wp_json_encode( __( 'Not available on this site. Availability reflects the live environment — a required plugin, integration, or WP-CLI may be inactive or missing.', 'ai-command-center' ) ); ?>,
+		noParams:      <?php echo wp_json_encode( __( 'This operation declares no parameters.', 'ai-command-center' ) ); ?>,
+		noActions:     <?php echo wp_json_encode( __( 'This operation declares no per-action risk breakdown; the worst-case risk above applies.', 'ai-command-center' ) ); ?>,
+		colName:       <?php echo wp_json_encode( __( 'Name', 'ai-command-center' ) ); ?>,
+		colType:       <?php echo wp_json_encode( __( 'Type', 'ai-command-center' ) ); ?>,
+		colReq:        <?php echo wp_json_encode( __( 'Required', 'ai-command-center' ) ); ?>,
+		colDesc:       <?php echo wp_json_encode( __( 'Description', 'ai-command-center' ) ); ?>,
+		colAction:     <?php echo wp_json_encode( __( 'Action', 'ai-command-center' ) ); ?>,
+		colValues:     <?php echo wp_json_encode( __( 'Allowed values', 'ai-command-center' ) ); ?>,
+		yes:           <?php echo wp_json_encode( __( 'Yes', 'ai-command-center' ) ); ?>,
+		no:            <?php echo wp_json_encode( __( 'No', 'ai-command-center' ) ); ?>
 	};
 
 	// S2.1 — server-side pagination state (no client-side load-all).

@@ -39,6 +39,16 @@ final class McpServerRuntime {
 	const MCP_CLIENT_TIMEOUT = 240; // Observed MCP client abandonment (seconds).
 	const MCP_TIME_BUDGET    = 200; // Default server budget (< client timeout).
 
+	/**
+	 * ISSUE 14 — operations whose handlers shape their own output by context_mode
+	 * (rather than relying solely on the generic post-hoc ContextModeOptimizer).
+	 * context_mode is stripped from every tool's arguments by default so it never
+	 * collides with a runtime's own param validation (e.g. patch_manage rejects
+	 * unknown top-level fields); operations listed here get it forwarded back
+	 * into the payload so the handler can act on it directly.
+	 */
+	private const CONTEXT_AWARE_OPERATIONS = [ 'acf_manage' ];
+
 	private AuditLog $audit;
 	private Redactor $redactor;
 
@@ -133,7 +143,7 @@ final class McpServerRuntime {
 	public static function timeout_response( $id = null ): array {
 		$message = sprintf(
 			/* translators: %d: seconds */
-			__( 'Operation exceeded the %ds synchronous execution budget. Queue long-running work instead of calling it synchronously.', 'wp-command-center' ),
+			__( 'Operation exceeded the %ds synchronous execution budget. Queue long-running work instead of calling it synchronously.', 'ai-command-center' ),
 			self::time_budget()
 		);
 		return [
@@ -259,7 +269,12 @@ final class McpServerRuntime {
 			'wpcc://manifest'        => ContextModeOptimizer::COMPACT === $mode ? ( new ContextSummaryBuilder() )->manifest_summary() : $this->fetch_rest( '/agent/manifest' ),
 			'wpcc://context'         => ContextModeOptimizer::COMPACT === $mode ? ( new ContextSummaryBuilder() )->build() : $this->fetch_rest( '/agent/context' ),
 			'wpcc://capabilities'    => ( new CapabilityRegistry() )->get_summary(),
-			'wpcc://operations'      => ( new OperationRegistry() )->get_operations(),
+			// V1 Phase 6 — the protocol's own discovery channel carries enough for an
+			// assistant to build a correct first request without guessing.
+			'wpcc://operations'      => array_map(
+				[ \WPCommandCenter\Operations\OperationDescriptor::class, 'enrich' ],
+				( new OperationRegistry() )->get_operations()
+			),
 			'wpcc://queue'           => $this->get_queue_status(),
 			'wpcc://results'         => $this->get_results(),
 			'wpcc://recommendations' => $this->get_recommendations(),
@@ -283,6 +298,23 @@ final class McpServerRuntime {
 	}
 
 	// ── Tools ──
+
+	/**
+	 * The description an MCP client sees for one operation.
+	 *
+	 * @param array<string,mixed> $op
+	 */
+	private static function tool_description( array $op, string $mode ): string {
+		$title = (string) ( $op['title'] ?? ( $op['id'] ?? '' ) );
+		$note  = trim( (string) ( $op['agent_note'] ?? '' ) );
+
+		if ( ContextModeOptimizer::COMPACT !== $mode ) {
+			$full = $title . ': ' . (string) ( $op['description'] ?? '' );
+			return '' === $note ? $full : $full . ' ' . $note;
+		}
+
+		return '' === $note ? $title : $title . ' — ' . $note;
+	}
 
 	private function tools_list( array $params = [] ): array {
 		$mode    = ContextModeOptimizer::normalize( $params['context_mode'] ?? null );
@@ -339,7 +371,16 @@ final class McpServerRuntime {
 			}
 			$tools[] = [
 				'name'        => $op['id'],
-				'description' => ContextModeOptimizer::COMPACT === $mode ? $op['title'] : $op['title'] . ': ' . $op['description'],
+				/*
+				 * Compact mode drops the operation description to save context — and
+				 * compact is the default in every client configuration this plugin
+				 * generates, so in practice an agent never read it. That is fine for
+				 * prose, but not for a BOUNDARY: "this cannot create files", "this
+				 * needs a capability your host may not have". Those have to survive
+				 * compaction or the agent only discovers them by failing. An
+				 * operation opts in with `agent_note`, which is kept in every mode.
+				 */
+				'description' => self::tool_description( $op, $mode ),
 				'inputSchema' => [
 					'type'       => 'object',
 					'properties' => $props,
@@ -355,9 +396,39 @@ final class McpServerRuntime {
 
 	private function tools_call( array $params, array $context ): array {
 		$tool_name = $params['name'] ?? '';
-		$args      = $params['arguments'] ?? [];
-		$mode      = ContextModeOptimizer::normalize( $args['context_mode'] ?? $params['context_mode'] ?? null );
+
+		// ISSUE 13 — every tool call, regardless of which runtime it dispatches to,
+		// must surface a failure as a structured in-band isError result, never let
+		// an uncaught Throwable fall through to the outer REST layer's bare
+		// JSON-RPC transport error (McpRestApi::handle_mcp). A transport-level
+		// error on a tools/call response is what MCP clients render as a generic
+		// "Failed to call tool X" toast with no actionable message; isError
+		// results are surfaced to the agent as readable tool output instead.
+		// OperationExecutor already converts a handler's own Throwable into a
+		// WP_Error (wpcc_handler_exception), but capability checks, idempotency,
+		// redaction, and context-mode optimization all run OUTSIDE that inner
+		// try/catch — this outer one is the actual universal envelope.
+		try {
+			return $this->tools_call_inner( (string) $tool_name, $params, $context );
+		} catch ( \Throwable $e ) {
+			$this->audit( 'mcp.tool.exception', [ 'tool' => $tool_name, 'exception' => get_class( $e ), 'message' => $e->getMessage() ], $context );
+			return $this->tool_error( 'wpcc_tool_exception', $e->getMessage() );
+		}
+	}
+
+	private function tools_call_inner( string $tool_name, array $params, array $context ): array {
+		$args = $params['arguments'] ?? [];
+		$mode = ContextModeOptimizer::normalize( $args['context_mode'] ?? $params['context_mode'] ?? null );
+		$raw_context_mode = $args['context_mode'] ?? null;
 		unset( $args['context_mode'] );
+
+		// ISSUE 14 — some operations shape their own output by context_mode rather
+		// than relying solely on the generic post-hoc optimizer below. Forward the
+		// raw value back into the payload for those only, so it never leaks into a
+		// runtime with strict unknown-param validation (e.g. patch_manage).
+		if ( null !== $raw_context_mode && in_array( $tool_name, self::CONTEXT_AWARE_OPERATIONS, true ) ) {
+			$args['context_mode'] = $raw_context_mode;
+		}
 
 		// B5: Lift AI continuity fields from args into context so OperationExecutor
 		// can store them on auto-created approval requests.
@@ -370,6 +441,19 @@ final class McpServerRuntime {
 
 		$this->audit( 'mcp.tool.invoke', [ 'tool' => $tool_name, 'args' => $args ], $context );
 
+		// Test-only fault injection (ISSUE 13 harness): inert unless a test
+		// explicitly hooks this filter — external callers cannot reach it, since
+		// only PHP code in-process can register a WordPress filter. Lets a
+		// regression test force a Throwable for any tool_name and assert the
+		// universal envelope above converts it into a structured isError result
+		// no matter which runtime is targeted.
+		if ( has_filter( 'wpcc_test_force_tool_exception' ) ) {
+			$forced = apply_filters( 'wpcc_test_force_tool_exception', null, $tool_name, $args );
+			if ( $forced instanceof \Throwable ) {
+				throw $forced;
+			}
+		}
+
 		// Scope check — a read_only token may only call read-only-scope operations,
 		// regardless of whether the operation is mapped in CapabilityRegistry::OPERATION_MAP.
 		// Mirrors RestApi::require_write() so MCP cannot grant more access than REST.
@@ -377,7 +461,19 @@ final class McpServerRuntime {
 		$token_scope = $context['token_scope'] ?? '';
 		if ( AuthTokens::SCOPE_READ_ONLY === $token_scope && $cap_reg->requires_full_scope( $tool_name ) ) {
 			$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'insufficient_scope' ], $context );
-			return $this->tool_error( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform this action.', 'wp-command-center' ) );
+			// Message only — the scope decision above is unchanged. The old wording
+			// named the rule but not the fix, so an assistant relaying it left the
+			// customer with a dead end. This states the boundary AND the next step.
+			//
+			// It says "read-only" because that is what the scope is called everywhere
+			// the customer can see it: AuthTokens::scope_label() renders it "Read-only"
+			// in the Connections screen and in every token listing. The message
+			// previously said "restricted", so an assistant relaying it named a scope
+			// the customer could not find in their own UI.
+			return $this->tool_error(
+				'wpcc_token_read_only',
+				__( 'This token is read-only and cannot perform this action. A read-only token is limited to search, file and history lookups. To let the assistant do more, create a full access token in WP Command Center → Settings → Connections; changes will still wait for your approval.', 'ai-command-center' )
+			);
 		}
 
 		// Capability check
@@ -388,9 +484,28 @@ final class McpServerRuntime {
 				$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'missing_capability', 'required' => $validation['required_capability'] ], $context );
 				return $this->tool_error( 'wpcc_capability_denied', sprintf(
 					/* translators: %s: capability name */
-					__( 'Operation denied: missing capability %s', 'wp-command-center' ),
+					__( 'Operation denied: missing capability %s', 'ai-command-center' ),
 					(string) $validation['required_capability']
 				) );
+			}
+		}
+
+		// Idempotency (write ops only): a client-supplied key lets a retried call —
+		// e.g. after a transport timeout — return the recorded result instead of
+		// executing a second time and leaving duplicate/orphan state. Reads are
+		// naturally safe to repeat, so they skip this. No key → unchanged behavior.
+		$idem_key   = isset( $params['idempotency_key'] ) ? substr( sanitize_text_field( (string) $params['idempotency_key'] ), 0, 64 ) : '';
+		$idem_store = null;
+		if ( '' !== $idem_key && $cap_reg->requires_full_scope( $tool_name ) ) {
+			$idem_store = new IdempotencyStore();
+			$claim      = $idem_store->claim( $idem_key, (string) $tool_name );
+			if ( 'done' === $claim['claim'] ) {
+				$this->audit( 'mcp.idempotent.replay', [ 'tool' => $tool_name ], $context );
+				return $claim['result'];
+			}
+			if ( 'in_progress' === $claim['claim'] ) {
+				$this->audit( 'mcp.idempotent.in_progress', [ 'tool' => $tool_name ], $context );
+				return $this->tool_error( 'wpcc_idempotent_in_progress', __( 'This request is already being processed (same idempotency key). It was not run again — check History for the outcome.', 'ai-command-center' ) );
 			}
 		}
 
@@ -398,6 +513,24 @@ final class McpServerRuntime {
 		$executor = new OperationExecutor();
 		$result   = $executor->run( $tool_name, $args, $context );
 
+		$response = $this->build_tool_response( $result, $mode );
+
+		// Record the terminal outcome (success OR failure) under the idempotency key
+		// so any retry with the same key returns exactly this instead of re-running.
+		if ( null !== $idem_store ) {
+			$idem_store->complete( $idem_key, $response );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Shape an OperationExecutor result into the MCP tools/call response: the
+	 * STEP 89 in-band error convention, then context-mode optimization + redaction.
+	 *
+	 * @param array<string,mixed> $result OperationExecutor::run() return.
+	 */
+	private function build_tool_response( array $result, string $mode ): array {
 		if ( ! $result['success'] ) {
 			$err = $result['errors'][0] ?? [ 'code' => 'unknown_error', 'message' => 'Unknown error' ];
 			return $this->tool_error( (string) ( $err['code'] ?? 'unknown_error' ), (string) ( $err['message'] ?? 'Unknown error' ) );

@@ -133,6 +133,40 @@ SR=$(rest_get "/search?q=WPCC_BIGMARKER&type=text&path=plugins/wpcc-read-sandbox
 SM=$(mcp_text "$(jq -nc '{jsonrpc:"2.0",id:3,method:"tools/call",params:{name:"code_search",arguments:{action:"search_text",query:"WPCC_BIGMARKER",path:"plugins/wpcc-read-sandbox"}}}')")
 assert_eq "REST and MCP report the same files_skipped" "$(pj "$SR" '.files_skipped')" "$(pj "$SM" '.files_skipped')"
 
+echo "== 13. ISSUE 13 — EOF boundary reads never throw, always clamp cleanly =="
+# numbered.txt has exactly 1000 lines, each with a trailing newline.
+R=$(rest_get "/files/content?path=$NUM&line_start=991&line_count=10")
+assert_eq "range ending exactly at EOF: no error code" "" "$(pj "$R" '.code // empty')"
+assert_eq "range ending exactly at EOF: returns remaining 10 lines" "10" "$(pj "$R" '.returned_lines')"
+assert_eq "range ending exactly at EOF: not truncated" "false" "$(pj "$R" '.truncated')"
+assert_eq "range ending exactly at EOF: next_line_start is null" "null" "$(pj "$R" '.next_line_start')"
+assert_true "range ending exactly at EOF: last line present" "$(pj "$R" '.contents | test("line 1000 content")')"
+
+R=$(rest_get "/files/content?path=$NUM&line_start=1000&line_count=5")
+assert_eq "starting at EOF: no error code" "" "$(pj "$R" '.code // empty')"
+assert_eq "starting at EOF: returns exactly 1 line" "1" "$(pj "$R" '.returned_lines')"
+assert_true "starting at EOF: is the last line" "$(pj "$R" '.contents | test("^line 1000 content")')"
+
+R=$(rest_get "/files/content?path=$NUM&line_start=1001&line_count=5")
+assert_eq "starting past EOF: no error code" "" "$(pj "$R" '.code // empty')"
+assert_eq "starting past EOF: returns 0 lines" "0" "$(pj "$R" '.returned_lines')"
+assert_eq "starting past EOF: empty contents" "" "$(pj "$R" '.contents')"
+assert_eq "starting past EOF: not truncated" "false" "$(pj "$R" '.truncated')"
+
+NUM_SIZE=$(wc -c < "$SB/numbered.txt" | tr -d ' ')
+R=$(rest_get "/files/content?path=$NUM&byte_offset=$NUM_SIZE&byte_limit=100")
+assert_eq "byte range starting exactly at EOF: no error code" "" "$(pj "$R" '.code // empty')"
+assert_eq "byte range starting exactly at EOF: returns 0 bytes" "0" "$(pj "$R" '.returned_bytes')"
+
+R=$(rest_get "/files/content?path=$NUM&line_start=991&line_count=45")
+assert_eq "over-wide range spanning past EOF: no error code" "" "$(pj "$R" '.code // empty')"
+assert_eq "over-wide range spanning past EOF: returns only the 10 remaining lines" "10" "$(pj "$R" '.returned_lines')"
+
+echo "== 14. ISSUE 13 — same EOF boundary via MCP tool call (not just REST) =="
+RM=$(mcp_text "$(jq -nc --arg p "$NUM" '{jsonrpc:"2.0",id:4,method:"tools/call",params:{name:"file_manage",arguments:{action:"file_read",path:$p,line_start:991,line_count:10}}}')")
+assert_eq "MCP: range ending exactly at EOF returns 10 lines" "10" "$(pj "$RM" '.returned_lines')"
+assert_eq "MCP: range ending exactly at EOF not truncated" "false" "$(pj "$RM" '.truncated')"
+
 echo
 echo "================================================"
 echo "  File Read/Search Reliability: $PASS passed, $FAIL failed"

@@ -49,17 +49,22 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 		$model = $this->runtime->model( self::DEFAULT_MODEL );
 
 		if ( 'title' !== $kind && 'excerpt' !== $kind ) {
-			return ContentFieldResult::error( 'invalid_kind', __( 'Unknown content field kind.', 'wp-command-center' ), $this->id(), $model );
+			return ContentFieldResult::error( 'invalid_kind', __( 'Unknown content field kind.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		if ( ! $this->runtime->is_configured() ) {
-			return ContentFieldResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $this->id(), $model );
+			return ContentFieldResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'ai-command-center' ), $this->id(), $model );
 		}
 
+		// `meta` is non-wire metadata: it attributes the call to a feature for the usage
+		// ledger and never reaches the provider's request body.
 		$request = new GenerationRequest(
 			$model,
 			self::MAX_TOKENS,
-			[ new GenerationMessage( 'user', [ new GenerationTextPart( $this->prompt( $kind, $content ) ) ] ) ]
+			[ new GenerationMessage( 'user', [ new GenerationTextPart( $this->prompt( $kind, $content ) ) ] ) ],
+			GenerationRequest::DEFAULT_TIMEOUT,
+			[],
+			[ 'feature' => 'ai_content' ]
 		);
 
 		$result = $this->runtime->generate( $request );
@@ -70,7 +75,7 @@ final class AnthropicContentProvider implements ContentFieldProvider {
 
 		$value = self::extract_field( $result->text(), $kind );
 		if ( null === $value ) {
-			return ContentFieldResult::error( 'invalid_response', __( 'The provider did not return a valid content field JSON.', 'wp-command-center' ), $this->id(), $model );
+			return ContentFieldResult::error( 'invalid_response', __( 'The provider did not return a valid content field JSON.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		return ContentFieldResult::ok( $value, $this->id(), $model );

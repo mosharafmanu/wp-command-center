@@ -18,12 +18,12 @@ final class FormsRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$provider = sanitize_key( (string) ( $payload['provider'] ?? 'cf7' ) );
 		if ( ! isset( $this->providers[ $provider ] ) ) {
-			return $this->error( 'wpcc_provider_not_available', sprintf( __( 'Form provider "%s" is not available.', 'wp-command-center' ), $provider ) );
+			return $this->error( 'wpcc_provider_not_available', sprintf( /* translators: %s: value */ __( 'Form provider "%s" is not available.', 'ai-command-center' ), $provider ) );
 		}
 		$p = $this->providers[ $provider ];
 		$a = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $a, FormsRegistry::ACTIONS, true ) ) {
-			return $this->error( 'wpcc_invalid_forms_action', __( 'Invalid forms action.', 'wp-command-center' ) );
+			return $this->error( 'wpcc_invalid_forms_action', InvalidAction::message( 'forms', $a, FormsRegistry::ACTIONS ) );
 		}
 
 		$result = match ( $a ) {
@@ -58,12 +58,12 @@ final class FormsRuntimeManager {
 
 	public function rollback( array $payload, array $context = [] ): array {
 		$rid = (string) ( $payload['rollback_id'] ?? '' );
-		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'wp-command-center' ) );
+		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'ai-command-center' ) );
 		$rollbacks = get_option( 'wpcc_forms_rollbacks', [] );
 		$rec = null; $idx = null;
 		foreach ( $rollbacks as $i => $r ) { if ( $r['id'] === $rid ) { $rec = $r; $idx = $i; break; } }
-		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'wp-command-center' ) );
-		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'wp-command-center' ) );
+		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'ai-command-center' ) );
+		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'ai-command-center' ) );
 		// Undo create = delete
 		$act = $rec['action'];
 		$eid = $rec['entity_id'];
@@ -83,7 +83,7 @@ final class FormsRuntimeManager {
 		if ( $result && FormsRegistry::supports_rollback( $action ) && isset( $result['id'] ) ) {
 			$this->store_rollback( (string) $result['id'], $rollback_action, [], $context );
 		}
-		return $result ?: $this->error( 'wpcc_mutation_failed', __( 'Operation failed.', 'wp-command-center' ) );
+		return $result ?: $this->error( 'wpcc_mutation_failed', __( 'Operation failed.', 'ai-command-center' ) );
 	}
 
 	private function wrap( string $action, callable $fn, string $err_code, string $err_msg ): array {

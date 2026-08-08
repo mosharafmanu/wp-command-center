@@ -34,22 +34,22 @@ final class AcfSeed {
 	 */
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		if ( ! function_exists( 'acf_get_field' ) || ! function_exists( 'update_field' ) ) {
-			return new \WP_Error( 'wpcc_acf_inactive', __( 'Advanced Custom Fields is not active.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_acf_inactive', __( 'Advanced Custom Fields is not active.', 'ai-command-center' ) );
 		}
 
 		$post_id = (int) ( $params['post_id'] ?? 0 );
 		$fields  = (array) ( $params['fields'] ?? [] );
 
 		if ( 0 === $post_id || ! get_post( $post_id ) ) {
-			return new \WP_Error( 'wpcc_invalid_post_id', __( 'Invalid post ID.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_post_id', __( 'Invalid post ID.', 'ai-command-center' ) );
 		}
 
 		if ( ! current_user_can( 'edit_post', $post_id ) ) {
-			return new \WP_Error( 'wpcc_insufficient_permissions', __( 'You do not have permission to edit this post.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_insufficient_permissions', __( 'You do not have permission to edit this post.', 'ai-command-center' ) );
 		}
 
 		if ( empty( $fields ) ) {
-			return new \WP_Error( 'wpcc_no_fields_supplied', __( 'No fields supplied for seeding.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_no_fields_supplied', __( 'No fields supplied for seeding.', 'ai-command-center' ) );
 		}
 
 		$execution_result = [];
@@ -59,13 +59,13 @@ final class AcfSeed {
 			$field_object = acf_get_field( $field_key );
 
 			if ( ! $field_object ) {
-				return new \WP_Error( 'wpcc_unknown_acf_field', sprintf( __( 'ACF field "%s" not found.', 'wp-command-center' ), $field_key ) );
+				return new \WP_Error( 'wpcc_unknown_acf_field', sprintf( /* translators: %s: value */ __( 'ACF field "%s" not found.', 'ai-command-center' ), $field_key ) );
 			}
 
 			if ( ! in_array( $field_object['type'], self::ALLOWED_FIELD_TYPES, true ) ) {
 				return new \WP_Error(
 					'wpcc_unsupported_acf_field_type',
-					sprintf( __( 'ACF field type "%s" is not supported for seeding.', 'wp-command-center' ), $field_object['type'] )
+					sprintf( /* translators: %s: value */ __( 'ACF field type "%s" is not supported for seeding.', 'ai-command-center' ), $field_object['type'] )
 				);
 			}
 
@@ -79,7 +79,7 @@ final class AcfSeed {
 				// if the value actually changed or if it was already that value.
 				$current_value = get_field( $field_key, $post_id, false );
 				if ( $current_value !== $sanitized_value ) {
-					return new \WP_Error( 'wpcc_acf_update_failed', sprintf( __( 'Failed to update ACF field "%s".', 'wp-command-center' ), $field_key ) );
+					return new \WP_Error( 'wpcc_acf_update_failed', sprintf( /* translators: %s: value */ __( 'Failed to update ACF field "%s".', 'ai-command-center' ), $field_key ) );
 				}
 			}
 

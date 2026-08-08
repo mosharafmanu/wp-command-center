@@ -32,7 +32,7 @@ final class WooProductSeed {
 	 */
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		if ( ! class_exists( 'WooCommerce' ) || ! function_exists( 'WC' ) ) {
-			return new \WP_Error( 'wpcc_woo_inactive', __( 'WooCommerce is not active.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_woo_inactive', __( 'WooCommerce is not active.', 'ai-command-center' ) );
 		}
 
 		$name           = sanitize_text_field( $params['name'] ?? '' );
@@ -47,25 +47,25 @@ final class WooProductSeed {
 		$categories     = (array) ( $params['categories'] ?? [] );
 
 		if ( empty( $name ) ) {
-			return new \WP_Error( 'wpcc_missing_product_name', __( 'Product name is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_product_name', __( 'Product name is required.', 'ai-command-center' ) );
 		}
 
 		if ( ! in_array( $status, [ 'draft', 'publish' ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_product_status', __( 'Invalid product status. Supported: draft, publish.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_product_status', __( 'Invalid product status. Supported: draft, publish.', 'ai-command-center' ) );
 		}
 
 		if ( ! is_numeric( $regular_price ) || (float) $regular_price < 0 ) {
-			return new \WP_Error( 'wpcc_invalid_product_price', __( 'Invalid regular price.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_product_price', __( 'Invalid regular price.', 'ai-command-center' ) );
 		}
 
 		if ( '' !== $sale_price && ( ! is_numeric( $sale_price ) || (float) $sale_price < 0 ) ) {
-			return new \WP_Error( 'wpcc_invalid_product_sale_price', __( 'Invalid sale price.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_product_sale_price', __( 'Invalid sale price.', 'ai-command-center' ) );
 		}
 
 		if ( ! empty( $sku ) ) {
 			$existing_id = wc_get_product_id_by_sku( $sku );
 			if ( $existing_id ) {
-				return new \WP_Error( 'wpcc_duplicate_sku', sprintf( __( 'Product with SKU "%s" already exists.', 'wp-command-center' ), $sku ) );
+				return new \WP_Error( 'wpcc_duplicate_sku', sprintf( /* translators: %s: value */ __( 'Product with SKU "%s" already exists.', 'ai-command-center' ), $sku ) );
 			}
 		}
 
@@ -111,7 +111,7 @@ final class WooProductSeed {
 			$product_id = $product->save();
 
 			if ( ! $product_id ) {
-				return new \WP_Error( 'wpcc_woo_save_failed', __( 'Failed to save WooCommerce product.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_woo_save_failed', __( 'Failed to save WooCommerce product.', 'ai-command-center' ) );
 			}
 
 			return [

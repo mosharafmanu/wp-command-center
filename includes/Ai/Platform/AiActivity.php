@@ -8,9 +8,10 @@
  * schema/registry/runtime change; it only reads existing data, exactly as the
  * Overview home and the admin-bar badge already do.
  *
- * Honesty: it reports REAL recorded events. It never invents jobs, and it does
- * NOT fabricate token/cost numbers (per-token cost is not instrumented in the
- * runtime — surfaced as an explicit "not tracked yet", never a fake figure).
+ * Honesty: it reports REAL recorded events. It never invents jobs. Token counts come
+ * from UsageLedger — the figures the providers themselves reported, never estimated.
+ * Per-token COST remains uninstrumented and is surfaced as explicitly unavailable
+ * rather than as a fabricated figure: no versioned price list ships with the product.
  */
 
 namespace WPCommandCenter\Ai\Platform;
@@ -39,23 +40,97 @@ final class AiActivity {
 	/** Human label + dot color for a category. */
 	public static function category_meta( string $cat ): array {
 		$map = [
-			'rollback'   => [ __( 'Rollback', 'wp-command-center' ), '#7b3fbf' ],
-			'connection' => [ __( 'Connection', 'wp-command-center' ), '#2271b1' ],
-			'generation' => [ __( 'AI generation', 'wp-command-center' ), '#0a7a33' ],
-			'agent'      => [ __( 'AI agent', 'wp-command-center' ), '#1d62b0' ],
-			'change'     => [ __( 'Change', 'wp-command-center' ), '#8c5e00' ],
-			'operation'  => [ __( 'Operation', 'wp-command-center' ), '#50575e' ],
-			'security'   => [ __( 'Security', 'wp-command-center' ), '#d63638' ],
-			'patch'      => [ __( 'Patch', 'wp-command-center' ), '#2c3a4f' ],
-			'activity'   => [ __( 'Activity', 'wp-command-center' ), '#646970' ],
+			'rollback'   => [ __( 'Rollback', 'ai-command-center' ), '#7b3fbf' ],
+			'connection' => [ __( 'Connection', 'ai-command-center' ), '#2271b1' ],
+			'generation' => [ __( 'AI generation', 'ai-command-center' ), '#0a7a33' ],
+			'agent'      => [ __( 'AI agent', 'ai-command-center' ), '#1d62b0' ],
+			'change'     => [ __( 'Change', 'ai-command-center' ), '#8c5e00' ],
+			'operation'  => [ __( 'Operation', 'ai-command-center' ), '#50575e' ],
+			'security'   => [ __( 'Security', 'ai-command-center' ), '#d63638' ],
+			'patch'      => [ __( 'Patch', 'ai-command-center' ), '#2c3a4f' ],
+			'activity'   => [ __( 'Activity', 'ai-command-center' ), '#646970' ],
 		];
 		return $map[ $cat ] ?? $map['activity'];
 	}
 
 	/** Humanize a raw action string ("ai.connection.test" → "Ai connection test"). */
 	public static function humanize( string $action ): string {
+		/*
+		 * The activity feed is customer-facing, and it was rendering raw audit
+		 * ids with the dots swapped for spaces: "Operation worker completed",
+		 * "Operation result created", "Operation execution started". On a real
+		 * install those three account for the overwhelming majority of the feed
+		 * (31 of 40 entries when this was written), so what a customer actually
+		 * saw on the Built-in AI screen was a wall of the engine talking to
+		 * itself — twice over, since the category chip beside it already said
+		 * "Operation".
+		 *
+		 * Three layers, in order:
+		 *   1. an explicit map for the events customers actually meet;
+		 *   2. `operation.{operation_id}.{state}` resolved through ActionLabels,
+		 *      the same dictionary Approvals and Changes use, so one operation
+		 *      reads the same way everywhere;
+		 *   3. the original mechanical humanizer, so a newly added event still
+		 *      degrades to readable words rather than to a raw id.
+		 */
+		$explicit = self::event_labels();
+		if ( isset( $explicit[ $action ] ) ) {
+			return $explicit[ $action ];
+		}
+
+		// operation.<operation_id>.<started|completed|failed>
+		if ( preg_match( '/^operation\.([a-z0-9_]+)\.(started|completed|failed)$/', $action, $m ) ) {
+			$title = \WPCommandCenter\Admin\ActionLabels::describe( $m[1], '', [], '' );
+			if ( '' !== $title ) {
+				return match ( $m[2] ) {
+					'started'   => sprintf( /* translators: %s: what the change does. */ __( '%s — started', 'ai-command-center' ), $title ),
+					'failed'    => sprintf( /* translators: %s: what the change does. */ __( '%s — did not run', 'ai-command-center' ), $title ),
+					default     => sprintf( /* translators: %s: what the change does. */ __( '%s — done', 'ai-command-center' ), $title ),
+				};
+			}
+		}
+
 		$s = str_replace( [ '.', '_' ], ' ', $action );
 		return ucfirst( trim( $s ) );
+	}
+
+	/**
+	 * Customer-facing names for the audit events that actually reach the feed.
+	 * Engine vocabulary — worker, execution, result — never appears; what the
+	 * customer sees is what the product was doing on their behalf.
+	 *
+	 * @return array<string,string>
+	 */
+	private static function event_labels(): array {
+		return [
+			// The background queue. "Worker" is the engine's word for it.
+			'operation.worker.started'    => __( 'Background processing started', 'ai-command-center' ),
+			'operation.worker.completed'  => __( 'Background processing completed', 'ai-command-center' ),
+			'operation.worker.failed'     => __( 'Background processing failed', 'ai-command-center' ),
+			'operation.worker.locked'     => __( 'Background processing picked up an item', 'ai-command-center' ),
+			// Applying an approved change.
+			'operation.execution.started'   => __( 'Applying an approved change', 'ai-command-center' ),
+			'operation.execution.completed' => __( 'Approved change applied', 'ai-command-center' ),
+			'operation.execution.failed'    => __( 'A change could not be applied', 'ai-command-center' ),
+			// Bookkeeping the customer does not need named as bookkeeping.
+			'operation.result.created'    => __( 'Result recorded', 'ai-command-center' ),
+			'operation.result.completed'  => __( 'Result recorded', 'ai-command-center' ),
+			// Governance moments that matter to them.
+			'operation.approval.required'        => __( 'Waiting for your approval', 'ai-command-center' ),
+			'operation.approval.auto_requested'  => __( 'Sent for your approval', 'ai-command-center' ),
+			'operation.request.approved'         => __( 'You approved a change', 'ai-command-center' ),
+			'operation.request.rejected'         => __( 'You rejected a change', 'ai-command-center' ),
+			// Built-in AI generation.
+			'seo.generate.started'        => __( 'Generating SEO suggestions', 'ai-command-center' ),
+			'seo.generate.completed'      => __( 'SEO suggestions generated', 'ai-command-center' ),
+			'alt_text.generate.started'   => __( 'Generating alt text', 'ai-command-center' ),
+			'alt_text.generate.completed' => __( 'Alt text generated', 'ai-command-center' ),
+			'content.generate.started'    => __( 'Generating content suggestions', 'ai-command-center' ),
+			'content.generate.completed'  => __( 'Content suggestions generated', 'ai-command-center' ),
+			'proposal.created'            => __( 'Suggestion saved as a draft', 'ai-command-center' ),
+			'proposal.applied'            => __( 'Suggestion applied', 'ai-command-center' ),
+			'proposal.dismissed'          => __( 'Suggestion dismissed', 'ai-command-center' ),
+		];
 	}
 
 	/**
@@ -100,7 +175,7 @@ final class AiActivity {
 	/**
 	 * Mission-control counters (honest; cost intentionally absent — see class doc).
 	 *
-	 * @return array{events:int,generations:int,rollbacks:int,changes:int,pending_approvals:int,cost_tracked:bool}
+	 * @return array{events:int,generations:int,rollbacks:int,changes:int,pending_approvals:int,tokens_tracked:bool,total_tokens:int,cost_tracked:bool}
 	 */
 	public static function summary(): array {
 		$feed = self::feed( 100 );
@@ -110,27 +185,27 @@ final class AiActivity {
 			elseif ( 'rollback' === $f['category'] ) { $rb++; }
 			elseif ( 'change' === $f['category'] ) { $ch++; }
 		}
+		$usage = UsageLedger::summary();
+
 		return [
 			'events'            => count( $feed ),
 			'generations'      => $gen,
 			'rollbacks'        => $rb,
 			'changes'          => $ch,
 			'pending_approvals'=> self::pending_approvals(),
-			'cost_tracked'     => false, // honest: per-token cost is not instrumented.
+			// Tokens ARE instrumented now — the transports keep the usage block the
+			// providers return. Cost still is not, and deliberately: no versioned price
+			// list ships with the product, so a figure here would be a guess.
+			'tokens_tracked'   => $usage['tracked'],
+			'total_tokens'     => $usage['total_tokens'],
+			'cost_tracked'     => false, // honest: per-token COST is not instrumented.
 		];
 	}
 
 	/** Pending human-approval requests (read-only count; same source as the admin-bar badge). */
 	public static function pending_approvals(): int {
-		global $wpdb;
-		$table = $wpdb->prefix . 'wpcc_operation_requests';
-		// Guard: table may not exist on a fresh install.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
-		if ( $exists !== $table ) {
-			return 0;
-		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE status = %s", OperationManager::STATUS_PENDING_REVIEW ) );
+		// F-01: one canonical counter behind every pending figure. It carries the
+		// fresh-install table guard this method used to hold on its own.
+		return ( new OperationManager() )->count_pending_review();
 	}
 }

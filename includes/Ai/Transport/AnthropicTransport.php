@@ -31,6 +31,7 @@ use WPCommandCenter\Ai\Contract\GenerationImagePart;
 use WPCommandCenter\Ai\Contract\GenerationRequest;
 use WPCommandCenter\Ai\Contract\GenerationResult;
 use WPCommandCenter\Ai\Contract\GenerationTextPart;
+use WPCommandCenter\Ai\Contract\GenerationUsage;
 use WPCommandCenter\Ai\Http\AiHttpClient;
 use WPCommandCenter\Ai\Http\AiHttpRequest;
 use WPCommandCenter\Security\Redactor;
@@ -58,7 +59,7 @@ final class AnthropicTransport {
 		$model = $request->model();
 
 		if ( '' === $api_key ) {
-			return GenerationResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'wp-command-center' ), $model );
+			return GenerationResult::error( 'not_configured', __( 'No Anthropic API key configured.', 'ai-command-center' ), $model );
 		}
 
 		$http_request = new AiHttpRequest(
@@ -96,7 +97,15 @@ final class AnthropicTransport {
 			$text = trim( (string) $data['content'][0]['text'] );
 		}
 
-		return GenerationResult::ok( $text, $model );
+		// Anthropic reports usage on every successful Messages response. It was being
+		// decoded and thrown away, which is why the Token usage panel could only ever
+		// say "Not tracked yet" — the number existed, nothing carried it.
+		$usage = GenerationUsage::from_provider(
+			is_array( $data ) ? ( $data['usage'] ?? null ) : null,
+			is_array( $data ) ? (string) ( $data['id'] ?? '' ) : ''
+		);
+
+		return GenerationResult::ok( $text, $model, $usage );
 	}
 
 	/**

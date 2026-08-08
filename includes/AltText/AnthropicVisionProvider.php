@@ -53,24 +53,24 @@ final class AnthropicVisionProvider implements AltTextProvider {
 		$model = $this->runtime->model( self::DEFAULT_MODEL );
 
 		if ( ! $this->runtime->is_configured() ) {
-			return ProviderResult::error( 'not_configured', __( 'No vision API key configured.', 'wp-command-center' ), $this->id(), $model );
+			return ProviderResult::error( 'not_configured', __( 'No vision API key configured.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		$path = (string) ( $image['path'] ?? '' );
 		$mime = (string) ( $image['mime'] ?? '' );
 		if ( '' === $path || ! is_file( $path ) ) {
-			return ProviderResult::error( 'image_unreadable', __( 'Image file is not readable.', 'wp-command-center' ), $this->id(), $model );
+			return ProviderResult::error( 'image_unreadable', __( 'Image file is not readable.', 'ai-command-center' ), $this->id(), $model );
 		}
 		if ( 0 !== strpos( $mime, 'image/' ) ) {
-			return ProviderResult::error( 'unsupported_type', __( 'Attachment is not an image.', 'wp-command-center' ), $this->id(), $model );
+			return ProviderResult::error( 'unsupported_type', __( 'Attachment is not an image.', 'ai-command-center' ), $this->id(), $model );
 		}
 		$size = (int) ( @filesize( $path ) ?: 0 );
 		if ( $size <= 0 || $size > self::MAX_IMAGE_BYTES ) {
-			return ProviderResult::error( 'image_too_large', __( 'Image exceeds the size limit for suggestion.', 'wp-command-center' ), $this->id(), $model );
+			return ProviderResult::error( 'image_too_large', __( 'Image exceeds the size limit for suggestion.', 'ai-command-center' ), $this->id(), $model );
 		}
 		$bytes = @file_get_contents( $path );
 		if ( false === $bytes || '' === $bytes ) {
-			return ProviderResult::error( 'image_unreadable', __( 'Image file could not be read.', 'wp-command-center' ), $this->id(), $model );
+			return ProviderResult::error( 'image_unreadable', __( 'Image file could not be read.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		$prompt = self::PROMPT;
@@ -79,6 +79,8 @@ final class AnthropicVisionProvider implements AltTextProvider {
 			$prompt .= ' Context hint (may be irrelevant): ' . wp_strip_all_tags( $hint );
 		}
 
+		// `meta` is non-wire metadata: it attributes the call to a feature for the usage
+		// ledger and never reaches the provider's request body.
 		$request = new GenerationRequest(
 			$model,
 			self::MAX_TOKENS,
@@ -90,7 +92,10 @@ final class AnthropicVisionProvider implements AltTextProvider {
 						new GenerationTextPart( $prompt ),
 					]
 				),
-			]
+			],
+			GenerationRequest::DEFAULT_TIMEOUT,
+			[],
+			[ 'feature' => 'alt_text' ]
 		);
 
 		$result = $this->runtime->generate( $request );
@@ -101,7 +106,7 @@ final class AnthropicVisionProvider implements AltTextProvider {
 
 		$text = $result->text();
 		if ( '' === $text ) {
-			return ProviderResult::error( 'empty_response', __( 'The provider returned no suggestion.', 'wp-command-center' ), $this->id(), $model );
+			return ProviderResult::error( 'empty_response', __( 'The provider returned no suggestion.', 'ai-command-center' ), $this->id(), $model );
 		}
 
 		// Anthropic does not return a numeric confidence; leave it null (never faked).

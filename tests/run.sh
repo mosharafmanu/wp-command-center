@@ -23,6 +23,7 @@
 
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WP_ROOT="$(cd "$ROOT/../../.." && pwd)"   # wp-content/plugins/<plugin> -> WordPress root
 cd "$ROOT"
 MAP="tests/regression-map.tsv"
 QUAR="tests/regression-quarantine.txt"
@@ -122,9 +123,53 @@ lint_changed() {
   return $lint_fail
 }
 
+# ── Governance-state isolation ───────────────────────────────────
+# Around twenty suites change the site's protection mode or capability enforcement to
+# exercise gating, and most do it without a trap — so any early exit leaves the wrong
+# mode behind and the NEXT suite fails for reasons that have nothing to do with it.
+# Proven: test-capability-runtime drops 11 assertions when it inherits `enterprise`,
+# because its writes are gated and the timeline entries it asserts never appear.
+#
+# Restoring here, after every suite, makes the full run deterministic regardless of any
+# individual suite's hygiene. It is the runner's job: a suite cannot be trusted to clean
+# up after a failure it did not expect.
+GOV_SNAPSHOT() {
+  wp --path="$WP_ROOT" eval '
+    echo wp_json_encode( [
+      "mode" => get_option( "wpcc_security_mode" ),
+      "caps" => get_option( "wpcc_enforce_capabilities" ),
+      // Which Built-in AI tools are switched on is governance state too, now that it
+      // gates the row actions as well as the tabs. A suite that flips it and dies
+      // before restoring leaves every later suite testing a different product: the
+      // ✨ WPCC AI action simply is not there. That is exactly how test-ai-assist,
+      // test-alt-text-ui and test-contextual-entry came to fail in a full run while
+      // passing alone.
+      "tools" => get_option( "wpcc_builtin_ai_tools" ),
+    ] );' 2>/dev/null
+}
+GOV_RESTORE() {
+  local snap="$1"
+  [ -z "$snap" ] && return 0
+  wp --path="$WP_ROOT" eval '
+    $s = json_decode( $argv[0], true );
+    if ( ! is_array( $s ) ) { return; }
+    if ( null !== $s["mode"] && get_option( "wpcc_security_mode" ) !== $s["mode"] ) {
+      update_option( "wpcc_security_mode", $s["mode"] );
+    }
+    if ( null !== $s["caps"] && get_option( "wpcc_enforce_capabilities" ) != $s["caps"] ) {
+      update_option( "wpcc_enforce_capabilities", $s["caps"] );
+    }
+    if ( array_key_exists( "tools", $s ) && get_option( "wpcc_builtin_ai_tools" ) != $s["tools"] ) {
+      update_option( "wpcc_builtin_ai_tools", $s["tools"] );
+    }' "$snap" >/dev/null 2>&1
+}
+export -f GOV_SNAPSHOT GOV_RESTORE
+export WP_ROOT
+
 # ── Run a single suite (network suites retry once) ───────────────
 run_one() {
-  local suite="$1" out p f
+  local suite="$1" out p f gov
+  gov="$(GOV_SNAPSHOT)"
   out="$(bash "tests/$suite" 2>&1)"
   p="$(echo "$out" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+')"; p="${p:-0}"
   f="$(echo "$out" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+')"; f="${f:-0}"
@@ -133,6 +178,7 @@ run_one() {
     p="$(echo "$out" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+')"; p="${p:-0}"
     f="$(echo "$out" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+')"; f="${f:-0}"
   fi
+  GOV_RESTORE "$gov"
   printf '%s\t%s\t%s\n' "$suite" "$p" "$f"
 }
 export -f run_one is_network
@@ -148,6 +194,39 @@ if [ "$TIER" != "T2" ]; then lint_changed || LINT_RC=1; fi
 [ -z "$LIST_SUITES" ] && { echo "== $TIER: no suites selected (no matching runtime in the change signal) =="; [ "$LINT_RC" = 0 ] && exit 0 || exit 1; }
 
 echo "== $TIER: $(echo "$LIST_SUITES" | grep -c .) suites =="
+
+# ── Establish the governance baseline (T2) ───────────────────────
+#
+# GOV_RESTORE below makes each suite start from the same state as the one before
+# it — but that state is whatever the site happened to be in when the run began,
+# which is not the same thing as a known state. Most suites that WRITE do not set
+# a protection mode themselves; they assume changes apply immediately. Start a run
+# with the site on Standard protection and every one of those writes is answered
+# with pending_approval instead, and the suite fails for a reason that has nothing
+# to do with the code.
+#
+# Measured: a T2 run begun on Standard reported 107 failures — 76 of them the ACF
+# suites, which are the first to run and had nothing before them to blame. Every
+# one of those suites passes on Development. So the headline number depended on an
+# unrecorded precondition, which makes it unciteable.
+#
+# T2 therefore SETS the baseline rather than inheriting it, and puts the operator's
+# own mode back at the end. T0/T1 are left alone: they are quick, targeted runs
+# where surprising the operator's site is worse than a mode-sensitive result.
+RUN_GOV=""
+if [ "$TIER" = "T2" ]; then
+  RUN_GOV="$(GOV_SNAPSHOT)"
+  wp --path="$WP_ROOT" eval '
+    update_option( "wpcc_security_mode", \WPCommandCenter\Operations\SecurityModeManager::MODE_DEVELOPER );
+    update_option( "wpcc_enforce_capabilities", true );
+    // All three Built-in AI tools on, so the suites that assert the ✨ WPCC AI row
+    // action exists start from a known answer rather than whatever the operator left.
+    update_option( "wpcc_builtin_ai_tools", [ "seo" => true, "alt_text" => true, "content" => true ] );' >/dev/null 2>&1
+  echo "   governance baseline: developer + capabilities + built-in AI tools on (restored at end)"
+fi
+restore_run_gov() { [ -n "$RUN_GOV" ] && GOV_RESTORE "$RUN_GOV"; }
+trap restore_run_gov EXIT
+
 RESULTS="$(mktemp)"
 if [ "$JOBS" -gt 1 ] && command -v xargs >/dev/null; then
   echo "$LIST_SUITES" | xargs -P "$JOBS" -I{} bash -c 'cd "$ROOT"; run_one "{}"' > "$RESULTS"

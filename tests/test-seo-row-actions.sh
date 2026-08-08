@@ -42,8 +42,30 @@ has  "nonce verified in handler"             "check_admin_referer"            "$
 lacks "row link consolidated (no per-kind anchor)" "data-wpcc-action"         "$SRC"
 has  "capability gate"                       "current_user_can( 'manage_options' )" "$SRC"
 has  "FeatureGate gate"                      "FeatureGate::allows( self::FEATURE )" "$SRC"
-has  "build-flag gate (const)"               "WPCC_SEO_META_UI"               "$SRC"
-has  "build-flag gate (filter)"              "wpcc_seo_meta_ui"               "$SRC"
+# The gate itself, not the two literals it used to spell out. This file previously
+# reimplemented the precedence ("constant OR filter") and so had to name both
+# constants; that copy never learned about the in-admin toggle, which is why a tool
+# switched on from the UI grew a tab but no row action. The precedence now lives once
+# in BuiltinAiSettings::flag() and this class asks for it — so the durable assertion
+# is that it asks, plus a behavioural check that all three inputs are honoured.
+has  "build-flag gate delegates to the shared precedence" "BuiltinAiSettings::is_on( 'seo' )" "$SRC"
+lacks "no local copy of the precedence"        "apply_filters( 'wpcc_seo_meta_ui'" "$SRC"
+
+# Snapshot first: this probe writes the real per-tool option, and a suite that leaves
+# a customer'"'"'s Built-in AI tools switched off is exactly the litter this release spent
+# the day removing.
+BAI_SNAPSHOT="$(wpe 'echo wp_json_encode( get_option( "wpcc_builtin_ai_tools", [] ) );')"
+GATE_OPTION="$(wpe '
+  update_option( "wpcc_builtin_ai_tools", [ "seo" => true ] );
+  $on = \WPCommandCenter\Admin\BuiltinAiSettings::is_on( "seo" ) ? "1" : "0";
+  update_option( "wpcc_builtin_ai_tools", [ "seo" => false ] );
+  $off = \WPCommandCenter\Admin\BuiltinAiSettings::is_on( "seo" ) ? "1" : "0";
+  add_filter( "wpcc_seo_meta_ui", "__return_true" );
+  $filt = \WPCommandCenter\Admin\BuiltinAiSettings::is_on( "seo" ) ? "1" : "0";
+  echo $on . $off . $filt;
+')"
+assert_eq "gate honours option on / option off / filter override" "101" "$GATE_OPTION"
+wpe "update_option( 'wpcc_builtin_ai_tools', json_decode( '$BAI_SNAPSHOT', true ) ?: [] );" >/dev/null 2>&1
 has  "Products only when Woo active"         "class_exists( 'WooCommerce' )"  "$SRC"
 has  "calls existing generator"              "make_generator()->generate"     "$SRC"
 has  "generator is SeoMetaGenerator"         "new SeoMetaGenerator()"          "$SRC"
@@ -126,11 +148,21 @@ else
 
 		// (f) build-flag OFF -> absent.
 		remove_filter("wpcc_seo_meta_ui","__return_true");
+		// "Off" now means all THREE inputs off, not just the constant and filter: the
+		// in-admin per-tool option is a third way to switch a tool on, and this probe
+		// used to leave it untouched — so on a site where the admin had turned SEO on
+		// it asserted the action was absent while it was correctly present.
+		$bai_probe_saved = get_option( "wpcc_builtin_ai_tools", [] );
+		update_option( "wpcc_builtin_ai_tools", [] );
 		$out["flag_off_absent"] = $has_action( $ra->add( [], $pubpost ) ) ? 0 : 1;
+		update_option( "wpcc_builtin_ai_tools", $bai_probe_saved );
 		add_filter("wpcc_seo_meta_ui","__return_true");
 
 		// --- Propose-only round-trip via the EXISTING generator (stub provider, no network) ---
 		// Mirrors test-seo-generate.sh: prove the handler core creates a DRAFT and writes NO meta.
+		// Explicit opt-in: the generators refuse output from a provider the product does
+		// not ship, so a stub cannot silently become a customer-facing draft.
+		if ( ! defined( "WPCC_ALLOW_TEST_AI_PROVIDER" ) ) { define( "WPCC_ALLOW_TEST_AI_PROVIDER", true ); }
 		if ( \WPCommandCenter\Operations\SeoProvider::NONE !== \WPCommandCenter\Operations\SeoProvider::detect() ) {
 			$prov = \WPCommandCenter\Operations\SeoProvider::detect();
 			$store = new \WPCommandCenter\Proposals\ProposalStore();
@@ -204,6 +236,9 @@ if command -v wp >/dev/null 2>&1; then
 		add_filter("wpcc_seo_meta_ui","__return_true"); wp_set_current_user($aid);
 
 		// Test subclass injects a stub-provider generator (deterministic; no network).
+		// Explicit opt-in: the generators refuse output from a provider the product does
+		// not ship, so a stub cannot silently become a customer-facing draft.
+		if ( ! defined( "WPCC_ALLOW_TEST_AI_PROVIDER" ) ) { define( "WPCC_ALLOW_TEST_AI_PROVIDER", true ); }
 		$ra = new class extends \WPCommandCenter\Admin\SeoRowActions {
 			public $genFactory;
 			protected function make_generator(): \WPCommandCenter\Seo\SeoMetaGenerator { return ($this->genFactory)(); }
@@ -295,8 +330,8 @@ echo
 echo "== 5. Invariants unchanged =="
 assert_eq "OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-assert_eq "catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
-assert_eq "DB_VERSION 2.5.0"    "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+assert_eq "catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+assert_eq "DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

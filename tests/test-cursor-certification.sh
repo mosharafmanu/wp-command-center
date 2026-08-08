@@ -30,7 +30,10 @@ echo "== 2. Cursor Config Generation =="
 CURSOR_CFG=$(api "$WPCC_BASE/ai-clients/cursor/config")
 assert_true "cursor: config generated" "$(echo "$CURSOR_CFG" | jq -r 'if .config.mcpServers then "true" else "false" end')"
 assert_eq "cursor: name matches" "Cursor" "$(echo "$CURSOR_CFG" | jq -r '.name')"
-assert_contains "cursor: MCP URL in config" "$(echo "$CURSOR_CFG" | jq -r '.config.mcpServers["wp-command-center"].args[-1]')" "/wp-command-center/v1/mcp"
+# The MCP endpoint travels in env.WPCC_MCP_URL, not as the last launcher argument —
+# the generated config runs the relay this site ships (bash -c "curl …; node …")
+# rather than an npx package.
+assert_contains "cursor: MCP URL in config" "$(echo "$CURSOR_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "/wp-command-center/v1/mcp"
 assert_contains "cursor: config env has token" "$(echo "$CURSOR_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_TOKEN')" "WPCC_TOKEN"
 
 # ===================================================================
@@ -129,7 +132,7 @@ echo "  INFO: MCP init: ${PERF_MS}ms"
 
 echo "== 15. No Cursor-Specific Runtime =="
 assert_true "cursor: no per-client runtime" "true"
-assert_true "cursor: MCP endpoint is shared" "$(echo "$CURSOR_CFG" | jq -r '.config.mcpServers["wp-command-center"].args[-1] | contains("/mcp")')"
+assert_true "cursor: MCP endpoint is shared" "$(echo "$CURSOR_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_MCP_URL | contains("/mcp")')"
 
 echo "== 16. Cursor config paths =="
 CURSOR_MATRIX=$(echo "$CLIENTS" | jq -r '.compatibility_matrix[] | select(.id == "cursor")')

@@ -1,9 +1,19 @@
-# Known pre-existing failures (the "24 baseline"). Columns: suite <TAB> failing_assertions.
-# T2/full uses this to compute net-new failures automatically (suite_fail - baseline,
-# floored at 0; any failure in a suite not listed here counts fully as net-new).
-test-ai-client-layer.sh	1
-test-ai-integration-ux.sh	3
-test-claude-integration.sh	4
-test-cursor-certification.sh	2
-test-documentation-consistency.sh	11
-test-security-redaction.sh	3
+# Known pre-existing failures. Columns: suite <TAB> failing_assertions.
+#
+# THIS FILE IS EMPTY, AND SHOULD STAY EMPTY.
+#
+# It used to record 24 accepted failures across 6 suites. That was a mistake, and an
+# expensive one: the entries were seven weeks stale, so a full run reported 85
+# PRE-EXISTING failures as "net-new" and very nearly buried the 13 that a release
+# programme had genuinely introduced. A baseline of accepted failures does not make a
+# suite trustworthy — it makes it quiet.
+#
+# Every assertion that was failing has since been resolved. Each was verified against
+# live product behaviour first, and each turned out to be one of:
+#   - a stale expectation (the product had deliberately changed; the test had not)
+#   - an environment assumption (a Yoast-only fixture on a Rank Math site)
+#   - a fixture that could never match (an AWS key of the wrong length)
+#   - or, in four cases, a real bug in the product, which was fixed.
+#
+# A regression test must only fail when the product actually regresses. If a suite starts
+# failing, fix the product or fix the assertion — do not add a line here.

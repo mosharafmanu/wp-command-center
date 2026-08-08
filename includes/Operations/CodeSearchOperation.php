@@ -24,7 +24,7 @@ final class CodeSearchOperation {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, self::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_search_action', sprintf( __( 'Invalid action: %s. Use search_text, search_symbol, or search_file.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_search_action', InvalidAction::message( 'code search', $action, self::ACTIONS ) );
 		}
 
 		$query = isset( $params['query'] ) ? (string) $params['query'] : (string) ( $params['q'] ?? '' );

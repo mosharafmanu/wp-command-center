@@ -54,7 +54,7 @@ final class SiteScanner {
 			'is_multisite'        => is_multisite(),
 			'locale'              => get_locale(),
 			'timezone'            => wp_timezone_string(),
-			'permalink_structure' => get_option( 'permalink_structure' ) ?: __( 'Plain', 'wp-command-center' ),
+			'permalink_structure' => get_option( 'permalink_structure' ) ?: __( 'Plain', 'ai-command-center' ),
 			'is_ssl'              => is_ssl(),
 		];
 	}
@@ -261,7 +261,7 @@ final class SiteScanner {
 			$result[ $label ] = [
 				'exists'      => true,
 				'permissions' => substr( sprintf( '%o', fileperms( $path ) ), -4 ),
-				'writable'    => is_writable( $path ),
+				'writable'    => wp_is_writable( $path ),
 			];
 		}
 

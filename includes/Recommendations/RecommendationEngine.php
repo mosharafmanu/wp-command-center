@@ -72,7 +72,7 @@ final class RecommendationEngine {
 				'actor' => AuditLog::resolve_actor( $actor ),
 			] );
 
-			return new \WP_Error( 'wpcc_recommendation_scan_failed', __( 'Recommendation scan failed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_recommendation_scan_failed', __( 'Recommendation scan failed.', 'ai-command-center' ) );
 		}
 	}
 
@@ -165,6 +165,7 @@ final class RecommendationEngine {
 				$params[] = $filters[ $field ];
 			}
 		}
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $wpdb->prepare() is applied into $sql above; LIMIT/OFFSET are prepared separately after max()/min() integer casts.
 
 		$sql = "SELECT * FROM {$table}" . ( $where ? ' WHERE ' . implode( ' AND ', $where ) : '' ) . ' ORDER BY updated_at DESC, id DESC';
 		$sql .= $wpdb->prepare( ' LIMIT %d OFFSET %d', max( 1, min( 200, (int) ( $filters['limit'] ?? 50 ) ) ), max( 0, (int) ( $filters['offset'] ?? 0 ) ) );
@@ -174,6 +175,7 @@ final class RecommendationEngine {
 
 		return array_map( [ $this, 'normalize' ], $wpdb->get_results( $sql, ARRAY_A ) ?: [] );
 	}
+// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 	public function get( string $recommendation_id ): ?array {
 		global $wpdb;
@@ -185,14 +187,14 @@ final class RecommendationEngine {
 		global $wpdb;
 		$record = $this->get( $recommendation_id );
 		if ( ! $record ) {
-			return new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'ai-command-center' ) );
 		}
 		$allowed_from = [
 			'dismissed' => [ 'open' ],
 			'resolved'  => [ 'open', 'converted_to_action', 'plan_created', 'approved', 'executing' ],
 		];
 		if ( ! isset( $allowed_from[ $status ] ) || ! in_array( $record['status'], $allowed_from[ $status ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'The recommendation cannot make that status transition.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'The recommendation cannot make that status transition.', 'ai-command-center' ) );
 		}
 
 		$now  = time();
@@ -200,7 +202,7 @@ final class RecommendationEngine {
 		$data[ $status . '_at' ] = $now;
 		$updated = $wpdb->update( $this->table(), $data, [ 'recommendation_id' => $recommendation_id ] );
 		if ( false === $updated ) {
-			return new \WP_Error( 'wpcc_recommendation_update_failed', __( 'Failed to update recommendation.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_recommendation_update_failed', __( 'Failed to update recommendation.', 'ai-command-center' ) );
 		}
 
 		( new AuditLog() )->record( 'recommendation.' . $status, [
@@ -219,22 +221,22 @@ final class RecommendationEngine {
 		global $wpdb;
 		$record = $this->get( $recommendation_id );
 		if ( ! $record ) {
-			return new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'ai-command-center' ) );
 		}
 		if ( 'open' !== $record['status'] ) {
-			return new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'Only open recommendations can be converted to actions.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'Only open recommendations can be converted to actions.', 'ai-command-center' ) );
 		}
 
 		$session = $wpdb->get_var( $wpdb->prepare( "SELECT session_id FROM {$wpdb->prefix}wpcc_agent_sessions WHERE session_id = %s", $session_id ) );
 		$task    = $wpdb->get_row( $wpdb->prepare( "SELECT task_id, session_id FROM {$wpdb->prefix}wpcc_agent_tasks WHERE task_id = %s", $task_id ), ARRAY_A );
 		if ( ! $session ) {
-			return new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'ai-command-center' ) );
 		}
 		if ( ! $task ) {
-			return new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'ai-command-center' ) );
 		}
 		if ( $task['session_id'] !== $session_id ) {
-			return new \WP_Error( 'wpcc_task_session_mismatch', __( 'The agent task does not belong to the supplied session.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_task_session_mismatch', __( 'The agent task does not belong to the supplied session.', 'ai-command-center' ) );
 		}
 
 		$action_id   = wp_generate_uuid4();
@@ -246,7 +248,7 @@ final class RecommendationEngine {
 			'status' => 'proposed', 'created_at' => $now, 'updated_at' => $now,
 		] );
 		if ( false === $inserted ) {
-			return new \WP_Error( 'wpcc_action_create_failed', __( 'Failed to create the agent action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_action_create_failed', __( 'Failed to create the agent action.', 'ai-command-center' ) );
 		}
 
 		$context = $record['context'];
@@ -258,7 +260,7 @@ final class RecommendationEngine {
 		], [ 'recommendation_id' => $recommendation_id ] );
 		if ( false === $updated ) {
 			$wpdb->delete( $wpdb->prefix . 'wpcc_agent_actions', [ 'action_id' => $action_id ] );
-			return new \WP_Error( 'wpcc_recommendation_update_failed', __( 'Failed to link recommendation to action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_recommendation_update_failed', __( 'Failed to link recommendation to action.', 'ai-command-center' ) );
 		}
 
 		$resolved_actor = AuditLog::resolve_actor( $actor );
@@ -285,28 +287,28 @@ final class RecommendationEngine {
 		global $wpdb;
 		$record = $this->get( $recommendation_id );
 		if ( ! $record ) {
-			return new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'ai-command-center' ) );
 		}
 		if ( 'converted_to_action' !== $record['status'] || ! $record['action_id'] ) {
-			return new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'Only recommendations converted to an action can create a plan.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'Only recommendations converted to an action can create a plan.', 'ai-command-center' ) );
 		}
 
 		$action = $this->get_action( $record['action_id'] );
 		if ( ! $action ) {
-			return new \WP_Error( 'wpcc_action_not_found', __( 'Linked agent action not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_action_not_found', __( 'Linked agent action not found.', 'ai-command-center' ) );
 		}
 		$title     = sanitize_text_field( (string) ( $data['title'] ?? 'Plan: ' . $record['title'] ) );
 		$objective = sanitize_textarea_field( (string) ( $data['objective'] ?? $record['suggested_action'] ) );
 		$steps     = $data['steps'] ?? [ [ 'title' => $record['suggested_action'], 'description' => $record['description'] ] ];
 		if ( '' === $title || '' === $objective || ! is_array( $steps ) || empty( $steps ) ) {
-			return new \WP_Error( 'wpcc_invalid_plan', __( 'Plan title, objective, and at least one step are required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_plan', __( 'Plan title, objective, and at least one step are required.', 'ai-command-center' ) );
 		}
 
 		$normalized_steps = [];
 		foreach ( array_values( $steps ) as $index => $step ) {
 			$step_title = sanitize_text_field( (string) ( $step['title'] ?? '' ) );
 			if ( '' === $step_title ) {
-				return new \WP_Error( 'wpcc_invalid_plan_step', __( 'Each plan step needs a title.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_plan_step', __( 'Each plan step needs a title.', 'ai-command-center' ) );
 			}
 			$normalized_steps[] = [
 				'step_order' => $index + 1,
@@ -326,12 +328,12 @@ final class RecommendationEngine {
 		] );
 		if ( false === $inserted ) {
 			$wpdb->query( 'ROLLBACK' );
-			return new \WP_Error( 'wpcc_plan_create_failed', __( 'Failed to create the recommendation plan.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_plan_create_failed', __( 'Failed to create the recommendation plan.', 'ai-command-center' ) );
 		}
 		foreach ( $normalized_steps as $step ) {
 			if ( false === $wpdb->insert( $wpdb->prefix . 'wpcc_agent_plan_steps', [ 'plan_id' => $plan_id ] + $step ) ) {
 				$wpdb->query( 'ROLLBACK' );
-				return new \WP_Error( 'wpcc_plan_step_create_failed', __( 'Failed to create a recommendation plan step.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_plan_step_create_failed', __( 'Failed to create a recommendation plan step.', 'ai-command-center' ) );
 			}
 		}
 		$context = $record['context'] + [];
@@ -341,7 +343,7 @@ final class RecommendationEngine {
 		], [ 'recommendation_id' => $recommendation_id ] );
 		if ( false === $linked ) {
 			$wpdb->query( 'ROLLBACK' );
-			return new \WP_Error( 'wpcc_recommendation_update_failed', __( 'Failed to link recommendation to plan.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_recommendation_update_failed', __( 'Failed to link recommendation to plan.', 'ai-command-center' ) );
 		}
 		$wpdb->query( 'COMMIT' );
 
@@ -411,7 +413,7 @@ final class RecommendationEngine {
 				'context_json' => wp_json_encode( $candidate['context'] ), 'created_at' => $now, 'updated_at' => $now,
 			] );
 			if ( false === $inserted ) {
-				return new \WP_Error( 'wpcc_recommendation_create_failed', __( 'Failed to create recommendation.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_recommendation_create_failed', __( 'Failed to create recommendation.', 'ai-command-center' ) );
 			}
 			( new AuditLog() )->record( 'recommendation.created', $this->audit_context( $id, $candidate, 'open', $actor ) );
 			return [ 'operation' => 'created', 'recommendation' => $this->get( $id ) ];
@@ -465,6 +467,7 @@ final class RecommendationEngine {
 		if ( ! is_readable( $file ) || filemtime( $file ) < time() - WEEK_IN_SECONDS ) {
 			return [ 'count' => 0 ];
 		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle = fopen( $file, 'rb' );
 		if ( false === $handle ) {
 			return [ 'count' => 0 ];
@@ -474,6 +477,7 @@ final class RecommendationEngine {
 			fseek( $handle, -131072, SEEK_END );
 		}
 		$text = stream_get_contents( $handle ) ?: '';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 		preg_match_all( '/^.*(?:fatal|error|exception|warning).*$/mi', $text, $matches );
 		return [ 'count' => count( $matches[0] ?? [] ) ];

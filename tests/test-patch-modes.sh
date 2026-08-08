@@ -24,6 +24,13 @@ source "$PLUGIN_DIR/wpcc-env.sh"
 
 WP_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 WP_PATH="$WP_ROOT"
+
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_PATH"
 PLUGINS_DIR="$WP_ROOT/wp-content/plugins"
 
 SANDBOX="$PLUGINS_DIR/wpcc-patch-modes-sandbox"

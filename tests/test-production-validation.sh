@@ -23,7 +23,12 @@ echo ""
 echo "== 1. Platform Health =="
 HEALTH=$(api "$WPCC_BASE/health")
 assert_eq "health: status ok" "ok" "$(echo "$HEALTH" | jq -r '.status')"
-assert_eq "health: plugin version" "0.1.0" "$(echo "$HEALTH" | jq -r '.plugin_version')"
+# Derived from the plugin header, not hardcoded — a version bump must not make this stale.
+# Find the main plugin file rather than naming it — the file is named after the slug,
+# and a slug rename must not silently make this assertion read an empty version.
+WPCC_MAIN_FILE=$(grep -rl "^ \* Plugin Name:" "$SCRIPT_DIR/.."/*.php | head -1)
+WPCC_DECLARED_VERSION=$(grep -m1 "^ \* Version:" "$WPCC_MAIN_FILE" | sed 's/.*Version: *//;s/ *$//')
+assert_eq "health: plugin version matches the plugin header" "$WPCC_DECLARED_VERSION" "$(echo "$HEALTH" | jq -r '.plugin_version')"
 
 MANIFEST=$(api "$WPCC_BASE/agent/manifest")
 assert_true "health: manifest accessible" "$(echo "$MANIFEST" | jq -r 'if .plugin then "true" else "false" end')"
@@ -201,8 +206,15 @@ assert_true "security: MCP no token blocked (4xx/5xx)" "$( [ "$HTTP_MCP_NO_TOKEN
 echo "== 14. AI Client Registry Validation =="
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
 assert_eq "ai: total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
-assert_eq "ai: active clients" "2" "$(echo "$CLIENTS" | jq -r '.counts.active')"
-assert_eq "ai: claude gold" "gold" "$(echo "$CLIENTS" | jq -r '.clients.claude.status')"
+# `active` counts clients certified at Active or above. It was 2 while Claude
+# Desktop and Cursor carried unearned Gold; both markers were withdrawn, so 0 is
+# the honest answer and pinning 2 required the product to keep overstating.
+# The count must still be a real subset of the roster.
+assert_eq "ai: active count matches the clients marked active-or-above" "$(echo "$CLIENTS" | jq -r '.counts.active')" \
+	"$(echo "$CLIENTS" | jq -r '[ .clients[] | select(.status == "active" or .status == "bronze" or .status == "silver" or .status == "gold") ] | length')"
+# Not pinned to "gold": certification is awarded only from an executed run.
+assert_true "ai: claude status is a defined level" \
+	"$(echo "$CLIENTS" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if (.clients.claude.status | IN($v[])) then "true" else "false" end')"
 assert_eq "ai: planned count" "0" "$(echo "$CLIENTS" | jq -r '.counts.planned')"
 
 CLAUDE_CFG=$(api "$WPCC_BASE/ai-clients/claude/config")
@@ -264,7 +276,9 @@ PLUGINS=$(api_post -d '{"action":"plugin_list"}' "$WPCC_BASE/operations/plugin_m
 assert_true "plugin: list has plugins" "$(echo "$PLUGINS" | jq -r 'if .plugins then "true" else "false" end')"
 assert_true "plugin: acf-pro present" "$(echo "$PLUGINS" | jq -r 'any(.plugins.plugins[]; .slug == "advanced-custom-fields-pro")')"
 assert_true "plugin: woocommerce present" "$(echo "$PLUGINS" | jq -r 'any(.plugins.plugins[]; .slug == "woocommerce")')"
-assert_true "plugin: wp-command-center present" "$(echo "$PLUGINS" | jq -r 'any(.plugins.plugins[]; .slug == "wp-command-center")')"
+# This plugin's own slug, derived from its directory rather than hardcoded.
+WPCC_OWN_SLUG=$(basename "$(cd "$SCRIPT_DIR/.." && pwd)")
+assert_true "plugin: $WPCC_OWN_SLUG present" "$(echo "$PLUGINS" | jq -r --arg s "$WPCC_OWN_SLUG" 'any(.plugins.plugins[]; .slug == $s)')"
 
 # ===================================================================
 echo "== 22. Theme Runtime Validation =="

@@ -127,6 +127,10 @@ final class AiActionRegistry {
 				'suggest'     => $def['suggest'],
 				'fields'      => $def['fields'],
 				'suggestUrl'  => $def['suggest_url'],
+				// What is being generated, in the customer's words — so the panel's
+				// loading state can say "Generating a title…" rather than the
+				// workflow-agnostic "Generating suggestion…".
+				'subject'     => $def['subject'],
 			];
 		}
 		return $out;
@@ -145,8 +149,9 @@ final class AiActionRegistry {
 		$is_title = ( 'title' === $kind );
 		return [
 			'id'           => $kind,
-			'label'        => $is_title ? __( 'Generate Title', 'wp-command-center' ) : __( 'Generate Excerpt', 'wp-command-center' ),
-			'panel_title'  => $is_title ? __( 'Generate Title Suggestion', 'wp-command-center' ) : __( 'Generate Excerpt Suggestion', 'wp-command-center' ),
+			'label'        => $is_title ? __( 'Generate Title', 'ai-command-center' ) : __( 'Generate Excerpt', 'ai-command-center' ),
+			'subject'      => $is_title ? __( 'title', 'ai-command-center' ) : __( 'excerpt', 'ai-command-center' ),
+			'panel_title'  => $is_title ? __( 'Generate Title Suggestion', 'ai-command-center' ) : __( 'Generate Excerpt Suggestion', 'ai-command-center' ),
 			// Distinct icons so the two content actions read differently at a glance:
 			// Title = edit/pencil, Excerpt = lines-of-text.
 			'icon'         => $is_title ? 'dashicons-edit' : 'dashicons-text',
@@ -159,11 +164,11 @@ final class AiActionRegistry {
 			'suggest'      => null,
 			'fields'       => [
 				$is_title
-					? [ 'key' => 'title', 'label' => __( 'Title', 'wp-command-center' ), 'type' => 'text', 'prior' => 'title' ]
-					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
+					? [ 'key' => 'title', 'label' => __( 'Title', 'ai-command-center' ), 'type' => 'text', 'prior' => 'title' ]
+					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'ai-command-center' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
 			],
-			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-ai-content&tab=suggestions&kind=' . $kind ) ),
-			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-ai-content&tab=suggestions&kind=' . $kind ) ),
+			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
+			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
 			'supports'     => static fn ( \WP_Post $post ): bool => ContentFieldGenerator::is_supported_status( (string) $post->post_status ),
 		];
 	}
@@ -172,8 +177,9 @@ final class AiActionRegistry {
 	private function seo_def(): array {
 		return [
 			'id'           => 'seo',
-			'label'        => __( 'Generate SEO Meta', 'wp-command-center' ),
-			'panel_title'  => __( 'Generate SEO Suggestion', 'wp-command-center' ),
+			'label'        => __( 'Generate SEO Meta', 'ai-command-center' ),
+			'subject'      => __( 'SEO title and description', 'ai-command-center' ),
+			'panel_title'  => __( 'Generate SEO Suggestion', 'ai-command-center' ),
 			'icon'         => 'dashicons-search',
 			'object_types' => self::CONTENT_TYPES,
 			'build_flag'   => 'WPCC_SEO_META_UI',
@@ -183,11 +189,11 @@ final class AiActionRegistry {
 			'apply'        => [ 'action' => 'seo_update', 'idKey' => 'content_id', 'nest' => 'seo' ],
 			'suggest'      => 'seo',
 			'fields'       => [
-				[ 'key' => 'title', 'label' => __( 'SEO title', 'wp-command-center' ), 'type' => 'text', 'prior' => 'title' ],
-				[ 'key' => 'description', 'label' => __( 'Meta description', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'description' ],
+				[ 'key' => 'title', 'label' => __( 'SEO title', 'ai-command-center' ), 'type' => 'text', 'prior' => 'title' ],
+				[ 'key' => 'description', 'label' => __( 'Meta description', 'ai-command-center' ), 'type' => 'textarea', 'prior' => 'description' ],
 			],
-			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-seo&tab=suggestions' ) ),
-			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-seo&tab=suggestions' ) ),
+			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
+			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
 			'supports'     => static fn ( \WP_Post $post ): bool => SeoMetaGenerator::is_supported_status( (string) $post->post_status ),
 		];
 	}
@@ -196,8 +202,9 @@ final class AiActionRegistry {
 	private function alt_def(): array {
 		return [
 			'id'           => 'alt_text',
-			'label'        => __( 'Generate Alt Text', 'wp-command-center' ),
-			'panel_title'  => __( 'Generate Alt Text', 'wp-command-center' ),
+			'label'        => __( 'Generate Alt Text', 'ai-command-center' ),
+			'subject'      => __( 'description of this image', 'ai-command-center' ),
+			'panel_title'  => __( 'Generate Alt Text', 'ai-command-center' ),
 			'icon'         => 'dashicons-format-image',
 			'object_types' => self::MEDIA_TYPES,
 			'build_flag'   => 'WPCC_ALT_TEXT_UI',
@@ -207,19 +214,20 @@ final class AiActionRegistry {
 			'apply'        => [ 'action' => 'media_update', 'idKey' => 'media_id' ],
 			'suggest'      => null,
 			'fields'       => [
-				[ 'key' => 'alt', 'label' => __( 'Alt text', 'wp-command-center' ), 'type' => 'textarea', 'prior' => 'alt' ],
+				[ 'key' => 'alt', 'label' => __( 'Alt text', 'ai-command-center' ), 'type' => 'textarea', 'prior' => 'alt' ],
 			],
-			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-alt-text' ) ),
-			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-alt-text' ) ),
+			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),
+			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),
 			'supports'     => static fn ( \WP_Post $post ): bool => wp_attachment_is_image( $post->ID ),
 		];
 	}
 
-	/** Build-flag check: constant OR filter (mirrors the per-surface UI flags). */
+	/**
+	 * Build-flag check. Delegates to BuiltinAiSettings::flag(), which is the one place
+	 * the precedence is stated — this used to check constant OR filter only, so a tool
+	 * switched on from the admin UI never grew its row action.
+	 */
 	private function flag( string $const, string $filter ): bool {
-		if ( defined( $const ) && constant( $const ) ) {
-			return true;
-		}
-		return (bool) apply_filters( $filter, false );
+		return BuiltinAiSettings::flag( $const, $filter );
 	}
 }

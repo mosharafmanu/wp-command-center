@@ -64,21 +64,30 @@ has "legacy slug maps to setup tab" "'wpcc-ai-setup'" "$SHELL_F"
 has "five-C sections intact" "'wpcc-connect'" "$SHELL_F"
 
 echo "== 6. First-run panel — present, safe, dismissible =="
-has "first-run checklist rendered" "wpcc_checklist" "$HOME_F"
+# V1: Home replaced the checklist with a real status strip plus exactly ONE
+# next action. AdoptionStatus still drives whether the guide is shown.
+has "status strip rendered"        "wpcc-home__status" "$HOME_F"
+# Redesign: Home is a 3-step setup flow before connection, dashboard after.
+has "single next action"           "wpcc_active_step" "$HOME_F"
+has "adoption status still consulted" "AdoptionStatus::setup_incomplete" "$HOME_F"
 has "first-run nonce present" "wp_nonce_field\( 'wpcc_firstrun' \)" "$HOME_F"
 has "dismiss only when setup complete" "if \( ! \\\$wpcc_incomplete \)" "$HOME_F"
-has "honest does/doesn't copy present" "What it does:" "$HOME_F"
-has "honest irreversibility caveat present" "NOT automatically" "$HOME_F"
-has "no AI auto-enable language" "stays off until you add a key" "$HOME_F"
+has "honest limits copy present" "What it does not do" "$HOME_F"
+has "honest irreversibility caveat present" "not automatically reversible" "$HOME_F"
+has "no AI auto-enable language" "No AI runs on this site unless you connect an assistant" "$HOME_F"
 
 echo "== 7. Security Mode UX — audit + recommend + confirm =="
 has "mode change is audited" "security.mode.changed" "$SETTINGS"
-has "client mode recommended" "RECOMMENDED" "$SETTINGS"
+has "protected mode recommended" "'Recommended'" "$SETTINGS"
 has "developer mode carries a confirm guard" "window.confirm" "$SETTINGS"
-has "developer warning visible" "You are in Developer mode" "$SETTINGS"
+# The standing "approvals are off" warning lives on Home, where the owner lands, and
+# the mode card carries the never-on-production footnote. The old single string
+# ("Approval is currently turned off") no longer exists on either surface.
+has "developer warning visible" "Never use this mode on a live production website" "$SETTINGS"
+has "approvals-off stated on Home" "Approvals are off" "$ROOT/includes/Admin/views/command-home.php"
 
 echo "== 8. Invariants unchanged =="
-has "DB_VERSION still 2.5.0" "DB_VERSION = '2.5.0'" "$SCHEMA"
+has "DB_VERSION still 2.6.0" "DB_VERSION = '2.6.0'" "$SCHEMA"
 OPCOUNT=$(rg -o "=>" <(rg -U "OPERATION_MAP\s*=\s*\[(.*?)\];" -o "$CAPREG") | wc -l | tr -d ' ')
 if rg -q "OPERATION_MAP" "$CAPREG"; then pass "OPERATION_MAP present (unchanged file)"; else fail "OPERATION_MAP present"; fi
 hasnt "this program did not edit CapabilityRegistry" "PROGRAM-5A" "$CAPREG"

@@ -29,6 +29,7 @@ use WPCommandCenter\Ai\Contract\GenerationRequest;
 use WPCommandCenter\Ai\Contract\GenerationResult;
 use WPCommandCenter\Ai\Platform\ConnectionStore;
 use WPCommandCenter\Ai\Platform\Dialect;
+use WPCommandCenter\Ai\Platform\UsageLedger;
 use WPCommandCenter\Ai\Transport\OpenAiCompatibleTransport;
 
 defined( 'ABSPATH' ) || exit;
@@ -68,10 +69,63 @@ final class AiRuntime {
 	/** Execute a neutral request and return the neutral result — errors as DATA, never thrown. */
 	public function generate( GenerationRequest $request ): GenerationResult {
 		$target = $this->target();
+
 		if ( null !== $target ) {
-			return $this->openai->generate( $request, $target['key'], $target['endpoint'], $target['provider'], $target['deployment'] );
+			$result = $this->openai->generate( $request, $target['key'], $target['endpoint'], $target['provider'], $target['deployment'] );
+			$this->meter( $request, $result, $target['provider'] );
+			return $result;
 		}
-		return $this->client->generate( $request );
+
+		$result = $this->client->generate( $request );
+		$this->meter( $request, $result, 'anthropic' );
+		return $result;
+	}
+
+	/**
+	 * Record what the call consumed.
+	 *
+	 * This is the one place every Built-in AI generation passes through, whichever
+	 * transport runs it, which is why the meter lives here rather than in each feature
+	 * provider. The request's `meta['feature']` carries the attribution — it is non-wire
+	 * metadata the contract already supported, so nothing about the outbound request
+	 * changed to make this possible.
+	 *
+	 * Only SUCCESSFUL generations are metered.
+	 *
+	 * The first version metered anything that reached the wire, on the theory that a
+	 * request which left the building might have cost something. On a real site that
+	 * read as nonsense: the alt-text and SEO suites drive the transport against a mocked
+	 * 401, and the panel duly reported "31 generations, 26 of which reported no usage" —
+	 * a number dominated by calls that generated nothing and were billed nothing. A
+	 * rejected key, a rate-limit, a blocked endpoint and a timeout all produce no output
+	 * and no charge, so counting them makes "generations" mean something other than what
+	 * the customer would call a generation, and turns the honest "the provider did not
+	 * report usage" caveat into noise that hides the real cases.
+	 *
+	 * A successful call with no usage block IS still metered as unreported — that is the
+	 * genuine gap this distinction exists to surface.
+	 *
+	 * Metering never affects the result: a ledger write failure must not turn a
+	 * successful generation into a failed one.
+	 */
+	private function meter( GenerationRequest $request, GenerationResult $result, string $provider ): void {
+		if ( ! $result->is_ok() ) {
+			return; // nothing was generated, and nothing was billed.
+		}
+
+		$meta    = $request->meta();
+		$feature = isset( $meta['feature'] ) ? (string) $meta['feature'] : '';
+		if ( '' === $feature ) {
+			return; // unattributed (a connection test ping) — not customer feature usage.
+		}
+
+		UsageLedger::record(
+			$result->usage(),
+			$feature,
+			$provider,
+			'' !== $result->model() ? $result->model() : $request->model(),
+			(string) get_option( ConnectionStore::OPT_DEFAULT, '' )
+		);
 	}
 
 	/**

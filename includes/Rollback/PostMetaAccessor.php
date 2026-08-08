@@ -38,7 +38,10 @@ abstract class PostMetaAccessor implements FieldAccessor {
 	 * @param mixed      $value
 	 */
 	public function key_set( $entity_id, string $key, $value ): void {
-		update_post_meta( (int) $entity_id, $key, $value );
+		// wp_slash(): update_metadata() wp_unslash()es the value, so a restored value
+		// containing backslashes (escaped quotes, `\/`, Windows paths) would come back one
+		// level short of what was captured. Mirrors ElementorDataAccessor::key_set().
+		update_post_meta( (int) $entity_id, $key, wp_slash( $value ) );
 	}
 
 	/**

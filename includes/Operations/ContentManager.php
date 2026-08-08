@@ -28,7 +28,7 @@ final class ContentManager {
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		$action = sanitize_key( $params['action'] ?? '' );
 		if ( ! in_array( $action, ContentRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_content_action', __( 'Invalid content action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_content_action', InvalidAction::message( 'content', $action, ContentRegistry::ACTIONS ) );
 		}
 
 		$content_id = (int) ( $params['content_id'] ?? 0 );
@@ -37,15 +37,15 @@ final class ContentManager {
 		// Add rollback action to dispatch
 		if ( ! in_array( $action, [ ContentRegistry::ACTION_LIST, ContentRegistry::ACTION_CREATE ], true ) ) {
 			if ( $content_id <= 0 && $action !== 'content_rollback' ) {
-				return new \WP_Error( 'wpcc_missing_content_id', __( 'content_id is required.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_missing_content_id', __( 'content_id is required.', 'ai-command-center' ) );
 			}
 			if ( $action !== ContentRegistry::ACTION_CREATE && ! get_post( $content_id ) && $action !== 'content_rollback' ) {
-				return new \WP_Error( 'wpcc_content_not_found', __( 'Content not found.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_content_not_found', __( 'Content not found.', 'ai-command-center' ) );
 			}
 		}
 
 		if ( ! in_array( $type, ContentRegistry::TYPES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_content_type', __( 'Invalid content type. Use post or page.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_content_type', __( 'Invalid content type. Use post or page.', 'ai-command-center' ) );
 		}
 
 		return match ( $action ) {
@@ -60,7 +60,7 @@ final class ContentManager {
 			ContentRegistry::ACTION_TAXONOMY_ASSIGN=> $this->taxonomy_assign( $content_id, $params, $context ),
 			ContentRegistry::ACTION_FEATURED_IMAGE => $this->featured_image_assign( $content_id, $params, $context ),
 			'content_rollback'                     => $this->rollback_content( $params, $context ),
-			default => new \WP_Error( 'wpcc_invalid_content_action', __( 'Unknown action.', 'wp-command-center' ) ),
+			default => new \WP_Error( 'wpcc_invalid_content_action', __( 'Unknown action.', 'ai-command-center' ) ),
 		};
 	}
 
@@ -69,18 +69,18 @@ final class ContentManager {
 	private function rollback_content( array $params, array $context ): array|\WP_Error {
 		$rollback_id = sanitize_text_field( $params['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'ai-command-center' ) );
 		}
 
 		// PROGRAM-4B — resolve via the shared keyed RollbackStore (consistent storage API).
 		$store    = new OptionKeyedRollbackStore( 'wpcc_content_rollbacks' );
 		$resolved = $store->resolve( $rollback_id );
 		if ( null === $resolved ) {
-			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
 		}
 		$record = $resolved['record'];
 		if ( ! empty( $record['rollback_applied'] ) ) {
-			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback has already been applied.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback has already been applied.', 'ai-command-center' ) );
 		}
 
 		// PROGRAM-4 / P4.3 — field-scoped, drift-aware delta restore for v2 update records.
@@ -199,10 +199,10 @@ final class ContentManager {
 		$type    = sanitize_key( $params['type'] ?? 'post' );
 
 		if ( '' === $title ) {
-			return new \WP_Error( 'wpcc_missing_content_title', __( 'Title is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_content_title', __( 'Title is required.', 'ai-command-center' ) );
 		}
 		if ( ! in_array( $type, ContentRegistry::TYPES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_content_type', __( 'Invalid content type.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_content_type', __( 'Invalid content type.', 'ai-command-center' ) );
 		}
 
 		$id = wp_insert_post( [
@@ -308,7 +308,7 @@ final class ContentManager {
 
 		if ( ! $result ) {
 			$this->audit( 'content.delete.failed', [ 'content_id' => $id ], $context );
-			return new \WP_Error( 'wpcc_content_delete_failed', __( 'Failed to trash content.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_content_delete_failed', __( 'Failed to trash content.', 'ai-command-center' ) );
 		}
 
 		$this->audit( 'content.delete', [
@@ -390,12 +390,12 @@ final class ContentManager {
 	private function schedule_content( int $id, array $params, array $context ): array|\WP_Error {
 		$publish_at = sanitize_text_field( $params['publish_at'] ?? '' );
 		if ( '' === $publish_at ) {
-			return new \WP_Error( 'wpcc_missing_schedule_time', __( 'publish_at is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_schedule_time', __( 'publish_at is required.', 'ai-command-center' ) );
 		}
 
 		$ts = strtotime( $publish_at );
 		if ( false === $ts || $ts <= time() ) {
-			return new \WP_Error( 'wpcc_invalid_schedule_time', __( 'publish_at must be a future date/time.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_schedule_time', __( 'publish_at must be a future date/time.', 'ai-command-center' ) );
 		}
 
 		$post = get_post( $id );
@@ -433,11 +433,11 @@ final class ContentManager {
 		$terms    = $params['terms'] ?? [];
 
 		if ( ! is_array( $terms ) || empty( $terms ) ) {
-			return new \WP_Error( 'wpcc_missing_taxonomy_terms', __( 'terms array is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_taxonomy_terms', __( 'terms array is required.', 'ai-command-center' ) );
 		}
 
 		if ( ! taxonomy_exists( $taxonomy ) ) {
-			return new \WP_Error( 'wpcc_invalid_taxonomy', __( 'Taxonomy does not exist.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_taxonomy', __( 'Taxonomy does not exist.', 'ai-command-center' ) );
 		}
 
 		$post = get_post( $id );
@@ -470,16 +470,16 @@ final class ContentManager {
 	private function featured_image_assign( int $id, array $params, array $context ): array|\WP_Error {
 		$attachment_id = (int) ( $params['attachment_id'] ?? 0 );
 		if ( $attachment_id <= 0 ) {
-			return new \WP_Error( 'wpcc_missing_attachment_id', __( 'attachment_id is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_attachment_id', __( 'attachment_id is required.', 'ai-command-center' ) );
 		}
 
 		$attachment = get_post( $attachment_id );
 		if ( ! $attachment || 'attachment' !== $attachment->post_type ) {
-			return new \WP_Error( 'wpcc_invalid_attachment', __( 'Attachment not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_attachment', __( 'Attachment not found.', 'ai-command-center' ) );
 		}
 
 		if ( ! wp_attachment_is_image( $attachment_id ) ) {
-			return new \WP_Error( 'wpcc_not_an_image', __( 'Attachment is not an image.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_an_image', __( 'Attachment is not an image.', 'ai-command-center' ) );
 		}
 
 		$old_thumb = get_post_thumbnail_id( $id );

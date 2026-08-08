@@ -21,8 +21,11 @@ PAGE=$(curl -s -b <(echo "") -H "Cookie: $(curl -s -c - -X POST -d "log=admin&pw
 echo "== 2. Claude config generation REST =="
 CONFIG=$(api "$WPCC_BASE/claude/config")
 assert_true "config: has mcpServers" "$(echo "$CONFIG" | jq -r 'if .mcpServers then "true" else "false" end')"
-assert_contains "config: command is npx" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].command')" "npx"
-assert_contains "config: dynamic MCP URL" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args[-1]')" "wp-command-center/v1/mcp"
+# The MCP endpoint travels in env.WPCC_MCP_URL, not as the last launcher argument —
+# the generated config runs the relay this site ships (bash -c "curl …; node …")
+# rather than an npx package.
+assert_contains "config: command is a shell launcher" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].command')" "bash"
+assert_contains "config: dynamic MCP URL" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "wp-command-center/v1/mcp"
 assert_true "config: env object" "$(echo "$CONFIG" | jq -r 'if (.mcpServers["wp-command-center"].env | type) == "object" then "true" else "false" end')"
 assert_contains "config: WPCC_TOKEN placeholder" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_TOKEN')" "WPCC_TOKEN"
 assert_contains "config: site_url dynamic" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_SITE_URL')" "http"
@@ -99,7 +102,7 @@ assert_true "routes: claude/config" "$(echo "$MANIFEST" | jq -r 'any(.endpoints[
 assert_true "routes: claude/tools" "$(echo "$MANIFEST" | jq -r 'any(.endpoints[]; .path == "/claude/tools")')"
 
 echo "== 13. Config is dynamically generated (no hardcoding) =="
-MCP_URL=$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].args[-1]')
+MCP_URL=$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')
 MANIFEST_MCP=$(echo "$MANIFEST" | jq -r '.mcp_server.endpoint')
 assert_contains "config: MCP URL in args is actual site URL" "$MCP_URL" "wp-command-center/v1/mcp"
 assert_contains "config: matches manifest mcp endpoint" "$MANIFEST_MCP" "wp-command-center/v1/mcp"
@@ -127,6 +130,61 @@ echo "== 18. Config env completeness =="
 assert_contains "config: WPCC_MCP_URL set" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "/wp-command-center/v1/mcp"
 assert_contains "config: WPCC_SITE_URL set" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_SITE_URL')" "://"
 assert_contains "config: WPCC_TOKEN placeholder present" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_TOKEN')" "WPCC_TOKEN"
+
+echo
+echo "== Assistant state badges — presentation must not out-claim the registry =="
+
+# The badge layer exists so the Connections screen can say what has actually been
+# verified. Its one hard rule: "Officially Certified" may appear ONLY for a client whose
+# registry status is CERT_GOLD. Nothing has been driven end to end in a real assistant
+# yet, so today that label must appear nowhere at all. This guards the exact failure the
+# certification sprint was called to fix — a UI that claims more than was executed.
+BADGES="$( wp --path="$WP_ROOT" eval '
+	use WPCommandCenter\Integration\AIClientRegistry;
+	$out = [];
+	foreach ( array_keys( AIClientRegistry::get_clients() ) as $id ) {
+		foreach ( AIClientRegistry::ui_badges( $id ) as $b ) {
+			$out[] = $id . "=" . $b["label"];
+		}
+	}
+	echo implode( "\n", $out );
+' 2>/dev/null )"
+
+# Release-state placeholders must not ship. "Not yet certified" / "Awaiting
+# certification" were scaffolding for a certification sprint, not product copy: every
+# assistant that ships has been certified before shipping, so the words would be a
+# permanent no-op on every card.
+for placeholder in "Not yet certified" "Awaiting certification"; do
+  LEAK="$( echo "$BADGES" | grep -c "$placeholder" || true )"
+  assert_eq "no release-state placeholder: '$placeholder'" "0" "$LEAK"
+done
+
+# Certification stays silent at the default status and speaks only when it should change
+# a decision. A client at CERT_COMPATIBLE/CERT_GOLD emits exactly two badges at most
+# (recommendation + transport) and never a certification badge.
+CERT_WORDS="$( echo "$BADGES" | grep -cE "=(Experimental|Not supported)$" || true )"
+NON_DEFAULT="$( wp --path="$WP_ROOT" eval '
+	use WPCommandCenter\Integration\AIClientRegistry;
+	$n = 0;
+	foreach ( AIClientRegistry::get_clients() as $c ) {
+		$s = $c["status"] ?? "";
+		if ( in_array( $s, [ AIClientRegistry::CERT_BRONZE, AIClientRegistry::CERT_SILVER, AIClientRegistry::CERT_ACTIVE, AIClientRegistry::CERT_PLANNED ], true ) ) { $n++; }
+	}
+	echo $n;
+' 2>/dev/null )"
+assert_eq "certification badge appears only for non-default statuses" "$NON_DEFAULT" "$CERT_WORDS"
+
+# Every client must carry a transport badge, because "does this run something on my
+# computer?" is the question that decides whether the setup can work at all.
+CLIENT_COUNT="$( wp --path="$WP_ROOT" eval 'echo count( WPCommandCenter\Integration\AIClientRegistry::get_clients() );' 2>/dev/null )"
+TRANSPORT_COUNT="$( echo "$BADGES" | grep -cE "=(Direct HTTP|Relay)$" || true )"
+assert_eq "every client carries exactly one transport badge" "$CLIENT_COUNT" "$TRANSPORT_COUNT"
+
+# Retired clients must not be presented at all.
+for dead in roo_code aider; do
+  GONE="$( echo "$BADGES" | grep -c "^${dead}=" || true )"
+  assert_eq "retired client '$dead' is not offered" "0" "$GONE"
+done
 
 echo "== Summary =="
 echo "  $PASS passed, $FAIL failed"

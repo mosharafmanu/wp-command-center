@@ -77,7 +77,7 @@ assert_true "ss: has plugins" "$(echo "$SS"|jq -r 'if .plugins then "true" else 
 
 echo "== 15. Validation =="
 BAD=$(api_post -d '{"action":"bad"}' "$WPCC_BASE/operations/search_manage/run")
-assert_contains "val: bad" "$BAD" "Invalid action"
+assert_contains "val: bad" "$BAD" "Valid actions:"
 
 echo "== 16. Read-Only Access =="
 assert_true "scope: read_only" "true"

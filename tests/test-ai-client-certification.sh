@@ -22,18 +22,37 @@ CLIENTS=$(api "$WPCC_BASE/ai-clients")
 MATRIX=$(echo "$CLIENTS" | jq -r '.compatibility_matrix')
 
 assert_eq "cert: 11 total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
-assert_true "cert: gold count > 0" "$(if [ "$(echo "$CLIENTS" | jq -r '.counts.gold')" -gt 0 ] 2>/dev/null; then echo true; else echo false; fi)"
-assert_true "cert: certified count > 0" "$(if [ "$(echo "$CLIENTS" | jq -r '.counts.certified')" -gt 0 ] 2>/dev/null; then echo true; else echo false; fi)"
+# Was: at least one Gold and one Certified client. Both markers were withdrawn
+# because no assistant had been driven end to end, so these two lines required the
+# product to keep making a claim it had deliberately retracted. The durable
+# contract is that each count is a real subset of the roster — which catches a
+# fabricated certification just as well, and cannot be satisfied by inflating one.
+TOTAL_N="$(echo "$CLIENTS" | jq -r '.counts.total')"
+for c in gold certified active; do
+	N="$(echo "$CLIENTS" | jq -r --arg c "$c" '.counts[$c]')"
+	assert_true "cert: $c count is within the roster" \
+		"$(if [ "$N" -ge 0 ] && [ "$N" -le "$TOTAL_N" ]; then echo true; else echo false; fi)"
+done
+assert_eq "cert: gold count matches the clients marked gold" "$(echo "$CLIENTS" | jq -r '.counts.gold')" \
+	"$(echo "$CLIENTS" | jq -r '[ .clients[] | select(.status == "gold") ] | length')"
 
 echo "== 2. Certification Levels — All Levels Defined =="
 for level in planned compatible active bronze silver gold; do
 	assert_true "cert: level $level exists in constants" "true"
 done
 
-echo "== 3. Claude Desktop — Gold Certification =="
+echo "== 3. Claude Desktop — certification is reported, not assumed =="
+# Was: assert Claude Desktop is Gold. Certification is awarded only from an
+# executed end-to-end run recorded in docs/ASSISTANT-CERTIFICATION.md, and the
+# unearned Gold markers were withdrawn — so pinning "gold" here made the suite
+# enforce the overstatement it should have caught. The durable contract is that
+# the matrix reports a level the registry defines, with a matching label and a
+# validation date, whatever that level currently is.
 CLAUDE_CERT=$(echo "$MATRIX" | jq -r '.[] | select(.id == "claude") | .certification_level')
-assert_eq "cert: claude is gold" "gold" "$CLAUDE_CERT"
-assert_contains "cert: claude label" "$(echo "$MATRIX" | jq -r '.[] | select(.id == "claude") | .certification_label')" "Gold"
+assert_true "cert: claude level is a defined level" \
+	"$(echo "$MATRIX" | jq -r '[ "planned","compatible","bronze","silver","gold","active" ] as $v | if ([ .[] | select(.id == "claude") | .certification_level ][0] | IN($v[])) then "true" else "false" end')"
+assert_true "cert: claude has a certification label" \
+	"$(echo "$MATRIX" | jq -r 'if ([ .[] | select(.id == "claude") | .certification_label ][0] // "") != "" then "true" else "false" end')"
 assert_true "cert: claude has validated_at" "$(echo "$MATRIX" | jq -r '.[] | select(.id == "claude") | if .last_validated_at then "true" else "false" end')"
 
 echo "== 4. New Clients — ChatGPT + Command Code =="
@@ -44,7 +63,9 @@ assert_eq "cert: command_code compatible" "compatible" "$(echo "$CLIENTS" | jq -
 
 echo "== 5. Certification Matrix — All 11 Clients =="
 assert_eq "cert: matrix 11 entries" "11" "$(echo "$MATRIX" | jq -r 'length')"
-for client_id in claude chatgpt codex gemini cursor continue opencode aider roo_code windsurf command_code; do
+# Every registered client appears in the matrix — checked against the registry
+# itself rather than a copy of it that outlived two removed clients.
+for client_id in $(echo "$CLIENTS" | jq -r '.clients | keys[]'); do
 	assert_true "cert: $client_id in matrix" "$(echo "$MATRIX" | jq -r --arg id "$client_id" 'any(.[]; .id == $id)')"
 done
 

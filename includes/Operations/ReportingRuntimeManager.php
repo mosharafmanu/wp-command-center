@@ -56,7 +56,7 @@ final class ReportingRuntimeManager {
 	public function run( array $p, array $cx = [] ): array|\WP_Error {
 		$a = (string) ( $p['action'] ?? '' );
 		if ( ! in_array( $a, ReportingRegistry::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_report_action', __( 'Invalid report action.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_report_action', InvalidAction::message( 'report', $a, ReportingRegistry::ACTIONS ) );
 		}
 
 		$report = match ( $a ) {
@@ -170,8 +170,10 @@ final class ReportingRuntimeManager {
 			$by_scope[ $s ] = ( $by_scope[ $s ] ?? 0 ) + 1;
 		}
 
+		// F-01: the canonical counter, not a page of rows filtered on a status
+		// literal the table never stores. Same number the admin-bar badge shows.
 		$pending = 0;
-		try { $pending = count( ( new OperationManager() )->list_requests( [ 'status' => 'pending', 'limit' => 1000 ] ) ); } catch ( \Throwable $e ) { $pending = 0; }
+		try { $pending = ( new OperationManager() )->count_pending_review(); } catch ( \Throwable $e ) { $pending = 0; }
 
 		// Recent security-relevant audit events.
 		$entries = $this->audit->tail( self::AUDIT_DEFAULT );
@@ -304,13 +306,17 @@ final class ReportingRuntimeManager {
 	}
 
 	private function approval_activity( array $p ): array {
+		// F-01: both the breakdown and the pending headline come from the
+		// canonical counters. The breakdown is grouped in SQL (no 1000-row page
+		// to fall off) and `pending` reads the pending_review key it always
+		// meant — it was asking for `pending`, which nothing ever writes.
 		$by_status = [];
+		$pending   = 0;
 		try {
-			foreach ( ( new OperationManager() )->list_requests( [ 'limit' => 1000 ] ) as $r ) {
-				$s = (string) ( $r['status'] ?? 'unknown' );
-				$by_status[ $s ] = ( $by_status[ $s ] ?? 0 ) + 1;
-			}
-		} catch ( \Throwable $e ) { $by_status = []; }
+			$manager   = new OperationManager();
+			$by_status = $manager->count_requests_by_status();
+			$pending   = $manager->count_pending_review();
+		} catch ( \Throwable $e ) { $by_status = []; $pending = 0; }
 
 		$entries = $this->audit->tail( $this->audit_limit( $p ) );
 		$requested = $approved = $rejected = 0;
@@ -322,7 +328,7 @@ final class ReportingRuntimeManager {
 		}
 		return [ 'approval_activity' => [
 			'requests_by_status' => $by_status,
-			'pending'            => (int) ( $by_status['pending'] ?? 0 ),
+			'pending'            => $pending,
 			'audit'              => [ 'auto_requested' => $requested, 'approved' => $approved, 'rejected' => $rejected ],
 		] ];
 	}

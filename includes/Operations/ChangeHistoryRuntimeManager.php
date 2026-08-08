@@ -54,13 +54,49 @@ final class ChangeHistoryRuntimeManager {
 				return $this->rollback_discover( $p );
 			case 'rollback_target':
 				return $this->rollback_target( $p, $cx );
+			case 'operation_status':
+				return $this->operation_status( $p );
 			default:
-				return $this->err( 'wpcc_invalid_history_action', sprintf(
-					/* translators: %s: action */
-					__( 'Unknown change_history action: %s. Supported: history_list, history_get, history_timeline, rollback_discover, rollback_target.', 'wp-command-center' ),
-					$action
+				return $this->err( 'wpcc_invalid_history_action', InvalidAction::message(
+					'change_history',
+					$action,
+					[ 'history_list', 'history_get', 'history_timeline', 'rollback_discover', 'rollback_target', 'operation_status' ]
 				) );
 		}
+	}
+
+	/**
+	 * ISSUE 2 — operation_status: a client that lost a response to a transport
+	 * timeout can ask "did my request with idempotency key X commit?" instead of
+	 * guessing (which previously led to duplicate writes). Reads the idempotency
+	 * journal populated by the MCP write path. The relay logs the key it used per
+	 * tools/call to stderr, so a timed-out session can recover it.
+	 *
+	 * @param array<string,mixed> $p
+	 * @return array<string,mixed>
+	 */
+	private function operation_status( array $p ): array {
+		$key = sanitize_text_field( (string) ( $p['idempotency_key'] ?? '' ) );
+		if ( '' === $key ) {
+			return $this->err( 'wpcc_missing_idempotency_key', __( 'idempotency_key is required for operation_status.', 'ai-command-center' ) );
+		}
+
+		$entry  = ( new \WPCommandCenter\Mcp\IdempotencyStore() )->lookup( $key );
+		$status = $entry['status'] ?? 'unknown';
+
+		return [
+			'action'          => 'operation_status',
+			'idempotency_key' => $key,
+			'found'           => (bool) $entry['found'],
+			'status'          => $status,
+			// committed=true means the write completed server-side and is safe NOT to
+			// retry; found=false means it never reached the journal (safe to retry).
+			'committed'       => 'done' === $status,
+			'tool'            => $entry['tool'] ?? null,
+			'created_at'      => $entry['created_at'] ?? null,
+			'completed_at'    => $entry['completed_at'] ?? null,
+			'result'          => $entry['result'] ?? null,
+		];
 	}
 
 	// ── history_list ────────────────────────────────────────────────
@@ -74,11 +110,13 @@ final class ChangeHistoryRuntimeManager {
 
 		$where_sql = $where ? ( 'WHERE ' . implode( ' AND ', $where ) ) : '';
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $where_sql is built from placeholder-only fragments; values are bound through prepare(). The no-params branch has no user input.
 		$total = (int) $wpdb->get_var(
 			$params
 				? $wpdb->prepare( "SELECT COUNT(*) FROM {$table} {$where_sql}", $params )
 				: "SELECT COUNT(*) FROM {$table} {$where_sql}"
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		$rows = $this->fetch_rows( $table, $where_sql, $params, 'created_at DESC, id DESC', $limit, $offset );
 
@@ -93,7 +131,7 @@ final class ChangeHistoryRuntimeManager {
 
 		$change_id = sanitize_text_field( (string) ( $p['change_id'] ?? '' ) );
 		if ( '' === $change_id ) {
-			return $this->err( 'wpcc_missing_change_id', __( 'change_id is required for history_get.', 'wp-command-center' ) );
+			return $this->err( 'wpcc_missing_change_id', __( 'change_id is required for history_get.', 'ai-command-center' ) );
 		}
 
 		$cols = implode( ', ', self::COLUMNS );
@@ -105,7 +143,7 @@ final class ChangeHistoryRuntimeManager {
 		if ( ! is_array( $row ) ) {
 			return $this->err( 'wpcc_change_not_found', sprintf(
 				/* translators: %s: change id */
-				__( 'No change found for change_id %s.', 'wp-command-center' ),
+				__( 'No change found for change_id %s.', 'ai-command-center' ),
 				$change_id
 			) );
 		}
@@ -161,11 +199,13 @@ final class ChangeHistoryRuntimeManager {
 		[ $limit, $offset ] = $this->paging( $p );
 		$where_sql          = $where ? ( 'WHERE ' . implode( ' AND ', $where ) ) : '';
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $where_sql is built from placeholder-only fragments; values are bound through prepare(). The no-params branch has no user input.
 		$total = (int) $wpdb->get_var(
 			$params
 				? $wpdb->prepare( "SELECT COUNT(*) FROM {$table} {$where_sql}", $params )
 				: "SELECT COUNT(*) FROM {$table} {$where_sql}"
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		$rows = $this->fetch_rows( $table, $where_sql, $params, 'created_at DESC, id DESC', $limit, $offset );
 
@@ -198,7 +238,7 @@ final class ChangeHistoryRuntimeManager {
 		}
 
 		if ( ! $has_selector ) {
-			return $this->err( 'wpcc_missing_rollback_selector', __( 'rollback_discover requires one of: target, change_set_id, or change_id.', 'wp-command-center' ) );
+			return $this->err( 'wpcc_missing_rollback_selector', __( 'rollback_discover requires one of: target, change_set_id, or change_id.', 'ai-command-center' ) );
 		}
 
 		[ $limit, $offset ] = $this->paging( $p );
@@ -234,30 +274,57 @@ final class ChangeHistoryRuntimeManager {
 		// Write-scope enforcement (the operation is read-only-scope so the
 		// transport scope gate passes for read_only tokens — deny here).
 		if ( AuthTokens::SCOPE_READ_ONLY === (string) ( $cx['token_scope'] ?? '' ) ) {
-			return $this->err( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform rollback_target.', 'wp-command-center' ) );
+			return $this->err( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform rollback_target.', 'ai-command-center' ) );
 		}
 
 		global $wpdb;
 		$table = $wpdb->prefix . 'wpcc_change_log';
 
-		$change_id = sanitize_text_field( (string) ( $p['change_id'] ?? '' ) );
-		if ( '' === $change_id ) {
-			return $this->err( 'wpcc_missing_change_id', __( 'change_id is required for rollback_target.', 'wp-command-center' ) );
+		$change_id   = sanitize_text_field( (string) ( $p['change_id'] ?? '' ) );
+		$rollback_id = sanitize_text_field( (string) ( $p['rollback_id'] ?? '' ) );
+		$cols        = implode( ', ', self::COLUMNS );
+
+		/*
+		 * V1 Phase 3 — accept the handle a write actually returns.
+		 *
+		 * Every reversible write answers with `rollback_id`; change_id is minted by the
+		 * change recorder afterwards and the caller never sees it. Requiring change_id
+		 * here meant the one general undo entry point could not consume the one value
+		 * an assistant is holding, which is how a valid rollback_id ended up at
+		 * rollback_manage — the route that only understands patches.
+		 *
+		 * change_id still works and is still preferred when known.
+		 */
+		if ( '' === $change_id && '' !== $rollback_id ) {
+			$change_id = (string) $wpdb->get_var( $wpdb->prepare(
+				"SELECT change_id FROM {$table} WHERE rollback_id = %s ORDER BY id DESC LIMIT 1",
+				$rollback_id
+			) );
+			if ( '' === $change_id ) {
+				return $this->err( 'wpcc_rollback_id_not_found', sprintf(
+					/* translators: %s: rollback id */
+					__( 'No recorded change carries rollback_id %s. It may belong to a patch — reverse those with patch_manage — or the change may predate change recording.', 'ai-command-center' ),
+					$rollback_id
+				) );
+			}
 		}
 
-		$cols = implode( ', ', self::COLUMNS );
-		$row  = $wpdb->get_row( $wpdb->prepare( "SELECT {$cols} FROM {$table} WHERE change_id = %s LIMIT 1", $change_id ), ARRAY_A );
+		if ( '' === $change_id ) {
+			return $this->err( 'wpcc_missing_change_id', __( 'Pass change_id, or rollback_id as returned by the write you want to undo.', 'ai-command-center' ) );
+		}
+
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT {$cols} FROM {$table} WHERE change_id = %s LIMIT 1", $change_id ), ARRAY_A );
 
 		if ( ! is_array( $row ) ) {
 			return $this->err( 'wpcc_change_not_found', sprintf(
 				/* translators: %s: change id */
-				__( 'No change found for change_id %s.', 'wp-command-center' ),
+				__( 'No change found for change_id %s.', 'ai-command-center' ),
 				$change_id
 			) );
 		}
 
 		if ( 'rolled_back' === (string) $row['status'] ) {
-			return $this->err( 'wpcc_already_rolled_back', __( 'This change has already been rolled back.', 'wp-command-center' ) );
+			return $this->err( 'wpcc_already_rolled_back', __( 'This change has already been rolled back.', 'ai-command-center' ) );
 		}
 
 		$kind        = (string) ( $row['rollback_kind'] ?? 'none' );
@@ -265,7 +332,7 @@ final class ChangeHistoryRuntimeManager {
 		$rollback_id = (string) ( $row['rollback_id'] ?? '' );
 
 		if ( 1 !== $reversible || 'none' === $kind ) {
-			return $this->err( 'wpcc_not_reversible', __( 'This change is not reversible.', 'wp-command-center' ) );
+			return $this->err( 'wpcc_not_reversible', __( 'This change is not reversible.', 'ai-command-center' ) );
 		}
 
 		$actor      = is_array( $cx['actor'] ?? null ) ? $cx['actor'] : [];
@@ -274,7 +341,7 @@ final class ChangeHistoryRuntimeManager {
 		if ( 'patch' === $kind ) {
 			$patch_id = '' !== $rollback_id ? $rollback_id : (string) ( $row['change_set_id'] ?? '' );
 			if ( '' === $patch_id ) {
-				return $this->err( 'wpcc_missing_rollback_id', __( 'No patch id is linked to this change.', 'wp-command-center' ) );
+				return $this->err( 'wpcc_missing_rollback_id', __( 'No patch id is linked to this change.', 'ai-command-center' ) );
 			}
 			$res = ( new PatchApproval() )->rollback( $patch_id, $actor );
 			if ( is_wp_error( $res ) ) {
@@ -283,20 +350,20 @@ final class ChangeHistoryRuntimeManager {
 			$engine_res = $res;
 		} elseif ( 'runtime_option' === $kind ) {
 			if ( '' === $rollback_id ) {
-				return $this->err( 'wpcc_missing_rollback_id', __( 'No rollback id is linked to this change.', 'wp-command-center' ) );
+				return $this->err( 'wpcc_missing_rollback_id', __( 'No rollback id is linked to this change.', 'ai-command-center' ) );
 			}
 			$res = ( new OperationExecutor() )->rollback( (string) $row['operation_id'], [ 'rollback_id' => $rollback_id ], $cx );
 			if ( empty( $res['success'] ) ) {
 				return $this->err(
 					(string) ( $res['code'] ?? 'wpcc_rollback_failed' ),
-					(string) ( $res['message'] ?? __( 'Rollback failed.', 'wp-command-center' ) )
+					(string) ( $res['message'] ?? __( 'Rollback failed.', 'ai-command-center' ) )
 				);
 			}
 			$engine_res = $res;
 		} else {
 			return $this->err( 'wpcc_unsupported_rollback_kind', sprintf(
 				/* translators: %s: rollback kind */
-				__( 'Unsupported rollback kind: %s.', 'wp-command-center' ),
+				__( 'Unsupported rollback kind: %s.', 'ai-command-center' ),
 				$kind
 			) );
 		}
@@ -347,8 +414,23 @@ final class ChangeHistoryRuntimeManager {
 		}
 
 		if ( ! empty( $p['reversible_only'] ) && $this->truthy( $p['reversible_only'] ) ) {
-			$where[]              = 'reversible = %d';
-			$params[]             = 1;
+			$where[]  = 'reversible = %d';
+			$params[] = 1;
+			/*
+			 * A change that has ALREADY been undone is not something you can undo.
+			 * The `reversible` column records whether a change was ever capable of
+			 * being reversed, not whether it still is — so filtering on it alone
+			 * put already-undone changes in the "Can be undone" list, with no Undo
+			 * button and a "Rolled back" chip beside them. The engine itself
+			 * refuses a second rollback (wpcc_already_rolled_back); the list now
+			 * agrees with the engine instead of contradicting it.
+			 *
+			 * This also fixes the same promise for assistants: `reversible_only`
+			 * over MCP is how an assistant answers "what can I undo?", and it was
+			 * offering back work that would be rejected.
+			 */
+			$where[]  = 'status <> %s';
+			$params[] = 'rolled_back';
 			$filters['reversible_only'] = true;
 		}
 
@@ -405,9 +487,11 @@ final class ChangeHistoryRuntimeManager {
 
 		$sql       = "SELECT {$cols} FROM {$table} {$where_sql} ORDER BY {$order} LIMIT %d OFFSET %d";
 		$all_params = array_merge( $params, [ $limit, $offset ] );
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $sql is assembled from placeholder-only fragments and executed through prepare() with the bound array.
 
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $all_params ), ARRAY_A );
 		if ( ! is_array( $rows ) ) {
+// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			return [];
 		}
 

@@ -22,9 +22,20 @@ php -l "$VIEW" >/dev/null 2>&1 && pass "lint ai-setup.php" || fail "lint ai-setu
 echo "== 2. Helper is read-only + honest =="
 hasnt "no writes in activity helper" "update_option|delete_option|->record\(|INSERT|UPDATE |DELETE " "$ACT"
 has "reads existing audit log" "AuditLog" "$ACT"
-has "pending approvals from existing queue" "wpcc_operation_requests" "$ACT"
+# These two used to pin the raw `wpcc_operation_requests` COUNT and its
+# `SHOW TABLES LIKE` guard inside THIS file. F-01 deliberately deleted both from here:
+# every surface that answers "how many changes are waiting" now goes through
+# OperationManager::count_pending_review(), which carries the fresh-install guard
+# itself. Duplicating the query per caller is precisely the bug F-01 fixed — two of
+# those copies filtered on the status literal 'pending', which this table never
+# stores, and answered 0 on a site with 112 waiting requests.
+#
+# So assert the behaviour that must hold, not the implementation that had to go: the
+# count comes from the canonical queue counter, and the guard still exists where the
+# counter now lives.
+has "pending approvals from the canonical queue counter" "count_pending_review" "$ACT"
 has "cost explicitly NOT faked" "cost_tracked.*false|not instrumented" "$ACT"
-has "table-exists guard" "SHOW TABLES LIKE" "$ACT"
+has "table-exists guard (now in OperationManager)" "SHOW TABLES LIKE" "$ROOT/includes/Operations/OperationManager.php"
 
 echo "== 3. AI activity surface =="
 # Phase 2.5A: the in-screen "Mission control" sub-heading was renamed to "Recent AI
@@ -38,7 +49,7 @@ hasnt "no fabricated cost figure (no \$ amounts)" 'cost.*\$[0-9]' "$VIEW"
 has "empty state teaches" "When AI or an agent acts" "$VIEW"
 
 echo "== 4. Functional (wp eval-file) — classifier honesty =="
-PHPF="$(mktemp -t wpcc7.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc7.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\AiActivity as A;

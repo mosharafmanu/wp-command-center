@@ -32,11 +32,11 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'wp_debug_display',
-			__( 'Debug Display', 'wp-command-center' ),
+			__( 'Debug Display', 'ai-command-center' ),
 			$enabled ? self::STATUS_CRITICAL : self::STATUS_GOOD,
 			$enabled
-				? __( 'WP_DEBUG_DISPLAY is enabled — PHP errors may be shown to site visitors, leaking file paths and code details.', 'wp-command-center' )
-				: __( 'PHP errors are not displayed to visitors.', 'wp-command-center' )
+				? __( 'WP_DEBUG_DISPLAY is enabled — PHP errors may be shown to site visitors, leaking file paths and code details.', 'ai-command-center' )
+				: __( 'PHP errors are not displayed to visitors.', 'ai-command-center' )
 		);
 	}
 
@@ -45,11 +45,11 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'file_edit',
-			__( 'Theme/Plugin File Editor', 'wp-command-center' ),
+			__( 'Theme/Plugin File Editor', 'ai-command-center' ),
 			$disabled ? self::STATUS_GOOD : self::STATUS_RECOMMENDED,
 			$disabled
-				? __( 'The built-in theme and plugin file editor is disabled.', 'wp-command-center' )
-				: __( 'The built-in theme/plugin file editor is enabled. Consider setting DISALLOW_FILE_EDIT to true.', 'wp-command-center' )
+				? __( 'The built-in theme and plugin file editor is disabled.', 'ai-command-center' )
+				: __( 'The built-in theme/plugin file editor is enabled. Consider setting DISALLOW_FILE_EDIT to true.', 'ai-command-center' )
 		);
 	}
 
@@ -59,9 +59,9 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 		if ( ! $info['exists'] ) {
 			return $this->check(
 				'wp_config_permissions',
-				__( 'wp-config.php Permissions', 'wp-command-center' ),
+				__( 'wp-config.php Permissions', 'ai-command-center' ),
 				self::STATUS_INFO,
-				__( 'wp-config.php was not found at the expected location.', 'wp-command-center' )
+				__( 'wp-config.php was not found at the expected location.', 'ai-command-center' )
 			);
 		}
 
@@ -69,17 +69,17 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'wp_config_permissions',
-			__( 'wp-config.php Permissions', 'wp-command-center' ),
+			__( 'wp-config.php Permissions', 'ai-command-center' ),
 			$world_writable ? self::STATUS_CRITICAL : self::STATUS_GOOD,
 			$world_writable
 				? sprintf(
 					/* translators: %s: file permission octal value */
-					__( 'wp-config.php is world-writable (%s). Restrict permissions to 600 or 644.', 'wp-command-center' ),
+					__( 'wp-config.php is world-writable (%s). Restrict permissions to 600 or 644.', 'ai-command-center' ),
 					$info['permissions']
 				)
 				: sprintf(
 					/* translators: %s: file permission octal value */
-					__( 'wp-config.php permissions look reasonable (%s).', 'wp-command-center' ),
+					__( 'wp-config.php permissions look reasonable (%s).', 'ai-command-center' ),
 					$info['permissions']
 				)
 		);
@@ -90,11 +90,11 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'ssl',
-			__( 'SSL (HTTPS)', 'wp-command-center' ),
+			__( 'SSL (HTTPS)', 'ai-command-center' ),
 			$enabled ? self::STATUS_GOOD : self::STATUS_RECOMMENDED,
 			$enabled
-				? __( 'The site is being served over HTTPS.', 'wp-command-center' )
-				: __( 'The site is not using HTTPS. An SSL certificate is strongly recommended.', 'wp-command-center' )
+				? __( 'The site is being served over HTTPS.', 'ai-command-center' )
+				: __( 'The site is not using HTTPS. An SSL certificate is strongly recommended.', 'ai-command-center' )
 		);
 	}
 
@@ -104,9 +104,9 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 		if ( ! $user ) {
 			return $this->check(
 				'default_admin_account',
-				__( 'Default "admin" Account', 'wp-command-center' ),
+				__( 'Default "admin" Account', 'ai-command-center' ),
 				self::STATUS_GOOD,
-				__( 'No user with the username "admin" exists.', 'wp-command-center' )
+				__( 'No user with the username "admin" exists.', 'ai-command-center' )
 			);
 		}
 
@@ -114,11 +114,11 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'default_admin_account',
-			__( 'Default "admin" Account', 'wp-command-center' ),
+			__( 'Default "admin" Account', 'ai-command-center' ),
 			$is_administrator ? self::STATUS_RECOMMENDED : self::STATUS_INFO,
 			$is_administrator
-				? __( 'A user with the username "admin" has the Administrator role — a common brute-force target. Consider renaming or removing it.', 'wp-command-center' )
-				: __( 'A user with the username "admin" exists but is not an administrator.', 'wp-command-center' )
+				? __( 'A user with the username "admin" has the Administrator role — a common brute-force target. Consider renaming or removing it.', 'ai-command-center' )
+				: __( 'A user with the username "admin" exists but is not an administrator.', 'ai-command-center' )
 		);
 	}
 
@@ -129,11 +129,11 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'directory_listing',
-			__( 'Uploads Directory Listing', 'wp-command-center' ),
+			__( 'Uploads Directory Listing', 'ai-command-center' ),
 			$protected ? self::STATUS_GOOD : self::STATUS_RECOMMENDED,
 			$protected
-				? __( 'The uploads directory contains an index file that prevents directory listing.', 'wp-command-center' )
-				: __( 'The uploads directory has no index.php/index.html — directory listing may be possible if the server allows it.', 'wp-command-center' )
+				? __( 'The uploads directory contains an index file that prevents directory listing.', 'ai-command-center' )
+				: __( 'The uploads directory has no index.php/index.html — directory listing may be possible if the server allows it.', 'ai-command-center' )
 		);
 	}
 
@@ -147,9 +147,9 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 		if ( ! is_array( $updates ) || empty( $updates ) || ! isset( $updates[0]->response ) ) {
 			return $this->check(
 				'core_update',
-				__( 'WordPress Core Updates', 'wp-command-center' ),
+				__( 'WordPress Core Updates', 'ai-command-center' ),
 				self::STATUS_INFO,
-				__( 'Update status is unknown — WordPress has not checked for updates yet.', 'wp-command-center' )
+				__( 'Update status is unknown — WordPress has not checked for updates yet.', 'ai-command-center' )
 			);
 		}
 
@@ -158,19 +158,19 @@ final class SecurityDiagnostics extends AbstractDiagnostics {
 		if ( 'latest' === $latest->response || 'development' === $latest->response ) {
 			return $this->check(
 				'core_update',
-				__( 'WordPress Core Updates', 'wp-command-center' ),
+				__( 'WordPress Core Updates', 'ai-command-center' ),
 				self::STATUS_GOOD,
-				__( 'WordPress is up to date.', 'wp-command-center' )
+				__( 'WordPress is up to date.', 'ai-command-center' )
 			);
 		}
 
 		return $this->check(
 			'core_update',
-			__( 'WordPress Core Updates', 'wp-command-center' ),
+			__( 'WordPress Core Updates', 'ai-command-center' ),
 			self::STATUS_RECOMMENDED,
 			sprintf(
 				/* translators: %s: available WordPress version */
-				__( 'A WordPress core update is available (%s).', 'wp-command-center' ),
+				__( 'A WordPress core update is available (%s).', 'ai-command-center' ),
 				$latest->version ?? ''
 			)
 		);

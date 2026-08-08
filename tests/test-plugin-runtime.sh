@@ -214,8 +214,10 @@ assert_true "install: fake slug rejected" "$(if echo "$INSTALL_CODE" | grep -qE 
 
 echo
 echo "== 13. Duplicate install check =="
-# wp-command-center is the current plugin, it's already installed
-DUP_INSTALL=$(api POST /operations/plugin_manage/run '{"action":"plugin_install","slug":"wp-command-center"}')
+# This plugin is, by definition, already installed. Derive its slug from the directory
+# rather than hardcoding it, so the assertion survives a slug rename.
+WPCC_OWN_SLUG=$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)")
+DUP_INSTALL=$(api POST /operations/plugin_manage/run "{\"action\":\"plugin_install\",\"slug\":\"$WPCC_OWN_SLUG\"}")
 assert_eq "duplicate install: rejected" "wpcc_plugin_already_installed" "$(echo "$DUP_INSTALL" | jq -r '.code // "none"')"
 
 echo

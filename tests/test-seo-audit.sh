@@ -142,9 +142,16 @@ else
 			return $id;
 		};
 		$good_desc = str_repeat( "good description sentence. ", 6 ); // ~150 chars (120-160)
+		// Seed the meta keys of whichever provider is ACTIVE. These fixtures previously
+		// used the Yoast keys unconditionally, so on a Rank Math site the audit read
+		// nothing and every classification assertion failed, certifying neither.
+		$P  = \WPCommandCenter\Operations\SeoProvider::detect();
+		$kT = \WPCommandCenter\Operations\SeoProvider::meta_key( "title", $P );
+		$kD = \WPCommandCenter\Operations\SeoProvider::meta_key( "description", $P );
+		$kK = \WPCommandCenter\Operations\SeoProvider::meta_key( "focus_keyword", $P );
 		$id_missing = $mk( [] ); // no title/desc -> missing
-		$id_weak    = $mk( [ "_yoast_wpseo_title"=>"A fine title", "_yoast_wpseo_metadesc"=>"too short", "_yoast_wpseo_focuskw"=>"kw" ] ); // desc<120 -> weak
-		$id_ok      = $mk( [ "_yoast_wpseo_title"=>"A fine SEO title", "_yoast_wpseo_metadesc"=>substr($good_desc,0,150), "_yoast_wpseo_focuskw"=>"keyword" ] ); // -> ok
+		$id_weak    = $mk( [ $kT=>"A fine title", $kD=>"too short", $kK=>"kw" ] ); // desc<120 -> weak
+		$id_ok      = $mk( [ $kT=>"A fine SEO title", $kD=>substr($good_desc,0,150), $kK=>"keyword" ] ); // -> ok
 
 		// Newest posts (highest IDs) appear first under ORDER BY ID DESC.
 		$page = $Q->audit( [ "state" => "all" ], 100, 0 );
@@ -168,7 +175,7 @@ else
 		// Read-only: our ok post meta unchanged; no proposals created; rollbacks
 		// unchanged in BOTH stores (legacy option AND Slice 4c per-post meta).
 		$rbmeta_after = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->postmeta} WHERE meta_key LIKE '\_wpcc\_seo\_rb\_%'" );
-		$out["meta_intact"]       = ( get_post_meta( $id_ok, "_yoast_wpseo_title", true ) === "A fine SEO title" ) ? 1 : 0;
+		$out["meta_intact"]       = ( get_post_meta( $id_ok, $kT, true ) === "A fine SEO title" ) ? 1 : 0;
 		$out["no_proposals"]      = ( ( new \WPCommandCenter\Proposals\ProposalStore() )->count([]) === $prop_before ) ? 1 : 0;
 		$out["no_rollbacks"]      = ( get_option( "wpcc_seo_rollbacks", [] ) === $rb_before ) ? 1 : 0;
 		$out["no_rollback_meta"]  = ( $rbmeta_after === $rbmeta_before ) ? 1 : 0;
@@ -205,13 +212,21 @@ else
 	echo "== 5b. Tab gating (functional, via AppShell::sections) =="
 	# Experience Layer: SEO Meta is the Operate › SEO Meta tab; it appears in the
 	# shell only when the build flag is on AND the FeatureGate allows.
-	TAB_OFF="$(wpe 'remove_all_filters("wpcc_seo_meta_ui"); $s=\WPCommandCenter\Admin\AppShell::sections(); echo isset($s["wpcc-built-in-ai"]["tabs"]["seo"])?"shown":"hidden";')"
+	#
+	# "By default" means nothing has switched SEO on — and since Phase 4 that is THREE
+	# sources, not one. BuiltinAiSettings::flag() resolves constant -> filter -> option,
+	# so dropping the filter alone leaves the in-admin toggle in charge, and on a site
+	# where SEO is switched on (the T2 runner turns all three tools on by design) the
+	# tab is correctly shown and this asserted a default that no longer existed.
+	# Filtering the option too restores the intended precondition without writing to
+	# the site.
+	TAB_OFF="$(wpe 'remove_all_filters("wpcc_seo_meta_ui"); add_filter("option_wpcc_builtin_ai_tools", function(){ return ["seo"=>false,"alt_text"=>false,"content"=>false]; }, 99); $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); echo isset($t["seo"])?"shown":"hidden";')"
 	assert_eq "tab hidden by default" "hidden" "$TAB_OFF"
 
-	TAB_ON="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-built-in-ai"]["tabs"]["seo"])?"shown":"hidden";')"
+	TAB_ON="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); remove_all_filters("wpcc_seo_meta_ui"); echo isset($t["seo"])?"shown":"hidden";')"
 	assert_eq "tab shown when build flag on + FeatureGate allows" "shown" "$TAB_ON"
 
-	TAB_DENY="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $d=function($allow,$f){ return $f==="seo_meta_generator"?false:$allow; }; add_filter("wpcc_feature_allowed",$d,10,2); $s=\WPCommandCenter\Admin\AppShell::sections(); remove_filter("wpcc_feature_allowed",$d,10); remove_all_filters("wpcc_seo_meta_ui"); echo isset($s["wpcc-built-in-ai"]["tabs"]["seo"])?"shown":"hidden";')"
+	TAB_DENY="$(wpe 'add_filter("wpcc_seo_meta_ui","__return_true"); $d=function($allow,$f){ return $f==="seo_meta_generator"?false:$allow; }; add_filter("wpcc_feature_allowed",$d,10,2); $t=\WPCommandCenter\Admin\AppShell::builtin_tabs(); remove_filter("wpcc_feature_allowed",$d,10); remove_all_filters("wpcc_seo_meta_ui"); echo isset($t["seo"])?"shown":"hidden";')"
 	assert_eq "tab hidden when FeatureGate denies" "hidden" "$TAB_DENY"
 fi
 
@@ -219,8 +234,8 @@ echo
 echo "== 6. Invariants unchanged =="
 assert_eq "OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-assert_eq "catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
-assert_eq "DB_VERSION 2.5.0"    "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+assert_eq "catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+assert_eq "DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 
 echo ""
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

@@ -11,7 +11,7 @@
 #   - Home shows a recommendations signal only on real open findings
 #   - Activity › Approvals points to Recommendations only on real pending plans
 #   - Runtime (dashboard.php) retired in 2B; the new homes are the sole owners
-#   - No redirect loops; invariants 34/23/40/40/2.5.0; no new route/capability in new views
+#   - No redirect loops; invariants 34/23/42/42/2.6.0; no new route/capability in new views
 #
 # Requires: php, rg; wp-cli optional (functional + invariant checks).
 # Usage: bash tests/test-phase-2a.sh
@@ -45,7 +45,9 @@ for f in "$SHELL_PHP" "$TOOLS" "$RECS" "$HOME_V" "$APPROV"; do lint "lint $(base
 
 echo
 echo "== 2. New Settings tabs registered (additive) =="
-has "Tools tab → tools-search-replace"           "'tools'\s*=> \[ 'label' => __\( 'Tools'" "$SHELL_PHP"
+# Search & Replace moved from a top-level Settings tab into the Advanced hub
+# with the other developer tools.
+has "Search & Replace in the Advanced hub" "'view' => 'tools-search-replace'" "$ROOT/includes/Admin/views/settings-advanced.php"
 # Phase 2B: Recommendations is now a pane inside the Diagnostics hub (not a flat tab);
 # Runtime is removed.
 has "Recommendations hosted in Diagnostics hub"  "'view' => 'recommendations'" "$ROOT/includes/Admin/views/settings-diagnostics.php"
@@ -60,7 +62,8 @@ has "confirmation modal preserved" "wpcc-sr-confirm-overlay" "$TOOLS"
 has "risk model preserved"        "Computed Risk Level" "$TOOLS"
 has "uses OperationManager"       "OperationManager" "$TOOLS"
 has "uses OperationQueue"         "OperationQueue" "$TOOLS"
-has "points to Activity › Approvals (new IA)" "Activity . Approvals" "$TOOLS"
+# The section is now called Approvals; "Activity" no longer exists in the IA.
+has "points to Approvals (redesigned IA)" "from Approvals" "$TOOLS"
 lacks "no old Approval-Center-by-Operate copy" "Operate . Approvals" "$TOOLS"
 lacks "Tools adds NO REST route"  "register_rest_route" "$TOOLS"
 
@@ -78,15 +81,18 @@ lacks "Recommendations adds NO REST route" "register_rest_route" "$RECS"
 
 echo
 echo "== 5. Home signal — real data only, conditional, calm =="
-has "reads real open-recommendation count" "wpcc_recommendations WHERE status" "$HOME_V"
-has "signal is conditional (>0 only)"      "wpcc_rec_open > 0" "$HOME_V"
-has "links to Recommendations tab"         "wpcc_tab=recommendations" "$HOME_V"
+# Recommendations left Home: it is support tooling, and Home is reserved for
+# approvals and setup blockers. It still lives under Settings > Diagnostics.
+lacks "recommendations not promoted on Home" "wpcc_recommendations WHERE status" "$HOME_V"
+has "recommendations reachable from Approvals" "wpcc_pending_plan_cnt > 0" "$APPROV"
+# Diagnostics is now a pane of the Advanced hub.
+has "Home links to Diagnostics pane"       "apane=diagnostics" "$HOME_V"
 
 echo
 echo "== 6. Approvals pointer — real pending plans only =="
 has "reads real pending-plan count"   "wpcc_agent_plans WHERE status" "$APPROV"
 has "pointer conditional (>0 only)"   "wpcc_pending_plan_cnt > 0" "$APPROV"
-has "links to Recommendations"        "wpcc_tab=recommendations" "$APPROV"
+has "links to Recommendations"        "dpane=recommendations" "$APPROV"
 lacks "no duplicated recommendations table" "RecommendationEngine" "$APPROV"
 
 echo
@@ -122,9 +128,9 @@ else
 	INV="$(wpe '$i=(new WPCommandCenter\Admin\DashboardAdminQuery())->overview()["invariants"]; echo $i["operation_map"].",".$i["capabilities"].",".$i["catalogue"].",".$i["mcp_tools"].",".$i["db_version"];')"
 	assert_eq "OPERATION_MAP 34" "34" "$(echo "$INV"|cut -d, -f1)"
 	assert_eq "CAPABILITIES 23"  "23" "$(echo "$INV"|cut -d, -f2)"
-	assert_eq "catalogue 40"     "40" "$(echo "$INV"|cut -d, -f3)"
-	assert_eq "MCP tools 40"     "40" "$(echo "$INV"|cut -d, -f4)"
-	assert_eq "DB_VERSION 2.5.0" "2.5.0" "$(echo "$INV"|cut -d, -f5)"
+	assert_eq "catalogue 42"     "42" "$(echo "$INV"|cut -d, -f3)"
+	assert_eq "MCP tools 42"     "42" "$(echo "$INV"|cut -d, -f4)"
+	assert_eq "DB_VERSION 2.6.0" "2.6.0" "$(echo "$INV"|cut -d, -f5)"
 fi
 
 echo

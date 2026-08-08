@@ -21,6 +21,8 @@
 namespace WPCommandCenter\Seo;
 
 use WPCommandCenter\Ai\CapabilityGate;
+use WPCommandCenter\Ai\ProviderProvenance;
+use WPCommandCenter\Ai\SourceContentSignal;
 use WPCommandCenter\Proposals\ProposalStore;
 use WPCommandCenter\Operations\SeoProvider;
 
@@ -96,6 +98,16 @@ final class SeoMetaGenerator {
 			return $this->envelope( $batch_id, '', '', $created, $skipped, $failed );
 		}
 
+		// Precondition 2b (provenance): only a provider the product actually ships may
+		// produce a draft a customer will review. The resolver is an injectable test
+		// seam, and a stub driven through it writes real, indistinguishable drafts.
+		if ( ! ProviderProvenance::accepts( $provider->id() ) ) {
+			foreach ( $ids as $id ) {
+				$skipped[] = [ 'post_id' => $id, 'reason' => ProviderProvenance::REASON ];
+			}
+			return $this->envelope( $batch_id, $provider->id(), '', $created, $skipped, $failed );
+		}
+
 		// Precondition 3 (capability gate): the active provider must support what
 		// this feature requires. Inert for Anthropic; never selects/routes.
 		if ( ! CapabilityGate::check( 'seo_meta', $provider->id() )['ok'] ) {
@@ -106,6 +118,11 @@ final class SeoMetaGenerator {
 		}
 
 		$used_model = '';
+		// Posts whose source content was too light for a suggestion to add much. Advisory
+		// only — they still generate. A near-restatement of an existing title is the
+		// honest answer for a two-sentence page, and this is what lets the screen say so
+		// instead of presenting it as an ordinary suggestion that happened to be dull.
+		$thin = [];
 
 		foreach ( $ids as $id ) {
 			$post = get_post( $id );
@@ -125,11 +142,15 @@ final class SeoMetaGenerator {
 			}
 
 			$current = SeoProvider::read( $id, $seo_provider );
+			$source  = $this->excerpt( (string) $post->post_content );
+			if ( SourceContentSignal::is_thin( SourceContentSignal::of( $source ) ) ) {
+				$thin[] = $id;
+			}
 
 			$result = $provider->suggest_meta( [
 				'post_id'             => $id,
 				'title'               => get_the_title( $post ),
-				'content'             => $this->excerpt( (string) $post->post_content ),
+				'content'             => $source,
 				'current_title'       => (string) $current['title'],
 				'current_description' => (string) $current['description'],
 			] );
@@ -167,7 +188,7 @@ final class SeoMetaGenerator {
 			$created[] = (string) $proposal['proposal_id'];
 		}
 
-		return $this->envelope( $batch_id, $provider->id(), $used_model, $created, $skipped, $failed );
+		return $this->envelope( $batch_id, $provider->id(), $used_model, $created, $skipped, $failed, $thin );
 	}
 
 	/** Open-proposal dedup via the ProposalStore READ API (no writes). */
@@ -188,15 +209,20 @@ final class SeoMetaGenerator {
 		return $text;
 	}
 
-	private function envelope( string $batch_id, string $provider, string $model, array $created, array $skipped, array $failed ): array {
+	/**
+	 * @param int[] $thin_source Ids whose source content was too light to say much about.
+	 */
+	private function envelope( string $batch_id, string $provider, string $model, array $created, array $skipped, array $failed, array $thin_source = [] ): array {
 		return [
-			'action'   => 'seo_meta_generate',
-			'batch_id' => $batch_id,
-			'provider' => $provider,
-			'model'    => $model,
-			'created'  => $created,
-			'skipped'  => $skipped,
-			'failed'   => $failed,
+			'action'      => 'seo_meta_generate',
+			'batch_id'    => $batch_id,
+			'provider'    => $provider,
+			'model'       => $model,
+			'created'     => $created,
+			'skipped'     => $skipped,
+			'failed'      => $failed,
+			// Advisory only — these generated like any other item.
+			'thin_source' => array_values( $thin_source ),
 		];
 	}
 }

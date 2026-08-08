@@ -46,24 +46,24 @@ final class PathGuard {
 		$relative_path = $this->normalize_relative( $relative_path );
 
 		if ( '' === $relative_path || str_contains( $relative_path, '..' ) ) {
-			return new \WP_Error( 'wpcc_invalid_path', __( 'Invalid path.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_path', __( 'Invalid path.', 'ai-command-center' ) );
 		}
 
 		$absolute = trailingslashit( wp_normalize_path( WP_CONTENT_DIR ) ) . $relative_path;
 		$real     = realpath( $absolute );
 
 		if ( false === $real ) {
-			return new \WP_Error( 'wpcc_not_found', __( 'The requested path does not exist.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_found', __( 'The requested path does not exist.', 'ai-command-center' ) );
 		}
 
 		$real = wp_normalize_path( $real );
 
 		if ( ! $this->is_within_allowed_root( $real ) ) {
-			return new \WP_Error( 'wpcc_path_not_allowed', __( 'This path is outside the allowed directories (themes, plugins, mu-plugins).', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_path_not_allowed', __( 'This path is outside the allowed directories (themes, plugins, mu-plugins).', 'ai-command-center' ) );
 		}
 
 		if ( $this->is_denied( $real ) ) {
-			return new \WP_Error( 'wpcc_file_blocked', __( 'Access to this path is blocked for security reasons.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_file_blocked', __( 'Access to this path is blocked for security reasons.', 'ai-command-center' ) );
 		}
 
 		return $real;

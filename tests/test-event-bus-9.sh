@@ -39,7 +39,7 @@ has "bridge guarded" "catch \( \\\\Throwable" "$BRIDGE"
 has "bus is additive (no-op when no subscribers)" "no subscribers" "$BUS"
 
 echo "== 4. Functional (wp eval-file) =="
-PHPF="$(mktemp -t wpcc9.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc9.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Events\EventBus as B;

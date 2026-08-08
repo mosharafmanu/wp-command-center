@@ -8,6 +8,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../wpcc-env.sh"
 WP_PATH="$SCRIPT_DIR/../../../.."
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_PATH"
+
 PASS=0; FAIL=0
 
 pass()       { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -104,8 +111,14 @@ R=$(gate_result '{"jsonrpc":"2.0","id":24,"method":"tools/call","params":{"name"
 assert_eq "client: user_manage/user_list (diagnostic action) → immediate" "immediate" "$R"
 
 # Medium — gated in client
-R=$(gate_result '{"jsonrpc":"2.0","id":25,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Test","status":"draft"}}}')
-assert_eq "client: content_manage/create (medium) → pending_approval" "pending_approval" "$R"
+R=$(gate_result '{"jsonrpc":"2.0","id":25,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"content_create","post_type":"post","title":"Test","status":"draft"}}}')
+assert_eq "client: content_manage/content_create (medium) → pending_approval" "pending_approval" "$R"
+
+# A BOGUS action must be refused outright, never filed as an approval. This used to
+# queue a critical-risk request that could only ever fail once approved.
+R=$(gate_result '{"jsonrpc":"2.0","id":251,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Test"}}}')
+[ "$R" != "pending_approval" ] && pass "client: bogus action refused, not queued for approval" \
+  || fail "client: bogus action refused, not queued for approval"
 
 # High — gated in client
 R=$(gate_result '{"jsonrpc":"2.0","id":26,"method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_install","plugin":"hello-dolly"}}}')
@@ -151,8 +164,12 @@ R=$(gate_result '{"jsonrpc":"2.0","id":33,"method":"tools/call","params":{"name"
 assert_eq "enterprise: user_manage/user_list (diagnostic action) → immediate" "immediate" "$R"
 
 # Medium — gated in enterprise
-R=$(gate_result '{"jsonrpc":"2.0","id":34,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Enterprise Test","status":"draft"}}}')
-assert_eq "enterprise: content_manage/create (medium) → pending_approval" "pending_approval" "$R"
+R=$(gate_result '{"jsonrpc":"2.0","id":34,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"content_create","post_type":"post","title":"Enterprise Test","status":"draft"}}}')
+assert_eq "enterprise: content_manage/content_create (medium) → pending_approval" "pending_approval" "$R"
+
+R=$(gate_result '{"jsonrpc":"2.0","id":341,"method":"tools/call","params":{"name":"content_manage","arguments":{"action":"create","post_type":"post","title":"Enterprise Test"}}}')
+[ "$R" != "pending_approval" ] && pass "enterprise: bogus action refused, not queued for approval" \
+  || fail "enterprise: bogus action refused, not queued for approval"
 
 # High — gated in enterprise
 R=$(gate_result '{"jsonrpc":"2.0","id":35,"method":"tools/call","params":{"name":"theme_manage","arguments":{"action":"theme_install","theme":"twentytwentyfive"}}}')
@@ -193,8 +210,9 @@ assert_eq "consistency: wordpress_version identical in developer vs enterprise" 
 # ===================================================================
 echo "== Cleanup =="
 set_mode "developer"
-RESTORED=$(wp eval "echo get_option('wpcc_security_mode', 'developer');" --path="$WP_PATH" 2>/dev/null)
-assert_eq "mode restored to developer" "developer" "$RESTORED"
+wp eval "update_option('wpcc_security_mode', '${WPCC_ORIG_MODE}');" --path="$WP_PATH" >/dev/null 2>&1
+RESTORED=$(wp eval "echo get_option('wpcc_security_mode', '');" --path="$WP_PATH" 2>/dev/null)
+assert_eq "mode restored to the starting mode" "$WPCC_ORIG_MODE" "$RESTORED"
 
 echo ""
 echo "== Summary =="

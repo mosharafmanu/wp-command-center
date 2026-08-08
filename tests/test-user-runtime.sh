@@ -9,6 +9,12 @@ fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; if [ "$e" = "$a" ]; then pass "$d"; else fail "$d (expected '$e', got '$a')"; fi; }
 assert_true() { local d="$1" a="$2"; if [ "$a" = "true" ]; then pass "$d"; else fail "$d"; fi; }
 assert_contains() { local d="$1" h="$2" n="$3"; if [[ "$h" == *"$n"* ]]; then pass "$d"; else fail "$d"; fi; }
+# Errors are WP_Error REST responses ({code,message,data.status}), not the retired
+# in-band {"error":true} shape. Assert the SPECIFIC code — stronger than the old
+# substring check for the word "error", which no longer appears in a response at all.
+assert_code() { local d="$1" body="$2" want="$3"; local got
+  got=$(echo "$body" | jq -r '.code // empty' 2>/dev/null)
+  if [ "$got" = "$want" ]; then pass "$d"; else fail "$d (expected code '$want', got '${got:-none}')"; fi; }
 api() { curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$@"; }
 api_post() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" "$@"; }
 
@@ -116,7 +122,7 @@ fi
 
 echo "== 16. Validation — Invalid User ID =="
 BAD_GET=$(api_post -d '{"action":"user_get","user_id":99999999}' "$WPCC_BASE/operations/user_manage/run")
-assert_contains "validation: bad user_id blocked" "$BAD_GET" "error"
+assert_code "validation: bad user_id blocked" "$BAD_GET" "wpcc_user_not_found"
 
 echo "== 17. Validation — Invalid Action =="
 BAD_ACTION=$(api_post -d '{"action":"invalid_action"}' "$WPCC_BASE/operations/user_manage/run")
@@ -124,13 +130,13 @@ assert_contains "validation: bad action blocked" "$BAD_ACTION" "Invalid user act
 
 echo "== 18. Validation — Missing Fields =="
 MISSING=$(api_post -d '{"action":"user_create"}' "$WPCC_BASE/operations/user_manage/run")
-assert_contains "validation: missing fields blocked" "$MISSING" "error"
+assert_code "validation: missing fields blocked" "$MISSING" "wpcc_missing_user_fields"
 
 echo "== 19. Validation — Duplicate Username =="
 FIRST_USERNAME=$(echo "$ULIST" | jq -r '.users[0].username')
 if [ -n "$FIRST_USERNAME" ] && [ "$FIRST_USERNAME" != "null" ]; then
 	DUP=$(api_post -d "{\"action\":\"user_create\",\"username\":\"$FIRST_USERNAME\",\"email\":\"nobody@test.local\",\"password\":\"Test1234!\"}" "$WPCC_BASE/operations/user_manage/run")
-	assert_contains "validation: duplicate username blocked" "$DUP" "error"
+	assert_code "validation: duplicate username blocked" "$DUP" "wpcc_username_exists"
 fi
 
 echo "== 20. Timeline Events =="
@@ -144,7 +150,7 @@ assert_contains "rollback: endpoint accessible" "$RB_EP" "4"
 echo "== 22. Invalid Role =="
 if [ -n "$FIRST_ID" ]; then
 	BAD_ROLE=$(api_post -d "{\"action\":\"user_assign_role\",\"user_id\":$FIRST_ID,\"role\":\"nonexistent_role\"}" "$WPCC_BASE/operations/user_manage/run")
-	assert_contains "validation: bad role blocked" "$BAD_ROLE" "error"
+	assert_code "validation: bad role blocked" "$BAD_ROLE" "wpcc_invalid_role"
 fi
 
 echo "== 23. Self-Delete Handled =="
@@ -154,7 +160,7 @@ assert_true "validation: self-delete handled" "$(echo "$SELF_DELETE" | jq -r 'if
 
 echo "== 24. Weak Password Rejected =="
 WEAK=$(api_post -d '{"action":"user_reset_password","user_id":1,"new_password":"short"}' "$WPCC_BASE/operations/user_manage/run")
-assert_contains "validation: weak password" "$WEAK" "error"
+assert_code "validation: weak password" "$WEAK" "wpcc_weak_password"
 
 echo "== 25. Remove Last Role Blocked =="
 RB_STR="wpcc_rollback2_$(date +%s)"
@@ -162,7 +168,7 @@ RB2=$(api_post -d "{\"action\":\"user_create\",\"username\":\"$RB_STR\",\"email\
 RB2_ID=$(echo "$RB2" | jq -r '.user_id // 0')
 if [ "$RB2_ID" -gt 0 ] 2>/dev/null; then
 	LAST_ROLE=$(api_post -d "{\"action\":\"user_remove_role\",\"user_id\":$RB2_ID,\"role\":\"subscriber\"}" "$WPCC_BASE/operations/user_manage/run")
-	assert_contains "validation: last role blocked" "$LAST_ROLE" "error"
+	assert_code "validation: last role blocked" "$LAST_ROLE" "wpcc_cannot_remove_last_role"
 	# Cleanup
 	api_post -d "{\"action\":\"user_delete\",\"user_id\":$RB2_ID}" "$WPCC_BASE/operations/user_manage/run" >/dev/null
 fi
@@ -189,7 +195,7 @@ echo "  INFO: User list: ${PERF_MS}ms"
 
 echo "== 30. Empty Search Blocked =="
 EMPTY_SEARCH=$(api_post -d '{"action":"user_search","search":""}' "$WPCC_BASE/operations/user_manage/run")
-assert_contains "validation: empty search" "$EMPTY_SEARCH" "error"
+assert_code "validation: empty search" "$EMPTY_SEARCH" "wpcc_missing_search"
 
 echo "== 31. User Detail Fields =="
 assert_true "detail: has id" "$(echo "$UGET" | jq -r 'if .user.id then "true" else "false" end')"
@@ -212,13 +218,13 @@ assert_true "timeline: has user management activity" "$(echo "$TL2" | jq -r 'any
 
 echo "== 35. User Update — No Fields =="
 NO_FIELDS=$(api_post -d "{\"action\":\"user_update\",\"user_id\":$FIRST_ID}" "$WPCC_BASE/operations/user_manage/run")
-assert_contains "validation: no fields blocked" "$NO_FIELDS" "error"
+assert_code "validation: no fields blocked" "$NO_FIELDS" "wpcc_no_user_updates"
 
 echo "== 36. User Create — Duplicate Email =="
 FIRST_EMAIL=$(echo "$UGET" | jq -r '.user.email')
 if [ -n "$FIRST_EMAIL" ] && [ "$FIRST_EMAIL" != "null" ]; then
 	DUP_MAIL=$(api_post -d "{\"action\":\"user_create\",\"username\":\"unique_user_$(date +%s)\",\"email\":\"$FIRST_EMAIL\",\"password\":\"Pass1234!\"}" "$WPCC_BASE/operations/user_manage/run")
-	assert_contains "validation: duplicate email" "$DUP_MAIL" "error"
+	assert_code "validation: duplicate email" "$DUP_MAIL" "wpcc_user_email_exists"
 fi
 
 echo "== 38. Route Endpoint Verification =="
@@ -309,7 +315,7 @@ assert_true "extra field: existing user has roles" "$(echo "$ULIST" | jq -r 'if 
 
 echo "== 52. Password Reset Without User =="
 PW_NO_USER=$(api_post -d '{"action":"user_reset_password","user_id":99999999}' "$WPCC_BASE/operations/user_manage/run")
-assert_contains "pwreset: no user handled" "$PW_NO_USER" "error"
+assert_code "pwreset: no user handled" "$PW_NO_USER" "wpcc_user_not_found"
 
 echo ""
 echo "== Summary =="

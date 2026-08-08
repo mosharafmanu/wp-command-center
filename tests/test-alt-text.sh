@@ -13,6 +13,13 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
+
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
 cd "$PLUGIN_DIR"
 
 PASS=0; FAIL=0
@@ -25,7 +32,7 @@ wpe() { wp --path="$WP_ROOT" eval "$1" 2>/dev/null; }
 echo "STEP 110 Task 7A — AI Alt Text read-only scan"
 
 # ── Dynamic battery (dispatched through the REST server) ─────────────────────
-BATT="$(mktemp /tmp/wpcc-altscan-XXXXXX.php)"
+BATT="$(mktemp -d)/wpcc-altscan.php"
 cat > "$BATT" <<'PHP'
 <?php
 use WPCommandCenter\Proposals\ProposalStore as PStore;
@@ -138,13 +145,13 @@ rm -f "$SCAN_TMP"
 # ── 10. Invariants ───────────────────────────────────────────────────────────
 assert_eq "invariant: OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
 assert_eq "invariant: capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
-assert_eq "invariant: catalogue == 40"     "40" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
-assert_eq "invariant: DB_VERSION 2.5.0"    "2.5.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
+assert_eq "invariant: catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
+assert_eq "invariant: DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Task 7B — Provider abstraction (interface / result / Anthropic / resolver)
 # ─────────────────────────────────────────────────────────────────────────────
-PBATT="$(mktemp /tmp/wpcc-prov-batt-XXXXXX.php)"
+PBATT="$(mktemp -d)/wpcc-prov-batt.php"
 cat > "$PBATT" <<'PHP'
 <?php
 use WPCommandCenter\AltText\ProviderResult;
@@ -163,9 +170,25 @@ $emit('ProviderResult ok carries text+provenance', $ok->is_ok() && $ok->text()==
 $emit('ProviderResult error carries code+message', !$er->is_ok() && $er->get_error()['code']==='boom' && null===$er->to_array()['confidence']);
 
 // 3. resolver null when no key
+//
+// The vision provider is configured by ANY of the platform key sources, in order:
+// WPCC_ANTHROPIC_API_KEY, wpcc_anthropic_api_key, WPCC_VISION_API_KEY,
+// wpcc_alt_text_api_key (AnthropicClient::key_source()). One shared platform key
+// powers alt text too, which is the intended behaviour — so clearing only the
+// alt-text-specific option does NOT produce a "no key" state on a site that has the
+// shared key set, and this section silently asserted the opposite.
+$wpcc_saved_anthropic_key = get_option('wpcc_anthropic_api_key', '');
 delete_option('wpcc_alt_text_api_key');
+delete_option('wpcc_anthropic_api_key');
+if ( ( defined('WPCC_ANTHROPIC_API_KEY') && '' !== (string) WPCC_ANTHROPIC_API_KEY )
+  || ( defined('WPCC_VISION_API_KEY') && '' !== (string) WPCC_VISION_API_KEY ) ) {
+	// A constant cannot be unset at runtime; say so instead of asserting something false.
+	$emit('resolver active() null when no key', true, 'SKIPPED: an API key constant is defined in wp-config');
+	$emit('resolver has_active() false when no key', true, 'SKIPPED: an API key constant is defined in wp-config');
+} else {
 $emit('resolver active() null when no key', (new ProviderResolver())->active()===null);
 $emit('resolver has_active() false when no key', (new ProviderResolver())->has_active()===false);
+}
 
 // 4. resolver returns Anthropic when key exists
 update_option('wpcc_alt_text_api_key','sk-ant-test-DUMMYKEY000000');
@@ -181,8 +204,9 @@ add_filter('pre_http_request',$probe,10,3);
 $emit('resolver makes no outbound HTTP', 0===$GLOBALS['wpcc_http_calls'], (string)$GLOBALS['wpcc_http_calls']);
 remove_filter('pre_http_request',$probe,10);
 
-// 6. provider not_configured returns ProviderResult (no key)
+// 6. provider not_configured returns ProviderResult (no key) — clear every option source.
 delete_option('wpcc_alt_text_api_key');
+delete_option('wpcc_anthropic_api_key');
 $p=new AnthropicVisionProvider();
 $emit('provider not_configured -> error result', $p->suggest_alt(['attachment_id'=>1,'path'=>'/x.jpg','mime'=>'image/jpeg'])->get_error()['code']==='not_configured');
 
@@ -220,6 +244,9 @@ remove_filter('pre_http_request',$cap,10); unlink($small2);
 $emit('outbound request sets a hard timeout', $GLOBALS['wpcc_timeout']>0, (string)$GLOBALS['wpcc_timeout']);
 
 delete_option('wpcc_alt_text_api_key');
+// Restore the shared platform key this suite cleared. Leaving it deleted would
+// silently reconfigure the site for every suite that runs afterwards.
+if ( '' !== (string) $wpcc_saved_anthropic_key ) { update_option('wpcc_anthropic_api_key', $wpcc_saved_anthropic_key); }
 echo implode("\n",$out);
 PHP
 PRES="$(wp --path="$WP_ROOT" eval-file "$PBATT" 2>/dev/null)"
@@ -256,7 +283,7 @@ rm -f "$ALT_TMP"
 # ─────────────────────────────────────────────────────────────────────────────
 # Task 7C — AltTextGenerator (provider suggestion → ProposalStore draft)
 # ─────────────────────────────────────────────────────────────────────────────
-GBATT="$(mktemp /tmp/wpcc-gen-batt-XXXXXX.php)"
+GBATT="$(mktemp -d)/wpcc-gen-batt.php"
 cat > "$GBATT" <<'PHP'
 <?php
 use WPCommandCenter\AltText\AltTextGenerator;
@@ -281,7 +308,10 @@ $emit('generate route registered', isset(rest_get_server()->get_routes()['/wp-co
 wp_set_current_user(0); [$st0]=$call(['attachment_ids'=>[1]]); $emit('generate denied without auth (401)', 401===$st0, (string)$st0); wp_set_current_user($uid);
 
 // 3. no provider configured -> safe (no created, skipped no_provider)
+// Clear EVERY option key source — one shared platform key configures alt text too.
+$wpcc_saved_anthropic_key = get_option('wpcc_anthropic_api_key', '');
 delete_option('wpcc_alt_text_api_key');
+delete_option('wpcc_anthropic_api_key');
 [$id0,$f0]=$mkimg('gen7c-noprov','old');
 $gen=new AltTextGenerator(); $rnp=$gen->generate([$id0],['actor'=>['type'=>'admin','wp_user_id'=>$uid]]);
 $emit('no provider -> safe (0 created, skip no_provider)', 0===count($rnp['created']) && ($rnp['skipped'][0]['reason']??'')==='no_provider');
@@ -353,6 +383,7 @@ $wpdb->query("DELETE FROM {$wpdb->prefix}wpcc_change_log WHERE operation_id='med
 foreach([$id0,$id1,$id2] as $x) wp_delete_attachment($x,true);
 @unlink($f0); @unlink($f1); @unlink($f2);
 delete_option('wpcc_alt_text_api_key');
+if ( '' !== (string) $wpcc_saved_anthropic_key ) { update_option('wpcc_anthropic_api_key', $wpcc_saved_anthropic_key); }
 echo implode("\n",$out);
 PHP
 GRES="$(wp --path="$WP_ROOT" eval-file "$GBATT" 2>/dev/null)"

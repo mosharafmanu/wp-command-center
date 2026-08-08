@@ -162,8 +162,8 @@ final class RollbackDelta {
 
 		$code = 'conflict' === $status ? 'wpcc_rollback_conflict' : 'wpcc_rollback_partial';
 		$msg  = 'conflict' === $status
-			? __( 'Rollback skipped: every targeted field changed since this update was applied. No fields were restored.', 'wp-command-center' )
-			: __( 'Partial rollback: some fields were restored; others were skipped because they changed since this update was applied (drift).', 'wp-command-center' );
+			? __( 'Rollback skipped: every targeted field changed since this update was applied. No fields were restored.', 'ai-command-center' )
+			: __( 'Partial rollback: some fields were restored; others were skipped because they changed since this update was applied (drift).', 'ai-command-center' );
 
 		return array_merge( $base, [
 			'error'           => true,

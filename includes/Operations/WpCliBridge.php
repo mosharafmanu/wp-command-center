@@ -90,12 +90,12 @@ final class WpCliBridge {
 		if ( ! $this->is_available() ) {
 			$disabled = array_filter( array_map( 'trim', explode( ',', (string) ini_get( 'disable_functions' ) ) ) );
 			if ( ! function_exists( 'proc_open' ) || in_array( 'proc_open', $disabled, true ) ) {
-				return __( 'proc_open is disabled or unavailable.', 'wp-command-center' );
+				return __( 'proc_open is disabled or unavailable.', 'ai-command-center' );
 			}
 			if ( ! function_exists( 'shell_exec' ) || in_array( 'shell_exec', $disabled, true ) ) {
-				return __( 'shell_exec is disabled or unavailable.', 'wp-command-center' );
+				return __( 'shell_exec is disabled or unavailable.', 'ai-command-center' );
 			}
-			return __( 'WP-CLI binary not found or not executable.', 'wp-command-center' );
+			return __( 'WP-CLI binary not found or not executable.', 'ai-command-center' );
 		}
 		return '';
 	}
@@ -127,11 +127,11 @@ final class WpCliBridge {
 
 		// Structured mode: command_id + args.
 		if ( '' === $command_id ) {
-			return new \WP_Error( 'wpcc_missing_wpcli_command', __( 'command_id is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_wpcli_command', __( 'command_id is required.', 'ai-command-center' ) );
 		}
 
 		if ( ! is_array( $args ) ) {
-			return new \WP_Error( 'wpcc_invalid_wpcli_args', __( 'args must be an object.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_wpcli_args', __( 'args must be an object.', 'ai-command-center' ) );
 		}
 
 		return $this->run_structured( $command_id, $args, $context );
@@ -151,7 +151,7 @@ final class WpCliBridge {
 		];
 
 		if ( ! isset( $map[ $command_id ] ) ) {
-			return new \WP_Error( 'wpcc_invalid_wpcli_command', __( 'Invalid or unsupported WP-CLI command.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_wpcli_command', __( 'Invalid or unsupported WP-CLI command.', 'ai-command-center' ) );
 		}
 
 		$shell_cmd = $map[ $command_id ];
@@ -167,7 +167,7 @@ final class WpCliBridge {
 		if ( $this->registry->is_blocked( $command_id ) ) {
 			return new \WP_Error(
 				'wpcc_wpcli_blocked',
-				sprintf( __( 'WP-CLI command blocked for security: %s', 'wp-command-center' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'ai-command-center' ), esc_html( $command_id ) )
 			);
 		}
 
@@ -176,12 +176,12 @@ final class WpCliBridge {
 		if ( null === $cmd ) {
 			return new \WP_Error(
 				'wpcc_invalid_wpcli_command',
-				sprintf( __( 'Unknown or unsupported WP-CLI command: %s', 'wp-command-center' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'Unknown or unsupported WP-CLI command: %s', 'ai-command-center' ), esc_html( $command_id ) )
 			);
 		}
 
 		if ( ! $cmd['available'] ) {
-			return new \WP_Error( 'wpcc_wpcli_unavailable_cmd', __( 'This WP-CLI command is not available in the current environment.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_wpcli_unavailable_cmd', __( 'This WP-CLI command is not available in the current environment.', 'ai-command-center' ) );
 		}
 
 		// Validate args.
@@ -194,7 +194,7 @@ final class WpCliBridge {
 		if ( $this->matches_blocked( $cmd['command_parts'] ) ) {
 			return new \WP_Error(
 				'wpcc_wpcli_blocked',
-				sprintf( __( 'WP-CLI command blocked for security: %s', 'wp-command-center' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'ai-command-center' ), esc_html( $command_id ) )
 			);
 		}
 
@@ -226,6 +226,7 @@ final class WpCliBridge {
 	private function execute( string $shell_cmd, int $timeout, int $output_max, string $command_id ): array|\WP_Error {
 		$shell_cmd = $this->shell_path_prefix() . $shell_cmd . ' --path=' . escapeshellarg( ABSPATH ) . ' --allow-root';
 
+		// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found -- disclosed in the readme and in the reviewer notes. Degrades to unavailable where a host forbids process execution; removing it would make patching less safe.
 		$process = @proc_open(
 			$shell_cmd,
 			[
@@ -238,7 +239,7 @@ final class WpCliBridge {
 		if ( ! is_resource( $process ) ) {
 			return new \WP_Error(
 				'exec_disabled',
-				__( 'Failed to spawn WP-CLI process (proc_open returned false). The server likely disabled proc_open after the initial availability check, or a security policy is blocking process creation.', 'wp-command-center' ),
+				__( 'Failed to spawn WP-CLI process (proc_open returned false). The server likely disabled proc_open after the initial availability check, or a security policy is blocking process creation.', 'ai-command-center' ),
 				[ 'diagnostic' => 'exec_disabled' ]
 			);
 		}
@@ -254,10 +255,12 @@ final class WpCliBridge {
 		while ( $status['running'] ) {
 			if ( time() - $start > $timeout ) {
 				@proc_terminate( $process );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 				@fclose( $pipes[1] );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 				@fclose( $pipes[2] );
 				@proc_close( $process );
-				return new \WP_Error( 'wpcc_wpcli_timeout', __( 'WP-CLI command timed out.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_wpcli_timeout', __( 'WP-CLI command timed out.', 'ai-command-center' ) );
 			}
 			$chunk = @stream_get_contents( $pipes[1] );
 			if ( is_string( $chunk ) ) {
@@ -280,7 +283,9 @@ final class WpCliBridge {
 			$stderr .= $chunk_err;
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 		@fclose( $pipes[1] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 		@fclose( $pipes[2] );
 		@proc_close( $process );
 
@@ -298,9 +303,9 @@ final class WpCliBridge {
 				$code,
 				sprintf(
 					/* translators: 1: exit code, 2: stderr output or fallback */
-					__( 'WP-CLI command failed (exit %1$d): %2$s', 'wp-command-center' ),
+					__( 'WP-CLI command failed (exit %1$d): %2$s', 'ai-command-center' ),
 					$status['exitcode'],
-					$stderr_clean ?: __( 'No error output captured.', 'wp-command-center' )
+					$stderr_clean ?: __( 'No error output captured.', 'ai-command-center' )
 				),
 				[
 					'diagnostic' => $code,
@@ -363,7 +368,7 @@ final class WpCliBridge {
 		if ( ! $proc_open_ok && ! $shell_exec_ok ) {
 			return new \WP_Error(
 				'exec_disabled',
-				__( 'WP-CLI is unavailable: proc_open and shell_exec are both disabled on this server. This is common on managed and shared hosting. Use system_info for read-only site information instead.', 'wp-command-center' ),
+				__( 'WP-CLI is unavailable: proc_open and shell_exec are both disabled on this server. This is common on managed and shared hosting. Use system_info for read-only site information instead.', 'ai-command-center' ),
 				[
 					'diagnostic'               => 'exec_disabled',
 					'proc_open'                => false,
@@ -377,7 +382,7 @@ final class WpCliBridge {
 		if ( ! $proc_open_ok ) {
 			return new \WP_Error(
 				'proc_open_disabled',
-				__( 'WP-CLI is unavailable: proc_open is disabled. WP-CLI process spawning requires proc_open. Contact your host, or use system_info for read-only environment information.', 'wp-command-center' ),
+				__( 'WP-CLI is unavailable: proc_open is disabled. WP-CLI process spawning requires proc_open. Contact your host, or use system_info for read-only environment information.', 'ai-command-center' ),
 				[
 					'diagnostic' => 'proc_open_disabled',
 					'proc_open'  => false,
@@ -393,7 +398,7 @@ final class WpCliBridge {
 			'wp_cli_not_found',
 			sprintf(
 				/* translators: %s: colon-separated list of paths searched */
-				__( 'WP-CLI binary not found. Searched: %s. Install WP-CLI globally or ensure the binary is in one of these directories.', 'wp-command-center' ),
+				__( 'WP-CLI binary not found. Searched: %s. Install WP-CLI globally or ensure the binary is in one of these directories.', 'ai-command-center' ),
 				implode( ':', $searched )
 			),
 			[

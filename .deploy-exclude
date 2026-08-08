@@ -1,11 +1,29 @@
-# Files excluded from production deployment via rsync
+# Files excluded from production deployment via rsync.
+#
+# NOT the WordPress.org packager. That is scripts/build-release.sh, which copies
+# an allowlist; .distignore mirrors it for `wp dist-archive`. This file is a
+# blocklist for pushing a working copy to a staging site, so it has to name every
+# internal directory explicitly — anything not listed here is deployed.
+#
 # Dev tooling
 .git/
 .github/
+.claude/
 .ai/
 tests/
 artifacts/
+docs/
+scripts/
+examples/
+build/
+sdk/php/
+node_modules/
 wpcc-env*.sh
+composer.json
+composer.lock
+openapi.json
+package.json
+package-lock.json
 
 # Dev-only docs (STEP plans, audit reports, debug logs)
 STEP-*.md

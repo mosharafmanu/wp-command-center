@@ -34,7 +34,7 @@ final class Dialect {
 	public static function all(): array {
 		return [
 			self::ANTHROPIC => [
-				'label'             => __( 'Anthropic Messages', 'wp-command-center' ),
+				'label'             => __( 'Anthropic Messages', 'ai-command-center' ),
 				'auth'              => 'x-api-key',
 				'endpoint_editable' => false, // fixed SDK endpoint.
 				'default_endpoint'  => 'https://api.anthropic.com',
@@ -42,7 +42,7 @@ final class Dialect {
 				'runtime_supported' => true,  // the ONLY runtime-wired dialect today.
 			],
 			self::OPENAI => [
-				'label'             => __( 'OpenAI-compatible', 'wp-command-center' ),
+				'label'             => __( 'OpenAI-compatible', 'ai-command-center' ),
 				'auth'              => 'bearer',
 				'endpoint_editable' => true,  // base_url — enables OpenRouter/Groq/Ollama/LM Studio/self-hosted.
 				'default_endpoint'  => 'https://api.openai.com/v1',
@@ -50,7 +50,7 @@ final class Dialect {
 				'runtime_supported' => true,  // Phase D: OpenAI-compatible generation transport.
 			],
 			self::GEMINI => [
-				'label'             => __( 'Google Gemini', 'wp-command-center' ),
+				'label'             => __( 'Google Gemini', 'ai-command-center' ),
 				'auth'              => 'query-key',
 				'endpoint_editable' => false,
 				'default_endpoint'  => 'https://generativelanguage.googleapis.com/v1beta',

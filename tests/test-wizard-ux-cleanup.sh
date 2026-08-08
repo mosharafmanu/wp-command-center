@@ -44,14 +44,29 @@ for n in wpcc_provider wpcc_endpoint wpcc_key wpcc_model wpcc_model_custom wpcc_
 done
 
 echo "== 6. GENERATION/security/runtime byte-identical to main (no runtime change) =="
-for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php includes/Ai/Platform/CredentialStore.php; do
-  if git -C "$ROOT" diff --quiet main -- "$f" 2>/dev/null; then pass "unchanged vs main: $(basename "$f")"; else fail "CHANGED vs main: $(basename "$f")"; fi
+# CredentialStore.php is deliberately NOT pinned here any more — same reason as in
+# tests/test-connection-discovery-routing.sh. The V1 release work changes it on
+# purpose so the bootstrap "Anthropic (existing)" connection stops reporting
+# "Needs a key" for a key the runtime was already using. A byte-comparison cannot
+# say "unchanged except for the change we meant", so it would only assert
+# something intentionally false; tests/test-connection-state-truthfulness.sh
+# covers the behaviour directly. The two files below really are untouched.
+for f in includes/Ai/AnthropicClient.php includes/Ai/Platform/Dialect.php; do
+  # Ignore the text domain: a slug rename touches every file at once and says nothing
+  # about whether this layer's behaviour changed, which is what this guards.
+  if git -C "$ROOT" diff main -- "$f" 2>/dev/null \
+       | grep "^[+-]" | grep -v "^[+-][+-]" \
+       | grep -vq "['\"]\(wp\|ai\)-command-center['\"]"; then
+    fail "CHANGED vs main: $(basename "$f")"
+  else
+    pass "unchanged vs main (text domain aside): $(basename "$f")"
+  fi
 done
 # ProviderCatalog gains metadata() but ADDITIVELY — no existing line removed/changed.
 if [ -z "$(git -C "$ROOT" diff main -- includes/Ai/Platform/ProviderCatalog.php | rg '^-' | rg -v '^---')" ]; then pass "ProviderCatalog change is additive-only (no execution change)"; else fail "ProviderCatalog has non-additive edits"; fi
 
 echo "== 7. Functional: provider-meta correctness (the data the wizard renders) =="
-PHPF="$(mktemp -t wizux.XXXXXX.php)"
+PHPF="$(mktemp -d)/wizux.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Ai\Platform\ProviderCatalog as PC;

@@ -9,7 +9,18 @@ assert_true(){ if [ "$2" = true ]; then pass "$1"; else fail "$1"; fi; }
 api(){ local m="$1" p="$2" b="${3:-}"; if [ -n "$b" ]; then curl -sS -X "$m" -H "Authorization: Bearer $WPCC_TOKEN" -H 'Content-Type: application/json' -d "$b" "$WPCC_BASE$p"; else curl -sS -X "$m" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE$p"; fi; }
 
 echo "== 1. Read-only Verification =="
-BEFORE=$(wp eval 'global $wpdb; echo wp_json_encode(["posts"=>(int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts}"),"options"=>(int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->options}")]);' 2>/dev/null)
+# Count NON-TRANSIENT options only.
+#
+# Health verification makes real HTTP requests to the front end, the admin and the REST
+# API. Those requests can cause WordPress itself to write or expire a transient — which
+# is not this plugin modifying anything, but did make a total option count drift and this
+# assertion fail intermittently in a full run. Transients are volatile by definition;
+# content and settings are what "read-only" actually means here.
+WPCC_STATE_SNAPSHOT='global $wpdb; echo wp_json_encode([
+  "posts"   => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->posts}" ),
+  "options" => (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name NOT LIKE \"%_transient_%\"" ),
+]);'
+BEFORE=$(wp eval "$WPCC_STATE_SNAPSHOT" 2>/dev/null)
 VERIFY=$(api POST /health/verify '{}')
 VID=$(echo "$VERIFY" | jq -r '.verification_id')
 assert_true "verification returns UUID" "$(echo "$VID" | grep -Eq '^[a-f0-9-]{36}$' && echo true || echo false)"
@@ -17,8 +28,8 @@ assert_true "verification status valid" "$(echo "$VERIFY" | jq -r '.status | IN(
 assert_eq "seven checks returned" "7" "$(echo "$VERIFY" | jq -r '.checks|length')"
 for check in frontend_health admin_health rest_api_health wpcc_api_health woocommerce_health plugin_integrity theme_integrity; do assert_true "contains $check" "$(echo "$VERIFY" | jq -r --arg id "$check" 'any(.checks[]; .id==$id)')"; done
 assert_eq "summary total matches checks" "7" "$(echo "$VERIFY" | jq -r '.summary.total')"
-AFTER=$(wp eval 'global $wpdb; echo wp_json_encode(["posts"=>(int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->posts}"),"options"=>(int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->options}")]);' 2>/dev/null)
-assert_eq "verification does not modify posts/options" "$BEFORE" "$AFTER"
+AFTER=$(wp eval "$WPCC_STATE_SNAPSHOT" 2>/dev/null)
+assert_eq "verification does not modify posts or non-transient options" "$BEFORE" "$AFTER"
 
 echo "== 2. Result History & Security =="
 RESULTS=$(api GET '/health/results?limit=10')

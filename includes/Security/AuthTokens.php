@@ -29,8 +29,8 @@ final class AuthTokens {
 
 	public static function scope_label( string $scope ): string {
 		$labels = [
-			self::SCOPE_READ_ONLY => __( 'Read-only', 'wp-command-center' ),
-			self::SCOPE_FULL      => __( 'Full access', 'wp-command-center' ),
+			self::SCOPE_READ_ONLY => __( 'Read-only', 'ai-command-center' ),
+			self::SCOPE_FULL      => __( 'Full access', 'ai-command-center' ),
 		];
 
 		return $labels[ $scope ] ?? $scope;
@@ -40,16 +40,111 @@ final class AuthTokens {
 	 * Render a token's effective status (active / expired / revoked) as an
 	 * HTML badge (escaped).
 	 */
+	/**
+	 * Resolve the raw bearer token from the request, across servers that do not
+	 * hand PHP the Authorization header the usual way.
+	 *
+	 * Discovered on a clean WordPress install: on Apache (apache2handler, and
+	 * commonly CGI/FastCGI) `$_SERVER['HTTP_AUTHORIZATION']` is never populated,
+	 * so `WP_REST_Request::get_header('authorization')` returns nothing and every
+	 * assistant request failed with "Missing API token" — even with a valid,
+	 * active token. The header IS present; only that one lookup cannot see it.
+	 *
+	 * This checks the same sources WordPress core and the wider ecosystem use, in
+	 * order of reliability. It changes NO authorization policy: whatever is found
+	 * still goes through validate() exactly as before. It only stops a correct
+	 * token from being thrown away before it is ever checked.
+	 *
+	 * @return string Raw token, or '' when the request carries no bearer header.
+	 */
+	public static function bearer_from_request( \WP_REST_Request $request ): string {
+		$candidates = [];
+
+		$header = $request->get_header( 'authorization' );
+		if ( is_string( $header ) && '' !== $header ) {
+			$candidates[] = $header;
+		}
+		// Apache rewrites the header into REDIRECT_* when it passes through a rule.
+		foreach ( [ 'HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION' ] as $key ) {
+			if ( ! empty( $_SERVER[ $key ] ) ) {
+				$candidates[] = (string) $_SERVER[ $key ];
+			}
+		}
+		// Last resort: ask the server module directly (case-insensitive key match).
+		foreach ( [ 'getallheaders', 'apache_request_headers' ] as $fn ) {
+			if ( ! function_exists( $fn ) ) {
+				continue;
+			}
+			$headers = call_user_func( $fn );
+			if ( ! is_array( $headers ) ) {
+				continue;
+			}
+			foreach ( $headers as $name => $value ) {
+				if ( 0 === strcasecmp( (string) $name, 'authorization' ) && '' !== (string) $value ) {
+					$candidates[] = (string) $value;
+				}
+			}
+		}
+
+		foreach ( $candidates as $candidate ) {
+			if ( preg_match( '/^Bearer\s+(.+)$/i', trim( $candidate ), $m ) ) {
+				return trim( $m[1] );
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Canonical answer to "would this token work right now?".
+	 *
+	 * The stored `status` is not the whole rule: it stays 'active' on a token
+	 * whose `expires_at` has passed, because expiry is computed at use time
+	 * rather than written back. Anything that counts, lists or offers tokens
+	 * has to apply both halves or it disagrees with validate() — which is how
+	 * the Set up screen came to announce "4 access tokens ready" on a site with
+	 * one usable token and three revoked ones. This is the single definition for
+	 * anything that COUNTS or OFFERS tokens: usable_only() wraps it, and
+	 * AdoptionStatus, ConnectionStatus and the Integrations screen all go
+	 * through that.
+	 *
+	 * status_badge() deliberately does not call this. A badge has to say WHY a
+	 * token is unusable — "Revoked" and "Expired" are different facts to the
+	 * person reading the table — so it keeps the three-way form of the same
+	 * rule. Both agree on the boundary: expired means `expires_at < time()`.
+	 *
+	 * @param array<string, mixed> $token A token record from list().
+	 */
+	public static function is_usable( array $token ): bool {
+		if ( self::STATUS_ACTIVE !== ( $token['status'] ?? '' ) ) {
+			return false;
+		}
+
+		$expires = $token['expires_at'] ?? null;
+
+		return null === $expires || (int) $expires >= time();
+	}
+
+	/**
+	 * Filter a list of token records down to the ones that would work right now.
+	 *
+	 * @param array<int, array<string, mixed>> $tokens
+	 * @return array<int, array<string, mixed>> Re-indexed.
+	 */
+	public static function usable_only( array $tokens ): array {
+		return array_values( array_filter( $tokens, [ self::class, 'is_usable' ] ) );
+	}
+
 	public static function status_badge( array $token ): string {
 		if ( self::STATUS_REVOKED === $token['status'] ) {
-			return sprintf( '<span class="wpcc-badge wpcc-badge--neutral">%s</span>', esc_html__( 'Revoked', 'wp-command-center' ) );
+			return sprintf( '<span class="wpcc-badge wpcc-badge--neutral">%s</span>', esc_html__( 'Revoked', 'ai-command-center' ) );
 		}
 
 		if ( null !== $token['expires_at'] && $token['expires_at'] < time() ) {
-			return sprintf( '<span class="wpcc-badge wpcc-badge--critical">%s</span>', esc_html__( 'Expired', 'wp-command-center' ) );
+			return sprintf( '<span class="wpcc-badge wpcc-badge--critical">%s</span>', esc_html__( 'Expired', 'ai-command-center' ) );
 		}
 
-		return sprintf( '<span class="wpcc-badge wpcc-badge--good">%s</span>', esc_html__( 'Active', 'wp-command-center' ) );
+		return sprintf( '<span class="wpcc-badge wpcc-badge--good">%s</span>', esc_html__( 'Active', 'ai-command-center' ) );
 	}
 
 	/**
@@ -62,11 +157,11 @@ final class AuthTokens {
 		$label = sanitize_text_field( $label );
 
 		if ( '' === $label ) {
-			return new \WP_Error( 'wpcc_invalid_label', __( 'Please enter a label for this token.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_label', __( 'Please enter a label for this token.', 'ai-command-center' ) );
 		}
 
 		if ( ! in_array( $scope, self::VALID_SCOPES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_scope', __( 'Invalid token scope.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_scope', __( 'Invalid token scope.', 'ai-command-center' ) );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -146,7 +241,7 @@ final class AuthTokens {
 		$filtered = array_values( array_filter( $manifest, static fn( array $r ): bool => $r['id'] !== $id ) );
 
 		if ( count( $filtered ) === count( $manifest ) ) {
-			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'ai-command-center' ) );
 		}
 
 		$this->write_manifest( $dir, $filtered );
@@ -167,7 +262,7 @@ final class AuthTokens {
 		$raw_token = trim( $raw_token );
 
 		if ( '' === $raw_token ) {
-			return new \WP_Error( 'wpcc_missing_token', __( 'Missing API token.', 'wp-command-center' ), [ 'status' => 401 ] );
+			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'ai-command-center' ), [ 'status' => 401 ] );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -185,11 +280,11 @@ final class AuthTokens {
 			}
 
 			if ( self::STATUS_ACTIVE !== $record['status'] ) {
-				return new \WP_Error( 'wpcc_token_revoked', __( 'This API token has been revoked.', 'wp-command-center' ), [ 'status' => 401 ] );
+				return new \WP_Error( 'wpcc_token_revoked', __( 'This access token was revoked, so it no longer works. Create a new one in WP Command Center → Settings → Connections and update your assistant configuration.', 'ai-command-center' ), [ 'status' => 401 ] );
 			}
 
 			if ( null !== $record['expires_at'] && $record['expires_at'] < time() ) {
-				return new \WP_Error( 'wpcc_token_expired', __( 'This API token has expired.', 'wp-command-center' ), [ 'status' => 401 ] );
+				return new \WP_Error( 'wpcc_token_expired', __( 'This API token has expired.', 'ai-command-center' ), [ 'status' => 401 ] );
 			}
 
 			$record['last_used_at'] = time();
@@ -199,7 +294,7 @@ final class AuthTokens {
 		}
 		unset( $record );
 
-		return new \WP_Error( 'wpcc_invalid_token', __( 'Invalid API token.', 'wp-command-center' ), [ 'status' => 401 ] );
+		return new \WP_Error( 'wpcc_invalid_token', __( 'This access token was not recognised by this site. Check it was copied in full and belongs to this site, or create a new one in WP Command Center → Settings → Connections.', 'ai-command-center' ), [ 'status' => 401 ] );
 	}
 
 	/**
@@ -225,7 +320,7 @@ final class AuthTokens {
 		unset( $record );
 
 		if ( ! $found ) {
-			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_token_not_found', __( 'Token not found.', 'ai-command-center' ) );
 		}
 
 		$this->write_manifest( $dir, $manifest );
@@ -251,7 +346,7 @@ final class AuthTokens {
 		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
 
 		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the token storage directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the token storage directory.', 'ai-command-center' ) );
 		}
 
 		$this->protect_directory( $dir );

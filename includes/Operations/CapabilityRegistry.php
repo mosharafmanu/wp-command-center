@@ -118,7 +118,7 @@ final class CapabilityRegistry {
 	 * regardless of CapabilityRegistry::OPERATION_MAP mapping). Every other
 	 * operation requires a `full`-scope token, mirroring RestApi::require_write().
 	 */
-	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search', 'change_history' ];
+	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search', 'change_history', 'term_manage' ];
 
 	/**
 	 * Step 79 — Capability profiles. Single source of truth for the
@@ -198,10 +198,10 @@ final class CapabilityRegistry {
 
 	public function assign( string $subject, string $subject_id, string $capability ): ?\WP_Error {
 		if ( ! in_array( $capability, self::ALL_CAPABILITIES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'ai-command-center' ) );
 		}
 		if ( self::CAP_SYSTEM_ADMIN === $capability ) {
-			return new \WP_Error( 'wpcc_cannot_assign_admin', __( 'system.admin can only be assigned via direct configuration.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_cannot_assign_admin', __( 'system.admin can only be assigned via direct configuration.', 'ai-command-center' ) );
 		}
 		$all = $this->get_assignments();
 		$key = $subject . ':' . $subject_id;
@@ -217,12 +217,12 @@ final class CapabilityRegistry {
 
 	public function remove( string $subject, string $subject_id, string $capability ): ?\WP_Error {
 		if ( ! in_array( $capability, self::ALL_CAPABILITIES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'ai-command-center' ) );
 		}
 		$all = $this->get_assignments();
 		$key = $subject . ':' . $subject_id;
 		if ( ! isset( $all[ $key ] ) ) {
-			return new \WP_Error( 'wpcc_capability_not_assigned', __( 'No capabilities assigned to this subject.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_capability_not_assigned', __( 'No capabilities assigned to this subject.', 'ai-command-center' ) );
 		}
 		$all[ $key ] = array_values( array_filter( $all[ $key ], static fn( $c ) => $c !== $capability ) );
 		if ( empty( $all[ $key ] ) ) {

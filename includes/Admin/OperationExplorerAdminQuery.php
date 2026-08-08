@@ -270,7 +270,9 @@ final class OperationExplorerAdminQuery {
 			if ( ! empty( $op['available'] ) ) {
 				$available++;
 			}
-			if ( ! empty( $op['requires_approval'] ) ) {
+			// Mode-aware, so the "Need approval" tile agrees with the rows beneath it
+			// and with the security-mode tile beside it. See summarise_operation().
+			if ( SecurityModeManager::requires_approval( $risk ) ) {
 				$requires_approval++;
 			}
 			if ( null === $this->required_capability( $id ) ) {
@@ -305,11 +307,37 @@ final class OperationExplorerAdminQuery {
 		$description = (string) ( $op['description'] ?? '' );
 		$risks       = is_array( $op['action_risks'] ?? null ) ? $op['action_risks'] : [];
 
+		$risk = (string) ( $op['risk_level'] ?? SecurityModeManager::RISK_HIGH );
+
 		return [
 			'id'                  => $id,
 			'title'               => (string) ( $op['title'] ?? $id ),
-			'risk_level'          => (string) ( $op['risk_level'] ?? SecurityModeManager::RISK_HIGH ),
-			'requires_approval'   => (bool) ( $op['requires_approval'] ?? false ),
+			'risk_level'          => $risk,
+			/*
+			 * Answered for the CURRENT security mode, which is what this screen's own
+			 * opening sentence promises — "whether it needs approval in the current
+			 * security mode" — and what its detail panel has always said.
+			 *
+			 * The row and the header count used to report the catalogue's DECLARED
+			 * flag instead: "this operation is the kind of thing that can need
+			 * approval". On a site in Development mode the page therefore showed
+			 * "Development — no approval" beside "31 Need approval", and every row
+			 * read "Required" for operations that in fact run instantly. Two true
+			 * statements, one screen, opposite conclusions — and the one a customer
+			 * acts on is the wrong one.
+			 *
+			 * The declared flag is not lost: the detail panel still shows it, labelled
+			 * as a declaration, next to the mode-aware answer.
+			 *
+			 * Mode and risk are the ONLY inputs, because they are the only inputs the
+			 * gate itself has: OperationExecutor asks
+			 * SecurityModeManager::requires_approval( effective_risk ) and never reads
+			 * the declared flag. Anding the two here would have under-reported Strict
+			 * approval, which gates low-risk operations that declare no approval need
+			 * — exactly the operations Strict exists to catch.
+			 */
+			'requires_approval'   => SecurityModeManager::requires_approval( $risk ),
+			'declares_approval'   => (bool) ( $op['requires_approval'] ?? false ),
 			'available'           => (bool) ( $op['available'] ?? false ),
 			'required_capability' => $this->required_capability( $id ),
 			'read_only_scope'     => $this->is_read_only_scope( $id ),

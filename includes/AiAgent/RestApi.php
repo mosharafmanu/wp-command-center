@@ -10,6 +10,8 @@
 
 namespace WPCommandCenter\AiAgent;
 
+defined( 'ABSPATH' ) || exit;
+
 use WPCommandCenter\Core\Schema;
 use WPCommandCenter\Diagnostics\PerformanceDiagnostics;
 use WPCommandCenter\Diagnostics\SecurityDiagnostics;
@@ -72,7 +74,6 @@ use WPCommandCenter\Operations\WidgetsRuntimeManager;
 use WPCommandCenter\Operations\CPTRegistry;
 use WPCommandCenter\Operations\CPTRuntimeManager;
 
-defined( 'ABSPATH' ) || exit;
 
 final class RestApi {
 
@@ -1320,17 +1321,18 @@ final class RestApi {
 	}
 
 	private function check_token( \WP_REST_Request $request, string $required_scope ): bool|\WP_Error {
-		$header = $request->get_header( 'authorization' );
+		// Resolve across servers that never expose Authorization to WordPress.
+		$raw = AuthTokens::bearer_from_request( $request );
 
-		if ( ! $header || ! preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
+		if ( '' === $raw ) {
 			return new \WP_Error(
 				'wpcc_missing_token',
-				__( 'Missing API token. Provide an "Authorization: Bearer <token>" header.', 'wp-command-center' ),
+				__( 'Missing API token. Provide an "Authorization: Bearer <token>" header.', 'ai-command-center' ),
 				[ 'status' => 401 ]
 			);
 		}
 
-		$record = $this->tokens->validate( $matches[1] );
+		$record = $this->tokens->validate( $raw );
 
 		if ( is_wp_error( $record ) ) {
 			return $record;
@@ -1344,7 +1346,7 @@ final class RestApi {
 		if ( AuthTokens::SCOPE_FULL === $required_scope && AuthTokens::SCOPE_FULL !== $record['scope'] ) {
 			return new \WP_Error(
 				'wpcc_insufficient_scope',
-				__( 'This API token is read-only and cannot perform this action.', 'wp-command-center' ),
+				__( 'This API token is read-only and cannot perform this action.', 'ai-command-center' ),
 				[ 'status' => 403 ]
 			);
 		}
@@ -1357,13 +1359,13 @@ final class RestApi {
 	 * stored record (id, label, scope, ...), or null if missing/invalid.
 	 */
 	private function validated_token( \WP_REST_Request $request ): ?array {
-		$header = $request->get_header( 'authorization' );
+		$raw = AuthTokens::bearer_from_request( $request );
 
-		if ( ! $header || ! preg_match( '/^Bearer\s+(.+)$/i', $header, $matches ) ) {
+		if ( '' === $raw ) {
 			return null;
 		}
 
-		$record = $this->tokens->validate( $matches[1] );
+		$record = $this->tokens->validate( $raw );
 
 		return is_wp_error( $record ) ? null : $record;
 	}
@@ -1414,7 +1416,10 @@ final class RestApi {
 			$status = $default;
 		}
 
-		$error->add_data( [ 'status' => $status ] );
+		// MERGE, never replace. WP_Error::add_data() overwrites the data for a code, so
+		// attaching the status used to discard whatever the error already carried —
+		// silently throwing away structured detail on its way out to the caller.
+		$error->add_data( array_merge( is_array( $data ) ? $data : [], [ 'status' => $status ] ) );
 
 		return $error;
 	}
@@ -1883,13 +1888,15 @@ final class RestApi {
 			$session = $this->find_agent_session( $session_id );
 
 			if ( null === $session ) {
-				return $this->with_status( new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'wp-command-center' ) ) );
+				return $this->with_status( new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'ai-command-center' ) ) );
 			}
 
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name is $wpdb->prefix . 'wpcc_*' from a private accessor; the value is bound with %s. SQL identifiers cannot be placeholders.
 			$task_rows = $wpdb->get_results(
 				$wpdb->prepare( 'SELECT * FROM ' . $this->agent_tasks_table() . ' WHERE session_id = %s ORDER BY id DESC', $session_id ),
 				ARRAY_A
 			);
+			// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 			$response['session']         = $session;
 			$response['session_tasks']   = array_map( [ $this, 'normalize_agent_task' ], $task_rows ?: [] );
@@ -2046,13 +2053,13 @@ final class RestApi {
 		];
 
 		if ( $filters['type'] && ! in_array( $filters['type'], RecommendationEngine::TYPES, true ) ) {
-			return $this->with_status( new \WP_Error( 'wpcc_invalid_type', __( 'Invalid recommendation type.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_invalid_type', __( 'Invalid recommendation type.', 'ai-command-center' ) ) );
 		}
 		if ( $filters['severity'] && ! in_array( $filters['severity'], RecommendationEngine::SEVERITIES, true ) ) {
-			return $this->with_status( new \WP_Error( 'wpcc_invalid_recommendation_severity', __( 'Invalid recommendation severity.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_invalid_recommendation_severity', __( 'Invalid recommendation severity.', 'ai-command-center' ) ) );
 		}
 		if ( $filters['status'] && ! in_array( $filters['status'], RecommendationEngine::STATUSES, true ) ) {
-			return $this->with_status( new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'Invalid recommendation status.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_invalid_recommendation_status', __( 'Invalid recommendation status.', 'ai-command-center' ) ) );
 		}
 
 		$data = ( new RecommendationEngine() )->list( array_filter( $filters, static fn ( $value ): bool => null !== $value && '' !== $value ) );
@@ -2062,7 +2069,7 @@ final class RestApi {
 	public function get_recommendation( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		$record = ( new RecommendationEngine() )->get( (string) $request->get_param( 'id' ) );
 		if ( ! $record ) {
-			return $this->with_status( new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_recommendation_not_found', __( 'Recommendation not found.', 'ai-command-center' ) ) );
 		}
 
 		return new \WP_REST_Response( $this->redact_response( $record, 'recommendations/detail', $request ) );
@@ -2093,7 +2100,7 @@ final class RestApi {
 		} elseif ( in_array( $action, [ 'dismiss', 'resolve' ], true ) ) {
 			$result = $engine->transition( $id, 'dismiss' === $action ? 'dismissed' : 'resolved', $this->token_actor( $request ) );
 		} else {
-			$result = new \WP_Error( 'wpcc_invalid_action', __( 'Invalid recommendation action.', 'wp-command-center' ) );
+			$result = new \WP_Error( 'wpcc_invalid_action', __( 'Invalid recommendation action.', 'ai-command-center' ) );
 		}
 
 		if ( is_wp_error( $result ) ) {
@@ -2154,7 +2161,9 @@ final class RestApi {
 			// No filter: return last N sessions
 			$limit    = isset( $params['limit'] ) ? max( 1, (int) $params['limit'] ) : 5;
 			$offset   = isset( $params['offset'] ) ? max( 0, (int) $params['offset'] ) : 0;
+			// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; LIMIT/OFFSET bound with %d after integer casts.
 			$rows     = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . $this->agent_sessions_table() . ' ORDER BY id DESC LIMIT %d OFFSET %d', $limit, $offset ), ARRAY_A );
+			// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			$sessions = array_map( [ $this, 'normalize_agent_session' ], $rows ?: [] );
 		}
 
@@ -2224,8 +2233,14 @@ final class RestApi {
 		$operation = ( new OperationRegistry() )->get_operation( $id );
 
 		if ( null === $operation ) {
-			return $this->with_status( new \WP_Error( 'wpcc_operation_not_found', __( 'Operation not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_operation_not_found', __( 'Operation not found.', 'ai-command-center' ) ) );
 		}
+
+		// V1 Phase 6 — enough detail to build a correct first request: per-action risk
+		// and read/write kind, approval behaviour per protection mode, accepted
+		// parameter aliases, the rollback route, and whether this host and this site's
+		// plugins actually satisfy the operation's requirements.
+		$operation = \WPCommandCenter\Operations\OperationDescriptor::enrich( $operation );
 
 		$response = $this->redact_response( $operation, 'operations/detail', $request );
 
@@ -2255,7 +2270,7 @@ final class RestApi {
 		$row     = $manager->get_request( $id );
 
 		if ( ! $row ) {
-			return $this->with_status( new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'ai-command-center' ) ) );
 		}
 
 		$response = $this->redact_response( $row, 'operations/requests/detail', $request );
@@ -2270,7 +2285,7 @@ final class RestApi {
 		$actor   = $this->token_actor( $request );
 
 		if ( empty( $op_id ) ) {
-			return $this->with_status( new \WP_Error( 'wpcc_missing_operation_id', __( 'Operation ID is required.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_missing_operation_id', __( 'Operation ID is required.', 'ai-command-center' ) ) );
 		}
 
 		$meta = [
@@ -2312,7 +2327,7 @@ final class RestApi {
 
 		$row = $manager->get_request( $id );
 		if ( ! $row ) {
-			return $this->with_status( new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'ai-command-center' ) ) );
 		}
 
 		$result = null;
@@ -2416,7 +2431,7 @@ final class RestApi {
 		$item = ( new OperationQueue() )->get_item( $id );
 
 		if ( ! $item ) {
-			return $this->with_status( new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'ai-command-center' ) ) );
 		}
 
 		$response = $this->redact_response( $item, 'operations/queue/detail', $request );
@@ -2432,7 +2447,7 @@ final class RestApi {
 
 		$item = $queue->get_item( $id );
 		if ( ! $item ) {
-			return $this->with_status( new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'ai-command-center' ) ) );
 		}
 		$operation_request = ( new OperationManager() )->get_request( $item['request_id'] );
 		$links = [
@@ -2540,7 +2555,7 @@ final class RestApi {
 		$result = ( new OperationResults() )->get_result( $id );
 
 		if ( ! $result ) {
-			return $this->with_status( new \WP_Error( 'wpcc_result_not_found', __( 'Operation result not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_result_not_found', __( 'Operation result not found.', 'ai-command-center' ) ) );
 		}
 
 		$response = $this->redact_response( $result, 'operations/results/detail', $request );
@@ -2809,7 +2824,15 @@ final class RestApi {
 
 		if ( ! $result['success'] ) {
 			$error = $result['errors'][0] ?? [ 'code' => 'execution_failed', 'message' => 'Unknown error' ];
-			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
+
+			// Carry the runtime's structured detail out with the error. A partial
+			// rollback is the case that made this matter: it reports which fields it
+			// restored and which it skipped as drifted, and that detail existed only
+			// inside the prose message once the envelope was flattened to code+message.
+			// An assistant cannot act on prose; it can act on skipped_fields.
+			$details = isset( $error['details'] ) && is_array( $error['details'] ) ? $error['details'] : [];
+
+			return $this->with_status( new \WP_Error( $error['code'], $error['message'], $details ) );
 		}
 
 		return new \WP_REST_Response( $result['result'] );
@@ -3036,7 +3059,7 @@ final class RestApi {
 			default:
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_type',
-					__( 'Invalid diagnostics type. Use performance, security, or woocommerce.', 'wp-command-center' )
+					__( 'Invalid diagnostics type. Use performance, security, or woocommerce.', 'ai-command-center' )
 				) );
 		}
 
@@ -3056,73 +3079,94 @@ final class RestApi {
 		return new \WP_REST_Response( $result );
 	}
 
-	public function list_files( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		$path   = (string) $request->get_param( 'path' );
-		$result = ( new FileAccessApi() )->list_directory( $path );
-
-		if ( is_wp_error( $result ) ) {
-			return $this->with_status( $result );
+	/**
+	 * ISSUE 13 — these three convenience routes call FileAccessApi directly and
+	 * never touch OperationExecutor (which has its own Throwable-safe wrapper
+	 * around the file_manage handler), so without this catch a rare exception
+	 * here would fall through as an unhandled fatal instead of a structured
+	 * error response.
+	 */
+	private function catch_file_access( callable $fn ): \WP_REST_Response|\WP_Error {
+		try {
+			return $fn();
+		} catch ( \Throwable $e ) {
+			return $this->with_status( new \WP_Error( 'wpcc_file_access_exception', $e->getMessage() ), 500 );
 		}
+	}
 
-		return new \WP_REST_Response( $result );
+	public function list_files( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->catch_file_access( function () use ( $request ) {
+			$path   = (string) $request->get_param( 'path' );
+			$result = ( new FileAccessApi() )->list_directory( $path );
+
+			if ( is_wp_error( $result ) ) {
+				return $this->with_status( $result );
+			}
+
+			return new \WP_REST_Response( $result );
+		} );
 	}
 
 	public function read_file( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		$path = (string) $request->get_param( 'path' );
+		return $this->catch_file_access( function () use ( $request ) {
+			$path = (string) $request->get_param( 'path' );
 
-		if ( '' === $path ) {
-			return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'wp-command-center' ) ) );
-		}
-
-		// STEP 103.0A — paginated reads (line/byte range) so large live files can
-		// be inspected in chunks via REST, mirroring the file_manage MCP tool.
-		$opts = [];
-		foreach ( [ 'line_start', 'line_count', 'byte_offset', 'byte_limit', 'context_before', 'context_after' ] as $k ) {
-			$v = $request->get_param( $k );
-			if ( null !== $v && '' !== $v ) {
-				$opts[ $k ] = (int) $v;
-			}
-		}
-
-		$result = ( new FileAccessApi() )->read( $path, $opts );
-
-		if ( is_wp_error( $result ) ) {
-			if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
-				$this->record_security_event( $request, 'security.file_blocked', [
-					'path'     => $path,
-					'endpoint' => 'files/content',
-				] );
+			if ( '' === $path ) {
+				return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'ai-command-center' ) ) );
 			}
 
-			return $this->with_status( $result );
-		}
+			// STEP 103.0A — paginated reads (line/byte range) so large live files can
+			// be inspected in chunks via REST, mirroring the file_manage MCP tool.
+			$opts = [];
+			foreach ( [ 'line_start', 'line_count', 'byte_offset', 'byte_limit', 'context_before', 'context_after' ] as $k ) {
+				$v = $request->get_param( $k );
+				if ( null !== $v && '' !== $v ) {
+					$opts[ $k ] = (int) $v;
+				}
+			}
 
-		$result = $this->redact_field( $result, 'contents', 'files/content', $request );
+			$result = ( new FileAccessApi() )->read( $path, $opts );
 
-		return new \WP_REST_Response( $result );
+			if ( is_wp_error( $result ) ) {
+				if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
+					$this->record_security_event( $request, 'security.file_blocked', [
+						'path'     => $path,
+						'endpoint' => 'files/content',
+					] );
+				}
+
+				return $this->with_status( $result );
+			}
+
+			$result = $this->redact_field( $result, 'contents', 'files/content', $request );
+
+			return new \WP_REST_Response( $result );
+		} );
 	}
 
 	public function get_file_meta( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
-		$path = (string) $request->get_param( 'path' );
+		return $this->catch_file_access( function () use ( $request ) {
+			$path = (string) $request->get_param( 'path' );
 
-		if ( '' === $path ) {
-			return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'wp-command-center' ) ) );
-		}
-
-		$result = ( new FileAccessApi() )->meta( $path );
-
-		if ( is_wp_error( $result ) ) {
-			if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
-				$this->record_security_event( $request, 'security.file_blocked', [
-					'path'     => $path,
-					'endpoint' => 'files/meta',
-				] );
+			if ( '' === $path ) {
+				return $this->with_status( new \WP_Error( 'wpcc_missing_path', __( 'The path parameter is required.', 'ai-command-center' ) ) );
 			}
 
-			return $this->with_status( $result );
-		}
+			$result = ( new FileAccessApi() )->meta( $path );
 
-		return new \WP_REST_Response( $result );
+			if ( is_wp_error( $result ) ) {
+				if ( 'wpcc_file_blocked' === $result->get_error_code() ) {
+					$this->record_security_event( $request, 'security.file_blocked', [
+						'path'     => $path,
+						'endpoint' => 'files/meta',
+					] );
+				}
+
+				return $this->with_status( $result );
+			}
+
+			return new \WP_REST_Response( $result );
+		} );
 	}
 
 	public function search_code( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
@@ -3153,14 +3197,14 @@ final class RestApi {
 		if ( ! in_array( $source, self::SESSION_SOURCES, true ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_session_source',
-				__( 'Invalid session source. Use claude, codex, gpt, api, or manual.', 'wp-command-center' )
+				__( 'Invalid session source. Use claude, codex, gpt, api, or manual.', 'ai-command-center' )
 			) );
 		}
 
 		if ( '' === $label ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_missing_session_label',
-				__( 'The session label is required.', 'wp-command-center' )
+				__( 'The session label is required.', 'ai-command-center' )
 			) );
 		}
 
@@ -3170,7 +3214,7 @@ final class RestApi {
 		if ( $expires_at <= $now ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_session_expiry',
-				__( 'The session expiry must be a future Unix timestamp.', 'wp-command-center' )
+				__( 'The session expiry must be a future Unix timestamp.', 'ai-command-center' )
 			) );
 		}
 
@@ -3192,7 +3236,7 @@ final class RestApi {
 		if ( false === $inserted ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_session_create_failed',
-				__( 'Failed to create the agent session.', 'wp-command-center' )
+				__( 'Failed to create the agent session.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3203,7 +3247,9 @@ final class RestApi {
 		global $wpdb;
 
 		$this->expire_agent_sessions();
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Fully static SQL over a plugin-owned table; no user input reaches it.
 		$rows = $wpdb->get_results( 'SELECT * FROM ' . $this->agent_sessions_table() . ' ORDER BY id DESC', ARRAY_A );
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return new \WP_REST_Response( array_map( [ $this, 'normalize_agent_session' ], $rows ?: [] ) );
 	}
@@ -3214,7 +3260,7 @@ final class RestApi {
 		$session    = $this->find_agent_session( $session_id );
 
 		if ( null === $session ) {
-			return $this->with_status( new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'ai-command-center' ) ) );
 		}
 
 		$session['tasks']   = $this->list_agent_tasks_by( 'session_id', $session_id );
@@ -3235,7 +3281,7 @@ final class RestApi {
 		$session    = $this->find_agent_session( $session_id );
 
 		if ( null === $session ) {
-			return $this->with_status( new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'ai-command-center' ) ) );
 		}
 
 		if ( self::SESSION_STATUS_CLOSED === $session['status'] ) {
@@ -3245,7 +3291,7 @@ final class RestApi {
 		if ( self::SESSION_STATUS_ACTIVE !== $session['status'] ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_session_status',
-				__( 'Only active agent sessions can be closed.', 'wp-command-center' )
+				__( 'Only active agent sessions can be closed.', 'ai-command-center' )
 			) );
 		}
 
@@ -3260,7 +3306,7 @@ final class RestApi {
 		if ( false === $updated ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_session_close_failed',
-				__( 'Failed to close the agent session.', 'wp-command-center' )
+				__( 'Failed to close the agent session.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3281,6 +3327,7 @@ final class RestApi {
 	}
 
 	private function list_agent_tasks_by( ?string $field = null, ?string $value = null ): array {
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is checked against a hard allowlist on the line above; the value is bound with %s.
 		global $wpdb;
 
 		$table = $this->agent_tasks_table();
@@ -3294,6 +3341,7 @@ final class RestApi {
 
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'normalize_agent_task' ], $rows ?: [] );
 	}
 
@@ -3319,10 +3367,12 @@ final class RestApi {
 	private function find_agent_session( string $session_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_sessions_table() . ' WHERE session_id = %s', $session_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_session( $row ) : null;
 	}
@@ -3349,21 +3399,21 @@ final class RestApi {
 		if ( null === $this->find_agent_session( $session_id ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_session_not_found',
-				__( 'Agent session not found.', 'wp-command-center' )
+				__( 'Agent session not found.', 'ai-command-center' )
 			) );
 		}
 
 		if ( ! in_array( $source, self::SESSION_SOURCES, true ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_task_source',
-				__( 'Invalid task source. Use claude, codex, gpt, api, or manual.', 'wp-command-center' )
+				__( 'Invalid task source. Use claude, codex, gpt, api, or manual.', 'ai-command-center' )
 			) );
 		}
 
 		if ( '' === $user_prompt ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_missing_user_prompt',
-				__( 'The user prompt is required.', 'wp-command-center' )
+				__( 'The user prompt is required.', 'ai-command-center' )
 			) );
 		}
 
@@ -3386,7 +3436,7 @@ final class RestApi {
 		if ( false === $inserted ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_task_create_failed',
-				__( 'Failed to create the agent task.', 'wp-command-center' )
+				__( 'Failed to create the agent task.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3405,7 +3455,9 @@ final class RestApi {
 	public function list_agent_tasks(): \WP_REST_Response {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Fully static SQL over a plugin-owned table; no user input reaches it.
 		$rows = $wpdb->get_results( 'SELECT * FROM ' . $this->agent_tasks_table() . ' ORDER BY id DESC', ARRAY_A );
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return new \WP_REST_Response( array_map( [ $this, 'normalize_agent_task' ], $rows ?: [] ) );
 	}
@@ -3415,7 +3467,7 @@ final class RestApi {
 		$task    = $this->find_agent_task( $task_id );
 
 		if ( null === $task ) {
-			return $this->with_status( new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'ai-command-center' ) ) );
 		}
 
 		$task['session'] = $this->find_agent_session( $task['session_id'] );
@@ -3436,13 +3488,13 @@ final class RestApi {
 		$task    = $this->find_agent_task( $task_id );
 
 		if ( null === $task ) {
-			return $this->with_status( new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'ai-command-center' ) ) );
 		}
 
 		if ( ! in_array( $status, self::TASK_STATUSES, true ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_task_status',
-				__( 'Invalid task status.', 'wp-command-center' )
+				__( 'Invalid task status.', 'ai-command-center' )
 			) );
 		}
 
@@ -3461,7 +3513,7 @@ final class RestApi {
 		if ( false === $updated ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_task_update_failed',
-				__( 'Failed to update the agent task.', 'wp-command-center' )
+				__( 'Failed to update the agent task.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3485,10 +3537,12 @@ final class RestApi {
 	private function find_agent_task( string $task_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_tasks_table() . ' WHERE task_id = %s', $task_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_task( $row ) : null;
 	}
@@ -3528,14 +3582,14 @@ final class RestApi {
 		if ( ! in_array( $type, self::ACTION_TYPES, true ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_action_type',
-				__( 'Invalid action type. Use investigate, recommendation, diagnosis, code_change, configuration_change, or maintenance.', 'wp-command-center' )
+				__( 'Invalid action type. Use investigate, recommendation, diagnosis, code_change, configuration_change, or maintenance.', 'ai-command-center' )
 			) );
 		}
 
 		if ( '' === $title ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_missing_action_title',
-				__( 'The action title is required.', 'wp-command-center' )
+				__( 'The action title is required.', 'ai-command-center' )
 			) );
 		}
 
@@ -3560,7 +3614,7 @@ final class RestApi {
 		if ( false === $inserted ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_action_create_failed',
-				__( 'Failed to create the agent action.', 'wp-command-center' )
+				__( 'Failed to create the agent action.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3587,7 +3641,7 @@ final class RestApi {
 		$action    = $this->find_agent_action( $action_id );
 
 		if ( null === $action ) {
-			return $this->with_status( new \WP_Error( 'wpcc_action_not_found', __( 'Agent action not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_action_not_found', __( 'Agent action not found.', 'ai-command-center' ) ) );
 		}
 
 		$action['task']    = $this->find_agent_task( $action['task_id'] );
@@ -3615,14 +3669,14 @@ final class RestApi {
 		$action    = $this->find_agent_action( $action_id );
 
 		if ( null === $action ) {
-			return $this->with_status( new \WP_Error( 'wpcc_action_not_found', __( 'Agent action not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_action_not_found', __( 'Agent action not found.', 'ai-command-center' ) ) );
 		}
 
 		if ( 'accept' === $transition ) {
 			if ( ! in_array( $action['status'], self::ACTION_ACCEPTABLE_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_action_status',
-					__( 'Only proposed actions can be accepted.', 'wp-command-center' )
+					__( 'Only proposed actions can be accepted.', 'ai-command-center' )
 				) );
 			}
 
@@ -3632,7 +3686,7 @@ final class RestApi {
 			if ( ! in_array( $action['status'], self::ACTION_REJECTABLE_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_action_status',
-					__( 'Only proposed actions can be rejected.', 'wp-command-center' )
+					__( 'Only proposed actions can be rejected.', 'ai-command-center' )
 				) );
 			}
 
@@ -3642,7 +3696,7 @@ final class RestApi {
 			if ( ! in_array( $action['status'], self::ACTION_CANCELLABLE_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_action_status',
-					__( 'Only proposed or accepted actions can be cancelled.', 'wp-command-center' )
+					__( 'Only proposed or accepted actions can be cancelled.', 'ai-command-center' )
 				) );
 			}
 
@@ -3652,14 +3706,14 @@ final class RestApi {
 			if ( ! in_array( $action['status'], self::ACTION_COMPLETABLE_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_action_status',
-					__( 'Only accepted actions can be completed.', 'wp-command-center' )
+					__( 'Only accepted actions can be completed.', 'ai-command-center' )
 				) );
 			}
 
 			$status = self::ACTION_STATUS_COMPLETED;
 			$event  = 'action.completed';
 		} else {
-			return $this->with_status( new \WP_Error( 'wpcc_invalid_agent_action', __( 'Invalid agent action.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_invalid_agent_action', __( 'Invalid agent action.', 'ai-command-center' ) ) );
 		}
 
 		$updated = $wpdb->update(
@@ -3673,7 +3727,7 @@ final class RestApi {
 		if ( false === $updated ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_action_update_failed',
-				__( 'Failed to update the agent action.', 'wp-command-center' )
+				__( 'Failed to update the agent action.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3698,14 +3752,17 @@ final class RestApi {
 	private function find_agent_action( string $action_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_actions_table() . ' WHERE action_id = %s', $action_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_action( $row ) : null;
 	}
 
+	// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is checked against a hard allowlist on the line above; the value is bound with %s.
 	private function list_agent_actions_by( ?string $field = null, ?string $value = null ): array {
 		global $wpdb;
 
@@ -3720,6 +3777,7 @@ final class RestApi {
 
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 
+	// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'normalize_agent_action' ], $rows ?: [] );
 	}
 
@@ -3754,27 +3812,27 @@ final class RestApi {
 		}
 
 		if ( null !== $action_id && null === $this->find_agent_action( $action_id ) ) {
-			return $this->with_status( new \WP_Error( 'wpcc_action_not_found', __( 'Agent action not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_action_not_found', __( 'Agent action not found.', 'ai-command-center' ) ) );
 		}
 
 		if ( '' === $title || '' === $objective ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_plan',
-				__( 'Plan title and objective are required.', 'wp-command-center' )
+				__( 'Plan title and objective are required.', 'ai-command-center' )
 			) );
 		}
 
 		if ( ! in_array( $status, self::PLAN_CREATE_STATUSES, true ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_plan_status',
-				__( 'New plans must be draft or pending_review.', 'wp-command-center' )
+				__( 'New plans must be draft or pending_review.', 'ai-command-center' )
 			) );
 		}
 
 		if ( ! is_array( $steps ) || empty( $steps ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_invalid_plan_steps',
-				__( 'A plan must include at least one step.', 'wp-command-center' )
+				__( 'A plan must include at least one step.', 'ai-command-center' )
 			) );
 		}
 
@@ -3788,7 +3846,7 @@ final class RestApi {
 			if ( '' === $step_title || ! in_array( $step_status, self::PLAN_STEP_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_plan_step',
-					__( 'Each plan step needs a title and a valid status.', 'wp-command-center' )
+					__( 'Each plan step needs a title and a valid status.', 'ai-command-center' )
 				) );
 			}
 
@@ -3825,7 +3883,7 @@ final class RestApi {
 
 			return $this->with_status( new \WP_Error(
 				'wpcc_plan_create_failed',
-				__( 'Failed to create the agent plan.', 'wp-command-center' )
+				__( 'Failed to create the agent plan.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3841,7 +3899,7 @@ final class RestApi {
 
 				return $this->with_status( new \WP_Error(
 					'wpcc_plan_step_create_failed',
-					__( 'Failed to create an agent plan step.', 'wp-command-center' )
+					__( 'Failed to create an agent plan step.', 'ai-command-center' )
 				), 500 );
 			}
 		}
@@ -3871,7 +3929,7 @@ final class RestApi {
 		$plan    = $this->find_agent_plan( $plan_id );
 
 		if ( null === $plan ) {
-			return $this->with_status( new \WP_Error( 'wpcc_plan_not_found', __( 'Agent plan not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_plan_not_found', __( 'Agent plan not found.', 'ai-command-center' ) ) );
 		}
 
 		$plan['session'] = $this->find_agent_session( $plan['session_id'] );
@@ -3891,14 +3949,14 @@ final class RestApi {
 		$plan    = $this->find_agent_plan( $plan_id );
 
 		if ( null === $plan ) {
-			return $this->with_status( new \WP_Error( 'wpcc_plan_not_found', __( 'Agent plan not found.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_plan_not_found', __( 'Agent plan not found.', 'ai-command-center' ) ) );
 		}
 
 		if ( 'approve' === $action ) {
 			if ( ! in_array( $plan['status'], self::PLAN_APPROVABLE_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_plan_status',
-					__( 'Only pending_review or draft plans can be approved.', 'wp-command-center' )
+					__( 'Only pending_review or draft plans can be approved.', 'ai-command-center' )
 				) );
 			}
 
@@ -3908,7 +3966,7 @@ final class RestApi {
 			if ( ! in_array( $plan['status'], self::PLAN_REJECTABLE_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_plan_status',
-					__( 'Only pending_review or draft plans can be rejected.', 'wp-command-center' )
+					__( 'Only pending_review or draft plans can be rejected.', 'ai-command-center' )
 				) );
 			}
 
@@ -3918,14 +3976,14 @@ final class RestApi {
 			if ( ! in_array( $plan['status'], self::PLAN_CANCELLABLE_STATUSES, true ) ) {
 				return $this->with_status( new \WP_Error(
 					'wpcc_invalid_plan_status',
-					__( 'Only draft, pending_review, or approved plans can be cancelled.', 'wp-command-center' )
+					__( 'Only draft, pending_review, or approved plans can be cancelled.', 'ai-command-center' )
 				) );
 			}
 
 			$status = self::PLAN_STATUS_CANCELLED;
 			$event  = 'plan.cancelled';
 		} else {
-			return $this->with_status( new \WP_Error( 'wpcc_invalid_plan_action', __( 'Invalid plan action.', 'wp-command-center' ) ) );
+			return $this->with_status( new \WP_Error( 'wpcc_invalid_plan_action', __( 'Invalid plan action.', 'ai-command-center' ) ) );
 		}
 
 		$updated = $wpdb->update(
@@ -3939,7 +3997,7 @@ final class RestApi {
 		if ( false === $updated ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_plan_update_failed',
-				__( 'Failed to update the agent plan.', 'wp-command-center' )
+				__( 'Failed to update the agent plan.', 'ai-command-center' )
 			), 500 );
 		}
 
@@ -3963,19 +4021,19 @@ final class RestApi {
 		$session = $this->find_agent_session( $session_id );
 
 		if ( null === $session ) {
-			return new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'ai-command-center' ) );
 		}
 
 		$task = $this->find_agent_task( $task_id );
 
 		if ( null === $task ) {
-			return new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'ai-command-center' ) );
 		}
 
 		if ( $task['session_id'] !== $session_id ) {
 			return new \WP_Error(
 				'wpcc_task_session_mismatch',
-				__( 'The agent task does not belong to the supplied session.', 'wp-command-center' )
+				__( 'The agent task does not belong to the supplied session.', 'ai-command-center' )
 			);
 		}
 
@@ -3997,14 +4055,17 @@ final class RestApi {
 	private function find_agent_plan( string $plan_id ): ?array {
 		global $wpdb;
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$row = $wpdb->get_row(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_plans_table() . ' WHERE plan_id = %s', $plan_id ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		return is_array( $row ) ? $this->normalize_agent_plan( $row ) : null;
 	}
 
+	// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is checked against a hard allowlist on the line above; the value is bound with %s.
 	private function list_agent_plans_by( ?string $field = null, ?string $value = null ): array {
 		global $wpdb;
 
@@ -4019,6 +4080,7 @@ final class RestApi {
 
 		$rows = $wpdb->get_results( $sql, ARRAY_A );
 
+	// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 		return array_map( [ $this, 'normalize_agent_plan' ], $rows ?: [] );
 	}
 
@@ -4033,10 +4095,12 @@ final class RestApi {
 			$row[ $integer_field ] = (int) $row[ $integer_field ];
 		}
 
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- Table name from a private accessor; the value is bound with %s.
 		$steps = $wpdb->get_results(
 			$wpdb->prepare( 'SELECT * FROM ' . $this->agent_plan_steps_table() . ' WHERE plan_id = %s ORDER BY step_order ASC', $row['plan_id'] ),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 		$row['steps'] = array_map(
 			static function ( array $step ): array {
@@ -4088,7 +4152,7 @@ final class RestApi {
 		if ( ! is_array( $files ) || empty( $files ) ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_no_files',
-				__( 'The "files" parameter must be a non-empty array of {path, modified}.', 'wp-command-center' )
+				__( 'The "files" parameter must be a non-empty array of {path, modified}.', 'ai-command-center' )
 			) );
 		}
 
@@ -4132,7 +4196,7 @@ final class RestApi {
 			'reject'   => $service->reject( $id, $actor ),
 			'apply'    => $service->apply( $id, $actor ),
 			'rollback' => $service->rollback( $id, $actor ),
-			default    => new \WP_Error( 'wpcc_invalid_action', __( 'Invalid action.', 'wp-command-center' ) ),
+			default    => new \WP_Error( 'wpcc_invalid_action', __( 'Invalid action.', 'ai-command-center' ) ),
 		};
 
 		if ( is_wp_error( $result ) ) {
@@ -4213,14 +4277,14 @@ final class RestApi {
 		if ( ! $client ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_client_not_found',
-				sprintf( __( 'AI Client "%s" not found.', 'wp-command-center' ), $client_id ),
+				sprintf( /* translators: %s: value */ __( 'AI Client "%s" not found.', 'ai-command-center' ), $client_id ),
 			), 404 );
 		}
 
 		if ( ! $client['config_generator'] ) {
 			return $this->with_status( new \WP_Error(
 				'wpcc_client_not_configured',
-				sprintf( __( 'Configuration generator not yet implemented for "%s".', 'wp-command-center' ), $client['name'] ),
+				sprintf( /* translators: %s: value */ __( 'Configuration generator not yet implemented for "%s".', 'ai-command-center' ), $client['name'] ),
 			), 501 );
 		}
 

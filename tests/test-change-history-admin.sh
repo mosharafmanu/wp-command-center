@@ -28,6 +28,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
+
 # shellcheck source=/dev/null
 source "$PLUGIN_DIR/wpcc-env.sh"
 
@@ -284,14 +291,16 @@ assert_eq   "restore: original row stamped rolled_back" "rolled_back" "$(pj "$RB
 assert_eq   "restore: value reverted to pre-change"    "$SAVED_BLOG" "$(pj "$RB" '.blogname')"
 
 # Idempotency guard: rolling back an already-rolled-back change is refused with
-# an in-band wpcc_already_rolled_back error (the engine never re-runs it).
+# wpcc_already_rolled_back (the engine never re-runs it). The refusal is surfaced
+# through the normalized executor envelope — success:false with the code in errors[] —
+# not as result.code, which is where an earlier response shape put it.
 DUP=$(wpe "
 global \$wpdb; \$t = \$wpdb->prefix . 'wpcc_change_log';
 \$cid = \$wpdb->get_var( \$wpdb->prepare( \"SELECT change_id FROM {\$t} WHERE session_id = %s AND status = 'rolled_back' ORDER BY id DESC LIMIT 1\", '$RB_SESSION' ) );
 \$req = new WP_REST_Request( 'POST', '/' );
 \$req->set_param( 'change_id', \$cid );
 \$d = ( new \WPCommandCenter\Admin\AdminRestApi() )->history_rollback( \$req )->get_data();
-echo wp_json_encode( [ 'code' => \$d['result']['code'] ?? '', 'is_error' => ( \$d['result']['error'] ?? false ) ] );
+echo wp_json_encode( [ 'code' => \$d['errors'][0]['code'] ?? ( \$d['result']['code'] ?? '' ), 'is_error' => ( false === ( \$d['success'] ?? true ) ) ] );
 ")
 assert_eq "restore: double-rollback refused (wpcc_already_rolled_back)" "wpcc_already_rolled_back" "$(pj "$DUP" '.code')"
 
@@ -326,7 +335,10 @@ echo wp_json_encode( [
 assert_eq   "approval: client mode returns pending_approval"        "pending_approval" "$(pj "$APPR" '.status')"
 assert_true "approval: an approval request was created"             "$(pj "$APPR" '.has_request')"
 assert_true "approval: rollback did NOT execute (value + status unchanged)" "$(pj "$APPR" '.not_executed')"
-assert_eq   "approval: security mode restored to developer"         "developer" "$(pj "$APPR" '.mode_after')"
+# The eval block above captures and restores the mode itself; the assertion
+# used to compare it against a hardcoded "developer", so it only held on a site
+# that happened to start in developer. Compare against the real starting mode.
+assert_eq   "approval: security mode restored to the starting mode" "$WPCC_ORIG_MODE" "$(pj "$APPR" '.mode_after')"
 
 echo
 echo "== 15. STEP 105.3 DestructiveGuard: ordinary (non-high-risk) reversal takes the fast path =="

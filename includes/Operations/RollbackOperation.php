@@ -30,7 +30,7 @@ final class RollbackOperation {
 		$action = sanitize_key( $params['action'] ?? '' );
 
 		if ( ! in_array( $action, self::ACTIONS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_rollback_action', sprintf( __( 'Invalid action: %s. Use rollback_list, rollback_get, rollback_apply, or rollback_verify.', 'wp-command-center' ), esc_html( $action ) ) );
+			return new \WP_Error( 'wpcc_invalid_rollback_action', InvalidAction::message( 'rollback', $action, self::ACTIONS ) );
 		}
 
 		return match ( $action ) {
@@ -62,11 +62,35 @@ final class RollbackOperation {
 		];
 	}
 
+	/**
+	 * rollback_manage only ever operates on patches (file changes made through
+	 * patch_manage). Every other runtime — ACF values, SEO, Woo, settings — hands
+	 * back a `rollback_id` with `rollback_available: true`, and this tool offers an
+	 * action literally called `rollback_apply`, so a caller holding one of those
+	 * ids very reasonably brings it here. It used to answer "patch_id is required",
+	 * naming a parameter they never supplied and never mentioning that their id is
+	 * undone somewhere else — which costs them the undo. Say both things.
+	 *
+	 * @param array<string,mixed> $params
+	 */
+	private static function missing_patch_id( array $params ): \WP_Error {
+		$offered = sanitize_text_field( (string) ( $params['rollback_id'] ?? '' ) );
+
+		if ( '' !== $offered ) {
+			return new \WP_Error(
+				'wpcc_not_a_patch_rollback',
+				__( 'rollback_manage undoes patches only, and takes patch_id. A rollback_id returned by another operation (ACF, SEO, WooCommerce, settings, media) is undone with change_history {action: "rollback_target", change_id: "..."} — use change_history {action: "rollback_discover"} to find the change_id.', 'ai-command-center' )
+			);
+		}
+
+		return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required. rollback_manage undoes patches only; to undo any other change use change_history {action: "rollback_target"}.', 'ai-command-center' ) );
+	}
+
 	private function get( array $params ): array|\WP_Error {
 		$patch_id = sanitize_text_field( (string) ( $params['patch_id'] ?? '' ) );
 
 		if ( '' === $patch_id ) {
-			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'wp-command-center' ) );
+			return self::missing_patch_id( $params );
 		}
 
 		$patch = ( new PatchManager() )->get( $patch_id );
@@ -88,7 +112,7 @@ final class RollbackOperation {
 		$patch_id = sanitize_text_field( (string) ( $params['patch_id'] ?? '' ) );
 
 		if ( '' === $patch_id ) {
-			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'wp-command-center' ) );
+			return self::missing_patch_id( $params );
 		}
 
 		$actor  = $context['actor'] ?? [];
@@ -124,7 +148,7 @@ final class RollbackOperation {
 		$patch_id = sanitize_text_field( (string) ( $params['patch_id'] ?? '' ) );
 
 		if ( '' === $patch_id ) {
-			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'wp-command-center' ) );
+			return self::missing_patch_id( $params );
 		}
 
 		$patch = ( new PatchManager() )->get( $patch_id );
@@ -133,7 +157,7 @@ final class RollbackOperation {
 		}
 
 		if ( empty( $patch['snapshot_ids'] ) ) {
-			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'ai-command-center' ) );
 		}
 
 		$snapshots = new SnapshotManager();

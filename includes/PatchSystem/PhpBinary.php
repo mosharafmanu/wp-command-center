@@ -197,6 +197,7 @@ final class PhpBinary {
 		}
 
 		$descriptors = [ 1 => [ 'pipe', 'w' ], 2 => [ 'pipe', 'w' ] ];
+		// phpcs:ignore Generic.PHP.ForbiddenFunctions.Found -- disclosed in the readme and in the reviewer notes. Degrades to unavailable where a host forbids process execution; removing it would make patching less safe.
 		$proc        = @proc_open( $cmd, $descriptors, $pipes );
 		if ( ! is_resource( $proc ) ) {
 			return [ 'status' => 'error', 'stdout' => '', 'stderr' => '' ];
@@ -219,7 +220,9 @@ final class PhpBinary {
 			}
 			if ( microtime( true ) >= $deadline ) {
 				proc_terminate( $proc, 9 );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 				fclose( $pipes[1] );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 				fclose( $pipes[2] );
 				proc_close( $proc );
 				return [ 'status' => 'timeout', 'stdout' => $stdout, 'stderr' => $stderr ];
@@ -229,7 +232,9 @@ final class PhpBinary {
 
 		$stdout .= (string) stream_get_contents( $pipes[1] );
 		$stderr .= (string) stream_get_contents( $pipes[2] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 		fclose( $pipes[1] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 		fclose( $pipes[2] );
 		proc_close( $proc );
 

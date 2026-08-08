@@ -51,7 +51,7 @@ final class CodeSearch {
 		$query = trim( $query );
 
 		if ( '' === $query ) {
-			return new \WP_Error( 'wpcc_empty_query', __( 'Please enter a search term.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_empty_query', __( 'Please enter a search term.', 'ai-command-center' ) );
 		}
 
 		$relative_path = isset( $args['path'] ) ? trim( str_replace( '\\', '/', (string) $args['path'] ), '/' ) : '';
@@ -59,7 +59,7 @@ final class CodeSearch {
 		$type          = isset( $args['type'] ) && '' !== $args['type'] ? sanitize_key( (string) $args['type'] ) : 'text';
 
 		if ( ! in_array( $type, self::VALID_TYPES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_type', __( 'Invalid search type. Use text, function, class, or hook.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_type', __( 'Invalid search type. Use text, function, class, or hook.', 'ai-command-center' ) );
 		}
 
 		// STEP 103.2 — scope can be a single FILE or a directory. resolve() enforces
@@ -192,7 +192,7 @@ final class CodeSearch {
 		$query = trim( $query );
 
 		if ( '' === $query ) {
-			return new \WP_Error( 'wpcc_empty_query', __( 'Please enter a search term.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_empty_query', __( 'Please enter a search term.', 'ai-command-center' ) );
 		}
 
 		$relative_path = isset( $args['path'] ) ? trim( str_replace( '\\', '/', (string) $args['path'] ), '/' ) : '';
@@ -251,7 +251,7 @@ final class CodeSearch {
 		}
 
 		if ( ! is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_not_a_directory', __( 'The search path must be a directory.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_not_a_directory', __( 'The search path must be a directory.', 'ai-command-center' ) );
 		}
 
 		return [ $real ];
@@ -283,7 +283,7 @@ final class CodeSearch {
 			return [ 'mode' => 'file', 'files' => [ $real ] ];
 		}
 
-		return new \WP_Error( 'wpcc_not_found', __( 'The search path does not exist.', 'wp-command-center' ) );
+		return new \WP_Error( 'wpcc_not_found', __( 'The search path does not exist.', 'ai-command-center' ) );
 	}
 
 	/**
@@ -341,6 +341,7 @@ final class CodeSearch {
 	 */
 	private function search_file( \SplFileInfo $file, string $relative, int $size, string $query, ?string $pattern ): array {
 		$matches = [];
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- streamed read: this scans files that can be very large (debug.log, whole-theme search) line by line. WP_Filesystem::get_contents() has no streaming form and would load the entire file into memory.
 		$handle  = fopen( $file->getPathname(), 'rb' );
 
 		if ( false === $handle ) {
@@ -374,6 +375,7 @@ final class CodeSearch {
 			}
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- paired with the streamed fopen above.
 		fclose( $handle );
 
 		return $matches;

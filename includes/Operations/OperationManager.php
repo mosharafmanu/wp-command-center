@@ -41,11 +41,36 @@ final class OperationManager {
 		$operation = $registry->get_operation( $operation_id );
 
 		if ( ! $operation ) {
-			return new \WP_Error( 'wpcc_operation_not_found', __( 'Operation not found in registry.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_operation_not_found', __( 'Operation not found in registry.', 'ai-command-center' ) );
 		}
 
 		$request_id = wp_generate_uuid4();
 		$created_at = time();
+
+		/*
+		 * Record the risk of the ACTION, not the operation's headline tier.
+		 *
+		 * This stored `$operation['risk_level']` — the operation-wide default — while
+		 * every other reader of risk in the product resolves it through
+		 * SecurityModeManager::effective_risk(), which prefers the per-action entry
+		 * in `action_risks`. On any operation where the two differ the row disagreed
+		 * with the whole rest of the system.
+		 *
+		 * The clearest case is undo. `change_history` is a read operation whose tier
+		 * is 'diagnostic'; its one write, `rollback_target`, declares 'high'. The gate
+		 * saw 'high' and correctly demanded approval — and then the row it created
+		 * said "diagnostic". MCP's approval_manage read that column back and told the
+		 * assistant a HIGH-risk undo was diagnostic, while the Approvals screen, which
+		 * recomputes from the registry, showed HIGH RISK on the same request. The
+		 * record contradicted both the decision that produced it and the screen the
+		 * customer approves from.
+		 *
+		 * The gate is unaffected: it computed the effective risk before calling here
+		 * and gates on that value, not on this column. This only stops the stored
+		 * record from misreporting what was already decided. The fallback follows
+		 * effective_risk() — unknown risk is treated as high, never as safe.
+		 */
+		$risk_level = SecurityModeManager::effective_risk( $operation, (string) ( $payload['action'] ?? '' ) );
 
 		$inserted = $wpdb->insert(
 			$wpdb->prefix . 'wpcc_operation_requests',
@@ -58,14 +83,14 @@ final class OperationManager {
 				'plan_id'      => $meta['plan_id'] ?? null,
 				'status'       => self::STATUS_PENDING_REVIEW,
 				'payload'      => wp_json_encode( $payload ),
-				'risk_level'   => $operation['risk_level'] ?? 'medium',
+				'risk_level'   => $risk_level,
 				'created_at'   => $created_at,
 			],
 			[ '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d' ]
 		);
 
 		if ( false === $inserted ) {
-			return new \WP_Error( 'wpcc_request_create_failed', __( 'Failed to create operation request.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_create_failed', __( 'Failed to create operation request.', 'ai-command-center' ) );
 		}
 
 		return $this->get_request( $request_id );
@@ -178,11 +203,11 @@ final class OperationManager {
 
 		$request = $this->get_request( $request_id );
 		if ( ! $request ) {
-			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'ai-command-center' ) );
 		}
 
 		if ( self::STATUS_APPROVED !== $request['status'] ) {
-			return new \WP_Error( 'wpcc_request_not_approved', __( 'Only approved requests can be executed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_not_approved', __( 'Only approved requests can be executed.', 'ai-command-center' ) );
 		}
 
 		// B2-2 execute-once (synchronous path). The status check above blocks a
@@ -197,7 +222,7 @@ final class OperationManager {
 				'path'         => 'synchronous',
 				'reason'       => 'already_executed',
 			] );
-			return new \WP_Error( 'wpcc_request_already_executed', __( 'This request has already been executed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_request_already_executed', __( 'This request has already been executed.', 'ai-command-center' ) );
 		}
 
 		$payload = json_decode( $request['payload'], true ) ?: [];
@@ -303,11 +328,13 @@ final class OperationManager {
 	public function finalize_execution( string $request_id, bool $success ): void {
 		global $wpdb;
 		$status = $success ? self::STATUS_EXECUTED : self::STATUS_FAILED;
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- The interpolated column is chosen in-file from a two-value ternary, never from input; all values are bound.
 		$field  = $success ? 'executed_at' : 'failed_at';
 		$wpdb->query( $wpdb->prepare(
 			"UPDATE {$wpdb->prefix}wpcc_operation_requests SET status = %s, {$field} = %d WHERE request_id = %s AND status = %s",
 			$status,
 			time(),
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 			$request_id,
 			self::STATUS_EXECUTING
 		) );
@@ -326,10 +353,52 @@ final class OperationManager {
 		}
 	}
 
+	/**
+	 * The one risk level a request row reports, wherever it is read.
+	 *
+	 * Rows written before create_request() resolved the per-action risk still hold
+	 * the operation-wide tier — a stored 'diagnostic' on an undo that the gate had
+	 * already judged 'high'. Those rows are not rewritten (an approval record is
+	 * history, and a migration that edits risk on decided requests would be worse
+	 * than the mislabel); they are normalised as they are read, through exactly
+	 * the resolver the Approvals screen uses. MCP and the UI therefore cannot
+	 * disagree about a request's risk, on old rows or new ones.
+	 *
+	 * An operation no longer in the registry — a runtime whose plugin has since
+	 * been deactivated — keeps whatever the row recorded, and an unrecognised or
+	 * missing value reads as 'high'. Unknown risk is never presented as safe.
+	 *
+	 * @param array<string,mixed> $row Raw request row.
+	 */
+	private function canonical_risk( array $row ): string {
+		$operation = ( new OperationRegistry() )->get_operation( (string) ( $row['operation_id'] ?? '' ) );
+
+		if ( null === $operation ) {
+			$stored = (string) ( $row['risk_level'] ?? '' );
+			return in_array( $stored, SecurityModeManager::RISK_LEVELS, true )
+				? $stored
+				: SecurityModeManager::RISK_HIGH;
+		}
+
+		$payload = json_decode( (string) ( $row['payload'] ?? '{}' ), true );
+		$action  = is_array( $payload ) ? (string) ( $payload['action'] ?? '' ) : '';
+
+		return SecurityModeManager::effective_risk( $operation, $action );
+	}
+
+	/**
+	 * @param array<string,mixed> $row
+	 * @return array<string,mixed>
+	 */
+	private function normalise_row( array $row ): array {
+		$row['risk_level'] = $this->canonical_risk( $row );
+		return $row;
+	}
+
 	public function get_request( string $request_id ): ?array {
 		global $wpdb;
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}wpcc_operation_requests WHERE request_id = %s", $request_id ), ARRAY_A );
-		return $row ?: null;
+		return $row ? $this->normalise_row( $row ) : null;
 	}
 
 	public function list_requests( array $filters = [] ): array {
@@ -353,6 +422,7 @@ final class OperationManager {
 		$sql .= ' ORDER BY id DESC';
 
 		$limit  = isset( $filters['limit'] ) ? max( 1, (int) $filters['limit'] ) : 50;
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- $wpdb->prepare() is applied into $sql above; the sniffer cannot follow prepare-into-variable.
 		$offset = isset( $filters['offset'] ) ? max( 0, (int) $filters['offset'] ) : 0;
 		$sql   .= $wpdb->prepare( ' LIMIT %d OFFSET %d', $limit, $offset );
 
@@ -360,7 +430,87 @@ final class OperationManager {
 			$sql = $wpdb->prepare( $sql, ...$params );
 		}
 
-		return $wpdb->get_results( $sql, ARRAY_A ) ?: [];
+		return array_map( [ $this, 'normalise_row' ], $wpdb->get_results( $sql, ARRAY_A ) ?: [] );
+	}
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
+
+	/**
+	 * F-01 — canonical count of operation requests. Read-only; never mutates.
+	 *
+	 * Every surface that answers "how many changes are waiting for you" routes
+	 * here: the admin-bar badge, the Approval Center header, the mission-control
+	 * counters and the MCP reports. Before this existed each of them wrote its
+	 * own COUNT, and the two report fields wrote it against the status literal
+	 * `'pending'` — a value this table never stores — so they answered 0 on a
+	 * site with 112 waiting requests. One counter, one status constant, no
+	 * literal left to drift.
+	 *
+	 * Prefer this over counting rows from list_requests(): that method is a
+	 * paginated fetch (LIMIT defaults to 50, callers were passing 1000) and its
+	 * length silently becomes a cap, not a count.
+	 *
+	 * @param array{status?:string,risk_level?:string,operation_id?:string,session_id?:string,task_id?:string,plan_id?:string} $filters Equality filters; omit for every row.
+	 */
+	public function count_requests( array $filters = [] ): int {
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_operation_requests';
+		if ( ! $this->requests_table_exists() ) {
+			return 0;
+		}
+
+		$where  = [];
+		$params = [];
+		foreach ( [ 'session_id', 'task_id', 'plan_id', 'status', 'operation_id', 'risk_level' ] as $key ) {
+			if ( ! empty( $filters[ $key ] ) ) {
+				$where[]  = "{$key} = %s";
+				$params[] = $filters[ $key ];
+			}
+		}
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name is a trusted prefix concat; every filter value goes through prepare() below.
+		$sql = "SELECT COUNT(*) FROM {$table}";
+		if ( $where ) {
+			$sql = $wpdb->prepare( $sql . ' WHERE ' . implode( ' AND ', $where ), ...$params );
+		}
+		return (int) $wpdb->get_var( $sql );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/** Requests currently awaiting a human decision — the one canonical pending count. */
+	public function count_pending_review(): int {
+		return $this->count_requests( [ 'status' => self::STATUS_PENDING_REVIEW ] );
+	}
+
+	/**
+	 * Whole-table status histogram, grouped in SQL. Read-only.
+	 *
+	 * The report breakdown used to tally a fetched page of rows, so past ~1000
+	 * requests it would have started under-reporting the very statuses it
+	 * summarises. GROUP BY has no page to fall off.
+	 *
+	 * @return array<string,int> status => count, for statuses present in the table.
+	 */
+	public function count_requests_by_status(): array {
+		global $wpdb;
+		if ( ! $this->requests_table_exists() ) {
+			return [];
+		}
+		$table = $wpdb->prefix . 'wpcc_operation_requests';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- no user input; table name is a trusted prefix concat.
+		$rows = $wpdb->get_results( "SELECT status, COUNT(*) AS total FROM {$table} GROUP BY status", ARRAY_A ) ?: [];
+		$out  = [];
+		foreach ( $rows as $row ) {
+			$out[ (string) ( $row['status'] ?? 'unknown' ) ] = (int) ( $row['total'] ?? 0 );
+		}
+		return $out;
+	}
+
+	/** Guard: the requests table is absent on a fresh install until migrations run. */
+	private function requests_table_exists(): bool {
+		global $wpdb;
+		$table = $wpdb->prefix . 'wpcc_operation_requests';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		return $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
 	}
 
 	private function update_status( string $request_id, string $status, ?string $timestamp_field = null, array $extra = [] ): bool|\WP_Error {
@@ -393,12 +543,12 @@ final class OperationManager {
 			// Check if it already has the status or if it wasn't pending
 			$request = $this->get_request( $request_id );
 			if ( ! $request ) {
-				return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'ai-command-center' ) );
 			}
 			if ( $request['status'] === $status ) {
 				return true;
 			}
-			return new \WP_Error( 'wpcc_invalid_transition', sprintf( __( 'Cannot transition request from %s to %s.', 'wp-command-center' ), $request['status'], $status ) );
+			return new \WP_Error( 'wpcc_invalid_transition', sprintf( /* translators: 1: current status, 2: requested status */ __( 'Cannot transition request from %1$s to %2$s.', 'ai-command-center' ), $request['status'], $status ) );
 		}
 
 		return true;

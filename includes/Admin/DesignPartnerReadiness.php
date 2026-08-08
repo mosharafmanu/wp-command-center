@@ -25,7 +25,7 @@ final class DesignPartnerReadiness {
 	 * @return array<int,array{key:string,label:string,status:string,detail:string,action_label:string,action_url:string}>
 	 */
 	public static function checklist(): array {
-		$providers_url = admin_url( 'admin.php?page=wpcc-built-in-ai&wpcc_tab=providers' );
+		$providers_url = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' );
 		$security_url  = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=security' );
 		$history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 		$approvals_url = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
@@ -42,45 +42,45 @@ final class DesignPartnerReadiness {
 		// 1. Approvals on (Client-safe mode).
 		$items[] = [
 			'key'          => 'security_mode',
-			'label'        => __( 'Approvals are on (Client-safe mode)', 'wp-command-center' ),
+			'label'        => __( 'Approvals are on (Client-safe mode)', 'ai-command-center' ),
 			'status'       => $client_safe ? 'pass' : 'warning',
 			'detail'       => $client_safe
-				? __( 'Every AI change waits for your approval before it applies.', 'wp-command-center' )
-				: __( 'You’re in Developer mode, which applies AI writes without approval. Switch to Client-safe mode before working on a real site.', 'wp-command-center' ),
-			'action_label' => $client_safe ? '' : __( 'Set Client-safe mode', 'wp-command-center' ),
+				? \WPCommandCenter\Operations\SecurityModeManager::promise()
+				: __( 'You’re in Developer mode, which applies AI writes without approval. Switch to Client-safe mode before working on a real site.', 'ai-command-center' ),
+			'action_label' => $client_safe ? '' : __( 'Set Client-safe mode', 'ai-command-center' ),
 			'action_url'   => $security_url,
 		];
 
 		// 2. Provider connected.
 		$items[] = [
 			'key'          => 'provider_connected',
-			'label'        => __( 'AI provider connected', 'wp-command-center' ),
+			'label'        => __( 'AI provider connected', 'ai-command-center' ),
 			'status'       => $configured ? 'pass' : 'blocked',
 			'detail'       => $configured
-				? __( 'A provider key is configured.', 'wp-command-center' )
-				: __( 'No provider yet. Add your AI provider key to start.', 'wp-command-center' ),
-			'action_label' => $configured ? '' : __( 'Connect a provider', 'wp-command-center' ),
+				? __( 'A provider key is configured.', 'ai-command-center' )
+				: __( 'No provider yet. Add your AI provider key to start.', 'ai-command-center' ),
+			'action_label' => $configured ? '' : __( 'Connect a provider', 'ai-command-center' ),
 			'action_url'   => $providers_url,
 		];
 
 		// 3. Provider tested.
 		$items[] = [
 			'key'          => 'provider_tested',
-			'label'        => __( 'Provider tested', 'wp-command-center' ),
+			'label'        => __( 'Provider tested', 'ai-command-center' ),
 			'status'       => $tested ? 'pass' : ( $configured ? 'warning' : 'blocked' ),
 			'detail'       => $tested
-				? __( 'Your provider key passed a connection test.', 'wp-command-center' )
-				: __( 'Run “Test connection” on your provider to confirm the key works.', 'wp-command-center' ),
-			'action_label' => $tested ? '' : __( 'Test the connection', 'wp-command-center' ),
+				? __( 'Your provider key passed a connection test.', 'ai-command-center' )
+				: __( 'Run “Test connection” on your provider to confirm the key works.', 'ai-command-center' ),
+			'action_label' => $tested ? '' : __( 'Test the connection', 'ai-command-center' ),
 			'action_url'   => $providers_url,
 		];
 
 		// 4. Generation supported (honest provider reality).
 		$items[] = [
 			'key'          => 'generation_supported',
-			'label'        => __( 'Generation supported', 'wp-command-center' ),
+			'label'        => __( 'Generation supported', 'ai-command-center' ),
 			'status'       => $configured ? 'pass' : 'blocked',
-			'detail'       => __( 'Generation runs on the provider you set as the default — Anthropic (Claude) or an OpenAI-compatible provider. Other providers can be connected and tested, but only the one you select will generate.', 'wp-command-center' ),
+			'detail'       => __( 'Generation runs on the provider you set as the default — Anthropic (Claude) or an OpenAI-compatible provider. Other providers can be connected and tested, but only the one you select will generate.', 'ai-command-center' ),
 			'action_label' => '',
 			'action_url'   => $providers_url,
 		];
@@ -88,32 +88,32 @@ final class DesignPartnerReadiness {
 		// 5. At least one built-in AI tool enabled.
 		$items[] = [
 			'key'          => 'tool_enabled',
-			'label'        => __( 'A built-in AI tool is on', 'wp-command-center' ),
+			'label'        => __( 'A built-in AI tool is on', 'ai-command-center' ),
 			'status'       => $any_tool ? 'pass' : 'blocked',
 			'detail'       => $any_tool
-				? __( 'At least one tool (SEO, Alt Text, or Content) is turned on.', 'wp-command-center' )
-				: __( 'Turn on SEO, Alt Text, or Content under Built-in AI › Providers.', 'wp-command-center' ),
-			'action_label' => $any_tool ? '' : __( 'Turn on a tool', 'wp-command-center' ),
+				? __( 'At least one tool (SEO, Alt Text, or Content) is turned on.', 'ai-command-center' )
+				: __( 'Turn on SEO, Alt Text, or Content under Built-in AI › Providers.', 'ai-command-center' ),
+			'action_label' => $any_tool ? '' : __( 'Turn on a tool', 'ai-command-center' ),
 			'action_url'   => $providers_url,
 		];
 
 		// 6. Test content available.
 		$items[] = [
 			'key'          => 'test_content',
-			'label'        => __( 'Test content available', 'wp-command-center' ),
+			'label'        => __( 'Test content available', 'ai-command-center' ),
 			'status'       => ( $content['has_post'] && $content['has_image'] ) ? 'pass' : 'warning',
 			'detail'       => self::content_detail( $content ),
-			'action_label' => ( $content['has_post'] && $content['has_image'] ) ? '' : __( 'Add a post or image', 'wp-command-center' ),
+			'action_label' => ( $content['has_post'] && $content['has_image'] ) ? '' : __( 'Add a post or image', 'ai-command-center' ),
 			'action_url'   => admin_url( 'post-new.php' ),
 		];
 
 		// 7. Approvals workflow ready.
 		$items[] = [
 			'key'          => 'approvals_ready',
-			'label'        => __( 'Approvals are ready', 'wp-command-center' ),
+			'label'        => __( 'Approvals are ready', 'ai-command-center' ),
 			'status'       => 'pass',
-			'detail'       => __( 'Changes that need your sign-off appear in Activity › Approvals.', 'wp-command-center' ),
-			'action_label' => __( 'Open Approvals', 'wp-command-center' ),
+			'detail'       => __( 'Changes that need your sign-off appear under Approvals.', 'ai-command-center' ),
+			'action_label' => __( 'Open Approvals', 'ai-command-center' ),
 			'action_url'   => $approvals_url,
 		];
 
@@ -121,10 +121,10 @@ final class DesignPartnerReadiness {
 		$history_ok = FeatureGate::allows( 'change_history' );
 		$items[]    = [
 			'key'          => 'history_ready',
-			'label'        => __( 'History &amp; undo are ready', 'wp-command-center' ),
+			'label'        => __( 'History &amp; undo are ready', 'ai-command-center' ),
 			'status'       => $history_ok ? 'pass' : 'warning',
-			'detail'       => __( 'Every change is recorded in History, where you can undo what’s reversible.', 'wp-command-center' ),
-			'action_label' => __( 'Open History', 'wp-command-center' ),
+			'detail'       => __( 'Every change is recorded in History, where you can undo what’s reversible.', 'ai-command-center' ),
+			'action_label' => __( 'Open History', 'ai-command-center' ),
 			'action_url'   => $history_url,
 		];
 
@@ -190,7 +190,6 @@ final class DesignPartnerReadiness {
 			'post_status'      => [ 'publish', 'draft' ],
 			'numberposts'      => 1,
 			'fields'           => 'ids',
-			'suppress_filters' => true,
 		] );
 		$images = get_posts( [
 			'post_type'        => 'attachment',
@@ -198,21 +197,20 @@ final class DesignPartnerReadiness {
 			'post_status'      => 'inherit',
 			'numberposts'      => 1,
 			'fields'           => 'ids',
-			'suppress_filters' => true,
 		] );
 		return [ 'has_post' => ! empty( $posts ), 'has_image' => ! empty( $images ) ];
 	}
 
 	private static function content_detail( array $content ): string {
 		if ( $content['has_post'] && $content['has_image'] ) {
-			return __( 'You have a post and an image to try SEO and Alt Text on.', 'wp-command-center' );
+			return __( 'You have a post and an image to try SEO and Alt Text on.', 'ai-command-center' );
 		}
 		if ( ! $content['has_post'] && ! $content['has_image'] ) {
-			return __( 'Add a draft post and upload an image so you have something to generate on.', 'wp-command-center' );
+			return __( 'Add a draft post and upload an image so you have something to generate on.', 'ai-command-center' );
 		}
 		if ( ! $content['has_post'] ) {
-			return __( 'Add a draft post to try SEO on.', 'wp-command-center' );
+			return __( 'Add a draft post to try SEO on.', 'ai-command-center' );
 		}
-		return __( 'Upload an image to try Alt Text on.', 'wp-command-center' );
+		return __( 'Upload an image to try Alt Text on.', 'ai-command-center' );
 	}
 }

@@ -106,13 +106,13 @@ final class PatchModeResolver {
 			if ( array_key_exists( 'content', $file ) ) {
 				return new \WP_Error(
 					'wpcc_unknown_patch_field',
-					__( "The 'content' field requires an explicit 'mode' (append, prepend, or replace_range). For a full-file replacement, set mode='whole_file' and use the 'modified' field instead of 'content'.", 'wp-command-center' )
+					__( "The 'content' field requires an explicit 'mode' (append, prepend, or replace_range). For a full-file replacement, set mode='whole_file' and use the 'modified' field instead of 'content'.", 'ai-command-center' )
 				);
 			}
 			if ( array_key_exists( 'diff', $file ) ) {
 				return new \WP_Error(
 					'wpcc_unknown_patch_field',
-					__( "The 'diff' field requires mode='unified_diff'.", 'wp-command-center' )
+					__( "The 'diff' field requires mode='unified_diff'.", 'ai-command-center' )
 				);
 			}
 
@@ -120,7 +120,7 @@ final class PatchModeResolver {
 				'wpcc_missing_patch_mode',
 				sprintf(
 					/* translators: %s: list of valid modes */
-					__( "Specify a 'mode' (%s), or provide the 'modified' field for a whole-file replacement.", 'wp-command-center' ),
+					__( "Specify a 'mode' (%s), or provide the 'modified' field for a whole-file replacement.", 'ai-command-center' ),
 					implode( ', ', self::MODES )
 				)
 			);
@@ -131,7 +131,7 @@ final class PatchModeResolver {
 				'wpcc_invalid_patch_mode',
 				sprintf(
 					/* translators: 1: supplied mode, 2: list of valid modes */
-					__( "Invalid patch mode '%1\$s'. Valid modes: %2\$s.", 'wp-command-center' ),
+					__( "Invalid patch mode '%1\$s'. Valid modes: %2\$s.", 'ai-command-center' ),
 					$mode,
 					implode( ', ', self::MODES )
 				)
@@ -166,14 +166,14 @@ final class PatchModeResolver {
 
 		$hint = '';
 		if ( self::MODE_WHOLE_FILE === $mode && in_array( 'content', $unknown, true ) ) {
-			$hint = __( " Whole-file replacement uses 'modified', not 'content'.", 'wp-command-center' );
+			$hint = __( " Whole-file replacement uses 'modified', not 'content'.", 'ai-command-center' );
 		}
 
 		return new \WP_Error(
 			'wpcc_unknown_patch_field',
 			sprintf(
 				/* translators: 1: unknown field names, 2: mode, 3: allowed field names, 4: optional hint */
-				__( "Unknown field(s) for mode '%2\$s': %1\$s. Allowed fields: %3\$s.%4\$s", 'wp-command-center' ),
+				__( "Unknown field(s) for mode '%2\$s': %1\$s. Allowed fields: %3\$s.%4\$s", 'ai-command-center' ),
 				implode( ', ', $unknown ),
 				$mode,
 				implode( ', ', $allowed ),
@@ -186,7 +186,7 @@ final class PatchModeResolver {
 		if ( ! array_key_exists( 'modified', $file ) ) {
 			return new \WP_Error(
 				'wpcc_missing_patch_field',
-				__( "Mode 'whole_file' requires the 'modified' field (the full new file content).", 'wp-command-center' )
+				__( "Mode 'whole_file' requires the 'modified' field (the full new file content).", 'ai-command-center' )
 			);
 		}
 
@@ -195,13 +195,13 @@ final class PatchModeResolver {
 		return [
 			'modified' => $modified,
 			'mode'     => self::MODE_WHOLE_FILE,
-			'meta'     => [ 'summary' => __( 'Replaces the entire file.', 'wp-command-center' ) ],
+			'meta'     => [ 'summary' => __( 'Replaces the entire file.', 'ai-command-center' ) ],
 		];
 	}
 
 	private static function resolve_append( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'content', $file ) ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'append' requires the 'content' field.", 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'append' requires the 'content' field.", 'ai-command-center' ) );
 		}
 
 		$content    = (string) $file['content'];
@@ -223,7 +223,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'      => sprintf(
 					/* translators: %d: number of lines appended */
-					__( 'Appends %d line(s) to the end of the file.', 'wp-command-center' ),
+					__( 'Appends %d line(s) to the end of the file.', 'ai-command-center' ),
 					self::line_count( $content )
 				),
 				'lines_added' => self::line_count( $content ),
@@ -233,7 +233,7 @@ final class PatchModeResolver {
 
 	private static function resolve_prepend( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'content', $file ) ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'prepend' requires the 'content' field.", 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'prepend' requires the 'content' field.", 'ai-command-center' ) );
 		}
 
 		$content  = (string) $file['content'];
@@ -249,7 +249,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'     => sprintf(
 					/* translators: %d: number of lines prepended */
-					__( 'Prepends %d line(s) to the start of the file.', 'wp-command-center' ),
+					__( 'Prepends %d line(s) to the start of the file.', 'ai-command-center' ),
 					self::line_count( $content )
 				),
 				'lines_added' => self::line_count( $content ),
@@ -259,10 +259,10 @@ final class PatchModeResolver {
 
 	private static function resolve_replace_text( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'find', $file ) || '' === (string) $file['find'] ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires a non-empty 'find' field.", 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires a non-empty 'find' field.", 'ai-command-center' ) );
 		}
 		if ( ! array_key_exists( 'replace', $file ) ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires the 'replace' field (may be an empty string to delete the text).", 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires the 'replace' field (may be an empty string to delete the text).", 'ai-command-center' ) );
 		}
 
 		$find    = (string) $file['find'];
@@ -274,7 +274,7 @@ final class PatchModeResolver {
 				'wpcc_patch_text_not_found',
 				sprintf(
 					/* translators: %s: the search text (truncated) */
-					__( "The text to replace was not found in the file: \"%s\".", 'wp-command-center' ),
+					__( "The text to replace was not found in the file: \"%s\".", 'ai-command-center' ),
 					self::truncate( $find )
 				)
 			);
@@ -283,7 +283,7 @@ final class PatchModeResolver {
 		if ( array_key_exists( 'count', $file ) ) {
 			$count = (int) $file['count'];
 			if ( $count < 1 ) {
-				return new \WP_Error( 'wpcc_invalid_patch_field', __( "'count' must be a positive integer.", 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_patch_field', __( "'count' must be a positive integer.", 'ai-command-center' ) );
 			}
 			// explode with a limit splits on at most $count delimiters, leaving the
 			// remainder intact, so imploding with $replace swaps exactly the first N.
@@ -300,7 +300,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'              => sprintf(
 					/* translators: 1: occurrences changed, 2: total occurrences found */
-					__( 'Replaces %1$d of %2$d occurrence(s) of the target text.', 'wp-command-center' ),
+					__( 'Replaces %1$d of %2$d occurrence(s) of the target text.', 'ai-command-center' ),
 					$changed,
 					$total
 				),
@@ -317,7 +317,7 @@ final class PatchModeResolver {
 					'wpcc_missing_patch_field',
 					sprintf(
 						/* translators: %s: field name */
-						__( "Mode 'replace_range' requires the '%s' field.", 'wp-command-center' ),
+						__( "Mode 'replace_range' requires the '%s' field.", 'ai-command-center' ),
 						$required
 					)
 				);
@@ -334,7 +334,7 @@ final class PatchModeResolver {
 				'wpcc_patch_range_invalid',
 				sprintf(
 					/* translators: 1: start line, 2: end line, 3: total lines */
-					__( 'Invalid line range %1$d-%2$d: the file has %3$d line(s). Lines are 1-based and the range is inclusive.', 'wp-command-center' ),
+					__( 'Invalid line range %1$d-%2$d: the file has %3$d line(s). Lines are 1-based and the range is inclusive.', 'ai-command-center' ),
 					$start,
 					$end,
 					$total
@@ -357,7 +357,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'        => sprintf(
 					/* translators: 1: start line, 2: end line, 3: replacement line count */
-					__( 'Replaces lines %1$d-%2$d with %3$d line(s).', 'wp-command-center' ),
+					__( 'Replaces lines %1$d-%2$d with %3$d line(s).', 'ai-command-center' ),
 					$start,
 					$end,
 					count( $replacement )
@@ -370,7 +370,7 @@ final class PatchModeResolver {
 
 	private static function resolve_unified_diff( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'diff', $file ) || '' === (string) $file['diff'] ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'unified_diff' requires a non-empty 'diff' field.", 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'unified_diff' requires a non-empty 'diff' field.", 'ai-command-center' ) );
 		}
 
 		$result = self::apply_unified_diff( $original, (string) $file['diff'] );
@@ -384,7 +384,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'        => sprintf(
 					/* translators: %d: number of hunks applied */
-					__( 'Applies a unified diff (%d hunk(s)).', 'wp-command-center' ),
+					__( 'Applies a unified diff (%d hunk(s)).', 'ai-command-center' ),
 					$result['hunks']
 				),
 				'hunks_applied'  => $result['hunks'],
@@ -435,16 +435,16 @@ final class PatchModeResolver {
 
 			if ( str_starts_with( $line, '@@' ) ) {
 				if ( ! preg_match( '/^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@/', $line, $m ) ) {
-					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Malformed hunk header in unified diff.', 'wp-command-center' ) );
+					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Malformed hunk header in unified diff.', 'ai-command-center' ) );
 				}
 				$old_start = (int) $m[1];
 				$target    = max( 0, $old_start - 1 );
 
 				if ( $target < $cursor ) {
-					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Overlapping or out-of-order hunks in unified diff.', 'wp-command-center' ) );
+					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Overlapping or out-of-order hunks in unified diff.', 'ai-command-center' ) );
 				}
 				if ( $target > count( $orig_lines ) ) {
-					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'A hunk starts beyond the end of the file.', 'wp-command-center' ) );
+					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'A hunk starts beyond the end of the file.', 'ai-command-center' ) );
 				}
 
 				// Copy untouched lines up to the hunk start.
@@ -469,7 +469,7 @@ final class PatchModeResolver {
 				if ( ! isset( $orig_lines[ $cursor ] ) || $orig_lines[ $cursor ] !== $text ) {
 					return new \WP_Error( 'wpcc_patch_diff_failed', sprintf(
 						/* translators: %d: line number */
-						__( 'Context line %d does not match the file; the diff may be stale.', 'wp-command-center' ),
+						__( 'Context line %d does not match the file; the diff may be stale.', 'ai-command-center' ),
 						$cursor + 1
 					) );
 				}
@@ -479,7 +479,7 @@ final class PatchModeResolver {
 				if ( ! isset( $orig_lines[ $cursor ] ) || $orig_lines[ $cursor ] !== $text ) {
 					return new \WP_Error( 'wpcc_patch_diff_failed', sprintf(
 						/* translators: %d: line number */
-						__( 'Removed line %d does not match the file; the diff may be stale.', 'wp-command-center' ),
+						__( 'Removed line %d does not match the file; the diff may be stale.', 'ai-command-center' ),
 						$cursor + 1
 					) );
 				}
@@ -487,12 +487,12 @@ final class PatchModeResolver {
 			} elseif ( '+' === $marker ) {
 				$result[] = $text;
 			} else {
-				return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Unrecognized line in unified diff hunk.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Unrecognized line in unified diff hunk.', 'ai-command-center' ) );
 			}
 		}
 
 		if ( 0 === $hunks ) {
-			return new \WP_Error( 'wpcc_patch_diff_failed', __( 'The unified diff contained no hunks.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_patch_diff_failed', __( 'The unified diff contained no hunks.', 'ai-command-center' ) );
 		}
 
 		// Copy any remaining untouched lines.

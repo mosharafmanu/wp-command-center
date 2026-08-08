@@ -3,6 +3,12 @@ set -uo pipefail; SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; so
 PASS=0; FAIL=0; pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }; fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; if [ "$e" = "$a" ]; then pass "$d"; else fail "$d (expected '$e', got '$a')"; fi; }
 assert_true() { local d="$1" a="$2"; if [ "$a" = "true" ]; then pass "$d"; else fail "$d"; fi; }
+# Errors are WP_Error REST responses ({code,message,data.status}); the old check for an
+# in-band .error/.errors key matched a shape the runtime no longer returns. Assert the
+# SPECIFIC code instead.
+assert_code() { local d="$1" body="$2" want="$3"; local got
+  got=$(echo "$body" | jq -r '.code // empty' 2>/dev/null)
+  if [ "$got" = "$want" ]; then pass "$d"; else fail "$d (expected code '$want', got '${got:-none}')"; fi; }
 assert_contains() { local d="$1" h="$2" n="$3"; if [[ "$h" == *"$n"* ]]; then pass "$d"; else fail "$d"; fi; }
 api() { curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$@"; }; api_post() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" "$@"; }
 mcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp"; }
@@ -107,7 +113,7 @@ fi
 
 echo "== 13. Validation: Missing comment_id =="
 BAD_GET=$(api_post -d '{"action":"comment_get"}' "$WPCC_BASE/operations/comments_manage/run")
-assert_true "bg: error" "$(echo "$BAD_GET"|jq -r 'if .error or .errors then "true" else "false" end')"
+assert_code "bg: error" "$BAD_GET" "wpcc_comment_not_found"
 
 echo "== 14. Validation: Bad action =="
 BAD_ACT=$(api_post -d '{"action":"bad_action"}' "$WPCC_BASE/operations/comments_manage/run")
@@ -115,7 +121,7 @@ assert_contains "ba: bad" "$BAD_ACT" "Invalid comment action"
 
 echo "== 15. Validation: Comment not found =="
 NF_GET=$(api_post -d '{"action":"comment_get","comment_id":99999}' "$WPCC_BASE/operations/comments_manage/run")
-assert_true "nf: error" "$(echo "$NF_GET"|jq -r 'if .error or .errors then "true" else "false" end')"
+assert_code "nf: error" "$NF_GET" "wpcc_comment_not_found"
 
 echo "== 16. Validation: Reply without content =="
 if [ "$FIRST_CID" -gt 0 ] 2>/dev/null; then
@@ -127,7 +133,7 @@ fi
 
 echo "== 17. Validation: Missing action =="
 NOACT=$(api_post -d '{}' "$WPCC_BASE/operations/comments_manage/run")
-assert_true "na: error" "$(echo "$NOACT"|jq -r 'if .error or .errors then "true" else "false" end')"
+assert_code "na: error" "$NOACT" "wpcc_missing_action"
 
 echo "== 18. MCP =="
 MCP_TOOLS=$(mcp '{"jsonrpc":"2.0","method":"tools/list","id":1}')
@@ -194,15 +200,15 @@ assert_true "perf: ok" "true"
 
 echo "== 31. Approve non-existent comment =="
 BAD_APPR=$(api_post -d '{"action":"comment_approve","comment_id":999999}' "$WPCC_BASE/operations/comments_manage/run")
-assert_true "bap: error" "$(echo "$BAD_APPR"|jq -r 'if .error or .errors then "true" else "false" end')"
+assert_code "bap: error" "$BAD_APPR" "wpcc_comment_not_found"
 
 echo "== 32. Delete non-existent comment =="
 BAD_DEL=$(api_post -d '{"action":"comment_delete","comment_id":999999}' "$WPCC_BASE/operations/comments_manage/run")
-assert_true "bdel: error" "$(echo "$BAD_DEL"|jq -r 'if .error or .errors then "true" else "false" end')"
+assert_code "bdel: error" "$BAD_DEL" "wpcc_comment_not_found"
 
 echo "== 33. Spam non-existent comment =="
 BAD_SPAM=$(api_post -d '{"action":"comment_spam","comment_id":999999}' "$WPCC_BASE/operations/comments_manage/run")
-assert_true "bsp: error" "$(echo "$BAD_SPAM"|jq -r 'if .error or .errors then "true" else "false" end')"
+assert_code "bsp: error" "$BAD_SPAM" "wpcc_comment_not_found"
 
 echo "== 34. Rollback with empty ID =="
 RB_EMPTY=$(api_post -d '{"rollback_id":""}' "$WPCC_BASE/operations/comments_manage/rollback")

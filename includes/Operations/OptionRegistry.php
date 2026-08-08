@@ -36,8 +36,8 @@ final class OptionRegistry {
 			'site_title' => [
 				'option_id'       => 'site_title',
 				'option_name'     => 'blogname',
-				'title'           => __( 'Site Title', 'wp-command-center' ),
-				'description'     => __( 'The site title displayed in the header and browser title bar.', 'wp-command-center' ),
+				'title'           => __( 'Site Title', 'ai-command-center' ),
+				'description'     => __( 'The site title displayed in the header and browser title bar.', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -50,8 +50,8 @@ final class OptionRegistry {
 			'tagline' => [
 				'option_id'       => 'tagline',
 				'option_name'     => 'blogdescription',
-				'title'           => __( 'Tagline', 'wp-command-center' ),
-				'description'     => __( 'A short description or tagline for the site.', 'wp-command-center' ),
+				'title'           => __( 'Tagline', 'ai-command-center' ),
+				'description'     => __( 'A short description or tagline for the site.', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -63,8 +63,8 @@ final class OptionRegistry {
 			'timezone' => [
 				'option_id'       => 'timezone',
 				'option_name'     => 'timezone_string',
-				'title'           => __( 'Timezone', 'wp-command-center' ),
-				'description'     => __( 'The site timezone string (e.g. America/Chicago).', 'wp-command-center' ),
+				'title'           => __( 'Timezone', 'ai-command-center' ),
+				'description'     => __( 'The site timezone string (e.g. America/Chicago).', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -76,8 +76,8 @@ final class OptionRegistry {
 			'date_format' => [
 				'option_id'       => 'date_format',
 				'option_name'     => 'date_format',
-				'title'           => __( 'Date Format', 'wp-command-center' ),
-				'description'     => __( 'The default date format string.', 'wp-command-center' ),
+				'title'           => __( 'Date Format', 'ai-command-center' ),
+				'description'     => __( 'The default date format string.', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -89,8 +89,8 @@ final class OptionRegistry {
 			'time_format' => [
 				'option_id'       => 'time_format',
 				'option_name'     => 'time_format',
-				'title'           => __( 'Time Format', 'wp-command-center' ),
-				'description'     => __( 'The default time format string.', 'wp-command-center' ),
+				'title'           => __( 'Time Format', 'ai-command-center' ),
+				'description'     => __( 'The default time format string.', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -102,8 +102,8 @@ final class OptionRegistry {
 			'start_of_week' => [
 				'option_id'       => 'start_of_week',
 				'option_name'     => 'start_of_week',
-				'title'           => __( 'Start of Week', 'wp-command-center' ),
-				'description'     => __( 'The day the week starts on (0=Sunday, 1=Monday, ...).', 'wp-command-center' ),
+				'title'           => __( 'Start of Week', 'ai-command-center' ),
+				'description'     => __( 'The day the week starts on (0=Sunday, 1=Monday, ...).', 'ai-command-center' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -116,8 +116,8 @@ final class OptionRegistry {
 			'posts_per_page' => [
 				'option_id'       => 'posts_per_page',
 				'option_name'     => 'posts_per_page',
-				'title'           => __( 'Posts Per Page', 'wp-command-center' ),
-				'description'     => __( 'Number of blog posts shown per page.', 'wp-command-center' ),
+				'title'           => __( 'Posts Per Page', 'ai-command-center' ),
+				'description'     => __( 'Number of blog posts shown per page.', 'ai-command-center' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -130,8 +130,8 @@ final class OptionRegistry {
 			'show_on_front' => [
 				'option_id'       => 'show_on_front',
 				'option_name'     => 'show_on_front',
-				'title'           => __( 'Front Page Displays', 'wp-command-center' ),
-				'description'     => __( 'What to show on the front page: posts or a static page.', 'wp-command-center' ),
+				'title'           => __( 'Front Page Displays', 'ai-command-center' ),
+				'description'     => __( 'What to show on the front page: posts or a static page.', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -143,8 +143,8 @@ final class OptionRegistry {
 			'page_on_front' => [
 				'option_id'       => 'page_on_front',
 				'option_name'     => 'page_on_front',
-				'title'           => __( 'Front Page', 'wp-command-center' ),
-				'description'     => __( 'The ID of the page shown on the front page (when Front Page Displays is "page").', 'wp-command-center' ),
+				'title'           => __( 'Front Page', 'ai-command-center' ),
+				'description'     => __( 'The ID of the page shown on the front page (when Front Page Displays is "page").', 'ai-command-center' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -157,8 +157,8 @@ final class OptionRegistry {
 			'page_for_posts' => [
 				'option_id'       => 'page_for_posts',
 				'option_name'     => 'page_for_posts',
-				'title'           => __( 'Posts Page', 'wp-command-center' ),
-				'description'     => __( 'The ID of the page used for blog posts (when Front Page Displays is "page").', 'wp-command-center' ),
+				'title'           => __( 'Posts Page', 'ai-command-center' ),
+				'description'     => __( 'The ID of the page used for blog posts (when Front Page Displays is "page").', 'ai-command-center' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -171,8 +171,8 @@ final class OptionRegistry {
 			'default_comment_status' => [
 				'option_id'       => 'default_comment_status',
 				'option_name'     => 'default_comment_status',
-				'title'           => __( 'Default Comment Status', 'wp-command-center' ),
-				'description'     => __( 'Default comment status for new posts.', 'wp-command-center' ),
+				'title'           => __( 'Default Comment Status', 'ai-command-center' ),
+				'description'     => __( 'Default comment status for new posts.', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -184,8 +184,8 @@ final class OptionRegistry {
 			'default_ping_status' => [
 				'option_id'       => 'default_ping_status',
 				'option_name'     => 'default_ping_status',
-				'title'           => __( 'Default Ping Status', 'wp-command-center' ),
-				'description'     => __( 'Default ping/trackback status for new posts.', 'wp-command-center' ),
+				'title'           => __( 'Default Ping Status', 'ai-command-center' ),
+				'description'     => __( 'Default ping/trackback status for new posts.', 'ai-command-center' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -197,8 +197,8 @@ final class OptionRegistry {
 			'admin_email' => [
 				'option_id'       => 'admin_email',
 				'option_name'     => 'admin_email',
-				'title'           => __( 'Administration Email', 'wp-command-center' ),
-				'description'     => __( 'The email address used for site administration notifications.', 'wp-command-center' ),
+				'title'           => __( 'Administration Email', 'ai-command-center' ),
+				'description'     => __( 'The email address used for site administration notifications.', 'ai-command-center' ),
 				'type'            => self::TYPE_EMAIL,
 				'risk_level'      => self::RISK_HIGH,
 				'requires_approval' => true,
@@ -226,7 +226,7 @@ final class OptionRegistry {
 	public function validate_value( string $option_id, mixed $value ): ?\WP_Error {
 		$option = $this->get_option( $option_id );
 		if ( null === $option ) {
-			return new \WP_Error( 'wpcc_invalid_option_id', __( 'Unknown option ID.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_option_id', __( 'Unknown option ID.', 'ai-command-center' ) );
 		}
 
 		$type       = $option['type'];
@@ -238,18 +238,18 @@ final class OptionRegistry {
 			case self::TYPE_EMAIL:
 			case self::TYPE_URL:
 				if ( ! is_string( $value ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( __( 'Expected string, got %s.', 'wp-command-center' ), gettype( $value ) ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected string, got %s.', 'ai-command-center' ), gettype( $value ) ) );
 				}
 				break;
 			case self::TYPE_INTEGER:
 				if ( ! is_int( $value ) && ! ctype_digit( (string) $value ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( __( 'Expected integer, got %s.', 'wp-command-center' ), gettype( $value ) ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected integer, got %s.', 'ai-command-center' ), gettype( $value ) ) );
 				}
 				$value = (int) $value;
 				break;
 			case self::TYPE_BOOL:
 				if ( ! is_bool( $value ) && ! in_array( $value, [ 0, 1, '0', '1', 'true', 'false' ], true ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', __( 'Expected boolean value.', 'wp-command-center' ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', __( 'Expected boolean value.', 'ai-command-center' ) );
 				}
 				break;
 		}
@@ -258,39 +258,39 @@ final class OptionRegistry {
 		if ( is_string( $value ) ) {
 			$len = mb_strlen( $value );
 			if ( isset( $validation['min_length'] ) && $len < $validation['min_length'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_short', sprintf( __( 'Value must be at least %d characters.', 'wp-command-center' ), $validation['min_length'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_short', sprintf( /* translators: %d: number */ __( 'Value must be at least %d characters.', 'ai-command-center' ), $validation['min_length'] ) );
 			}
 			if ( isset( $validation['max_length'] ) && $len > $validation['max_length'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_long', sprintf( __( 'Value must be at most %d characters.', 'wp-command-center' ), $validation['max_length'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_long', sprintf( /* translators: %d: number */ __( 'Value must be at most %d characters.', 'ai-command-center' ), $validation['max_length'] ) );
 			}
 		}
 
 		// Min/max for integers.
 		if ( is_int( $value ) ) {
 			if ( isset( $validation['min'] ) && $value < $validation['min'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_small', sprintf( __( 'Value must be at least %d.', 'wp-command-center' ), $validation['min'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_small', sprintf( /* translators: %d: number */ __( 'Value must be at least %d.', 'ai-command-center' ), $validation['min'] ) );
 			}
 			if ( isset( $validation['max'] ) && $value > $validation['max'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_large', sprintf( __( 'Value must be at most %d.', 'wp-command-center' ), $validation['max'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_large', sprintf( /* translators: %d: number */ __( 'Value must be at most %d.', 'ai-command-center' ), $validation['max'] ) );
 			}
 		}
 
 		// Enum validation.
 		if ( isset( $validation['enum'] ) && ! in_array( $value, $validation['enum'], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_option_value', sprintf( __( 'Invalid value. Allowed: %s.', 'wp-command-center' ), implode( ', ', $validation['enum'] ) ) );
+			return new \WP_Error( 'wpcc_invalid_option_value', sprintf( /* translators: %s: value */ __( 'Invalid value. Allowed: %s.', 'ai-command-center' ), implode( ', ', $validation['enum'] ) ) );
 		}
 
 		// Valid timezone check.
 		if ( ! empty( $validation['valid_timezone'] ) && is_string( $value ) ) {
 			if ( ! in_array( $value, timezone_identifiers_list(), true ) ) {
-				return new \WP_Error( 'wpcc_invalid_timezone', __( 'Invalid timezone identifier.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_timezone', __( 'Invalid timezone identifier.', 'ai-command-center' ) );
 			}
 		}
 
 		// Valid email check.
 		if ( ! empty( $validation['valid_email'] ) && is_string( $value ) ) {
 			if ( ! is_email( $value ) ) {
-				return new \WP_Error( 'wpcc_invalid_email', __( 'Invalid email address.', 'wp-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_email', __( 'Invalid email address.', 'ai-command-center' ) );
 			}
 		}
 
@@ -300,7 +300,7 @@ final class OptionRegistry {
 			if ( 0 !== $page_id ) {
 				$post = get_post( $page_id );
 				if ( ! $post || 'page' !== $post->post_type || 'publish' !== $post->post_status ) {
-					return new \WP_Error( 'wpcc_invalid_page_id', __( 'The specified page does not exist or is not published.', 'wp-command-center' ) );
+					return new \WP_Error( 'wpcc_invalid_page_id', __( 'The specified page does not exist or is not published.', 'ai-command-center' ) );
 				}
 			}
 		}

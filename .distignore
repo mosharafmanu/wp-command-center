@@ -1,0 +1,74 @@
+# Everything that must NOT ship in the WordPress.org release package.
+#
+# The repository carries development history, test suites, program handoffs and
+# validation artifacts. None of it runs at runtime, and shipping it is called out
+# in the WordPress.org guidelines as a reason to reject a submission. The
+# authoritative packager is scripts/build-release.sh, which copies an ALLOWLIST
+# rather than trusting this file; this list exists so `wp dist-archive` and
+# similar tools produce the same result.
+
+# Version control / CI
+.git
+.gitignore
+.github
+.distignore
+.deploy-exclude
+
+# Development process: plans, handoffs, audits, validation output
+.ai
+.claude
+docs
+artifacts
+tests
+examples
+scripts
+build
+
+# sdk/ is NOT excluded wholesale, and must not be.
+#
+# sdk/javascript/wpcc-mcp-relay.mjs is a runtime file. The configuration this
+# plugin generates for Claude Desktop, Cursor, Codex and the rest tells the
+# user's machine to fetch that exact path from their own site and run it (see
+# Integration\BaseClientIntegration::relay_url()). Drop it and the fetch 404s,
+# the connector never starts, and every connection fails silently.
+#
+# scripts/build-release.sh copies it explicitly and fails the build if it is
+# missing. A bare `sdk` line here made this file disagree with the authoritative
+# packager on the one file whose absence breaks the product, which defeats the
+# purpose of keeping the two in step. Only the source-only samples are excluded.
+sdk/php
+sdk/javascript/client.js
+
+# Root development documents
+HANDOFF-STEP-*.md
+PROJECT-HANDOFF-WPCC.md
+WPCC-POST-STEP-101-ROADMAP.md
+WPCC-RUNTIME-ROADMAP.md
+*-REPORT.md
+*-FINDING-*.md
+STEP-*.md
+AGENTS.md
+CLAUDE.md
+
+# Developer tooling / local config
+composer.json
+composer.lock
+vendor
+node_modules
+package.json
+package-lock.json
+phpcs.xml
+phpcs.xml.dist
+phpunit.xml
+phpunit.xml.dist
+wpcc-env.sh
+wpcc-env*.sh
+*.local.json
+*.local.php
+
+# API description used for development, not needed at runtime
+openapi.json
+
+# OS noise
+.DS_Store
+Thumbs.db

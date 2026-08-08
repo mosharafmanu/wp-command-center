@@ -23,9 +23,13 @@ final class CredentialStore {
 
 	public const OPT = 'wpcc_ai_credentials'; // connection_id => key
 
-	/** True when a usable credential exists for a connection (constant, stored, or not-needed). */
+	/** True when a usable credential exists for a connection (constant, stored, legacy, or not-needed). */
 	public function has_secret( array $conn ): bool {
 		if ( $this->is_constant_backed( $conn ) ) {
+			return true;
+		}
+		// The bootstrap connection's key lives in the pre-6R option, not in this store.
+		if ( $this->is_legacy_option_backed( $conn ) ) {
 			return true;
 		}
 		$store = $this->raw();
@@ -39,12 +43,36 @@ final class CredentialStore {
 
 	/** A constant (Anthropic/Vision) provides this connection's key → read-only in UI. */
 	public function is_constant_backed( array $conn ): bool {
-		if ( Dialect::ANTHROPIC !== ( $conn['dialect'] ?? '' ) ) {
+		return $this->legacy_key_source( $conn, [ 'anthropic_constant', 'vision_constant' ] );
+	}
+
+	/**
+	 * A pre-6R key OPTION provides this bootstrap connection's key.
+	 *
+	 * ConnectionStore surfaces the virtual "Anthropic (existing)" connection precisely
+	 * BECAUSE a legacy key exists — and then this store, which only ever looked in its
+	 * own per-connection option, answered that the connection had no key. The screen
+	 * said "Needs a key · Add an API key to finish setup" about a connection whose key
+	 * the runtime was reading and using on every call, and nothing could be routed to it
+	 * because both default_id() and routes() gate on has_secret(). The two halves of the
+	 * bridge now read the same source.
+	 */
+	public function is_legacy_option_backed( array $conn ): bool {
+		return $this->legacy_key_source( $conn, [ 'anthropic_option', 'vision_option' ] );
+	}
+
+	/**
+	 * Whether the bootstrap Anthropic connection's key comes from one of $sources.
+	 * Only the bridge connection can be legacy-backed — a normal saved connection keeps
+	 * its key in this store, keyed by its own id.
+	 *
+	 * @param string[] $sources
+	 */
+	private function legacy_key_source( array $conn, array $sources ): bool {
+		if ( Dialect::ANTHROPIC !== ( $conn['dialect'] ?? '' ) || empty( $conn['bridge_legacy'] ) ) {
 			return false;
 		}
-		$src = ( new AnthropicClient() )->key_source();
-		return in_array( $src, [ 'anthropic_constant', 'vision_constant' ], true )
-			&& ! empty( $conn['bridge_legacy'] );
+		return in_array( ( new AnthropicClient() )->key_source(), $sources, true );
 	}
 
 	/**

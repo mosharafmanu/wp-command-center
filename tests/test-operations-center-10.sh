@@ -2,6 +2,9 @@
 # PROGRAM-10 — Live Operations Center. Structural + functional (wp eval-file).
 set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Derived, not hardcoded: the text domain follows the plugin slug, and these
+# assertions must survive a slug rename.
+WPCC_TEXTDOMAIN=$(grep -m1 "^ \* Text Domain:" "$(dirname "${BASH_SOURCE[0]}")"/../*.php | sed 's/.*Text Domain: *//;s/ *$//')
 ROOT="$(cd "$DIR/.." && pwd)"
 WP_PATH="$DIR/../../../.."
 
@@ -30,7 +33,7 @@ has "cost explicitly not tracked" "'cost_tracked'     => false" "$Q"
 has "view shows cost not tracked" "Not tracked yet" "$V"
 hasnt "no fabricated cost figure" 'Cost.*\$[0-9]' "$V"
 has "running shown only from real telemetry" "running.*=> .int. \\\$s\['running'\]|'running'   => \(int\) \\\$s\['running'\]" "$Q"
-has "duration unknown surfaced honestly" "'unknown', 'wp-command-center'" "$V"
+has "duration unknown surfaced honestly" "'unknown', '$WPCC_TEXTDOMAIN'" "$V"
 has "audit fallback marks duration not measured" "duration not measured" "$V"
 
 echo "== 4. Required sections present =="
@@ -47,14 +50,24 @@ has "empty: no reversible" "No reversible changes recorded yet" "$V"
 has "all clear state" "All clear" "$V"
 
 echo "== 6. Safety — escaping, link, nav, access =="
-has "operation output escaped" "esc_html\( \\\$row\['operation'\]" "$V"
+# The row name is now resolved through ActionLabels (the same plain-language
+# dictionary Approvals and Changes use) before output — "worker" was the engine's
+# internal name for the background queue, repeated on every row. Escaping is
+# unchanged and still asserted: the resolved label is what reaches esc_html().
+has "operation output escaped" "esc_html\( \\\$wpcc_op_label\(" "$V"
+has "row names use the product dictionary" "ActionLabels::describe" "$V"
 has "session id url-safe" "rawurlencode\( \(string\) \\\$s\['session_id'\] \)" "$V"
 has "review link to change history sessions" "wpcc-history&wpcc_tab=changes&tab=sessions" "$V"
-has "tab registered under Operate" "'view' => 'operations-center'" "$SHELL_F"
+# The Operations Center view is registered as the "System" pane of Settings > Advanced
+# (settings-advanced.php), not in AppShell. AppShell only keeps the legacy
+# wpcc-operations-center slug as a redirect to that pane.
+# Pane list moved to AppShell::advanced_panes() so the ⌘K palette can reach it.
+has "view registered as the Advanced > System pane" "'view'     => 'operations-center'" "$ROOT/includes/Admin/AppShell.php"
+has "legacy slug still redirects to it" "'wpcc-operations-center'" "$SHELL_F"
 has "legacy slug mapped" "'wpcc-operations-center'" "$SHELL_F"
 
 echo "== 7. Functional (wp eval-file) =="
-PHPF="$(mktemp -t wpcc10.XXXXXX.php)"
+PHPF="$(mktemp -d)/wpcc10.php"
 cat > "$PHPF" <<'PHP'
 <?php
 use WPCommandCenter\Admin\OperationsCenterQuery as OC;

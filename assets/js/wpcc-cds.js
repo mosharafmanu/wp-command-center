@@ -65,15 +65,99 @@
 	var activeIdx = 0;
 	var lastFocus = null;
 
+	/**
+	 * The destination list, already flat and already unique per URL (AppShell::
+	 * nav_map builds one row per real destination). The old version derived rows
+	 * from a section/tab tree, which emitted a section AND its only tab as two
+	 * rows pointing at the same screen. Deduplicating by URL here as well keeps
+	 * that guarantee true even if a future map hands us the same URL twice.
+	 */
 	function flattenNav() {
-		var out = [];
-		( cfg.nav || [] ).forEach( function ( section ) {
-			out.push( { label: section.label, hint: ( cfg.i18n && cfg.i18n.section ) || 'Section', url: section.url } );
-			( section.tabs || [] ).forEach( function ( tab ) {
-				out.push( { label: section.label + ' › ' + tab.label, hint: section.label, url: tab.url } );
+		var seen = {};
+		var out  = [];
+		( cfg.nav || [] ).forEach( function ( item ) {
+			if ( ! item || ! item.url || seen[ item.url ] ) { return; }
+			seen[ item.url ] = true;
+			out.push( {
+				label:    item.label,
+				hint:     item.hint || ( cfg.i18n && cfg.i18n.section ) || 'Section',
+				url:      item.url,
+				keywords: ( item.keywords || '' ).toLowerCase()
 			} );
 		} );
 		return out;
+	}
+
+	function escapeRe( s ) { return s.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' ); }
+
+	/** Does `word` begin a word inside `hay`? Never a mid-word or scattered hit. */
+	function startsWord( hay, word ) {
+		return new RegExp( '(^|[^a-z0-9])' + escapeRe( word ) ).test( hay );
+	}
+
+	/**
+	 * Score one destination against a query. Lower is better; -1 is no match.
+	 *
+	 * The ladder, best first:
+	 *   0  the whole query IS the label                 ("changes" → Changes)
+	 *   1  the whole query IS one of its aliases        ("security mode" → Protection)
+	 *   2  every word begins a word in the label        ("tok" → … › Access tokens)
+	 *   3  the label starts with the query              ("app" → Approvals)
+	 *   4  the label contains the query somewhere       (contiguous, not scattered)
+	 *   5  every word begins a word in the aliases      ("undo" → Changes)
+	 *   6  an alias contains it somewhere
+	 *
+	 * Every tier is a CONTIGUOUS match: exact, word-start, or substring. Nothing
+	 * here matches characters merely appearing in order across a label, which is
+	 * what makes a fuzzy palette answer "token" with "Marketing". A word that
+	 * appears nowhere excludes the destination outright.
+	 *
+	 * Multi-word queries must match every word somewhere, and take the WORST tier
+	 * any one of them earned — so "access token" and "token access" both land on
+	 * Access tokens, and neither is flattered by its better half.
+	 *
+	 * Aliases are never displayed. They exist so the words a customer actually
+	 * types reach the screen they mean. A partial alias hit always ranks below
+	 * every hit on a real name, so a keyword can never flood out the screen
+	 * actually called that. The one exception is deliberate: a query that IS an
+	 * alias in full ("security mode") is a synonym someone chose for this screen,
+	 * so it outranks a fragment of some other screen's name — but never a
+	 * destination whose own name is exactly what was typed.
+	 */
+	function score( item, words, query ) {
+		var label   = item.label.toLowerCase();
+		var aliases = item.keywords;
+		var hay     = label + ' ' + aliases;
+
+		// Whole-query tiers first: these compare the query against the whole name,
+		// which per-word scoring cannot express.
+		if ( label === query ) { return 0; }
+		// The last segment of a breadcrumb is the screen's own name — "Settings ›
+		// Connections › Access tokens" IS "Access tokens" to the person typing it.
+		var leaf = label.split( '›' ).pop().trim();
+		if ( leaf === query ) { return 0; }
+		if ( aliases && aliases.split( /\s*,\s*|\s{2,}/ ).indexOf( query ) !== -1 ) { return 1; }
+
+		var best = 2;
+		for ( var i = 0; i < words.length; i++ ) {
+			var w = words[ i ];
+			if ( hay.indexOf( w ) === -1 ) { return -1; }
+
+			var rank;
+			if ( startsWord( label, w ) ) {
+				rank = 2;
+			} else if ( label.indexOf( w ) === 0 ) {
+				rank = 3;
+			} else if ( label.indexOf( w ) !== -1 ) {
+				rank = 4;
+			} else if ( startsWord( aliases, w ) ) {
+				rank = 5;
+			} else {
+				rank = 6;
+			}
+			if ( rank > best ) { best = rank; }
+		}
+		return best;
 	}
 
 	function buildPalette() {
@@ -96,10 +180,38 @@
 	function renderOpts( query ) {
 		var all = flattenNav();
 		var q = ( query || '' ).toLowerCase().trim();
-		var matches = q ? all.filter( function ( o ) { return o.label.toLowerCase().indexOf( q ) !== -1; } ) : all;
+		var matches;
+
+		if ( ! q ) {
+			matches = all;
+		} else {
+			var words = q.split( /\s+/ );
+			matches = all
+				.map( function ( o, i ) { return { o: o, s: score( o, words, q ), i: i }; } )
+				.filter( function ( r ) { return r.s !== -1; } )
+				// Ties keep map order, which is navigation order — so equally good
+				// matches come back in the order the product itself lists them.
+				.sort( function ( a, b ) { return a.s - b.s || a.i - b.i; } )
+				.map( function ( r ) { return r.o; } );
+		}
+
 		paletteItems = matches;
 		activeIdx = 0;
 		palette.list.innerHTML = '';
+
+		/*
+		 * An empty result used to render an empty <ul>: the panel simply went
+		 * blank, which reads as the search being broken rather than as "that word
+		 * matched nothing". Say so, and say what to do about it.
+		 */
+		if ( ! matches.length ) {
+			var none = WPCC.el( 'li', { class: 'wpcc-cmdk__none', role: 'status' } );
+			none.appendChild( WPCC.el( 'span', null, ( cfg.i18n && cfg.i18n.paletteNone ) || 'Nothing matches that.' ) );
+			none.appendChild( WPCC.el( 'small', null, ( cfg.i18n && cfg.i18n.paletteNoneHint ) || 'Try a shorter word, or clear the box to see everywhere you can go.' ) );
+			palette.list.appendChild( none );
+			return;
+		}
+
 		matches.forEach( function ( o, i ) {
 			var li = WPCC.el( 'li', { class: 'wpcc-cmdk__opt' + ( i === 0 ? ' is-active' : '' ), role: 'option', 'aria-selected': i === 0 ? 'true' : 'false' } );
 			li.appendChild( WPCC.el( 'span', null, o.label ) );
@@ -222,9 +334,24 @@
 			return '<div class="wpcc-cds-kpi"><span class="wpcc-cds-kpi__value">' + WPCC.escHtml( value )
 				+ '</span><span class="wpcc-cds-kpi__label">' + WPCC.escHtml( label ) + '</span></div>';
 		},
+		/**
+		 * Empty state.
+		 *
+		 * `icon` stays a dashicons class name, exactly as before, so every existing
+		 * caller is untouched. It may ALSO be a `.svg` URL, which renders the brand
+		 * mark instead - used where the empty state is the product's own "nothing has
+		 * happened here yet" rather than a state carrying its own meaning. Decorative
+		 * either way: the title directly below already says what is empty.
+		 */
 		empty: function ( title, detail, icon ) {
+			var art = '';
+			if ( icon ) {
+				art = /\.svg($|\?)/.test( icon )
+					? '<img src="' + WPCC.escHtml( icon ) + '" alt="" class="wpcc-cds-empty__mark" width="32" height="32" decoding="async" />'
+					: '<span class="dashicons ' + WPCC.escHtml( icon ) + ' wpcc-cds-empty__icon" aria-hidden="true"></span>';
+			}
 			return '<div class="wpcc-cds-empty">'
-				+ ( icon ? '<span class="dashicons ' + WPCC.escHtml( icon ) + ' wpcc-cds-empty__icon" aria-hidden="true"></span>' : '' )
+				+ art
 				+ '<div class="wpcc-cds-empty__title">' + WPCC.escHtml( title ) + '</div>'
 				+ ( detail ? '<p>' + WPCC.escHtml( detail ) + '</p>' : '' )
 				+ '</div>';
@@ -239,6 +366,78 @@
 				+ '<span class="wpcc-cds-error__title">' + WPCC.escHtml( title ) + '</span>'
 				+ ( detail ? '<span class="wpcc-cds-error__detail">' + WPCC.escHtml( detail ) + '</span>' : '' )
 				+ '</div>';
+		},
+
+		/**
+		 * In-page confirmation. Returns a Promise<boolean>.
+		 *
+		 * Replaces window.confirm(). A native dialog is the one piece of UI in this
+		 * product that the product does not control: it renders as "localhost says:",
+		 * ignores the design system, cannot show what is about to happen, and blocks
+		 * the whole renderer while it is open. On a bulk action that is about to
+		 * approve or reject several real changes, that is the wrong moment to hand
+		 * the customer a browser default.
+		 *
+		 * opts: { title, body, confirmLabel, cancelLabel, danger }
+		 */
+		confirm: function ( opts ) {
+			opts = opts || {};
+			return new Promise( function ( resolve ) {
+				var prev = document.activeElement;
+				var host = document.createElement( 'div' );
+				host.className = 'wpcc-cds-confirm';
+				host.setAttribute( 'role', 'dialog' );
+				host.setAttribute( 'aria-modal', 'true' );
+				host.setAttribute( 'aria-label', opts.title || '' );
+				host.innerHTML =
+					'<div class="wpcc-cds-confirm__box">'
+					+ '<h2 class="wpcc-cds-confirm__title">' + WPCC.escHtml( opts.title || '' ) + '</h2>'
+					+ ( opts.body ? '<p class="wpcc-cds-confirm__body">' + WPCC.escHtml( opts.body ) + '</p>' : '' )
+					+ '<div class="wpcc-cds-confirm__actions">'
+					+ '<button type="button" class="button button-primary' + ( opts.danger ? ' wpcc-cds-confirm__danger' : '' ) + '" data-wpcc-go>'
+					+ WPCC.escHtml( opts.confirmLabel || 'Continue' ) + '</button>'
+					+ '<button type="button" class="button" data-wpcc-cancel>'
+					+ WPCC.escHtml( opts.cancelLabel || 'Cancel' ) + '</button>'
+					+ '</div></div>';
+				document.body.appendChild( host );
+
+				function done( value ) {
+					document.removeEventListener( 'keydown', onKey, true );
+					if ( host.parentNode ) { host.parentNode.removeChild( host ); }
+					if ( prev && prev.focus ) { try { prev.focus(); } catch ( e ) {} }
+					resolve( value );
+				}
+				/*
+				 * Escape cancels, and Tab cannot leave the dialog.
+				 *
+				 * The dialog is aria-modal, which tells assistive tech that the rest of
+				 * the page is inert — but nothing was actually stopping Tab from walking
+				 * out of it into the page behind, which for a keyboard user meant the
+				 * focus ring vanishing into a form they had just been warned about. With
+				 * exactly two focusable controls the trap is simply: wrap at the ends.
+				 */
+				function onKey( e ) {
+					if ( 'Escape' === e.key ) { e.preventDefault(); done( false ); return; }
+					if ( 'Tab' !== e.key ) { return; }
+					var focusable = host.querySelectorAll( 'button:not([disabled])' );
+					if ( ! focusable.length ) { return; }
+					var first = focusable[ 0 ];
+					var last = focusable[ focusable.length - 1 ];
+					if ( e.shiftKey && document.activeElement === first ) {
+						e.preventDefault(); last.focus();
+					} else if ( ! e.shiftKey && document.activeElement === last ) {
+						e.preventDefault(); first.focus();
+					} else if ( ! host.contains( document.activeElement ) ) {
+						e.preventDefault(); first.focus();
+					}
+				}
+				host.querySelector( '[data-wpcc-go]' ).addEventListener( 'click', function () { done( true ); } );
+				host.querySelector( '[data-wpcc-cancel]' ).addEventListener( 'click', function () { done( false ); } );
+				// Clicking the backdrop cancels; clicking inside the box does not.
+				host.addEventListener( 'click', function ( e ) { if ( e.target === host ) { done( false ); } } );
+				document.addEventListener( 'keydown', onKey, true );
+				host.querySelector( '[data-wpcc-go]' ).focus();
+			} );
 		},
 	};
 

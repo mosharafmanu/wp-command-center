@@ -85,13 +85,13 @@ final class ProposalStore {
 		$target_type  = (string) ( $args['target_type'] ?? '' );
 
 		if ( '' === $operation_id ) {
-			return new \WP_Error( 'wpcc_proposal_missing_operation_id', __( 'operation_id is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_missing_operation_id', __( 'operation_id is required.', 'ai-command-center' ) );
 		}
 		if ( '' === $target_type ) {
-			return new \WP_Error( 'wpcc_proposal_missing_target_type', __( 'target_type is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_missing_target_type', __( 'target_type is required.', 'ai-command-center' ) );
 		}
 		if ( ! array_key_exists( 'payload', $args ) || ! is_array( $args['payload'] ) ) {
-			return new \WP_Error( 'wpcc_proposal_missing_payload', __( 'payload (array) is required.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_missing_payload', __( 'payload (array) is required.', 'ai-command-center' ) );
 		}
 
 		$proposal_id = wp_generate_uuid4();
@@ -134,11 +134,11 @@ final class ProposalStore {
 
 		$inserted = $wpdb->insert( $this->table(), $data, $formats );
 		if ( false === $inserted ) {
-			return new \WP_Error( 'wpcc_proposal_create_failed', __( 'Failed to create proposal.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_create_failed', __( 'Failed to create proposal.', 'ai-command-center' ) );
 		}
 
 		$row = $this->get( $proposal_id );
-		return $row ?: new \WP_Error( 'wpcc_proposal_create_failed', __( 'Proposal created but could not be read back.', 'wp-command-center' ) );
+		return $row ?: new \WP_Error( 'wpcc_proposal_create_failed', __( 'Proposal created but could not be read back.', 'ai-command-center' ) );
 	}
 
 	/** Fetch one proposal by its proposal_id (uuid). */
@@ -165,6 +165,7 @@ final class ProposalStore {
 
 		$limit  = isset( $filters['limit'] ) ? max( 1, min( 200, (int) $filters['limit'] ) ) : 50;
 		$offset = isset( $filters['offset'] ) ? max( 0, (int) $filters['offset'] ) : 0;
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- build_where() returns placeholder-only fragments; all values are bound through prepare().
 
 		$sql      = "SELECT * FROM {$this->table()} {$where_sql} ORDER BY id DESC LIMIT %d OFFSET %d";
 		$params[] = $limit;
@@ -173,8 +174,10 @@ final class ProposalStore {
 		return $wpdb->get_results( $wpdb->prepare( $sql, ...$params ), ARRAY_A ) ?: [];
 	}
 
+// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 	/** Total rows matching the given filters (for pagination). */
 	public function count( array $filters = [] ): int {
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery -- build_where() returns placeholder-only fragments; the no-params branch is static SQL over a plugin-owned table.
 		global $wpdb;
 		[ $where_sql, $params ] = $this->build_where( $filters );
 		$sql = "SELECT COUNT(*) FROM {$this->table()} {$where_sql}";
@@ -182,6 +185,7 @@ final class ProposalStore {
 			? $wpdb->get_var( $sql )
 			: $wpdb->get_var( $wpdb->prepare( $sql, ...$params ) ) );
 	}
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter,WordPress.DB.PreparedSQLPlaceholders.LikeWildcardsInQuery
 
 	/** @return array{0:string,1:array<int,mixed>} prepared WHERE fragment + params. */
 	private function build_where( array $filters ): array {
@@ -208,12 +212,12 @@ final class ProposalStore {
 
 		$row = $this->get( $proposal_id );
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
 		}
 		if ( self::STATUS_DRAFT !== $row['status'] ) {
 			return new \WP_Error(
 				'wpcc_proposal_not_editable',
-				sprintf( __( 'final_payload is editable only while draft (current: %s).', 'wp-command-center' ), (string) $row['status'] )
+				sprintf( /* translators: %s: value */ __( 'final_payload is editable only while draft (current: %s).', 'ai-command-center' ), (string) $row['status'] )
 			);
 		}
 
@@ -225,9 +229,9 @@ final class ProposalStore {
 			[ '%s', '%s' ]
 		);
 		if ( false === $updated ) {
-			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal payload.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal payload.', 'ai-command-center' ) );
 		}
-		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'wp-command-center' ) );
+		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
 	}
 
 	/**
@@ -245,7 +249,7 @@ final class ProposalStore {
 	 */
 	public function mark_pending_approval( string $proposal_id, string $request_id ): array|\WP_Error {
 		if ( '' === $request_id ) {
-			return new \WP_Error( 'wpcc_proposal_request_id_required', __( 'request_id is required to mark a proposal pending_approval.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_request_id_required', __( 'request_id is required to mark a proposal pending_approval.', 'ai-command-center' ) );
 		}
 		return $this->transition( $proposal_id, self::STATUS_PENDING_APPROVAL, [ 'request_id' => $request_id ] );
 	}
@@ -257,7 +261,7 @@ final class ProposalStore {
 	 */
 	public function mark_applied( string $proposal_id, string $change_id, ?array $applied_by = null ): array|\WP_Error {
 		if ( '' === $change_id ) {
-			return new \WP_Error( 'wpcc_proposal_change_id_required', __( 'change_id is required to mark a proposal applied.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_change_id_required', __( 'change_id is required to mark a proposal applied.', 'ai-command-center' ) );
 		}
 		$fields = [ 'change_id' => $change_id ];
 		if ( null !== $applied_by ) {
@@ -273,7 +277,7 @@ final class ProposalStore {
 	public function mark_failed( string $proposal_id, array|string $error ): array|\WP_Error {
 		$error_json = is_string( $error ) ? $error : (string) wp_json_encode( $error );
 		if ( '' === $error_json || '[]' === $error_json || 'null' === $error_json ) {
-			return new \WP_Error( 'wpcc_proposal_error_required', __( 'A non-empty error is required to mark a proposal failed.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_error_required', __( 'A non-empty error is required to mark a proposal failed.', 'ai-command-center' ) );
 		}
 		return $this->transition( $proposal_id, self::STATUS_FAILED, [ 'error_json' => $error_json ] );
 	}
@@ -292,7 +296,7 @@ final class ProposalStore {
 
 		$row = $this->get( $proposal_id );
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
 		}
 		$from = (string) $row['status'];
 
@@ -304,7 +308,7 @@ final class ProposalStore {
 		if ( in_array( $from, self::TERMINAL, true ) ) {
 			return new \WP_Error(
 				'wpcc_proposal_terminal',
-				sprintf( __( 'Proposal is terminal (%s); cannot transition to %s.', 'wp-command-center' ), $from, $to )
+				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Proposal is terminal (%1$s); cannot transition to %2$s.', 'ai-command-center' ), $from, $to )
 			);
 		}
 		// Legality.
@@ -312,7 +316,7 @@ final class ProposalStore {
 		if ( ! in_array( $to, $allowed, true ) ) {
 			return new \WP_Error(
 				'wpcc_proposal_invalid_transition',
-				sprintf( __( 'Illegal transition %s -> %s.', 'wp-command-center' ), $from, $to )
+				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Illegal transition %1$s -> %2$s.', 'ai-command-center' ), $from, $to )
 			);
 		}
 
@@ -328,7 +332,7 @@ final class ProposalStore {
 		);
 
 		if ( false === $updated ) {
-			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal status.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal status.', 'ai-command-center' ) );
 		}
 		if ( 0 === $updated ) {
 			// The row changed under us between read and write. Re-read: if it
@@ -338,9 +342,9 @@ final class ProposalStore {
 			if ( $fresh && $to === $fresh['status'] ) {
 				return $fresh;
 			}
-			return new \WP_Error( 'wpcc_proposal_conflict', __( 'Proposal state changed concurrently; transition not applied.', 'wp-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_conflict', __( 'Proposal state changed concurrently; transition not applied.', 'ai-command-center' ) );
 		}
 
-		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'wp-command-center' ) );
+		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
 	}
 }

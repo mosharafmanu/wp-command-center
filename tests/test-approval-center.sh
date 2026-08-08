@@ -30,6 +30,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
+# Leave the site exactly as we found it: capture the protection mode now and
+# restore it on every exit path, including an interrupted run. See
+# tests/lib/mode-guard.sh — several suites used to write back a hardcoded
+# "developer", which left a Standard-protection site unprotected.
+source "$SCRIPT_DIR/lib/mode-guard.sh"
+wpcc_mode_guard_init "$WP_ROOT"
+
 # shellcheck source=/dev/null
 source "$PLUGIN_DIR/wpcc-env.sh"
 
@@ -66,7 +73,7 @@ lint "AdminMenu lints"            "$MENU"
 
 echo
 echo "== 2. Schema: DB 2.4.0 + forward-only attribution columns =="
-has "DB_VERSION bumped to 2.5.0"        "DB_VERSION = '2.5.0'"   "$SCHEMA"
+has "DB_VERSION bumped to 2.6.0"        "DB_VERSION = '2.6.0'"   "$SCHEMA"
 has "column resolved_by_label"          "resolved_by_label"      "$SCHEMA"
 has "column resolved_by_type"           "resolved_by_type"       "$SCHEMA"
 has "column resolved_by_user_id"        "resolved_by_user_id"    "$SCHEMA"
@@ -179,7 +186,11 @@ lacks "no standalone approval-center submenu" "add_submenu_page.*wpcc-approval-c
 # Obsolete view removed
 [ ! -f "$PLUGIN_DIR/includes/Admin/views/approvals.php" ] && pass "obsolete approvals.php removed" || fail "approvals.php still present"
 # View uses new slug + a11y + i18n
-has "view base_url uses new slug"            "page=wpcc-approval-center" "$VIEW"
+# V1: links now use the CANONICAL section URL instead of the retired standalone
+# slug. The old slug still redirects, but shipping links that need a redirect
+# means every click pays for it.
+has "view base_url uses canonical URL"       "page=wpcc-activity&wpcc_tab=approvals" "$VIEW"
+lacks "view base_url avoids retired slug"    "page=wpcc-approval-center" "$VIEW"
 has "tabs expose aria-current"               'aria-current="page"'       "$VIEW"
 has "modal is role=dialog + aria-modal"      'role="dialog" aria-modal'  "$VIEW"
 has "modal focus trap (Tab handling)"        "ev.key !== 'Tab'"          "$VIEW"
@@ -191,7 +202,7 @@ has "unset lifecycle timestamps suppressed"  "function tsRow"            "$VIEW"
 has "nonce-expiry (403) error state"         "nonceExpired"              "$VIEW"
 lacks "no raw English risk labels in JS"     "critical: 'Critical'"      "$VIEW"
 # Cross-view consistency
-has "change-history links to new slug"       "page=wpcc-approval-center" "$CH"
+has "change-history links to canonical URL"  "page=wpcc-activity&wpcc_tab=approvals" "$CH"
 lacks "change-history drops stale Pending Approvals label" "Open Pending Approvals" "$CH"
 
 echo
@@ -384,6 +395,127 @@ RISK_HEX="$(awk '/^<script>/{s=1} /^<\/script>/{s=0;next} !s{print}' "$VIEW" | g
 assert_eq "no hardcoded risk hex in approval-center.php (CDS Scope 2)" "0" "$RISK_HEX"
 RISK_TOKENS="$(grep -cE 'var\(--wpcc-risk-(critical|high|medium|low|diagnostic)-fg\)' "$VIEW" || true)"
 assert_true "risk tiers use CDS risk-semantic tokens" "$([ "${RISK_TOKENS:-0}" -ge 5 ] && echo true || echo false)"
+
+# ── An undo says what it undoes, not which UUID it undoes ───────────────────
+#
+# Found in a real customer journey. "What will change" renders the payload field
+# by field, and an undo's payload is just { action, change_id, confirm } — so the
+# one row a customer read before granting consent was
+# `Change id: 98ba74ef-83d0-402b-…`. The heading directly above it already said
+# "Undo a change — Update SEO details", so the product could resolve the target
+# perfectly well; the consent table simply had no way to ask for it.
+echo
+echo "== Undo target is human-readable (Simple mode) =="
+
+# The resolver is reused, not reimplemented: ActionLabels::undo_target() is what
+# already produces the heading, and it is now reachable from the detail query.
+has "undo_target resolver is callable"        "public static function undo_target" "$PLUGIN_DIR/includes/Admin/ActionLabels.php"
+has "detail envelope carries the resolved target" "'undo_target' => ActionLabels::undo_target" "$QUERY"
+has "view consumes the resolved target"       "summarisePayload\( d.payload \|\| \{\}, d.undo_target \)" "$VIEW"
+
+# The change-id fields never render as a plain row.
+has "change-id fields are diverted"           "UNDO_ID_KEYS" "$VIEW"
+has "human row is shown for every undo"       "'rollback_target' === \( payload \|\| \{\} \).action" "$VIEW"
+has "human row label exists"                  "lblUndoes:" "$VIEW"
+has "unresolvable original still says something" "undoUnknown:" "$VIEW"
+
+# Detailed mode MAY keep the identifier — the established pattern on this screen
+# (the operation id beside Area uses the same class) — but Simple must not.
+has "raw id row is Detailed-only"             "tech: true" "$VIEW"
+has "technical rows carry the disclosure class" "r.tech \\? ' class=" "$VIEW"
+
+# Heading and decision controls are untouched by this change.
+has "heading still describes the undo"        "headline" "$RESTAPI"
+has "approve control unchanged"               "wpcc-approve-btn" "$VIEW"
+has "reject control unchanged"                "wpcc-reject-btn" "$VIEW"
+
+# Functional: the resolver turns a real change_id into words, and returns ''
+# (never a UUID) when the original cannot be found.
+UNDO_OUT="$(wpe '
+	global $wpdb; $c = $wpdb->prefix . "wpcc_change_log";
+	$cid = $wpdb->get_var( "SELECT change_id FROM {$c} WHERE reversible = 1 ORDER BY id DESC LIMIT 1" );
+	$resolved = $cid ? \WPCommandCenter\Admin\ActionLabels::undo_target( [ "change_id" => $cid ] ) : "";
+	$missing  = \WPCommandCenter\Admin\ActionLabels::undo_target( [ "change_id" => "no-such-change-xyz" ] );
+	echo wp_json_encode( [
+		"resolved_nonempty" => ( "" !== trim( (string) $resolved ) ),
+		"resolved_is_uuid"  => (bool) preg_match( "/^[0-9a-f-]{36}$/", (string) $resolved ),
+		"missing_is_empty"  => ( "" === (string) $missing ),
+	] );
+')"
+assert_eq "undo_target resolves a real change to words" "true"  "$(pj "$UNDO_OUT" '.resolved_nonempty')"
+assert_eq "undo_target never returns a bare UUID"       "false" "$(pj "$UNDO_OUT" '.resolved_is_uuid')"
+assert_eq "unresolvable change yields empty, not an id" "true"  "$(pj "$UNDO_OUT" '.missing_is_empty')"
+
+# ── Final UX polish sprint: continuity, naming, honest execution language ────
+echo
+echo "== Approval titles name the content being changed =="
+#
+# Scanning a queue of six "Update SEO details" rows tells a customer nothing
+# about which page each one touches. Two separate causes, both fixed in
+# ActionLabels::target():
+#   - SEO payloads carry `content_id` and nest values under `seo`, so neither
+#     the name scan nor the id scan matched and the target came back empty.
+#   - Content payloads carry a top-level `title` which is the SUGGESTED NEW
+#     title, so a suggestion of "Shopping Basket" for the Cart page rendered as
+#     'Edit a post or page — "Shopping Basket"' — naming a page that does not
+#     exist. Resolving the object's real title fixes both.
+LABELS="$PLUGIN_DIR/includes/Admin/ActionLabels.php"
+has "object name resolver exists"        "private static function object_name" "$LABELS"
+has "resolver reads Built-in AI id keys" "content_id., .post_id., .media_id" "$LABELS"
+has "resolved name takes precedence"     "object_name = self::object_name" "$LABELS"
+
+TITLE_PHP="$(mktemp)"
+cat > "$TITLE_PHP" <<'PHPEOF'
+<?php
+global $wpdb;
+$pid  = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_title <> '' LIMIT 1" );
+$name = get_the_title( $pid );
+$seo  = \WPCommandCenter\Admin\ActionLabels::describe( 'seo_manage', 'seo_update', [ 'content_id' => $pid, 'seo' => [ 'title' => 'X' ] ], '' );
+$con  = \WPCommandCenter\Admin\ActionLabels::describe( 'content_manage', 'content_update', [ 'content_id' => $pid, 'title' => 'A DIFFERENT SUGGESTED TITLE' ], '' );
+$opt  = \WPCommandCenter\Admin\ActionLabels::describe( 'option_manage', 'option_update', [ 'option_id' => 'site_title' ], '' );
+echo wp_json_encode( [
+	'seo_names_page'         => ( '' !== $name && false !== strpos( $seo, $name ) ),
+	'content_names_page'     => ( '' !== $name && false !== strpos( $con, $name ) ),
+	'content_not_suggestion' => ( false === strpos( $con, 'A DIFFERENT SUGGESTED TITLE' ) ),
+	'option_unaffected'      => ( false !== strpos( $opt, 'Site title' ) ),
+] );
+PHPEOF
+TITLE_OUT="$( wp --path="$WP_ROOT" eval-file "$TITLE_PHP" 2>/dev/null )"
+rm -f "$TITLE_PHP"
+assert_eq "SEO approval names the page"                    "true" "$(pj "$TITLE_OUT" '.seo_names_page')"
+assert_eq "Content approval names the page"                "true" "$(pj "$TITLE_OUT" '.content_names_page')"
+assert_eq "Content approval does NOT name the suggestion"  "true" "$(pj "$TITLE_OUT" '.content_not_suggestion')"
+assert_eq "settings approvals unaffected by the resolver"  "true" "$(pj "$TITLE_OUT" '.option_unaffected')"
+
+echo
+echo "== Execution language never contradicts itself =="
+#
+# A request moves pending_review -> approved -> executed; its queue item moves
+# queued -> running -> completed. One shared label map meant a single change
+# showed "Executed", "Completed" AND "Cancelled" at once — the last of which
+# reads as "your change did not happen" when it did.
+has "request and queue have separate label maps" "queueStatusLabels" "$VIEW"
+has "statusLabel takes the state machine"        "function statusLabel\\( s, kind \\)" "$VIEW"
+has "queue rows declare their context"           "statusPill\\(q.status, 'queue'\\)" "$VIEW"
+has "executed reads as Applied"                  "executed: +<\\?php echo wp_json_encode\\( __\\( .Applied." "$VIEW"
+has "completed reads as Applied too"             "completed: +<\\?php echo wp_json_encode\\( __\\( .Applied." "$VIEW"
+has "a stopped ATTEMPT is not a cancelled change" "Attempt stopped" "$VIEW"
+has "raw engine token kept in Detailed"          "margin-left:6px" "$VIEW"
+# An all-zero counter row beside "Applied" reads as a contradiction.
+has "all-zero counters hidden from Simple"       "total > 0" "$VIEW"
+
+echo
+echo "== The journey continues after a decision =="
+has "completion card on executed requests"  "wpcc-detail-done" "$VIEW"
+has "completion offers Changes"             "approvedLink" "$VIEW"
+has "completion offers Built-in AI"         "doneBackAi"   "$VIEW"
+has "completion offers other approvals"     "doneMore"     "$VIEW"
+has "heading is past tense once decided"    "secWhatChanged" "$VIEW"
+has "rejected requests say what would have" "secWhatWouldHave" "$VIEW"
+# Object ids are addressing, not a change the customer made.
+has "object ids are Detailed-only"          "OBJECT_ID_KEYS" "$VIEW"
+# CDS Scope 2: the completion card must stay token-driven like everything else.
+lacks "completion card uses no literal hex" "wpcc-detail-done \{ background:#" "$VIEW"
 
 echo
 echo "========================================"
