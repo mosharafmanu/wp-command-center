@@ -220,7 +220,22 @@ final class BuiltinAiSettings {
 			/* translators: %s: tool name */
 			return [ 'type' => 'success', 'message' => sprintf( __( '%s is on. Connect an AI provider to start generating.', 'ai-command-center' ), $label ) ];
 		}
-		/* translators: %s: tool name */
-		return [ 'type' => 'success', 'message' => sprintf( __( '%s is on and ready.', 'ai-command-center' ), $label ) ];
+		/*
+		 * Turning a tool on succeeds and then says so — and stops.
+		 *
+		 * "SEO is on and ready." is true, and it is the end of a sentence rather
+		 * than the start of one: the customer has just switched on a feature and
+		 * is told nothing about where to go and use it. The tool does appear as a
+		 * tab in this same response, which is a change they may well not notice
+		 * on a settings page they were reading rather than watching.
+		 *
+		 * Naming the tab costs six words and no interface. The two branches above
+		 * already end by naming the next action; this one now matches them.
+		 */
+		return [
+			'type'    => 'success',
+			/* translators: 1: tool name, 2: the same tool name, as the tab that has just appeared. */
+			'message' => sprintf( __( '%1$s is on and ready — open the %2$s tab above to use it.', 'ai-command-center' ), $label, $label ),
+		];
 	}
 }

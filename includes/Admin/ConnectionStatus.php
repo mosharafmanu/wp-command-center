@@ -36,7 +36,9 @@ final class ConnectionStatus {
 	 * @return array{
 	 *   state:string,
 	 *   active_tokens:int,
+	 *   read_only_tokens:int,
 	 *   last_used_at:?int,
+	 *   last_label:string,
 	 *   label:string,
 	 *   detail:string
 	 * }
@@ -49,32 +51,53 @@ final class ConnectionStatus {
 		$tokens = ( new AuthTokens() )->list();
 		$active = AuthTokens::usable_only( $tokens );
 
-		$last_used = null;
+		/*
+		 * WHICH token last opened the door, and how many of them are read-only.
+		 *
+		 * Both are read off records this method already has in hand — no new
+		 * option, route, or stored state. They exist because the two questions a
+		 * customer actually asks of this screen are "which assistant is that?"
+		 * and "how much can it do?", and a bare count answered neither.
+		 *
+		 * `last_label` is the token's LABEL — the name the customer typed when
+		 * they created it. The token-creation form pre-fills that with the
+		 * assistant they picked, so in practice it reads "Claude Desktop"; but it
+		 * is editable, so this is reported as the name they gave, never as a
+		 * detected client. The product does not sniff user agents and this does
+		 * not start.
+		 */
+		$last_used  = null;
+		$last_label = '';
+		$read_only  = 0;
 		foreach ( $active as $token ) {
+			if ( AuthTokens::SCOPE_READ_ONLY === ( $token['scope'] ?? '' ) ) {
+				++$read_only;
+			}
 			$used = isset( $token['last_used_at'] ) ? (int) $token['last_used_at'] : 0;
 			if ( $used > 0 && ( null === $last_used || $used > $last_used ) ) {
-				$last_used = $used;
+				$last_used  = $used;
+				$last_label = (string) ( $token['label'] ?? '' );
 			}
 		}
 
 		if ( [] === $active ) {
-			return self::shape( self::STATE_NO_TOKEN, $active, null );
+			return self::shape( self::STATE_NO_TOKEN, $active, null, '', 0 );
 		}
 		if ( null === $last_used ) {
-			return self::shape( self::STATE_UNUSED, $active, null );
+			return self::shape( self::STATE_UNUSED, $active, null, '', $read_only );
 		}
 		$state = ( time() - $last_used ) <= self::ACTIVE_WINDOW
 			? self::STATE_CONNECTED
 			: self::STATE_IDLE;
 
-		return self::shape( $state, $active, $last_used );
+		return self::shape( $state, $active, $last_used, $last_label, $read_only );
 	}
 
 	/**
 	 * @param array<int,array<string,mixed>> $active
-	 * @return array{state:string,active_tokens:int,last_used_at:?int,label:string,detail:string}
+	 * @return array{state:string,active_tokens:int,read_only_tokens:int,last_used_at:?int,last_label:string,label:string,detail:string}
 	 */
-	private static function shape( string $state, array $active, ?int $last_used ): array {
+	private static function shape( string $state, array $active, ?int $last_used, string $last_label = '', int $read_only = 0 ): array {
 		$ago = null !== $last_used
 			/* translators: %s: human-readable time difference, e.g. "2 hours" */
 			? sprintf( __( '%s ago', 'ai-command-center' ), human_time_diff( $last_used, time() ) )
@@ -102,11 +125,13 @@ final class ConnectionStatus {
 		}
 
 		return [
-			'state'         => $state,
-			'active_tokens' => count( $active ),
-			'last_used_at'  => $last_used,
-			'label'         => $label,
-			'detail'        => $detail,
+			'state'            => $state,
+			'active_tokens'    => count( $active ),
+			'read_only_tokens' => $read_only,
+			'last_used_at'     => $last_used,
+			'last_label'       => $last_label,
+			'label'            => $label,
+			'detail'           => $detail,
 		];
 	}
 

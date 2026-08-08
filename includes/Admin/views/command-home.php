@@ -72,6 +72,32 @@ $wpcc_incomplete   = AdoptionStatus::setup_incomplete();
 $wpcc_fr_dismissed = '1' === get_user_meta( get_current_user_id(), 'wpcc_firstrun_dismissed', true );
 $wpcc_show_guide   = $wpcc_incomplete || ! $wpcc_fr_dismissed;
 
+/*
+ * STATE FOR "ALSO INCLUDED" — the difference between a brochure and a dashboard.
+ *
+ * Those three cards described what the plugin can do and never once said what
+ * this site is actually doing. Read after six months away they are unanswerable:
+ * "Built-in AI — let the plugin write SEO descriptions" gives a returning admin
+ * no way to tell whether they switched it on in March, whether the key is still
+ * there, or whether it has been quietly off the whole time. The card looks the
+ * same either way, so the only way to find out is to click it — which is the
+ * "now what?" this pass exists to remove.
+ *
+ * Both reads are free. The tool flags are options resolved through the one
+ * precedence helper, and the token count is already computed above for the
+ * status strip — so this adds no query, no route and no option to a screen whose
+ * heavy data is fetched asynchronously and deliberately stays that way. Nothing
+ * here is derived, estimated, or padded: a card either states a fact the product
+ * already knows or says nothing.
+ */
+$wpcc_home_tools_on = [];
+foreach ( \WPCommandCenter\Admin\BuiltinAiSettings::tools() as $wpcc_hk => $wpcc_hd ) {
+	if ( \WPCommandCenter\Admin\BuiltinAiSettings::is_on( $wpcc_hk ) ) {
+		$wpcc_home_tools_on[] = $wpcc_hd['label'];
+	}
+}
+$wpcc_home_ai_key = AdoptionStatus::ai_configured();
+
 /**
  * SETUP STATE — the redesign's central idea.
  *
@@ -292,7 +318,35 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 				<span class="wpcc-home__dot <?php echo ConnectionStatus::STATE_CONNECTED === $wpcc_conn['state'] ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 				<?php echo esc_html( $wpcc_conn['label'] ); ?>
 			</a>
-			<span class="wpcc-home__stat-hint"><?php echo esc_html( $wpcc_conn['detail'] ); ?></span>
+			<span class="wpcc-home__stat-hint">
+				<?php
+				/*
+				 * WHICH assistant, not just that there is one.
+				 *
+				 * "Assistant connected · Last request 28 minutes ago" is true and
+				 * still leaves the obvious question unanswered on a site with more
+				 * than one token: connected to *what*? The name of the token that
+				 * last authenticated answers it from data already read — and since
+				 * the token form pre-fills that name with the assistant the
+				 * customer picked, in practice it reads "Claude Desktop".
+				 *
+				 * It is the name they gave, not a detected client. Nothing here
+				 * inspects a user agent, and a customer who named a token "staging
+				 * laptop" sees "staging laptop", which is the truthful answer to
+				 * "which one of mine is that?".
+				 */
+				echo esc_html(
+					'' !== $wpcc_conn['last_label']
+						? sprintf(
+							/* translators: 1: the name the customer gave the token that last connected, e.g. "Claude Desktop"; 2: sentence about when, e.g. "Last request 28 minutes ago." */
+							__( '%1$s · %2$s', 'ai-command-center' ),
+							$wpcc_conn['last_label'],
+							$wpcc_conn['detail']
+						)
+						: $wpcc_conn['detail']
+				);
+				?>
+			</span>
 		</div>
 		<div class="wpcc-home__stat">
 			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Waiting for you', 'ai-command-center' ); ?></span>
@@ -404,20 +458,193 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	<h2><?php esc_html_e( 'Also included', 'ai-command-center' ); ?></h2>
 	<p class="wpcc-home__also-lede"><?php esc_html_e( 'Optional extras that are part of the plugin. Nothing here is switched on unless you choose it.', 'ai-command-center' ); ?></p>
 	<div class="wpcc-home__also">
-		<a class="wpcc-home__also-card" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai' ) ); ?>">
+		<?php
+		/*
+		 * Built-in AI — four genuinely different situations, and the card used to
+		 * render one sentence for all of them.
+		 *
+		 * The states are not decoration; each has a different next action, and
+		 * getting them the wrong way round wastes the customer's time in a
+		 * specific way. "Tools on, no key" sends someone to switch on a tool they
+		 * already switched on; "key, no tools on" sends someone to add a key they
+		 * already added. Both were reachable before, because the card could not
+		 * tell the two apart.
+		 */
+		$wpcc_bai_link  = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai' );
+		$wpcc_bai_total = count( \WPCommandCenter\Admin\BuiltinAiSettings::tools() );
+		$wpcc_bai_count = count( $wpcc_home_tools_on );
+		$wpcc_bai_state = '';
+		$wpcc_bai_tone  = 'off';
+
+		/*
+		 * "X of 3 tools on" rather than a list of names.
+		 *
+		 * The earlier wording — "SEO and Content on" / "Key ready · no tools on" —
+		 * named things but never said how many there were to have. "0 of 3" tells
+		 * a first-time customer two things at once: nothing is running, and there
+		 * are three of them to choose from. That second fact is the invitation,
+		 * and a bare "no tools on" threw it away.
+		 *
+		 * The names are not lost — they are one click away on the screen this card
+		 * links to, which is where acting on them happens. Repeating them here
+		 * would be the duplicated information this pass is meant to remove.
+		 */
+		$wpcc_bai_ratio = sprintf(
+			/* translators: 1: how many built-in AI tools are switched on; 2: how many exist in total. */
+			__( '%1$s of %2$s tools on', 'ai-command-center' ),
+			number_format_i18n( $wpcc_bai_count ),
+			number_format_i18n( $wpcc_bai_total )
+		);
+
+		if ( $wpcc_home_tools_on && $wpcc_home_ai_key ) {
+			$wpcc_bai_tone  = 'on';
+			$wpcc_bai_state = $wpcc_bai_ratio;
+			$wpcc_bai_cta   = __( 'Open Built-in AI →', 'ai-command-center' );
+		} elseif ( $wpcc_home_tools_on ) {
+			// Switched on and unable to generate — the one state worth flagging.
+			$wpcc_bai_tone  = 'warn';
+			$wpcc_bai_state = __( 'Needs a provider key', 'ai-command-center' );
+			$wpcc_bai_cta   = __( 'Add a provider key →', 'ai-command-center' );
+		} elseif ( $wpcc_home_ai_key ) {
+			// A key on its own generates nothing. Say both halves, so the customer
+			// is not left wondering why a "ready" provider produces no output.
+			$wpcc_bai_state = sprintf(
+				/* translators: %s: e.g. "0 of 3 tools on". */
+				__( 'Provider ready · %s', 'ai-command-center' ),
+				$wpcc_bai_ratio
+			);
+			$wpcc_bai_cta = __( 'Turn on a tool →', 'ai-command-center' );
+		} else {
+			$wpcc_bai_state = __( 'Not set up', 'ai-command-center' );
+			$wpcc_bai_cta   = __( 'Set up Built-in AI →', 'ai-command-center' );
+		}
+
+		/*
+		 * Land on the switches, not the top of a long screen.
+		 *
+		 * When the next action is "turn one on", the destination is the tool
+		 * toggles — which sit below a hero, a two-path explainer and the provider
+		 * cards. `#wpcc-bai-tools-h` is the heading the toggles already carry, and
+		 * the receiving screen now spotlights an incoming hash target on load.
+		 */
+		if ( ! $wpcc_home_tools_on && $wpcc_home_ai_key ) {
+			$wpcc_bai_link .= '#wpcc-bai-tools-h';
+		}
+		?>
+		<a class="wpcc-home__also-card" href="<?php echo esc_url( $wpcc_bai_link ); ?>">
 			<strong><?php esc_html_e( 'Built-in AI', 'ai-command-center' ); ?></strong>
+			<span class="wpcc-home__also-state is-<?php echo esc_attr( $wpcc_bai_tone ); ?>"><?php echo esc_html( $wpcc_bai_state ); ?></span>
 			<span><?php esc_html_e( 'Let the plugin write SEO descriptions, image alt text and draft content by itself, without opening an assistant. Needs your own AI provider key, and only for the tools you switch on.', 'ai-command-center' ); ?></span>
-			<em><?php esc_html_e( 'Set up Built-in AI →', 'ai-command-center' ); ?></em>
+			<em><?php echo esc_html( $wpcc_bai_cta ); ?></em>
 		</a>
 		<a class="wpcc-home__also-card" href="<?php echo esc_url( $links['change_history'] ); ?>">
 			<strong><?php esc_html_e( 'Undo any change', 'ai-command-center' ); ?></strong>
+			<?php
+			/*
+			 * The third card's state — filled in by script, not by a query.
+			 *
+			 * Its two neighbours state what this site is doing; this one described
+			 * a feature and stopped, which made it the odd card in a row of three
+			 * and left "is there anything to undo?" unanswered.
+			 *
+			 * The honest count lives behind a `COUNT(*)`, and adding one to every
+			 * Home render to fill a pill would be the wrong trade. It does not need
+			 * one: `change_history.changes` is ALREADY in the `/admin/dashboard`
+			 * response this page fetches for the activity list, on the same request,
+			 * so the number is free — it was simply never read out of the payload.
+			 *
+			 * Hidden until it has a real answer, so it never flashes a guess. A
+			 * gated response leaves it hidden for good rather than showing a zero
+			 * the customer has no permission to verify.
+			 */
+			?>
+			<span class="wpcc-home__also-state" id="wpcc-home-undo-state" hidden></span>
 			<span><?php esc_html_e( 'Every change is recorded with who made it and when. Supported changes can be put back exactly as they were, and the undo follows the same approval rules.', 'ai-command-center' ); ?></span>
 			<em><?php esc_html_e( 'See what changed →', 'ai-command-center' ); ?></em>
 		</a>
+		<?php
+		/*
+		 * Access tokens — the count is already in hand.
+		 *
+		 * $wpcc_conn was resolved at the top of this view for the status strip and
+		 * carries `active_tokens`, counted the way validate() actually counts
+		 * (usable, so an expired token is not advertised as live access). Saying
+		 * "2 active tokens" instead of nothing turns a card describing a feature
+		 * into a card describing this site, and the CTA stops saying "manage" to
+		 * someone with nothing to manage.
+		 */
+		$wpcc_home_tokens = (int) $wpcc_conn['active_tokens'];
+		$wpcc_home_ro     = (int) $wpcc_conn['read_only_tokens'];
+
+		/*
+		 * A count alone was actively misleading under THIS heading.
+		 *
+		 * The card is titled "Read-only access" and its copy pitches a token that
+		 * "can never change anything". Under that, "3 active tokens" reads as
+		 * three read-only assistants — and on the site this was written against,
+		 * all three were FULL access. That is not a wording nit: it invites a
+		 * customer to believe their site is safer than it is, which is the one
+		 * direction a safety-adjacent card must never be wrong in.
+		 *
+		 * So the pill states the composition. Both halves are read from the same
+		 * records the count came from; `scope` has always been stored.
+		 *
+		 * Deliberately NOT coloured as a warning when every token is full access.
+		 * Full access is a legitimate, deliberate choice — the product offers it
+		 * and defaults away from it. Stating it plainly is honest; painting it
+		 * amber would editorialise a supported configuration as a fault.
+		 */
+		?>
 		<a class="wpcc-home__also-card" href="<?php echo esc_url( $links['access'] ); ?>">
 			<strong><?php esc_html_e( 'Read-only access', 'ai-command-center' ); ?></strong>
+			<span class="wpcc-home__also-state is-<?php echo $wpcc_home_ro > 0 ? 'on' : 'off'; ?>">
+				<?php
+				if ( 0 === $wpcc_home_tokens ) {
+					esc_html_e( 'No tokens yet', 'ai-command-center' );
+				} elseif ( $wpcc_home_ro > 0 ) {
+					echo esc_html(
+						sprintf(
+							/* translators: 1: total active access tokens; 2: how many of them are read-only. */
+							_n( '%1$s active token · %2$s read-only', '%1$s active tokens · %2$s read-only', $wpcc_home_tokens, 'ai-command-center' ),
+							number_format_i18n( $wpcc_home_tokens ),
+							number_format_i18n( $wpcc_home_ro )
+						)
+					);
+				} else {
+					/*
+					 * The noun stays in. "3 active · all full access" drops the thing
+					 * being counted, and under a heading reading "Read-only access"
+					 * the missing noun is exactly the word that stops a customer
+					 * reading the number as "3 read-only assistants".
+					 */
+					echo esc_html(
+						sprintf(
+							/* translators: %s: number of active access tokens, none of which are read-only. */
+							_n( '%s active token · full access', '%s active tokens · all full access', $wpcc_home_tokens, 'ai-command-center' ),
+							number_format_i18n( $wpcc_home_tokens )
+						)
+					);
+				}
+				?>
+			</span>
 			<span><?php esc_html_e( 'Give an assistant a token that can answer questions about the site but can never change anything — useful for trying one out safely.', 'ai-command-center' ); ?></span>
-			<em><?php esc_html_e( 'Manage access tokens →', 'ai-command-center' ); ?></em>
+			<em>
+				<?php
+				/*
+				 * The next action follows the card's own purpose. A site with three
+				 * full-access tokens and no read-only one is precisely the site
+				 * this card is pitching to, so "Manage" — a filing action — is the
+				 * wrong verb. It offers the thing the card is about.
+				 */
+				if ( 0 === $wpcc_home_tokens ) {
+					esc_html_e( 'Create an access token →', 'ai-command-center' );
+				} elseif ( 0 === $wpcc_home_ro ) {
+					esc_html_e( 'Add a read-only token →', 'ai-command-center' );
+				} else {
+					esc_html_e( 'Manage access tokens →', 'ai-command-center' );
+				}
+				?>
+			</em>
 		</a>
 	</div>
 
@@ -525,6 +752,20 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 .wpcc-home__also-card strong { display: block; font-size: 14px; color: #1d2327; margin-bottom: 5px; }
 .wpcc-home__also-card span { display: block; font-size: 12.5px; line-height: 1.55; color: #50575e; margin-bottom: 9px; }
 .wpcc-home__also-card em { font-style: normal; font-size: 12.5px; font-weight: 600; color: #2271b1; }
+/* What this site is actually doing, as opposed to what the card describes.
+   `display:inline-block` and the tighter margin deliberately override the
+   generic `.wpcc-home__also-card span` block rule above — the pill sits on its
+   own line under the title, not as another paragraph of description. */
+.wpcc-home__also-state { display: inline-block !important; margin: 0 0 8px !important; padding: 1px 8px;
+	border-radius: 999px; font-size: 11px !important; font-weight: 600; line-height: 1.7;
+	letter-spacing: .01em; background: #f0f0f1; color: #646970 !important; }
+.wpcc-home__also-state.is-on { background: #e7f6ec; color: #0a7a33 !important; }
+.wpcc-home__also-state.is-warn { background: #fcf3e3; color: #8a5700 !important; }
+/* The `!important` above (needed to beat the generic `.wpcc-home__also-card span`
+   block rule) also beats the UA stylesheet's `[hidden] { display: none }`, which
+   is NOT important — so the script-filled pill would render as an empty chip
+   before its data arrives. Restore `hidden` at the same weight. */
+.wpcc-home__also-state[hidden] { display: none !important; }
 .wpcc-home__more { font-size: 13px; margin: 10px 0 26px; }
 .wpcc-home__guide { padding: 20px 22px; background: #fff; border: 1px solid #dcdcde; border-radius: 8px; margin: 8px 0 24px; }
 .wpcc-home__guide h2 { margin: 0 0 14px; } /* size comes from the type scale */
@@ -595,6 +836,12 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		readyCopy:   <?php echo wp_json_encode( __( 'Copy starter prompt', 'ai-command-center' ) ); ?>,
 		readyCopied: <?php echo wp_json_encode( __( 'Copied', 'ai-command-center' ) ); ?>,
 		readyGuide:  <?php echo wp_json_encode( __( 'View connection guide', 'ai-command-center' ) ); ?>,
+		/* The "Undo any change" card's state pill. Real counts from the dashboard
+		   read that is already in flight — never a placeholder or an estimate. */
+		undoNone:    <?php echo wp_json_encode( __( 'Nothing to undo yet', 'ai-command-center' ) ); ?>,
+		undoOne:     <?php echo wp_json_encode( __( '1 change recorded', 'ai-command-center' ) ); ?>,
+		/* translators: %s: number of recorded changes. */
+		undoMany:    <?php echo wp_json_encode( __( '%s changes recorded', 'ai-command-center' ) ); ?>,
 		actEmptyTitle:  <?php echo wp_json_encode( __( 'No changes yet', 'ai-command-center' ) ); ?>,
 		actEmptyDetail: <?php echo wp_json_encode( __( 'Once your assistant changes something here, it appears in this list — with an undo where the change supports one.', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of changes in a session */
@@ -713,6 +960,27 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		if ( ( ap.pending || 0 ) > 0 || ( ap.queue_failed || 0 ) > 0 ) { return false; }
 		if ( ( ap.resolved || 0 ) > 0 ) { return false; }
 		return ( hist.changes || 0 ) === 0;
+	}
+
+	/*
+	 * "Undo any change" — the one card in the row that could not state its own
+	 * state, because the count is not cheap enough to fetch on every page render.
+	 * It does not have to be: the number arrives in the dashboard read already
+	 * running for the activity list.
+	 *
+	 * Stays hidden on a gated or malformed response. A pill that says "0" because
+	 * a permission check failed is worse than no pill: it reads as a fact about
+	 * the site rather than a fact about the reader.
+	 */
+	function renderUndoState( hist ) {
+		var el = document.getElementById( 'wpcc-home-undo-state' );
+		if ( ! el || ! hist || typeof hist.changes !== 'number' ) { return; }
+		var n = hist.changes;
+		el.textContent = n === 0
+			? i18n.undoNone
+			: ( n === 1 ? i18n.undoOne : i18n.undoMany.replace( '%s', n.toLocaleString() ) );
+		el.classList.toggle( 'is-on', n > 0 );
+		el.hidden = false;
 	}
 
 	function renderReady( ap, hist ) {
@@ -855,6 +1123,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			renderAttn( ap );
 			// Same response, no extra request.
 			renderReady( ap, d.change_history && ! d.change_history.gated ? d.change_history : {} );
+			renderUndoState( d.change_history && ! d.change_history.gated ? d.change_history : null );
 			renderInvariants( d.invariants );
 			/*
 			 * Prefer the session feed (it groups related work), but fall back to the

@@ -76,6 +76,102 @@ foreach ( $wpcc_providers as $pid => $pdef ) {
 	else { $wpcc_groups['cloud'][ $pid ] = $pdef['label']; }
 }
 $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ] ) ? $wpcc_conns[ $wpcc_default ]['name'] : __( 'none yet', 'ai-command-center' );
+
+/*
+ * Is any built-in AI tool actually switched on for this site?
+ *
+ * Resolved once, here, because two separate places now need the answer: the
+ * outcome card that tells a customer what to do after saving a connection, and
+ * the "what happens next" list at the bottom. It was previously computed only at
+ * the bottom, which is also why the top of the screen could not tell the
+ * difference between "you are ready" and "you have a key and nothing turned on".
+ *
+ * Moving it up means it is now read BEFORE partials/builtin-ai-tools.php renders,
+ * and that partial is where a tool toggle would otherwise be processed — so the
+ * answer would describe the state before the toggle rather than after it. The
+ * hosting view (settings-ai.php) already handles the toggle first, for exactly
+ * this reason, and every route to this screen goes through it. Rather than leave
+ * that as an unstated dependency, the same `?? handle_post()` guard the partial
+ * uses is applied here: whoever gets there first handles it, and it is never
+ * handled twice — so this value is correct no matter who includes this view.
+ */
+$wpcc_bai_handled = $wpcc_bai_handled ?? \WPCommandCenter\Admin\BuiltinAiSettings::handle_post();
+$wpcc_ai_tools_on = count( \WPCommandCenter\Admin\AppShell::builtin_tabs() ) > 1;
+
+/*
+ * WHICH tools are on — not merely whether any is.
+ *
+ * `$wpcc_ai_tools_on` answers a yes/no question, and the post-success experience
+ * has to answer a which-one question: it names the tools that are running, and it
+ * has to be able to say "SEO is on, Content is not" rather than "some tools are
+ * on". Same precedence as everywhere else — BuiltinAiSettings::is_on() is the one
+ * place constant → filter → option is decided, so this cannot drift from what the
+ * toggles, the tabs and the row actions actually do.
+ */
+$wpcc_tools_on = [];
+foreach ( \WPCommandCenter\Admin\BuiltinAiSettings::tools() as $wpcc_tk => $wpcc_td ) {
+	if ( \WPCommandCenter\Admin\BuiltinAiSettings::is_on( $wpcc_tk ) ) {
+		$wpcc_tools_on[ $wpcc_tk ] = $wpcc_td['label'];
+	}
+}
+
+/*
+ * Does the "✨ WPCC AI" entry point exist on Posts and Pages right now?
+ *
+ * This is the single most undiscoverable thing in the product, and the reason is
+ * that it is CONDITIONAL in a way nothing ever states: AiActionRegistry only adds
+ * the row action for actions whose built-in tool is switched on. Content carries
+ * Title and Excerpt; SEO carries SEO meta; Alt Text is a Media Library action and
+ * deliberately not counted here, because it never appears on a post or page row.
+ *
+ * So "you will see WPCC AI when editing a post" is not a fact about the product —
+ * it is a fact about this site's current settings, and on a stock install it is
+ * false. Deriving it from the same flags the registry reads means the screen
+ * promises the menu only when the menu is genuinely there.
+ */
+$wpcc_editor_actions = [];
+if ( isset( $wpcc_tools_on['content'] ) ) {
+	$wpcc_editor_actions[] = __( 'Title', 'ai-command-center' );
+	$wpcc_editor_actions[] = __( 'Excerpt', 'ai-command-center' );
+}
+if ( isset( $wpcc_tools_on['seo'] ) ) {
+	$wpcc_editor_actions[] = __( 'SEO title and description', 'ai-command-center' );
+}
+
+/*
+ * Real assistant state (usable tokens + whether one has ever called) is resolved
+ * LAZILY, at the point of use, rather than here.
+ *
+ * ConnectionStatus::get() reads the token manifest off disk. That is cheap, and
+ * it is still work this screen does not need: the only thing that consumes it is
+ * one row of the post-success card, which renders after an action on a proven
+ * connection and not on the plain GET that most visits to this screen are. A
+ * read every visitor pays for so that a minority of visits can show a sentence
+ * is the kind of cost that is invisible until it is not.
+ */
+
+/*
+ * Per-connection usage, keyed by connection id.
+ *
+ * "When did I last use this?" is the first question a returning customer asks of
+ * a connection, and the answer was already being recorded — UsageLedger buckets
+ * carry the connection id and a `last` timestamp — it was simply never read back
+ * out. Folding the buckets by connection here costs one option read that the
+ * screen was already doing, adds no storage, and changes nothing about what is
+ * recorded or when.
+ */
+$wpcc_conn_usage = [];
+foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b ) {
+	$wpcc_bcid = (string) ( $wpcc_b['connection'] ?? '' );
+	if ( '' === $wpcc_bcid ) {
+		continue; // Recorded before a connection was attributable; not attributable now either.
+	}
+	if ( ! isset( $wpcc_conn_usage[ $wpcc_bcid ] ) ) {
+		$wpcc_conn_usage[ $wpcc_bcid ] = [ 'calls' => 0, 'last' => 0 ];
+	}
+	$wpcc_conn_usage[ $wpcc_bcid ]['calls'] += (int) ( $wpcc_b['calls'] ?? 0 );
+	$wpcc_conn_usage[ $wpcc_bcid ]['last']   = max( $wpcc_conn_usage[ $wpcc_bcid ]['last'], (int) ( $wpcc_b['last'] ?? 0 ) );
+}
 ?>
 <style>
 .wpcc-aip { max-width: 1080px; }
@@ -125,8 +221,22 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 .wpcc-aip-caps { display:flex; flex-wrap:wrap; gap:4px; }
 .wpcc-aip-cap { font-size:11px; padding:1px 7px; border-radius:5px; background:#f0f3f7; color:#50575e; }
 .wpcc-aip-cap.on { background:#e7f6ec; color:#0a7a33; }
-.wpcc-aip-actions { display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid #eef0f2; padding-top:10px; margin-top:2px; }
+.wpcc-aip-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; border-top:1px solid #eef0f2; padding-top:10px; margin-top:2px; }
 .wpcc-aip-actions form { margin:0; }
+/* The one line on a card that asks for something, told apart from the four that
+   only report. Same size, not muted — emphasis by colour, not by shouting. */
+.wpcc-aip-todo { color:#8a5700; font-weight:600; }
+/* Duplicate / Delete. Present, reachable, and not competing with Test. */
+.wpcc-aip-more { margin-left:auto; }
+/* Open, it stops being a trailing item and becomes its own full-width row, so the
+   summary sits above its buttons instead of floating to the right of them. */
+.wpcc-aip-more[open] { margin-left:0; flex:1 0 100%; }
+.wpcc-aip-more > summary { cursor:pointer; list-style:none; font-size:12px; color:#646970; padding:2px 6px; border-radius:4px; display:inline-block; }
+.wpcc-aip-more > summary::-webkit-details-marker { display:none; }
+.wpcc-aip-more > summary:hover { color:#1d2327; background:#f0f0f1; }
+.wpcc-aip-more[open] > summary { color:#1d2327; padding-left:0; }
+.wpcc-aip-more__body { display:flex; flex-wrap:wrap; gap:6px; padding-top:8px; }
+.wpcc-aip-more__body form { margin:0; }
 .wpcc-aip-empty { background:#fff; border:2px dashed #c3c4c7; border-radius:12px; padding:36px 24px; text-align:center; }
 .wpcc-aip-empty h3 { margin:0 0 6px; font-size:17px; }
 .wpcc-aip-route { display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid #f0f0f1; }
@@ -144,11 +254,390 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 .wpcc-aip-field label { display:block; font-weight:600; font-size:13px; margin-bottom:4px; }
 .wpcc-aip-field input, .wpcc-aip-field select { width:100%; max-width:420px; }
 .wpcc-aip-wnav { display:flex; justify-content:space-between; margin-top:18px; }
+
+/* ── Outcome card: what was saved, and the one thing left to do ───────────── */
+.wpcc-aip-outcome { background:#fff; border:1px solid #cfe4d2; border-left:3px solid #00a32a; border-radius:12px;
+	padding:18px 20px; margin:6px 0 20px; max-width:760px; box-shadow:0 1px 2px rgba(16,24,40,.04); }
+.wpcc-aip-outcome__title { margin:0 0 6px; font-size:15px; font-weight:650; color:#1d2327; letter-spacing:-.01em; }
+.wpcc-aip-outcome__title::before { content:"\2713"; color:#00a32a; font-weight:700; margin-right:8px; }
+.wpcc-aip-outcome__step { margin:0; font-size:13px; line-height:1.6; color:#50575e; max-width:70ch; }
+.wpcc-aip-outcome__actions { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:14px 0 0; }
+.wpcc-aip-outcome__link { font-size:12.5px; color:#2271b1; text-decoration:none; }
+.wpcc-aip-outcome__link:hover { text-decoration:underline; }
+
+/* "What you can do now" — the three surfaces a working connection unlocks.
+   Sits INSIDE the outcome card, below a rule, so it reads as the consequence of
+   the success above it rather than as a second, competing announcement. */
+.wpcc-aip-uses { margin:16px 0 0; padding-top:14px; border-top:1px solid #eef0f2; }
+.wpcc-aip-uses__h { margin:0 0 10px; font-size:12px; font-weight:700; letter-spacing:.04em;
+	text-transform:uppercase; color:#646970; }
+.wpcc-aip-use { display:flex; align-items:flex-start; gap:11px; padding:9px 0; border-top:1px solid #f4f5f7; }
+.wpcc-aip-use:first-of-type { border-top:0; }
+.wpcc-aip-use__icon { flex:0 0 auto; width:22px; height:22px; margin-top:1px; border-radius:6px;
+	background:#f0f3f7; color:#50575e; font-size:12px; line-height:22px; text-align:center; }
+.wpcc-aip-use__body { flex:1 1 auto; min-width:0; }
+.wpcc-aip-use__body strong { display:block; font-size:13px; color:#1d2327; margin-bottom:2px; }
+.wpcc-aip-use__body span { display:block; font-size:12.5px; line-height:1.55; color:#50575e; max-width:66ch; }
+/* The control keeps its own column so three rows of differing text length still
+   line their buttons up, and never squeezes below a tappable width. */
+.wpcc-aip-use > .button { flex:0 0 auto; margin-top:1px; }
+@media (max-width:600px){
+	.wpcc-aip-use { flex-wrap:wrap; }
+	.wpcc-aip-use > .button { margin-left:33px; }
+}
+
+/* The connection a just-completed action applied to. Marks the destination when
+   the page has scrolled to it, then fades — nothing stays decorated. */
+.wpcc-aip-spotlight { animation: wpcc-aip-spot 2.4s ease-out 1; }
+@keyframes wpcc-aip-spot {
+	0%   { box-shadow: 0 0 0 3px rgba(34,113,177,.45); }
+	70%  { box-shadow: 0 0 0 3px rgba(34,113,177,.30); }
+	100% { box-shadow: 0 0 0 3px rgba(34,113,177,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+	.wpcc-aip-spotlight { animation:none; box-shadow:0 0 0 3px rgba(34,113,177,.35); }
+}
+
 @media (max-width:782px){ .wpcc-aip-hero{flex-direction:column; align-items:flex-start;} .wpcc-aip-cards{grid-template-columns:1fr;} }
 </style>
 
 <div class="wrap wpcc-aip">
-	<?php if ( $wpcc_notice ) : ?>
+	<?php
+	/*
+	 * What just happened, and what to do about it.
+	 *
+	 * Saving a connection used to produce the words "Connection created." in a
+	 * generic admin notice — and then nothing. The connection itself renders
+	 * further down the page, past the tool switches and the activity feed, so a
+	 * first-time customer who had just pasted an API key was left on a screen that
+	 * looked identical to the one before, with no confirmation of what had been
+	 * saved, no sign of where it went, and no idea whether they were finished.
+	 * "Created" is not an outcome; it is a database event.
+	 *
+	 * The card below answers the three questions that moment actually raises —
+	 * what was saved, is it working, what is left — and carries ONE control for
+	 * whatever is genuinely next. Which control that is depends on the state the
+	 * connection is really in, so the screen never offers "Test" for a connection
+	 * with no key, or "you're ready" for a site with every tool switched off.
+	 *
+	 * Nothing here changes what saving a connection does. It is the same POST, the
+	 * same store, the same audit event; only the reporting is different.
+	 *
+	 * THREE moments, not one. Creating a connection was never the only place this
+	 * flow stopped dead — it was simply the first. The full journey is:
+	 *
+	 *     create → add key → test → healthy → ???
+	 *
+	 * and the last arrow was the worst of the three, because it is the one the
+	 * customer reaches having done everything right. "Connection succeeded." is a
+	 * result, not an outcome: the key works, and the product says nothing about
+	 * what now works BECAUSE it works. So `update_key` and `test` produce an
+	 * outcome card too, and a successful test additionally opens the "what you can
+	 * do now" section below — the point of the whole setup.
+	 */
+	$wpcc_outcome_action = (string) ( $wpcc_notice['action'] ?? '' );
+	$wpcc_outcome_id     = (string) ( $wpcc_notice['connection'] ?? '' );
+	$wpcc_outcome        = ( $wpcc_notice
+		&& in_array( $wpcc_outcome_action, [ 'create', 'update_key', 'test' ], true )
+		&& 'success' === $wpcc_notice['type']
+		&& isset( $wpcc_conns[ $wpcc_outcome_id ] ) )
+			? $wpcc_conns[ $wpcc_outcome_id ]
+			: null;
+	?>
+	<?php if ( $wpcc_outcome ) : ?>
+		<?php
+		$wpcc_o_def      = $wpcc_providers[ $wpcc_outcome['provider'] ] ?? [];
+		$wpcc_o_haskey   = $wpcc_store->is_configured( $wpcc_outcome );
+		$wpcc_o_runtime  = $wpcc_store->runtime_usable( $wpcc_outcome );
+		$wpcc_o_testable = $wpcc_store->testable( $wpcc_outcome );
+		$wpcc_o_health   = Health::of( $wpcc_outcome, $wpcc_store );
+		$wpcc_o_isdef    = ( $wpcc_default === $wpcc_outcome_id );
+		$wpcc_o_provider = (string) ( $wpcc_o_def['label'] ?? $wpcc_outcome['provider'] );
+
+		/*
+		 * The single next step, decided in the order things actually block on.
+		 *
+		 * Each branch produces one sentence and at most one primary control. The
+		 * order is not cosmetic: a connection with no key cannot be tested, and a
+		 * tested connection still generates nothing while every tool is off — so
+		 * asking "is there a key?" before "is it tested?" before "is anything
+		 * switched on?" is the order in which a customer would otherwise hit each
+		 * of these as a surprise.
+		 */
+		$wpcc_o_step = '';
+		$wpcc_o_cta  = '';
+		if ( ! $wpcc_o_haskey ) {
+			$wpcc_o_step = __( 'It has no API key yet, so it cannot generate anything. Add one to finish setup.', 'ai-command-center' );
+			$wpcc_o_cta  = 'addkey';
+		} elseif ( ! $wpcc_o_runtime ) {
+			$wpcc_o_step = sprintf(
+				/* translators: %s: provider label, e.g. "Mistral". */
+				__( 'Your key is saved. WP Command Center cannot run its own AI features through %s yet, so this connection is stored and testable rather than generating.', 'ai-command-center' ),
+				$wpcc_o_provider
+			);
+			$wpcc_o_cta = $wpcc_o_testable ? 'test' : '';
+		} elseif ( 'untested' === $wpcc_o_health['state'] ) {
+			$wpcc_o_step = __( 'Nothing is switched on by saving a key. Test it once to confirm the key works — the test only reads, and changes nothing on your site.', 'ai-command-center' );
+			$wpcc_o_cta  = 'test';
+		} elseif ( in_array( $wpcc_o_health['state'], [ 'healthy', 'slow' ], true ) && ! $wpcc_ai_tools_on ) {
+			$wpcc_o_step = __( 'The key works. The SEO, Alt Text and Content tools are still switched off for this site — turn one on and it will generate through this connection.', 'ai-command-center' );
+			$wpcc_o_cta  = 'tools';
+		} elseif ( in_array( $wpcc_o_health['state'], [ 'healthy', 'slow' ], true ) ) {
+			$wpcc_o_step = __( 'The key works and your built-in AI tools will generate through this connection. Nothing else to set up.', 'ai-command-center' );
+		} else {
+			$wpcc_o_step = $wpcc_o_health['action'];
+			$wpcc_o_cta  = $wpcc_o_testable ? 'test' : '';
+		}
+
+		/*
+		 * The headline reports what the customer just DID, not a generic "saved".
+		 *
+		 * A test that passes is the moment the product has actually proved
+		 * something, and "is saved" would throw that away — the customer pressed
+		 * Test to find out whether it works, so the first line answers that.
+		 */
+		if ( 'test' === $wpcc_outcome_action ) {
+			/* translators: 1: connection name chosen by the customer, 2: provider label, e.g. "Anthropic". */
+			$wpcc_o_head = __( '“%1$s” is working — %2$s', 'ai-command-center' );
+		} elseif ( 'update_key' === $wpcc_outcome_action ) {
+			/* translators: 1: connection name chosen by the customer, 2: provider label, e.g. "Anthropic". */
+			$wpcc_o_head = __( '“%1$s” has its API key — %2$s', 'ai-command-center' );
+		} else {
+			/* translators: 1: connection name chosen by the customer, 2: provider label, e.g. "Anthropic". */
+			$wpcc_o_head = __( '“%1$s” is saved — %2$s', 'ai-command-center' );
+		}
+
+		/*
+		 * Is this connection PROVEN to work right now?
+		 *
+		 * Gates the "what you can do now" section below. Deliberately not the same
+		 * thing as "the test just passed": arriving here by saving a key on a
+		 * connection that was already healthy is the same readiness, and a customer
+		 * who tests twice should not watch the section vanish. Health is the fact;
+		 * the action that got us here is not.
+		 */
+		$wpcc_o_proven = in_array( $wpcc_o_health['state'], [ 'healthy', 'slow' ], true );
+		?>
+		<div class="wpcc-aip-outcome" role="status">
+			<p class="wpcc-aip-outcome__title">
+				<?php
+				echo esc_html(
+					sprintf(
+						$wpcc_o_head,
+						(string) $wpcc_outcome['name'],
+						$wpcc_o_provider
+					)
+				);
+				?>
+				<?php if ( $wpcc_o_isdef ) : ?>
+					<span class="wpcc-aip-badge" style="background:#e7f0fb;color:#1d62b0;margin-left:6px;"><?php esc_html_e( 'DEFAULT', 'ai-command-center' ); ?></span>
+				<?php endif; ?>
+			</p>
+			<p class="wpcc-aip-outcome__step"><?php echo esc_html( $wpcc_o_step ); ?></p>
+			<div class="wpcc-aip-outcome__actions">
+				<?php if ( 'test' === $wpcc_o_cta ) : ?>
+					<?php // The whole action, right here — no scrolling to find the same button on the card. ?>
+					<form method="post" style="margin:0;">
+						<?php wp_nonce_field( ConnectionController::NONCE ); ?>
+						<input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $wpcc_outcome_id ); ?>" />
+						<button type="submit" name="wpcc_conn_action" value="test" class="button button-primary"><?php esc_html_e( 'Test this connection', 'ai-command-center' ); ?></button>
+					</form>
+				<?php elseif ( 'addkey' === $wpcc_o_cta ) : ?>
+					<?php // Opens this connection's own key field and puts the cursor in it. ?>
+					<a class="button button-primary wpcc-aip-jump" href="#wpcc-conn-<?php echo esc_attr( $wpcc_outcome_id ); ?>" data-open-key="1"><?php esc_html_e( 'Add your API key', 'ai-command-center' ); ?></a>
+				<?php elseif ( 'tools' === $wpcc_o_cta ) : ?>
+					<a class="button button-primary wpcc-aip-jump" href="#wpcc-bai-tools-h"><?php esc_html_e( 'Choose a tool to turn on', 'ai-command-center' ); ?></a>
+				<?php endif; ?>
+				<a class="wpcc-aip-outcome__link wpcc-aip-jump" href="#wpcc-conn-<?php echo esc_attr( $wpcc_outcome_id ); ?>"><?php esc_html_e( 'Show the connection', 'ai-command-center' ); ?></a>
+			</div>
+
+			<?php if ( $wpcc_o_proven ) : ?>
+				<?php
+				/*
+				 * ── WHERE THIS ACTUALLY SHOWS UP ────────────────────────────────
+				 *
+				 * The end of setup was the emptiest moment in the product. A
+				 * customer who created a connection, pasted a key and pressed Test
+				 * got the word "succeeded" and a screen of settings — having never
+				 * been told what any of it was FOR. Three surfaces were now live on
+				 * their site and the product mentioned none of them:
+				 *
+				 *   1. Built-in AI  — the SEO / Alt Text / Content tools, which run
+				 *      through this key. Five levels down in the menu.
+				 *   2. "✨ WPCC AI" on Posts and Pages — the row action. Nothing
+				 *      anywhere announced it; you found it by hovering a row.
+				 *   3. External assistants — Claude, ChatGPT and the rest, which do
+				 *      NOT use this key and are a genuinely separate path.
+				 *
+				 * Each row states what it is, what state it is in HERE, and carries
+				 * one link. The states are read, never assumed: a row that says the
+				 * WPCC AI menu is on your posts says it only when the flags that
+				 * put it there are on. That is the difference between telling
+				 * someone where a feature is and sending them to look for one that
+				 * is switched off.
+				 *
+				 * Presentation only — no route, option, capability or write.
+				 */
+				?>
+				<div class="wpcc-aip-uses">
+					<p class="wpcc-aip-uses__h"><?php esc_html_e( 'What you can do now', 'ai-command-center' ); ?></p>
+
+					<?php if ( $wpcc_o_runtime ) : ?>
+						<?php
+						/*
+						 * 1 — Built-in AI. The one that spends this key, so it is
+						 * first, and its state is the honest blocker: switched-on
+						 * tools generate; switched-off tools are the reason nothing
+						 * appears to happen after a successful test.
+						 */
+						?>
+						<div class="wpcc-aip-use">
+							<span class="wpcc-aip-use__icon" aria-hidden="true">✦</span>
+							<div class="wpcc-aip-use__body">
+								<strong><?php esc_html_e( 'Built-in AI', 'ai-command-center' ); ?></strong>
+								<span>
+									<?php
+									if ( $wpcc_tools_on ) {
+										/*
+										 * Names the tools that are ON, and nothing else.
+										 *
+										 * An earlier draft of this line listed what Built-in
+										 * AI can generate — "SEO descriptions, image alt text
+										 * or draft content" — regardless of which tools were
+										 * actually switched on, so a site running SEO and
+										 * Content was told it could produce alt text while
+										 * the Alt Text tool sat off. Promising a capability
+										 * the site cannot currently perform is the exact
+										 * defect this release already fixed in the operation
+										 * catalogue; the tool names carry the meaning and
+										 * cannot drift from the state.
+										 *
+										 * wp_sprintf_l() gives "SEO and Content" in English
+										 * and whatever the locale's list conjunction is
+										 * elsewhere; _n() keeps the verb agreeing with it.
+										 */
+										echo esc_html(
+											sprintf(
+												/* translators: %s: the built-in AI tool that is switched on, or a localized list of them, e.g. "SEO" / "SEO and Content". */
+												_n(
+													'The %s tool is on and generates through this connection, from inside WordPress.',
+													'The %s tools are on and generate through this connection, from inside WordPress.',
+													count( $wpcc_tools_on ),
+													'ai-command-center'
+												),
+												wp_sprintf_l( '%l', array_values( $wpcc_tools_on ) )
+											)
+										);
+									} else {
+										esc_html_e( 'Generate SEO descriptions, image alt text and draft content from inside WordPress. All three tools are switched off for this site, so nothing generates yet.', 'ai-command-center' );
+									}
+									?>
+								</span>
+							</div>
+							<?php if ( $wpcc_tools_on ) : ?>
+								<a class="button button-small wpcc-aip-jump" href="#wpcc-bai-tools-h"><?php esc_html_e( 'Open Built-in AI', 'ai-command-center' ); ?></a>
+							<?php else : ?>
+								<a class="button button-small button-primary wpcc-aip-jump" href="#wpcc-bai-tools-h"><?php esc_html_e( 'Turn one on', 'ai-command-center' ); ?></a>
+							<?php endif; ?>
+						</div>
+
+						<?php
+						/*
+						 * 2 — The row action. Named exactly as it appears ("✨ WPCC
+						 * AI"), on the screens it appears on (the Posts and Pages
+						 * LISTS — there is no block-editor sidebar, and sending
+						 * someone into the editor to hunt for a menu that lives on
+						 * the list screen would replace one dead end with another).
+						 *
+						 * The approval promise is stated here rather than in a
+						 * footnote: "a suggestion is a draft you approve" is the
+						 * single fact that makes a customer willing to try it.
+						 */
+						?>
+						<div class="wpcc-aip-use">
+							<span class="wpcc-aip-use__icon" aria-hidden="true">✎</span>
+							<div class="wpcc-aip-use__body">
+								<strong><?php esc_html_e( 'WPCC AI on your posts and pages', 'ai-command-center' ); ?></strong>
+								<span>
+									<?php
+									if ( $wpcc_editor_actions ) {
+										echo esc_html(
+											sprintf(
+												/* translators: %s: comma-separated list of what can be generated, e.g. "Title, Excerpt, SEO title and description". */
+												__( 'Open Posts or Pages and hover any row — “✨ WPCC AI” is now there, and generates: %s. Every suggestion arrives as a draft you review before anything changes.', 'ai-command-center' ),
+												implode( ', ', $wpcc_editor_actions )
+											)
+										);
+									} else {
+										esc_html_e( 'Hover a row in Posts or Pages for “✨ WPCC AI” and generate a title, excerpt or SEO meta in place. It appears once you switch on the Content or SEO tool above — that switch is what puts it there.', 'ai-command-center' );
+									}
+									?>
+								</span>
+							</div>
+							<?php if ( $wpcc_editor_actions ) : ?>
+								<a class="button button-small" href="<?php echo esc_url( admin_url( 'edit.php' ) ); ?>"><?php esc_html_e( 'Open Posts', 'ai-command-center' ); ?></a>
+							<?php endif; ?>
+						</div>
+					<?php endif; ?>
+
+					<?php
+					/*
+					 * 3 — External assistants. Shown even when the runtime cannot
+					 * use this provider, because this path does not use the key at
+					 * all — it is token-authenticated MCP/REST. Saying so is the
+					 * point: the surrounding screen is about a provider key, and a
+					 * customer who assumes their key is what connects Claude will
+					 * wire up the wrong thing. The state is real (usable tokens,
+					 * and whether one has ever actually called).
+					 */
+					$wpcc_assistant = \WPCommandCenter\Admin\ConnectionStatus::get();
+					$wpcc_use_tok   = (int) $wpcc_assistant['active_tokens'];
+					?>
+					<div class="wpcc-aip-use">
+						<span class="wpcc-aip-use__icon" aria-hidden="true">◇</span>
+						<div class="wpcc-aip-use__body">
+							<strong><?php esc_html_e( 'Claude, ChatGPT and other assistants', 'ai-command-center' ); ?></strong>
+							<span>
+								<?php
+								if ( \WPCommandCenter\Admin\ConnectionStatus::STATE_NO_TOKEN === $wpcc_assistant['state'] ) {
+									esc_html_e( 'Let an assistant work on this site directly. It needs its own access token, not this provider key. Nothing it asks for is applied on its own — changes wait for your approval.', 'ai-command-center' );
+								} elseif ( \WPCommandCenter\Admin\ConnectionStatus::STATE_UNUSED === $wpcc_assistant['state'] ) {
+									echo esc_html(
+										sprintf(
+											/* translators: %s: number of access tokens, already formatted. */
+											_n(
+												'%s access token is ready, and nothing has connected with it yet. Finish the setup inside your assistant, then ask it about this site.',
+												'%s access tokens are ready, and nothing has connected with them yet. Finish the setup inside your assistant, then ask it about this site.',
+												$wpcc_use_tok,
+												'ai-command-center'
+											),
+											number_format_i18n( $wpcc_use_tok )
+										)
+									);
+								} else {
+									echo esc_html(
+										sprintf(
+											/* translators: %s: sentence about the last assistant request, e.g. "Last request 2 hours ago." */
+											__( 'An assistant is already connected. %s Changes it asks for still wait for your approval.', 'ai-command-center' ),
+											(string) $wpcc_assistant['detail']
+										)
+									);
+								}
+								?>
+							</span>
+						</div>
+						<a class="button button-small<?php echo \WPCommandCenter\Admin\ConnectionStatus::STATE_NO_TOKEN === $wpcc_assistant['state'] ? ' button-primary' : ''; ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ); ?>">
+							<?php
+							echo \WPCommandCenter\Admin\ConnectionStatus::STATE_NO_TOKEN === $wpcc_assistant['state']
+								? esc_html__( 'Connect an assistant', 'ai-command-center' )
+								: esc_html__( 'Assistants', 'ai-command-center' );
+							?>
+						</a>
+					</div>
+				</div>
+			<?php endif; ?>
+		</div>
+	<?php elseif ( $wpcc_notice ) : ?>
 		<div class="notice inline notice-<?php echo esc_attr( $wpcc_notice['type'] ); ?>" role="alert"><p><?php echo esc_html( $wpcc_notice['message'] ); ?></p></div>
 	<?php endif; ?>
 
@@ -451,8 +940,42 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 				$h        = Health::of( $c, $wpcc_store );
 				$caps     = Capabilities::for_provider( $c['provider'] );
 				$avatar   = strtoupper( substr( (string) ( $def['label'] ?? $c['provider'] ), 0, 1 ) );
+
+				/*
+				 * Which built-in tools generate through this connection.
+				 *
+				 * This was already computed further down, used for one purpose — naming
+				 * the consequence in the delete confirmation — and then thrown away. It
+				 * is the answer to "what is this connection FOR?", which is the question
+				 * a customer returning after three months opens this screen to ask, so it
+				 * now travels with the connection instead of appearing only at the moment
+				 * they try to destroy it.
+				 */
+				$wpcc_routed = [];
+				foreach ( $wpcc_routes as $wpcc_feat => $wpcc_rcid ) {
+					if ( $wpcc_rcid === $cid && isset( ConnectionStore::FEATURES[ $wpcc_feat ] ) ) {
+						$wpcc_routed[] = ConnectionStore::FEATURES[ $wpcc_feat ];
+					}
+				}
+
+				// Recorded generations attributed to this connection (0/never when unused).
+				$wpcc_used = $wpcc_conn_usage[ $cid ] ?? [ 'calls' => 0, 'last' => 0 ];
+
+				/*
+				 * Which of this card's controls is THE one to press.
+				 *
+				 * Every action on this card used to be a `button-small` in a row, so
+				 * "Test" — the thing a connection that has never passed a test needs —
+				 * carried exactly the same visual weight as "Duplicate". A row of five
+				 * identical buttons is a row with no recommendation in it, which leaves
+				 * the customer to work out the product's own state machine. Health
+				 * already knows the answer; the card now spends its one point of emphasis
+				 * saying it.
+				 */
+				$wpcc_needs_key  = ( ! $has_key && ! $is_const );
+				$wpcc_needs_test = ( $has_key && $testable && ! in_array( $h['state'], [ 'healthy', 'slow' ], true ) );
 				?>
-				<div class="wpcc-aip-card <?php echo $c['enabled'] ? '' : 'dim'; ?>">
+				<div class="wpcc-aip-card <?php echo $c['enabled'] ? '' : 'dim'; ?>" id="wpcc-conn-<?php echo esc_attr( $cid ); ?>">
 					<div class="wpcc-aip-card__top">
 						<div style="display:flex;gap:10px;align-items:center;">
 							<div class="wpcc-aip-avatar" aria-hidden="true"><?php echo esc_html( $avatar ); ?></div>
@@ -477,6 +1000,43 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 					<div class="wpcc-aip-meta">
 						<?php if ( Dialect::endpoint_editable( $c['dialect'] ) ) : ?><div><?php esc_html_e( 'Endpoint', 'ai-command-center' ); ?>: <code><?php echo esc_html( $c['endpoint'] ?: '—' ); ?></code></div><?php endif; ?>
 						<div><?php esc_html_e( 'Model', 'ai-command-center' ); ?>: <code><?php echo esc_html( $c['model'] ?: ( $def['default_model'] ?? '—' ) ); ?></code></div>
+						<?php
+						/*
+						 * The returning-customer line: what this powers, and when it last
+						 * did anything.
+						 *
+						 * Both facts were already in the database and neither was ever shown.
+						 * Routes have always been stored; UsageLedger has recorded a call
+						 * count and a timestamp against a connection id since it was added.
+						 * Someone coming back after six months previously got "Healthy" and
+						 * five buttons, which answers neither "what is this for" nor "is
+						 * anything still using it" — the two things that decide whether they
+						 * keep it, re-point it, or delete it.
+						 *
+						 * Deliberately one line, not three. It is the highest-value row on
+						 * the card and it still has to earn its space against a brief that
+						 * says do not make the interface busier.
+						 */
+						$wpcc_use_bits = [];
+						$wpcc_use_bits[] = $wpcc_routed
+							? sprintf(
+								/* translators: %s: comma-separated tool names, e.g. "SEO meta, Alt text". */
+								__( 'Powers %s', 'ai-command-center' ),
+								implode( ', ', $wpcc_routed )
+							)
+							: __( 'Not powering any tool', 'ai-command-center' );
+						if ( $wpcc_used['calls'] > 0 && $wpcc_used['last'] > 0 ) {
+							$wpcc_use_bits[] = sprintf(
+								/* translators: 1: human time difference, e.g. "3 days"; 2: number of generations. */
+								_n( 'last used %1$s ago (%2$s generation)', 'last used %1$s ago (%2$s generations)', (int) $wpcc_used['calls'], 'ai-command-center' ),
+								human_time_diff( (int) $wpcc_used['last'], time() ),
+								number_format_i18n( (int) $wpcc_used['calls'] )
+							);
+						} else {
+							$wpcc_use_bits[] = __( 'not used yet', 'ai-command-center' );
+						}
+						?>
+						<div><?php echo esc_html( implode( ' · ', $wpcc_use_bits ) ); ?></div>
 						<?php if ( is_array( $lt ) && isset( $lt['time'] ) ) : ?>
 							<div class="muted">
 								<?php
@@ -488,7 +1048,16 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 								?>
 							</div>
 						<?php endif; ?>
-						<div class="muted" style="margin-top:2px;"><?php echo esc_html( $h['action'] ); ?></div>
+						<?php
+						/*
+						 * "Working. Nothing to do." is worth saying quietly; "The key was
+						 * rejected" is not. The same muted grey served both, so the one
+						 * line on the card that required action looked exactly like the one
+						 * that confirmed there was none.
+						 */
+						$wpcc_h_needs = ! in_array( $h['state'], [ 'healthy', 'slow' ], true );
+						?>
+						<div class="<?php echo $wpcc_h_needs ? 'wpcc-aip-todo' : 'muted'; ?>" style="margin-top:2px;"><?php echo esc_html( $h['action'] ); ?></div>
 					</div>
 
 					<details>
@@ -546,27 +1115,47 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 						<?php else : ?><p class="muted" style="font-size:12px;margin-top:8px;"><?php esc_html_e( 'Key defined in wp-config.php (constant) — read-only.', 'ai-command-center' ); ?></p><?php endif; ?>
 					</details>
 
+					<?php
+					/*
+					 * Actions, in two ranks instead of one row of five.
+					 *
+					 * Everything a customer does routinely — test it, make it the default,
+					 * turn it off — stays on the card. Duplicate and Delete move behind a
+					 * disclosure: neither is a thing anyone does on a normal visit, and one
+					 * of them destroys a stored API key. Putting an irreversible action at
+					 * the same rank as "Test", in the same size and colour, is how a tired
+					 * person deletes the wrong connection.
+					 *
+					 * Nothing is removed and nothing changes what any control does. Same
+					 * forms, same nonces, same handler, same confirmation dialog — this is
+					 * rank and grouping only.
+					 */
+					?>
 					<!-- Actions -->
 					<div class="wpcc-aip-actions">
-						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="test" class="button button-small" <?php disabled( ! $testable || ! $has_key ); ?>><?php esc_html_e( 'Test', 'ai-command-center' ); ?></button></form>
+						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="test" class="button button-small <?php echo $wpcc_needs_test ? 'button-primary' : ''; ?>" <?php disabled( ! $testable || ! $has_key ); ?>><?php esc_html_e( 'Test', 'ai-command-center' ); ?></button></form>
+						<?php if ( $wpcc_needs_key ) : ?>
+							<?php // The only thing this connection can usefully do next: it has no key. ?>
+							<a class="button button-small button-primary wpcc-aip-jump" href="#wpcc-conn-<?php echo esc_attr( $cid ); ?>" data-open-key="1"><?php esc_html_e( 'Add API key', 'ai-command-center' ); ?></a>
+						<?php endif; ?>
 						<?php if ( $runtime && ! $is_def && $has_key ) : ?><form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="set_default" class="button button-small"><?php esc_html_e( 'Set default', 'ai-command-center' ); ?></button></form><?php endif; ?>
 						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><input type="hidden" name="wpcc_enabled" value="<?php echo $c['enabled'] ? '0' : '1'; ?>" /><button type="submit" name="wpcc_conn_action" value="set_enabled" class="button button-small"><?php echo $c['enabled'] ? esc_html__( 'Disable', 'ai-command-center' ) : esc_html__( 'Enable', 'ai-command-center' ); ?></button></form>
-						<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="duplicate" class="button button-small"><?php esc_html_e( 'Duplicate', 'ai-command-center' ); ?></button></form>
-						<?php
-					/*
-					 * Which built-in tools currently generate through this connection. A
-					 * delete confirmation that cannot name the consequence is just a
-					 * speed bump; naming the tools that stop working is the whole point
-					 * of asking.
-					 */
-					$wpcc_routed = [];
-					foreach ( $wpcc_routes as $wpcc_feat => $wpcc_rcid ) {
-						if ( $wpcc_rcid === $cid && isset( ConnectionStore::FEATURES[ $wpcc_feat ] ) ) {
-							$wpcc_routed[] = ConnectionStore::FEATURES[ $wpcc_feat ];
-						}
-					}
-					?>
-					<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="delete" class="button button-small button-link-delete wpcc-conn-confirm" data-confirm="delete" data-conn-name="<?php echo esc_attr( $c['name'] ); ?>" data-has-key="<?php echo $has_key ? '1' : '0'; ?>" data-routed="<?php echo esc_attr( implode( ', ', $wpcc_routed ) ); ?>"><?php esc_html_e( 'Delete', 'ai-command-center' ); ?></button></form>
+						<details class="wpcc-aip-more">
+							<summary><?php esc_html_e( 'More', 'ai-command-center' ); ?></summary>
+							<div class="wpcc-aip-more__body">
+								<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="duplicate" class="button button-small"><?php esc_html_e( 'Duplicate', 'ai-command-center' ); ?></button></form>
+								<?php
+								/*
+								 * $wpcc_routed is resolved once at the top of this card now (it
+								 * answers "what does this power?" in the meta line as well). A
+								 * delete confirmation that cannot name the consequence is just a
+								 * speed bump; naming the tools that stop working is the whole
+								 * point of asking.
+								 */
+								?>
+								<form method="post"><?php wp_nonce_field( ConnectionController::NONCE ); ?><input type="hidden" name="wpcc_conn_id" value="<?php echo esc_attr( $cid ); ?>" /><button type="submit" name="wpcc_conn_action" value="delete" class="button button-small button-link-delete wpcc-conn-confirm" data-confirm="delete" data-conn-name="<?php echo esc_attr( $c['name'] ); ?>" data-has-key="<?php echo $has_key ? '1' : '0'; ?>" data-routed="<?php echo esc_attr( implode( ', ', $wpcc_routed ) ); ?>"><?php esc_html_e( 'Delete', 'ai-command-center' ); ?></button></form>
+							</div>
+						</details>
 					</div>
 				</div>
 			<?php endforeach; ?>
@@ -633,8 +1222,11 @@ $wpcc_default_name = '' !== $wpcc_default && isset( $wpcc_conns[ $wpcc_default ]
 	 * The step now depends on whether the tools are actually switched on for this
 	 * site, because those are two genuinely different next actions — and the
 	 * screen already knows which is true rather than making the customer guess.
+	 *
+	 * $wpcc_ai_tools_on is resolved once at the top of this view — the outcome card
+	 * needs the same answer, and two independent lookups is how the top and bottom
+	 * of a screen end up disagreeing about whether a feature is on.
 	 */
-	$wpcc_ai_tools_on = count( \WPCommandCenter\Admin\AppShell::builtin_tabs() ) > 1;
 	?>
 	<?php if ( $wpcc_store->is_configured( $wpcc_conns[ $wpcc_default ] ?? [] ) ) : ?>
 		<div style="margin:18px 0 0;padding:12px 14px;background:#f0f6fc;border:1px solid #c3c4c7;border-radius:8px;max-width:720px;">
@@ -885,5 +1477,133 @@ unset( $wpcc_m );
 			} );
 		} );
 	} );
+} )();
+
+/*
+ * Taking the customer to the thing that was just talked about.
+ *
+ * Two problems, one mechanism. After any action on this screen the browser
+ * reloads at the TOP: the outcome card or notice says what happened, and the
+ * connection it happened to is somewhere below the tool switches and the
+ * activity feed. Pressing "Test" on a card therefore scrolled you away from that
+ * card to read a sentence about it — and then left you to scroll back and find
+ * which of several cards you had acted on. The same gap is why "Connection
+ * created." used to feel like nothing had happened at all.
+ *
+ * So: every in-page jump on this screen (and every completed action) lands on the
+ * relevant card, marks it briefly, and — when the point of the trip was the API
+ * key — opens the right disclosure and puts the cursor in the field. Scrolling
+ * only happens when the target is actually off screen, because moving the page
+ * under someone who can already see the answer is its own annoyance.
+ *
+ * All progressive enhancement: these are real `#id` anchors, so with JS off the
+ * browser still jumps to the same place.
+ */
+( function () {
+	function reduced() {
+		return window.matchMedia && window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+	}
+
+	function spotlight( el ) {
+		el.classList.remove( 'wpcc-aip-spotlight' );
+		void el.offsetWidth; // restart the animation on a repeat visit
+		el.classList.add( 'wpcc-aip-spotlight' );
+	}
+
+	function onScreen( el ) {
+		var r = el.getBoundingClientRect();
+		return r.top >= 0 && r.bottom <= ( window.innerHeight || document.documentElement.clientHeight );
+	}
+
+	// Open this connection's key field: the Edit disclosure holds it, and a
+	// disclosure that is closed cannot be focused into.
+	function openKey( card ) {
+		var input = card.querySelector( 'input[name="wpcc_key"]' );
+		if ( ! input ) { return false; }
+		var d = input.closest ? input.closest( 'details' ) : null;
+		if ( d ) { d.open = true; }
+		input.focus( { preventScroll: true } );
+		return true;
+	}
+
+	function reveal( card, wantKey ) {
+		if ( wantKey ) { openKey( card ); }
+		if ( ! onScreen( card ) ) {
+			var soft = ! reduced();
+			card.scrollIntoView( { behavior: soft ? 'smooth' : 'auto', block: 'center' } );
+			/*
+			 * Smooth scrolling is an animation and animations do not always run — a
+			 * backgrounded tab suspends them, and the page then never moves at all.
+			 * Silently leaving someone where they were, with a highlight on a card
+			 * two screens down, is the exact confusion this whole mechanism exists to
+			 * remove. Verify the arrival; jump if it did not happen.
+			 */
+			if ( soft ) {
+				setTimeout( function () {
+					var r  = card.getBoundingClientRect();
+					var vh = window.innerHeight || document.documentElement.clientHeight;
+					if ( r.top > vh || r.bottom < 0 ) { card.scrollIntoView( { behavior: 'auto', block: 'center' } ); }
+				}, 700 );
+			}
+		}
+		spotlight( card );
+	}
+
+	Array.prototype.forEach.call( document.querySelectorAll( '.wpcc-aip-jump' ), function ( link ) {
+		link.addEventListener( 'click', function ( e ) {
+			var id = ( link.getAttribute( 'href' ) || '' ).replace( /^#/, '' );
+			var target = id ? document.getElementById( id ) : null;
+			if ( ! target ) { return; } // let the plain anchor try
+			e.preventDefault();
+			reveal( target, link.dataset.openKey === '1' );
+		} );
+	} );
+
+	/*
+	 * The connection the action that produced this page load applied to. Empty on
+	 * a plain visit, so a customer who just came to look is never scrolled.
+	 */
+	/*
+	 * Arriving from ANOTHER screen with a #target.
+	 *
+	 * Home's "Turn on a tool" points at `#wpcc-bai-tools-h` — the tool switches,
+	 * which sit below a hero, a two-path explainer and the provider cards. The
+	 * browser jumps there on its own and says nothing about why the page is
+	 * suddenly halfway down itself; a customer who followed a specific promise
+	 * arrives with no confirmation they landed on the thing they were promised.
+	 *
+	 * So the destination is marked exactly as an in-page jump marks it, and takes
+	 * keyboard focus so the arrival is announced rather than merely rendered. No
+	 * scrolling of our own — the browser has already done it, and doing it twice
+	 * is how a page ends up lurching.
+	 */
+	if ( window.location.hash.length > 1 ) {
+		var hashed = document.getElementById( window.location.hash.slice( 1 ) );
+		if ( hashed ) {
+			// A heading is not focusable by default; -1 makes it programmatically
+			// focusable without adding it to the tab order.
+			if ( ! hashed.hasAttribute( 'tabindex' ) ) { hashed.setAttribute( 'tabindex', '-1' ); }
+			hashed.focus( { preventScroll: true } );
+			/*
+			 * Focus belongs on the thing that was named; the RING belongs on the
+			 * panel around it. `#wpcc-bai-tools-h` is a heading, and a box-shadow
+			 * drawn on a heading is a rectangle hugging a line of text, which
+			 * reads as a rendering fault rather than as "here". Marking its card
+			 * shows the customer the whole thing they came for.
+			 */
+			spotlight( hashed.closest( '.wpcc-cds-card, .wpcc-aip-card' ) || hashed );
+		}
+	}
+
+	var acted = <?php echo wp_json_encode( (string) ( $wpcc_notice['connection'] ?? '' ) ); ?>;
+	if ( acted ) {
+		var card = document.getElementById( 'wpcc-conn-' + acted );
+		// Not scrolled for a brand-new connection: the outcome card at the top is
+		// carrying the next step, and yanking the page away from it would hide the
+		// one control the customer is meant to press.
+		if ( card && ! document.querySelector( '.wpcc-aip-outcome' ) ) {
+			reveal( card, false );
+		}
+	}
 } )();
 </script>

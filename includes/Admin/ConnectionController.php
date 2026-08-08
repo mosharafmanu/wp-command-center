@@ -29,7 +29,7 @@ final class ConnectionController {
 		$this->store = new ConnectionStore();
 	}
 
-	/** @return array{type:string,message:string}|null */
+	/** @return array{type:string,message:string,action:string,connection:string}|null */
 	public function handle_post(): ?array {
 		if ( ! isset( $_POST['wpcc_conn_action'] ) ) {
 			return null;
@@ -88,7 +88,7 @@ final class ConnectionController {
 		}
 		$this->store->sync_runtime();
 		$this->audit( 'ai.connection.created', [ 'connection' => $id, 'provider' => $provider ] );
-		return $this->n( 'success', __( 'Connection created.', 'ai-command-center' ) );
+		return $this->n( 'success', __( 'Connection created.', 'ai-command-center' ), 'create', $id );
 	}
 
 	private function update( string $id ): array {
@@ -105,7 +105,7 @@ final class ConnectionController {
 		];
 		$this->store->update( $id, $fields );
 		$this->audit( 'ai.connection.updated', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Connection saved.', 'ai-command-center' ) );
+		return $this->n( 'success', __( 'Connection saved.', 'ai-command-center' ), 'update', $id );
 	}
 
 	private function update_key( string $id ): array {
@@ -122,7 +122,7 @@ final class ConnectionController {
 		$this->store->record_test( $id, false, 'untested' );
 		$this->store->sync_runtime();
 		$this->audit( 'ai.connection.key.updated', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'API key saved. It is stored on this site and never shown again.', 'ai-command-center' ) );
+		return $this->n( 'success', __( 'API key saved. It is stored on this site and never shown again.', 'ai-command-center' ), 'update_key', $id );
 	}
 
 	private function clear_key( string $id ): array {
@@ -133,7 +133,7 @@ final class ConnectionController {
 		}
 		$this->store->credentials()->clear_secret( $id );
 		$this->audit( 'ai.connection.key.cleared', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'API key removed.', 'ai-command-center' ) );
+		return $this->n( 'success', __( 'API key removed.', 'ai-command-center' ), 'clear_key', $id );
 	}
 
 	private function set_default( string $id ): array {
@@ -141,21 +141,21 @@ final class ConnectionController {
 			return $this->n( 'error', __( 'This connection cannot be the default — WP Command Center cannot use its provider for AI features yet.', 'ai-command-center' ) );
 		}
 		$this->audit( 'ai.connection.default.set', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Default connection updated.', 'ai-command-center' ) );
+		return $this->n( 'success', __( 'Default connection updated.', 'ai-command-center' ), 'set_default', $id );
 	}
 
 	private function set_enabled( string $id ): array {
 		$enabled = ! empty( $_POST['wpcc_enabled'] );
 		$this->store->set_enabled( $id, $enabled );
 		$this->audit( 'ai.connection.enabled', [ 'connection' => $id, 'enabled' => $enabled ] );
-		return $this->n( 'success', $enabled ? __( 'Connection enabled.', 'ai-command-center' ) : __( 'Connection disabled.', 'ai-command-center' ) );
+		return $this->n( 'success', $enabled ? __( 'Connection enabled.', 'ai-command-center' ) : __( 'Connection disabled.', 'ai-command-center' ), 'set_enabled', $id );
 	}
 
 	private function duplicate( string $id ): array {
 		$new = $this->store->duplicate( $id );
 		if ( '' === $new ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
 		$this->audit( 'ai.connection.duplicated', [ 'from' => $id, 'connection' => $new ] );
-		return $this->n( 'success', __( 'Connection duplicated (without its key — add a key to the copy).', 'ai-command-center' ) );
+		return $this->n( 'success', __( 'Connection duplicated (without its key — add a key to the copy).', 'ai-command-center' ), 'duplicate', $new );
 	}
 
 	private function delete( string $id ): array {
@@ -178,10 +178,10 @@ final class ConnectionController {
 		$code   = sanitize_text_field( (string) ( $result['code'] ?? 'error' ) );
 		$this->store->record_test( $id, $ok, $code, [ 'latency_ms' => $ms, 'models' => (int) ( $result['models'] ?? 0 ), 'models_list' => is_array( $result['models_list'] ?? null ) ? $result['models_list'] : [] ] );
 		$this->audit( 'ai.connection.test', [ 'connection' => $id, 'dialect' => $conn['dialect'], 'result' => $code ] );
-		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'ai-command-center' ) ); }
+		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'ai-command-center' ), 'test', $id ); }
 		$detail = sanitize_text_field( (string) ( $result['message'] ?? '' ) );
 		/* translators: %s: secret-free error detail */
-		return $this->n( 'error', sprintf( __( 'Connection failed: %s', 'ai-command-center' ), '' !== $detail ? $detail : $code ) );
+		return $this->n( 'error', sprintf( __( 'Connection failed: %s', 'ai-command-center' ), '' !== $detail ? $detail : $code ), 'test', $id );
 	}
 
 	private function save_routes(): array {
@@ -195,11 +195,21 @@ final class ConnectionController {
 				$this->audit( 'ai.connection.route.set', [ 'feature' => $f, 'connection' => $cid ] );
 			}
 		}
+		/*
+		 * "0 feature routes saved." is a sentence that reports a number and
+		 * communicates nothing. Pressing Save with nothing changed is a normal
+		 * thing to do — often to confirm the current routing IS what is saved —
+		 * and the honest answer to it is that there was nothing to change, not a
+		 * count of zero dressed up as a result.
+		 */
+		if ( 0 === $changed ) {
+			return $this->n( 'success', __( 'Routing is unchanged — every feature already points where you selected.', 'ai-command-center' ), 'save_routes' );
+		}
 		return $this->n( 'success', sprintf(
 			/* translators: %d: number of feature routes updated */
 			_n( '%d feature route saved.', '%d feature routes saved.', $changed, 'ai-command-center' ),
 			$changed
-		) );
+		), 'save_routes' );
 	}
 
 	/* ---------------- input helpers ---------------- */
@@ -280,7 +290,29 @@ final class ConnectionController {
 		( new AuditLog() )->record( $action, $context );
 	}
 
-	private function n( string $type, string $message ): array {
-		return [ 'type' => $type, 'message' => $message ];
+	/**
+	 * Notice envelope.
+	 *
+	 * `action` and `connection` are OPTIONAL context, added so the view can say what
+	 * just happened to WHICH connection instead of announcing "Connection created."
+	 * above a list the customer then has to search. They are additive: the two keys
+	 * every caller already reads — `type` and `message` — are unchanged, and a view
+	 * that ignores the context behaves exactly as before.
+	 *
+	 * Nothing here alters what an action DOES. This is reporting, not behaviour.
+	 *
+	 * @param string $type    'success' | 'error' | 'warning'.
+	 * @param string $message Human-readable, secret-free.
+	 * @param string $action  Which action produced this, when it is worth reporting.
+	 * @param string $id      Connection the action applied to, when there is one.
+	 * @return array{type:string,message:string,action:string,connection:string}
+	 */
+	private function n( string $type, string $message, string $action = '', string $id = '' ): array {
+		return [
+			'type'       => $type,
+			'message'    => $message,
+			'action'     => $action,
+			'connection' => $id,
+		];
 	}
 }

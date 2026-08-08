@@ -429,6 +429,41 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-token-reveal__note { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: #50575e; max-width: 72ch; }
 	.wpcc-ai-config { border-radius:0 0 12px 12px; }
 
+	/* ── "What do I do next?" ────────────────────────────────────────────────
+	 * A customer who has just created a token has done the hard part and is
+	 * holding a string. The thing they need next — the finished configuration
+	 * with that token already in it — renders two panels further down, below a
+	 * picker they have already used and a token table they have no reason to
+	 * read. Nothing pointed at it, so the reliable ending to this flow was
+	 * "…now where do I paste this?".
+	 *
+	 * Two additions, both presentation: a three-word rail that says which step
+	 * this is, and one primary control that takes them to the next one. No new
+	 * data, no new route, no change to what a token is or does.
+	 * ──────────────────────────────────────────────────────────────────────── */
+	.wpcc-token-reveal__steps { display:flex; flex-wrap:wrap; gap:6px 16px; margin:0 0 14px; padding:0; list-style:none; }
+	.wpcc-token-reveal__steps li { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#8c92a0; }
+	.wpcc-token-reveal__steps .n { display:inline-flex; align-items:center; justify-content:center; width:17px; height:17px;
+		border-radius:50%; background:#eef0f4; color:#8c92a0; font-size:10.5px; font-weight:700; flex:0 0 auto; }
+	.wpcc-token-reveal__steps .is-done { color:#04620f; }
+	.wpcc-token-reveal__steps .is-done .n { background:#e6f6ea; color:#04620f; }
+	.wpcc-token-reveal__steps .is-now { color:#1d2327; font-weight:650; }
+	.wpcc-token-reveal__steps .is-now .n { background:#2271b1; color:#fff; }
+	.wpcc-token-reveal__next { margin:14px 0 0; }
+
+	/* The destination, when it is reached by that button rather than by scrolling.
+	 * A page that jumps without saying where it landed is disorienting; the ring
+	 * fades out on its own so nothing is left decorated permanently. */
+	.wpcc-spotlight { animation: wpcc-spotlight 2.4s ease-out 1; }
+	@keyframes wpcc-spotlight {
+		0%   { box-shadow: 0 0 0 3px rgba(34,113,177,.45), 0 1px 2px rgba(16,24,40,.04); }
+		70%  { box-shadow: 0 0 0 3px rgba(34,113,177,.30), 0 1px 2px rgba(16,24,40,.04); }
+		100% { box-shadow: 0 0 0 3px rgba(34,113,177,0),  0 1px 2px rgba(16,24,40,.04); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.wpcc-spotlight { animation: none; box-shadow: 0 0 0 3px rgba(34,113,177,.35), 0 1px 2px rgba(16,24,40,.04); }
+	}
+
 	/* Token creation dialog.
 	   Without JS the panel is simply a form on the page and the opener is hidden;
 	   `.wpcc-tokenmake--js` (added by script) inverts that. Nothing about the
@@ -537,6 +572,14 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	 *
 	 * One card. Success, not warning. Said once. And it ends by pointing at the
 	 * next step instead of leaving the customer holding a string.
+	 *
+	 * "Pointing at" was a sentence — "your configuration below already includes
+	 * it" — which is true and was still not enough. Below is two panels away,
+	 * past a picker the customer has already used and a token table they have no
+	 * reason to read, and nothing on the screen carried them there. So the card
+	 * now ends with the control that does it, and says which step this is, which
+	 * between them answer the two questions this moment actually raises: how much
+	 * is left, and what do I press.
 	 */
 	?>
 	<?php if ( $wpcc_new_token ) : ?>
@@ -560,13 +603,58 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				}
 				?>
 			</p>
+			<?php
+			/*
+			 * Where am I? Three steps, and this screen is all three of them, so the
+			 * rail is honest rather than aspirational — it is not promising a wizard
+			 * that does not exist. The last step names the assistant being connected,
+			 * because "paste it into your assistant" is the instruction a first-timer
+			 * cannot act on and "paste it into Claude Desktop" is the one they can.
+			 */
+			$wpcc_reveal_client = (string) ( $wpcc_current_client['name'] ?? '' );
+			?>
+			<ol class="wpcc-token-reveal__steps">
+				<li class="is-done"><span class="n" aria-hidden="true">&#10003;</span><?php esc_html_e( 'Assistant chosen', 'ai-command-center' ); ?></li>
+				<li class="is-done"><span class="n" aria-hidden="true">&#10003;</span><?php esc_html_e( 'Token created', 'ai-command-center' ); ?></li>
+				<li class="is-now"><span class="n" aria-hidden="true">3</span><?php
+					echo '' !== $wpcc_reveal_client
+						/* translators: %s: the assistant being connected, e.g. "Claude Desktop". */
+						? esc_html( sprintf( __( 'Paste into %s', 'ai-command-center' ), $wpcc_reveal_client ) )
+						: esc_html__( 'Paste into your assistant', 'ai-command-center' );
+				?></li>
+			</ol>
 			<div class="wpcc-ai-code wpcc-token-reveal__code">
 				<code class="wpcc-ai-code__text" id="wpcc-new-token"><?php echo esc_html( $wpcc_new_token ); ?></code>
 				<button type="button" class="button button-primary wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_new_token ); ?>"><?php esc_html_e( 'Copy', 'ai-command-center' ); ?></button>
 			</div>
 			<p class="wpcc-token-reveal__note">
-				<?php esc_html_e( 'This is the only time it will be shown, so save it somewhere safe. Your configuration below already includes it — copy that and paste it into your assistant.', 'ai-command-center' ); ?>
+				<?php esc_html_e( 'This is the only time it will be shown, so save it somewhere safe. Your configuration is ready below with this token already in it.', 'ai-command-center' ); ?>
 			</p>
+			<?php
+			/*
+			 * The next step, as a control rather than as a direction.
+			 *
+			 * Rendered only when the destination exists on this response — the
+			 * configuration section is gated on a usable token (it is, we just made
+			 * one) but a client with no generated config renders the manual panel
+			 * instead. Either way `#wpcc-config-panel` is the thing to scroll to, so
+			 * the button is offered whenever the configuration tab is what rendered.
+			 * Without JS it is still a real in-page link to that section, so nothing
+			 * here depends on a script having loaded.
+			 */
+			?>
+			<?php if ( 'configuration' === $wpcc_tab ) : ?>
+				<p class="wpcc-token-reveal__next">
+					<a class="button button-primary" href="#wpcc-config-panel" id="wpcc-token-next">
+						<?php
+						echo '' !== $wpcc_reveal_client
+							/* translators: %s: the assistant being connected, e.g. "Claude Desktop". */
+							? esc_html( sprintf( __( 'Next: get your %s configuration', 'ai-command-center' ), $wpcc_reveal_client ) )
+							: esc_html__( 'Next: get your configuration', 'ai-command-center' );
+						?> &rarr;
+					</a>
+				</p>
+			<?php endif; ?>
 		</div>
 	<?php elseif ( $wpcc_token_message ) : ?>
 		<div class="notice inline notice-success wpcc-ai-notice"><p><?php echo esc_html( $wpcc_token_message ); ?></p></div>
@@ -931,10 +1019,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<!-- Setup card: your configuration. Whole section waits for a token. -->
 		<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 		<?php if ( $wpcc_config ) : ?>
-			<div class="wpcc-ai-panel">
+			<?php // Named target for the reveal card's "Next" control, and for #wpcc-config-panel deep links. ?>
+			<div class="wpcc-ai-panel" id="wpcc-config-panel">
 				<div class="wpcc-ai-panel__header">
 					<?php printf( /* translators: %s: value */ esc_html__( 'Your %s configuration', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?>
-					<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-config-block">
+					<button type="button" class="button wpcc-copy-btn" id="wpcc-copy-config" data-copy-target="wpcc-config-block">
 						<?php esc_html_e( 'Copy configuration', 'ai-command-center' ); ?>
 					</button>
 					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'ai-command-center' ); ?></span>
@@ -1075,7 +1164,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				</div>
 			</div>
 		<?php else : ?>
-			<div class="wpcc-ai-panel">
+			<?php // Same target id on the manual fallback: the "Next" control must land somewhere for every assistant. ?>
+			<div class="wpcc-ai-panel" id="wpcc-config-panel">
 				<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Your configuration', 'ai-command-center' ); ?></div>
 				<div class="wpcc-ai-panel__body">
 					<p style="color:#646970;"><?php esc_html_e( 'A ready-made configuration isn’t available for this assistant yet. You can still connect it manually using the connection address and an access token below.', 'ai-command-center' ); ?></p>
@@ -1111,7 +1201,18 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'Access token', 'ai-command-center' ); ?></label>
 					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="wpcc_..." style="width: 100%; max-width: 500px; font-family: monospace;"
 						value="<?php echo esc_attr( $wpcc_new_token ); ?>">
-					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php esc_html_e( 'Paste an access token, or create one in “Access tokens” above.', 'ai-command-center' ); ?></p>
+					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php
+						/*
+						 * The field is prefilled with the token that was just created, so
+						 * telling that customer to paste one — or to go and make one — was
+						 * instructing them to redo the step they had just finished. Same
+						 * fix as the configuration hint directly above: say whichever of
+						 * the two is actually true.
+						 */
+						echo $wpcc_new_token
+							? esc_html__( 'Your new token is already filled in — just run the test.', 'ai-command-center' )
+							: esc_html__( 'Paste an access token, or create one in “Access tokens” above.', 'ai-command-center' );
+					?></p>
 				</div>
 				<button type="button" class="button" id="wpcc-test-connection"><?php esc_html_e( 'Run read-only test', 'ai-command-center' ); ?></button>
 				<div class="wpcc-ai-verify-result" id="wpcc-verify-result"></div>
@@ -1330,6 +1431,64 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		});
 	}
 
+	/*
+	 * "Next: get your <assistant> configuration" — the one control that ends the
+	 * token flow.
+	 *
+	 * The anchor already works with JS off; this upgrades the jump into something
+	 * a person can follow. Three things have to happen together, and the order
+	 * matters: move the keyboard to the Copy button FIRST (so assistive tech is
+	 * told where it now is), then scroll, then mark the destination. Focusing
+	 * after an animated scroll makes the browser jump a second time.
+	 *
+	 * preventDefault() means the URL never grows a #hash, so a reload does not
+	 * silently re-scroll a customer who came back for something else.
+	 */
+	var nextBtn = document.getElementById('wpcc-token-next');
+	if (nextBtn) {
+		nextBtn.addEventListener('click', function (e) {
+			var panel = document.getElementById('wpcc-config-panel');
+			if (!panel) { return; } // no destination: fall through to the plain anchor.
+			e.preventDefault();
+
+			var copyBtn = document.getElementById('wpcc-copy-config');
+			if (copyBtn) {
+				copyBtn.focus({ preventScroll: true });
+			} else {
+				// Manual-configuration fallback has no copy button; make the panel
+				// itself the focus target so the jump is still announced.
+				panel.setAttribute('tabindex', '-1');
+				panel.focus({ preventScroll: true });
+			}
+
+			var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+			panel.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+
+			/*
+			 * A smooth scroll is an animation, and animations are not guaranteed to
+			 * run — a backgrounded tab suspends them outright (measured: the request
+			 * is accepted and the page simply never moves). That failure is silent,
+			 * and it lands on the one control whose entire job is "take me there":
+			 * the customer would be left exactly where they were, with a highlight
+			 * drawn on something two screens below. So the arrival is verified, and
+			 * if it did not happen the page jumps instead. A plain jump is a worse
+			 * transition and an infinitely better outcome than none.
+			 */
+			if ( ! reduced ) {
+				setTimeout( function () {
+					var r = panel.getBoundingClientRect();
+					var vh = window.innerHeight || document.documentElement.clientHeight;
+					if ( r.top > vh || r.bottom < 0 ) { panel.scrollIntoView({ behavior: 'auto', block: 'start' }); }
+				}, 700 );
+			}
+
+			// Restart the animation reliably even if the button is pressed twice.
+			panel.classList.remove('wpcc-spotlight');
+			void panel.offsetWidth;
+			panel.classList.add('wpcc-spotlight');
+		});
+	}
+
 	// Live, browser-only token fill: insert the pasted access token into the
 	// displayed configuration so "Copy configuration" copies a complete, ready
 	// config. The token is substituted in the DOM only — it is never sent back to
@@ -1353,30 +1512,92 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		}
 	}
 
+	/*
+	 * Copy buttons confirm on THEMSELVES.
+	 *
+	 * Every copy button on this screen used to report success into one shared
+	 * element, `#wpcc-copy-feedback`, which lives in the configuration panel's
+	 * header. That is fine for the button standing next to it and wrong for every
+	 * other one — and the worst case was the most important button in the product:
+	 * the Copy beside a freshly minted access token, at the top of the page, whose
+	 * "Copied!" flashed two panels below the fold. A customer copying the one
+	 * string they will never be shown again saw nothing happen at all, and the
+	 * rational response to that is to press it again, or to select the text by
+	 * hand and hope.
+	 *
+	 * Confirmation now happens on the pressed button, so it is by definition where
+	 * the customer is looking. The shared span is still flashed when it is a
+	 * sibling of the button (the configuration header, where it reads correctly),
+	 * which keeps that panel looking exactly as it did.
+	 *
+	 * The failure path matters too: a clipboard write can be refused (insecure
+	 * origin, denied permission). It used to be swallowed, leaving a button that
+	 * said nothing whether it worked or not. Now it says so, and the text is still
+	 * on screen to select by hand.
+	 *
+	 * And the write is not allowed to answer with silence. `navigator.clipboard.
+	 * writeText()` can return a promise that settles NEITHER way — observed here,
+	 * on a page whose document reported itself focused — which is the one outcome
+	 * a confirmation cannot survive, because the button would sit there saying
+	 * nothing exactly as it did before. So the promise is given a short deadline;
+	 * miss it and the synchronous `execCommand` path decides, since that returns a
+	 * real boolean instead of a maybe. Every press ends in a definite answer, and
+	 * the answer is the truth rather than an optimistic guess.
+	 */
 	document.querySelectorAll('.wpcc-copy-btn').forEach(function(btn) {
+		var COPIED = <?php echo wp_json_encode( __( 'Copied', 'ai-command-center' ) ); ?>;
+		var FAILED = <?php echo wp_json_encode( __( 'Press Ctrl/Cmd+C', 'ai-command-center' ) ); ?>;
+
+		// Deprecated, still synchronous, still the only call here that answers.
+		function legacyCopy(text) {
+			var ta = document.createElement('textarea');
+			ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+			document.body.appendChild(ta); ta.select();
+			var ok = false;
+			try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+			document.body.removeChild(ta);
+			return ok;
+		}
+
+		function copyText(text, done) {
+			var answered = false;
+			function answer(ok) { if (!answered) { answered = true; done(ok); } }
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				navigator.clipboard.writeText(text).then(
+					function () { answer(true); },
+					function () { answer(legacyCopy(text)); }
+				);
+				// Still inside the browser's transient user activation window, so the
+				// fallback is allowed to run.
+				setTimeout(function () { if (!answered) { answer(legacyCopy(text)); } }, 400);
+				return;
+			}
+			answer(legacyCopy(text));
+		}
+
+		function confirmOn(ok) {
+			// A second press while the confirmation is showing must not capture
+			// "Copied" as the button's original label and leave it stuck there.
+			if (btn.dataset.wpccRestore === undefined) { btn.dataset.wpccRestore = btn.textContent; }
+			clearTimeout(btn._wpccT);
+			btn.textContent = ok ? ('✓ ' + COPIED) : FAILED;
+			btn.setAttribute('aria-live', 'polite');
+			btn._wpccT = setTimeout(function() {
+				btn.textContent = btn.dataset.wpccRestore;
+				delete btn.dataset.wpccRestore;
+			}, 2000);
+
+			// Only when it genuinely sits beside this button.
+			var fb = btn.parentNode ? btn.parentNode.querySelector('.wpcc-ai-copied') : null;
+			if (ok && fb) { fb.classList.add('wpcc-ai-copied--visible'); setTimeout(function() { fb.classList.remove('wpcc-ai-copied--visible'); }, 2000); }
+		}
+
 		btn.addEventListener('click', function() {
 			var targetId = this.getAttribute('data-copy-target');
-			var text;
-			if (targetId) {
-				text = document.getElementById(targetId).textContent;
-			} else {
-				text = this.getAttribute('data-copy');
-			}
+			var target   = targetId ? document.getElementById(targetId) : null;
+			var text     = targetId ? ( target ? target.textContent : '' ) : this.getAttribute('data-copy');
 			if (!text) return;
-			if (navigator.clipboard && navigator.clipboard.writeText) {
-				navigator.clipboard.writeText(text).then(function() {
-					var fb = document.getElementById('wpcc-copy-feedback');
-					if (fb) { fb.classList.add('wpcc-ai-copied--visible'); setTimeout(function() { fb.classList.remove('wpcc-ai-copied--visible'); }, 2000); }
-				});
-			} else {
-				var ta = document.createElement('textarea');
-				ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
-				document.body.appendChild(ta); ta.select();
-				try { document.execCommand('copy'); } catch(e) {}
-				document.body.removeChild(ta);
-				var fb = document.getElementById('wpcc-copy-feedback');
-				if (fb) { fb.classList.add('wpcc-ai-copied--visible'); setTimeout(function() { fb.classList.remove('wpcc-ai-copied--visible'); }, 2000); }
-			}
+			copyText(text, confirmOn);
 		});
 	});
 
