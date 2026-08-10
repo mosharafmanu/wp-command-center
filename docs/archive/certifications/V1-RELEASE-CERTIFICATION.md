@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: certifies an artifact superseded by the 2026-08-10 security re-cut
+
+---
+
 # WP Command Center 1.0.0 — V1 Release Certification
 
 > **SUPERSEDED.** This certification was accurate when written, but the closeout

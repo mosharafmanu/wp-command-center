@@ -1,3 +1,12 @@
+> **SUPERSEDED — the release process now lives in
+> [`../RELEASE_HANDOFF.md`](../RELEASE_HANDOFF.md) §7 (build), §8 (test) and §9 (release).**
+>
+> This file is retained for its invariants list. Where it disagrees with the handoff — in
+> particular on artifact identity, Plugin Check figures and the tag — the handoff is
+> correct.
+
+---
+
 # Release process
 
 ---

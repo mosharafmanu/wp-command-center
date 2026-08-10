@@ -95,7 +95,7 @@ Representative sites, each verifiable:
 * `includes/Operations/MediaUsageResolver.php:92` and `:318` — the helper returns
   placeholder-only clauses; values bind through `prepare()`, with `esc_like()` on filenames.
 
-`docs/WORDPRESS-ORG-COMPLIANCE-REPORT.md` classifies all 124 remaining findings.
+`docs/archive/certifications/WORDPRESS-ORG-COMPLIANCE-REPORT.md` classifies all 124 remaining findings.
 
 ---
 

@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: step-era handoff, closed
+
+---
+
 # PROJECT HANDOFF — STEP 108
 
 **Written:** 2026-06-18. Supersedes `HANDOFF-STEP-107.md` for current state.

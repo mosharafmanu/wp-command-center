@@ -10,6 +10,7 @@ modes) it was read from the running plugin, not from memory.
 
 | You want to… | Read |
 |---|---|
+| **Pick up the engineering work** | **[../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) — the single authoritative handoff** |
 | Understand what this is | [OVERVIEW.md](OVERVIEW.md) |
 | Connect an assistant in five minutes | [QUICKSTART.md](QUICKSTART.md) |
 | Install, upgrade, uninstall | [INSTALLATION.md](INSTALLATION.md) |
@@ -26,22 +27,26 @@ modes) it was read from the running plugin, not from memory.
 | [CAPABILITIES.md](CAPABILITIES.md) | The 23 capabilities and how to scope a token |
 | [AI-INTEGRATIONS.md](AI-INTEGRATIONS.md) | Supported clients and their configuration |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Symptoms and fixes |
-| [RELEASE.md](RELEASE.md) | Invariants, build, test tiers, compliance, lifecycle certification |
+| [RELEASE.md](RELEASE.md) | Superseded — release process now lives in [../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) §7–§9 |
 
 ## Certification
 
 | Document | Purpose |
 |---|---|
-| [V1-RELEASE-CERTIFICATION.md](V1-RELEASE-CERTIFICATION.md) | The V1 release certification |
-| [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) | Closeout: zero open items |
-| [WORDPRESS-ORG-COMPLIANCE-REPORT.md](WORDPRESS-ORG-COMPLIANCE-REPORT.md) | Plugin Check findings and their resolution |
+| [ASSISTANT-CERTIFICATION.md](ASSISTANT-CERTIFICATION.md) | The twelve-step manual MCP certification checklist — **the next phase** |
 | [WORDPRESS-ORG-REVIEWER-NOTES.md](WORDPRESS-ORG-REVIEWER-NOTES.md) | Notes for the wordpress.org reviewer |
+| [SLUG-REPLY.md](SLUG-REPLY.md) | Prepared reply to the wordpress.org slug email |
 
-Earlier certification reports (`CERTIFICATION-2026-08-02.md`,
-`FINAL-CERTIFICATION-2026-08-02.md`, `FINAL-RC-CERTIFICATION.md`,
-`V1-FINALIZATION-REPORT.md`) are retained as a record of the release programme. They are
-**superseded** — where they disagree with the documents above, the documents above are
-correct.
+The V1 and release-candidate certifications, the WordPress.org compliance report and the
+2026-08-02 certifications have moved to [`archive/certifications/`](archive/certifications/).
+They certify artifacts that the 2026-08-10 security re-cut superseded, and each carries a
+banner saying so. The authoritative Plugin Check result — **0 errors, 824 warnings against
+the extracted package** — is in [../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) §2.
+
+## Archive
+
+[`archive/`](archive/) holds every superseded handoff, roadmap, report, submission note and
+certification. Nothing was deleted; everything carries a superseded banner.
 
 ## Internal
 

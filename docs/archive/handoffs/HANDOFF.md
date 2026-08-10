@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: written 2026-08-02; its repository state (branch, commit, `main` untouched) and its Plugin Check figure are all out of date
+
+---
+
 # HANDOFF — WP Command Center
 
 For the next Claude session. Written 2026-08-02 at the close of the V1 development arc.

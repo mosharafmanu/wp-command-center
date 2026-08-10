@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: quotes the repository-wide Plugin Check figure (164) rather than the package result; the authoritative number is 0 errors / 824 warnings
+
+---
+
 # WordPress.org compliance — every Plugin Check finding accounted for
 
 **Plugin:** WP Command Center 1.0.0

@@ -2,6 +2,15 @@
 
 Complete listing of every document in the repository with its purpose.
 
+> **The authoritative engineering document is
+> [`../RELEASE_HANDOFF.md`](../RELEASE_HANDOFF.md).** Start there; this index is a map of
+> the supporting material, most of which is a historical record of how the product was
+> built rather than a description of what it currently is.
+>
+> On 2026-08-10 every superseded handoff, roadmap, report, submission note and
+> certification was moved to [`../docs/archive/`](../docs/archive/). Files listed below
+> under those categories may now live there.
+
 ---
 
 ## Root-Level Documents

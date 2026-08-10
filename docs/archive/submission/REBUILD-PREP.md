@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: a prepared-but-unapplied rebuild checklist whose numbers were never the shipped ones
+
+---
+
 # Rebuild preparation — what must change once the ZIP is rebuilt
 
 **Status: PREPARED, NOT APPLIED.** Nothing in this file has been written into the

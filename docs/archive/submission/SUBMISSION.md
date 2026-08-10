@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: records the 2026-08-03 artifact; both its checksum and its file count are superseded
+
+---
+
 # WordPress.org submission package — WP Command Center 1.0.0
 
 **Artifact:** `build/ai-command-center-1.0.0.zip`

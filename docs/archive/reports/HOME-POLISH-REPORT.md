@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: point-in-time UX report for work that has shipped
+
+---
+
 # Home Dashboard — Final UX Polish (pre-WordPress.org)
 
 No new features. No redesign. Three cards, one status strip, and the CTA that connects

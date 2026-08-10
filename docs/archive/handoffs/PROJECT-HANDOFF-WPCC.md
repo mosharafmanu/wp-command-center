@@ -1,3 +1,14 @@
+> # SUPERSEDED — HISTORICAL RECORD ONLY
+>
+> This document is **not current** and must not be used to verify, build, or ship
+> anything. It is kept because it records what was true when it was written.
+>
+> **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
+>
+> Superseded on 2026-08-10. Reason: pre-1.0 project handoff from the step-numbered development era
+
+---
+
 # PROJECT HANDOFF — WP Command Center (WPCC)
 
 **Written:** 2026-06-15. **Purpose:** let a fresh Claude Code session resume immediately with zero prior chat history. Read this top-to-bottom, then jump to **START HERE** at the bottom.
