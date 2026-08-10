@@ -71,7 +71,8 @@ ROLLBACK=$(api POST "/patches/$PATCH_ID/rollback" '{}'); eq "patch rolled back" 
 
 echo "== 6. Health & Evidence =="
 HEALTH=$(api POST /health/verify '{}'); ok "health verification returned seven checks" "$(echo "$HEALTH" | jq -r '.checks|length==7')"; ok "health verification has no failed checks" "$(echo "$HEALTH" | jq -r '.summary.failed==0')"
-AUDIT="$WP_CONTENT/uploads/wpcc-audit/audit.log"
+source "$ROOT/tests/lib/private-store.sh"
+AUDIT="$(wpcc_store_dir wpcc-audit)/audit.log"
 for event in recommendation.scan.completed operation.request.created operation.queue.created operation.queue.running operation.queue.completed operation.result.created patch.rolled_back health.verification.completed; do ok "audit contains $event" "$(rg -q "\"action\":\"$event\"" "$AUDIT" && echo true || echo false)"; done
 
 jq -n --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg session_id "$SID" --arg task_id "$TID" --arg action_id "$AID" --arg plan_id "$PID" --arg request_id "$REQ_ID" --arg queue_id "$QID" --arg result_id "$RESULT_ID" --arg patch_id "$PATCH_ID" --arg verification_id "$(echo "$HEALTH" | jq -r '.verification_id')" --argjson diagnostics "$(jq -nc --argjson performance "$PERF" --argjson security "$SEC" --argjson woocommerce "$WOO" '{performance:$performance,security:$security,woocommerce:$woocommerce}')" --argjson recommendation_scan "$SCAN" --argjson health "$HEALTH" '{generated_at:$generated_at,ids:{session_id:$session_id,task_id:$task_id,action_id:$action_id,plan_id:$plan_id,request_id:$request_id,queue_id:$queue_id,result_id:$result_id,patch_id:$patch_id,verification_id:$verification_id},diagnostics:$diagnostics,recommendation_scan:$recommendation_scan,health:$health}' > "$EVIDENCE_DIR/validation-evidence.json"

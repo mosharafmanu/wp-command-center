@@ -3,8 +3,8 @@
  * §8.5 Patch System (AI Coding Bridge) — stores patch records (proposed
  * file changes, explanation, risk level, diff) and their lifecycle status.
  *
- * Per-patch JSON files under wp-content/uploads/wpcc-patches/ (protected
- * from direct web access) remain the primary content store — they hold the
+ * Per-patch JSON files in the `wpcc-patches` private store (Security\PrivateStore,
+ * not web-retrievable on any server) remain the primary content store — they hold the
  * full file contents, diffs, and status history. The {$wpdb->prefix}wpcc_patches
  * table is a queryable index/metadata mirror used for listing.
  */
@@ -557,35 +557,10 @@ final class PatchManager {
 	 * protective files) on first use.
 	 */
 	private function get_storage_dir(): string|\WP_Error {
-		$upload_dir = wp_upload_dir();
-
-		if ( ! empty( $upload_dir['error'] ) ) {
-			return new \WP_Error( 'wpcc_upload_dir_error', $upload_dir['error'] );
-		}
-
-		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
-
-		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the patch storage directory.', 'ai-command-center' ) );
-		}
-
-		$this->protect_directory( $dir );
-
-		return $dir;
-	}
-
-	private function protect_directory( string $dir ): void {
-		$htaccess = trailingslashit( $dir ) . '.htaccess';
-
-		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "Require all denied\nDeny from all\n" );
-		}
-
-		$index = trailingslashit( $dir ) . 'index.php';
-
-		if ( ! file_exists( $index ) ) {
-			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
-		}
+		return \WPCommandCenter\Security\PrivateStore::dir(
+			self::DIR_NAME,
+			__( 'Failed to create the patch storage directory.', 'ai-command-center' )
+		);
 	}
 
 	private function write_record( string $dir, array $record ): void {

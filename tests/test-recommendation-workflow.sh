@@ -96,7 +96,7 @@ assert_true "timeline plan_created" "$(echo "$TIMELINE" | jq -r 'any(.[]; .label
 assert_true "timeline approved" "$(echo "$TIMELINE" | jq -r 'any(.[]; .label == "Recommendation approved")')"
 assert_true "timeline executing" "$(echo "$TIMELINE" | jq -r 'any(.[]; .label == "Recommendation executing")')"
 assert_true "timeline resolved" "$(echo "$TIMELINE" | jq -r 'any(.[]; .label == "Recommendation resolved")')"
-AUDIT_FILE=$(wp eval '$u=wp_upload_dir(); echo trailingslashit($u["basedir"])."wpcc-audit/audit.log";' 2>/dev/null)
+AUDIT_FILE=$(wp eval 'echo trailingslashit( \WPCommandCenter\Security\PrivateStore::path( "wpcc-audit" ) )."audit.log";' 2>/dev/null)
 for event in recommendation.action_created recommendation.plan_created recommendation.approved recommendation.executing recommendation.resolved; do
 	assert_true "audit has $event" "$(grep -q "$event" "$AUDIT_FILE" && echo true || echo false)"
 done

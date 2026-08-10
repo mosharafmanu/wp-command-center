@@ -246,7 +246,8 @@ assert_true "agent context redaction: redaction_count >= 1" "$(echo "$AGENT_CONT
 echo
 echo "== 8. Audit log =="
 
-AUDIT_LOG="$WP_CONTENT_DIR/uploads/wpcc-audit/audit.log"
+source "$SCRIPT_DIR/lib/private-store.sh"
+AUDIT_LOG="$(wpcc_store_dir wpcc-audit)/audit.log"
 
 if [ ! -r "$AUDIT_LOG" ]; then
 	fail "audit log: file not readable at $AUDIT_LOG"

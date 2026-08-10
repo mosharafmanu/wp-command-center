@@ -2,8 +2,8 @@
 /**
  * §8.6 Rollback Engine — file snapshot taken before every patch.
  * Only the affected file(s) are backed up. The `.snapshot` content files
- * remain on disk under wp-content/uploads/wpcc-snapshots/, protected from
- * direct web access; the {$wpdb->prefix}wpcc_snapshots table is a
+ * remain on disk in the `wpcc-snapshots` private store (Security\PrivateStore,
+ * not web-retrievable on any server); the {$wpdb->prefix}wpcc_snapshots table is a
  * queryable index/metadata mirror used for listing and lookups.
  */
 
@@ -252,35 +252,10 @@ final class SnapshotManager {
 	 * its protective files) on first use.
 	 */
 	private function get_storage_dir(): string|\WP_Error {
-		$upload_dir = wp_upload_dir();
-
-		if ( ! empty( $upload_dir['error'] ) ) {
-			return new \WP_Error( 'wpcc_upload_dir_error', $upload_dir['error'] );
-		}
-
-		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
-
-		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the snapshot storage directory.', 'ai-command-center' ) );
-		}
-
-		$this->protect_directory( $dir );
-
-		return $dir;
-	}
-
-	private function protect_directory( string $dir ): void {
-		$htaccess = trailingslashit( $dir ) . '.htaccess';
-
-		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "Require all denied\nDeny from all\n" );
-		}
-
-		$index = trailingslashit( $dir ) . 'index.php';
-
-		if ( ! file_exists( $index ) ) {
-			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
-		}
+		return \WPCommandCenter\Security\PrivateStore::dir(
+			self::DIR_NAME,
+			__( 'Failed to create the snapshot storage directory.', 'ai-command-center' )
+		);
 	}
 
 	private function to_relative_path( string $real_path ): string {

@@ -59,7 +59,8 @@ assert_true() {
 ROTATE_BYTES=52428800 # Must mirror AuditLog::ROTATE_BYTES (50 MB).
 MAX_SEGMENTS=5        # Must mirror AuditLog::MAX_SEGMENTS.
 
-AUDIT_DIR="$WP_CONTENT_DIR/uploads/wpcc-audit"
+source "$SCRIPT_DIR/lib/private-store.sh"
+AUDIT_DIR="$(wpcc_store_dir wpcc-audit)"
 ACTIVE_LOG="$AUDIT_DIR/audit.log"
 BACKUP_DIR=""
 

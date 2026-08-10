@@ -2,7 +2,8 @@
 /**
  * §10 Security Model — append-only activity/audit log for AI agent and
  * patch lifecycle operations. Stored as newline-delimited JSON (JSONL)
- * under wp-content/uploads/wpcc-audit/, protected from direct web access.
+ * in the `wpcc-audit` private store (Security\PrivateStore), which is not
+ * web-retrievable on any server.
  */
 
 namespace WPCommandCenter\Security;
@@ -269,34 +270,10 @@ final class AuditLog {
 	 * protective files) on first use.
 	 */
 	private function get_storage_dir(): string|\WP_Error {
-		$upload_dir = wp_upload_dir();
-
-		if ( ! empty( $upload_dir['error'] ) ) {
-			return new \WP_Error( 'wpcc_upload_dir_error', $upload_dir['error'] );
-		}
-
-		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
-
-		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the audit log directory.', 'ai-command-center' ) );
-		}
-
-		$this->protect_directory( $dir );
-
-		return $dir;
+		return PrivateStore::dir(
+			self::DIR_NAME,
+			__( 'Failed to create the audit log directory.', 'ai-command-center' )
+		);
 	}
 
-	private function protect_directory( string $dir ): void {
-		$htaccess = trailingslashit( $dir ) . '.htaccess';
-
-		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "Require all denied\nDeny from all\n" );
-		}
-
-		$index = trailingslashit( $dir ) . 'index.php';
-
-		if ( ! file_exists( $index ) ) {
-			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
-		}
-	}
 }

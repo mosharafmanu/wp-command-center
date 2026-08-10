@@ -102,7 +102,7 @@ assert_true "timeline has recommendation.dismissed" "$(echo "$TIMELINE" | jq -r 
 assert_true "timeline has recommendation.resolved" "$(echo "$TIMELINE" | jq -r 'any(.[]; .label == "Recommendation resolved")')"
 assert_true "timeline has recommendation.converted_to_action" "$(echo "$TIMELINE" | jq -r 'any(.[]; .label == "Recommendation converted to action")')"
 
-AUDIT_FILE=$(wp eval '$u=wp_upload_dir(); echo trailingslashit($u["basedir"])."wpcc-audit/audit.log";' 2>/dev/null)
+AUDIT_FILE=$(wp eval 'echo trailingslashit( \WPCommandCenter\Security\PrivateStore::path( "wpcc-audit" ) )."audit.log";' 2>/dev/null)
 assert_true "audit has scan started" "$(grep -q 'recommendation.scan.started' "$AUDIT_FILE" && echo true || echo false)"
 assert_true "audit has scan completed" "$(grep -q 'recommendation.scan.completed' "$AUDIT_FILE" && echo true || echo false)"
 assert_true "audit has recommendation.created" "$(grep -q 'recommendation.created' "$AUDIT_FILE" && echo true || echo false)"

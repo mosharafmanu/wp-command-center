@@ -106,11 +106,19 @@ function wpcc_uninstall_site(): void {
 		delete_metadata( 'user', 0, $meta_key, '', true );
 	}
 
-	// Upload directories (tokens, audit log, snapshots, patch backups).
+	// Upload directories (tokens, audit log, snapshots, patch backups). Each
+	// store carries a per-install random suffix (see Security\PrivateStore), so
+	// the unsuffixed legacy name AND every suffixed directory must both go —
+	// a purge the owner explicitly asked for must not leave the real store on
+	// disk just because this file cannot load the plugin's autoloader.
 	$upload_dir = wp_upload_dir();
 	if ( empty( $upload_dir['error'] ) && ! empty( $upload_dir['basedir'] ) ) {
+		$base = trailingslashit( $upload_dir['basedir'] );
 		foreach ( WPCC_UNINSTALL_UPLOAD_DIRS as $dir_name ) {
-			wpcc_uninstall_rmdir( trailingslashit( $upload_dir['basedir'] ) . $dir_name );
+			wpcc_uninstall_rmdir( $base . $dir_name );
+			foreach ( (array) glob( $base . $dir_name . '-*', GLOB_ONLYDIR ) as $suffixed ) {
+				wpcc_uninstall_rmdir( (string) $suffixed );
+			}
 		}
 	}
 }

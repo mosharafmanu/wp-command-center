@@ -33,7 +33,8 @@ WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 source "$SCRIPT_DIR/lib/mode-guard.sh"
 wpcc_mode_guard_init "$WP_ROOT"
 PLUGINS_DIR="$WP_ROOT/wp-content/plugins"
-AUDIT_LOG="$WP_ROOT/wp-content/uploads/wpcc-audit/audit.log"
+source "$SCRIPT_DIR/lib/private-store.sh"
+AUDIT_LOG="$(wpcc_store_dir wpcc-audit)/audit.log"
 
 # shellcheck source=/dev/null
 source "$PLUGIN_DIR/wpcc-env.sh"

@@ -841,7 +841,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		undoNone:    <?php echo wp_json_encode( __( 'Nothing to undo yet', 'ai-command-center' ) ); ?>,
 		undoOne:     <?php echo wp_json_encode( __( '1 change recorded', 'ai-command-center' ) ); ?>,
 		/* translators: %s: number of recorded changes. */
-		undoMany:    <?php echo wp_json_encode( __( '%s changes recorded', 'ai-command-center' ) ); ?>,
+		undoMany:    <?php echo wp_json_encode( /* translators: %s: number of recorded changes. */ __( '%s changes recorded', 'ai-command-center' ) ); ?>,
 		actEmptyTitle:  <?php echo wp_json_encode( __( 'No changes yet', 'ai-command-center' ) ); ?>,
 		actEmptyDetail: <?php echo wp_json_encode( __( 'Once your assistant changes something here, it appears in this list — with an undo where the change supports one.', 'ai-command-center' ) ); ?>,
 		/* translators: %d: number of changes in a session */

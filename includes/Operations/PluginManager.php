@@ -511,26 +511,10 @@ final class PluginManager {
 	 * Protected storage directory for pre-delete plugin backups.
 	 */
 	private function backup_dir(): string|\WP_Error {
-		$upload = wp_upload_dir();
-		if ( ! empty( $upload['error'] ) ) {
-			return new \WP_Error( 'wpcc_upload_dir_error', $upload['error'] );
-		}
-
-		$dir = trailingslashit( $upload['basedir'] ) . 'wpcc-plugin-backups';
-		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the plugin backup directory.', 'ai-command-center' ) );
-		}
-
-		$htaccess = trailingslashit( $dir ) . '.htaccess';
-		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "Require all denied\nDeny from all\n" );
-		}
-		$index = trailingslashit( $dir ) . 'index.php';
-		if ( ! file_exists( $index ) ) {
-			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
-		}
-
-		return $dir;
+		return \WPCommandCenter\Security\PrivateStore::dir(
+			'wpcc-plugin-backups',
+			__( 'Failed to create the plugin backup directory.', 'ai-command-center' )
+		);
 	}
 
 	// ── Rollback action ──

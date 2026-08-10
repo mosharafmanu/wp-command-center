@@ -195,7 +195,8 @@ fi
 echo
 echo "== 10. Audit log =="
 
-AUDIT_LOG="$WP_CONTENT_DIR/uploads/wpcc-audit/audit.log"
+source "$SCRIPT_DIR/lib/private-store.sh"
+AUDIT_LOG="$(wpcc_store_dir wpcc-audit)/audit.log"
 
 if [ -z "$PATCH_ID" ]; then
 	fail "audit log: skipped, no patch id"

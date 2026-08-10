@@ -9,7 +9,8 @@
  *
  * Media files live under `uploads/`, which the code-oriented Snapshot/PathGuard
  * system intentionally excludes; so this service keeps its own byte store under
- * `uploads/wpcc-media-snapshots/` (directory-listing denied). Exposed via a thin
+ * the `wpcc-media-snapshots` private store (Security\PrivateStore, not
+ * web-retrievable on any server). Exposed via a thin
  * set of `media_manage` actions (media_snapshot_create/restore/verify/list) so it
  * is exercisable over REST and MCP. Capture never mutates live files; restore
  * rewrites the captured bytes.
@@ -237,19 +238,15 @@ final class MediaSnapshot {
 	}
 
 	private function store_basedir(): string {
-		$up = wp_upload_dir();
-		return trailingslashit( $up['basedir'] ) . self::SUBDIR;
+		return \WPCommandCenter\Security\PrivateStore::path( self::SUBDIR );
 	}
 
 	/** Create (and harden) the per-snapshot storage directory. @return string|\WP_Error */
 	private function snapshot_dir( string $id ) {
+		// PrivateStore creates and hardens the store; '' means uploads is unusable.
 		$base = $this->store_basedir();
-		if ( ! is_dir( $base ) && ! wp_mkdir_p( $base ) ) {
+		if ( '' === $base ) {
 			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot store.', 'ai-command-center' ) );
-		}
-		// Deny directory listing / direct access.
-		if ( ! is_file( trailingslashit( $base ) . 'index.php' ) ) {
-			@file_put_contents( trailingslashit( $base ) . 'index.php', "<?php // Silence is golden.\n" );
 		}
 		$dir = trailingslashit( $base ) . $id;
 		if ( ! wp_mkdir_p( $dir ) ) {

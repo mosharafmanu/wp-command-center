@@ -46,7 +46,7 @@ assert_eq "manifest has two health verification endpoints" 2 "$(echo "$MANIFEST"
 TIMELINE=$(api GET '/agent/timeline?limit=200')
 assert_true "timeline started event" "$(echo "$TIMELINE" | jq -r 'any(.[];.label=="Health verification started")')"
 assert_true "timeline terminal event" "$(echo "$TIMELINE" | jq -r 'any(.[];.label=="Health verification completed" or .label=="Health verification failed")')"
-AUDIT=$(wp eval '$u=wp_upload_dir(); echo trailingslashit($u["basedir"])."wpcc-audit/audit.log";' 2>/dev/null)
+AUDIT=$(wp eval 'echo trailingslashit( \WPCommandCenter\Security\PrivateStore::path( "wpcc-audit" ) )."audit.log";' 2>/dev/null)
 assert_true "audit started event" "$(grep -q 'health.verification.started' "$AUDIT" && echo true || echo false)"
 assert_true "audit terminal event" "$(grep -Eq 'health.verification.(completed|failed)' "$AUDIT" && echo true || echo false)"
 

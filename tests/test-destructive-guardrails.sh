@@ -26,8 +26,10 @@ source "$PLUGIN_DIR/wpcc-env.sh"
 
 WP_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 PLUGINS_DIR="$WP_ROOT/wp-content/plugins"
-AUDIT_LOG="$WP_ROOT/wp-content/uploads/wpcc-audit/audit.log"
-BACKUP_DIR="$WP_ROOT/wp-content/uploads/wpcc-plugin-backups"
+source "$SCRIPT_DIR/lib/private-store.sh"
+AUDIT_LOG="$(wpcc_store_dir wpcc-audit)/audit.log"
+source "$SCRIPT_DIR/lib/private-store.sh"
+BACKUP_DIR="$(wpcc_store_dir wpcc-plugin-backups)"
 DUMMY_SLUG="wpcc-test-dummy-delete"
 DUMMY_PATH="$PLUGINS_DIR/$DUMMY_SLUG"
 

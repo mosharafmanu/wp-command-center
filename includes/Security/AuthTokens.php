@@ -1,9 +1,10 @@
 <?php
 /**
  * §10 Security Model — API tokens with expiration for AI agent access.
- * Tokens are stored as salted hashes under wp-content/uploads/wpcc-tokens/,
- * protected from direct web access. The raw token is only ever returned
- * once, at creation time.
+ * Tokens are stored as salted hashes in the `wpcc-tokens` private store (see
+ * Security\PrivateStore — an uploads directory carrying a per-install random
+ * suffix, so it is not web-retrievable on any server). The raw token is only
+ * ever returned once, at creation time.
  */
 
 namespace WPCommandCenter\Security;
@@ -337,35 +338,10 @@ final class AuthTokens {
 	 * protective files) on first use.
 	 */
 	private function get_storage_dir(): string|\WP_Error {
-		$upload_dir = wp_upload_dir();
-
-		if ( ! empty( $upload_dir['error'] ) ) {
-			return new \WP_Error( 'wpcc_upload_dir_error', $upload_dir['error'] );
-		}
-
-		$dir = trailingslashit( $upload_dir['basedir'] ) . self::DIR_NAME;
-
-		if ( ! is_dir( $dir ) && ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_mkdir_failed', __( 'Failed to create the token storage directory.', 'ai-command-center' ) );
-		}
-
-		$this->protect_directory( $dir );
-
-		return $dir;
-	}
-
-	private function protect_directory( string $dir ): void {
-		$htaccess = trailingslashit( $dir ) . '.htaccess';
-
-		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "Require all denied\nDeny from all\n" );
-		}
-
-		$index = trailingslashit( $dir ) . 'index.php';
-
-		if ( ! file_exists( $index ) ) {
-			file_put_contents( $index, "<?php\n// Silence is golden.\n" );
-		}
+		return PrivateStore::dir(
+			self::DIR_NAME,
+			__( 'Failed to create the token storage directory.', 'ai-command-center' )
+		);
 	}
 
 	/**

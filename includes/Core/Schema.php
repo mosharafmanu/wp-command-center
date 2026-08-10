@@ -3,8 +3,8 @@
  * Database schema for patches, rollback snapshots, and the agent runtime.
  *
  * `wpcc_patches` and `wpcc_snapshots` are queryable indexes/metadata only —
- * the JSON files under wp-content/uploads/wpcc-patches/ and
- * wp-content/uploads/wpcc-snapshots/ remain the primary content store
+ * the JSON files in the `wpcc-patches` and `wpcc-snapshots` private stores
+ * (Security\PrivateStore) remain the primary content store
  * (full diffs, original/modified file contents, status history).
  */
 
@@ -30,6 +30,33 @@ final class Schema {
 		// the DB version gate above, so a site already at 2.3.0 (table created in
 		// 104.1) still gets seeded.
 		self::maybe_backfill_change_log();
+
+		// One-time move of the on-disk stores behind their per-install suffix.
+		// Flag-guarded and independent of the DB version gate, because this
+		// release changes no table: a site updating from 1.0.0 would otherwise
+		// never run it, and would keep serving its existing snapshots and
+		// patches from a guessable uploads path on any non-Apache host.
+		self::maybe_relocate_private_stores();
+	}
+
+	/**
+	 * Migrate every private store off its guessable path, once.
+	 *
+	 * Only flips the flag when every store actually landed on the suffixed
+	 * path. If the host refused a move, PrivateStore keeps serving the legacy
+	 * directory (data intact) and this retries on the next request rather than
+	 * recording a migration that did not happen.
+	 */
+	private static function maybe_relocate_private_stores(): void {
+		if ( get_option( 'wpcc_stores_relocated' ) ) {
+			return;
+		}
+
+		$stores = \WPCommandCenter\Security\PrivateStore::STORES;
+
+		if ( \WPCommandCenter\Security\PrivateStore::relocate_all() === count( $stores ) ) {
+			update_option( 'wpcc_stores_relocated', 1 );
+		}
 	}
 
 	/**
@@ -422,11 +449,13 @@ final class Schema {
 
 		global $wpdb;
 
-		$upload_dir = wp_upload_dir();
-		$base       = trailingslashit( $upload_dir['basedir'] );
+		// Resolved through PrivateStore so the v1 backfill still finds the
+		// manifests after the stores moved behind a per-install suffix.
+		$patches   = \WPCommandCenter\Security\PrivateStore::path( 'wpcc-patches' );
+		$snapshots = \WPCommandCenter\Security\PrivateStore::path( 'wpcc-snapshots' );
 
-		self::migrate_patches( $wpdb, $base . 'wpcc-patches/manifest.json' );
-		self::migrate_snapshots( $wpdb, $base . 'wpcc-snapshots/manifest.json' );
+		self::migrate_patches( $wpdb, trailingslashit( $patches ) . 'manifest.json' );
+		self::migrate_snapshots( $wpdb, trailingslashit( $snapshots ) . 'manifest.json' );
 
 		update_option( 'wpcc_migrated_v1', 1 );
 	}

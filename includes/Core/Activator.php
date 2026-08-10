@@ -32,6 +32,11 @@ final class Activator {
 
 		Schema::install();
 
+		// Put the on-disk stores behind this install's private suffix before
+		// anything writes to them, so a fresh install never creates the
+		// guessable paths at all and an upgrade moves what is already there.
+		\WPCommandCenter\Security\PrivateStore::relocate_all();
+
 		if ( ! wp_next_scheduled( \WPCommandCenter\Operations\OperationWorker::CRON_HOOK ) ) {
 			wp_schedule_event( time(), 'wpcc_five_minutes', \WPCommandCenter\Operations\OperationWorker::CRON_HOOK );
 		}
