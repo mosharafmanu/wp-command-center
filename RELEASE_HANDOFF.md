@@ -5,6 +5,11 @@ Every other handoff, roadmap, submission note and certification has been superse
 moved under [`docs/archive/`](docs/archive/). If something here disagrees with a document
 there, this file is correct.
 
+> **Want the three-minute version first?** Read [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
+> It summarises this document — current release, blocking work, what not to change, and a
+> resume checklist — and never restates detail. If the two ever disagree, **this file is
+> correct** and the status page needs updating.
+
 **Written:** 2026-08-10, at the close of engineering.
 **Status:** engineering complete. The next phase is **manual MCP certification**, performed
 by the owner. No further code, UX or release-engineering work is planned before it.

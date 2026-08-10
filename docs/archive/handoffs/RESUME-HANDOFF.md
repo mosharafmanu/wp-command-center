@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the operational-table row counts taken before the release freeze, and the reasoning for not mass-deleting audit history without a verified backup.
+>
 > Superseded on 2026-08-10. Reason: written 2026-08-07 to resume an uncommitted tree; that tree was committed and the checksum it records describes a build that no longer exists
 
 ---

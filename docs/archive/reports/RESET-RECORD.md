@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** what a clean local environment rebuild involved, if you ever have to do it again.
+>
 > Superseded on 2026-08-10. Reason: record of a one-off local environment reset
 
 ---

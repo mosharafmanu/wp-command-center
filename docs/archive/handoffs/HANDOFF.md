@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the verified-working matrix from the V1 arc — every screen, governance check and integration that was personally exercised, with database evidence. Still the best single list of what was actually tested by hand.
+>
 > Superseded on 2026-08-10. Reason: written 2026-08-02; its repository state (branch, commit, `main` untouched) and its Plugin Check figure are all out of date
 
 ---

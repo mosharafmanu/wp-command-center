@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the V1 release certification evidence, including the governance and rollback checks.
+>
 > Superseded on 2026-08-10. Reason: certifies an artifact superseded by the 2026-08-10 security re-cut
 
 ---

@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the WordPress.org submission walkthrough and reviewer-facing notes. Every checksum in it is superseded.
+>
 > Superseded on 2026-08-10. Reason: records the 2026-08-03/05 artifact; both its checksum and its file count are superseded
 
 ---

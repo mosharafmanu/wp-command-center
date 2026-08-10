@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the original runtime sequencing plan, useful for understanding why subsystems landed in the order they did.
+>
 > Superseded on 2026-08-10. Reason: pre-1.0 runtime roadmap; superseded by the shipped runtime and RELEASE_HANDOFF.md §12
 
 ---

@@ -10,7 +10,8 @@ modes) it was read from the running plugin, not from memory.
 
 | You want to… | Read |
 |---|---|
-| **Pick up the engineering work** | **[../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) — the single authoritative handoff** |
+| **Pick up the project (start here)** | **[../PROJECT_STATUS.md](../PROJECT_STATUS.md)** — three-minute overview: current release, blocking work, resume checklist |
+| **Then: the engineering detail** | [../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) — the single authoritative handoff |
 | Understand what this is | [OVERVIEW.md](OVERVIEW.md) |
 | Connect an assistant in five minutes | [QUICKSTART.md](QUICKSTART.md) |
 | Install, upgrade, uninstall | [INSTALLATION.md](INSTALLATION.md) |
@@ -48,10 +49,19 @@ the extracted package** — is in [../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md)
 [`archive/`](archive/) holds every superseded handoff, roadmap, report, submission note and
 certification. Nothing was deleted; everything carries a superseded banner.
 
-## Internal
+## Historical record — read the directory README first
 
-`product/` and `architecture/` hold strategy notes, specifications and session handoffs.
-They are working documents, not product documentation, and may lag the shipped product.
+None of these describe the current product. Each directory explains what its contents are
+still good for, and warns that every invariant in them (tool counts, DB version, plugin
+version) is superseded.
+
+| Directory | What it holds |
+|---|---|
+| [`product/`](product/README.md) | Programme and phase records, session handoffs, strategy notes — **why** decisions were made |
+| [`governance/`](governance/README.md) | The design, audit and validation record of the rollback engine — read before changing undo behaviour |
+| [`reports/`](reports/README.md) | Step-level audits and validation reports |
+| [`architecture/`](architecture/) | Two point-in-time specifications (`AI-CERTIFICATION`, `WPCC-STEP-104-SPEC`). The current architecture is `../RELEASE_HANDOFF.md` §4. |
+| [`archive/`](archive/README.md) | Formally superseded handoffs, roadmaps, submission notes and certifications, each individually bannered |
 
 ---
 

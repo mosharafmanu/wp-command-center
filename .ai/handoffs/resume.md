@@ -1,3 +1,23 @@
+> # SUPERSEDED — DO NOT RESUME FROM THIS FILE
+>
+> **Last verified 2026-06-15.** That is before v1.0.0, before the release freeze, and
+> before the 2026-08-10 security re-cut. Its "SESSION STATE — START HERE" heading is no
+> longer true: the branch, the commits, the deploy state, the tool counts and the schema
+> version below are all out of date.
+>
+> **Resume from [`../../PROJECT_STATUS.md`](../../PROJECT_STATUS.md), then
+> [`../../RELEASE_HANDOFF.md`](../../RELEASE_HANDOFF.md).**
+>
+> **Security note:** this file contains a production SSH password in cleartext, and this
+> repository is public. It is recorded as the first owner action in `PROJECT_STATUS.md`.
+> Treat the credential as compromised; do not use it, and do not copy it anywhere.
+>
+> **Still useful for:** the deploy-model archaeology — why push-based CI deploy was
+> abandoned for a server-side pull cron, and the evidence that diagnosed it. That reasoning
+> is summarised in `RELEASE_HANDOFF.md` §10 and `.ai/DEPLOY.md`.
+
+---
+
 # WP Command Center - Claude Handoff
 
 Last verified: June 15, 2026.

@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the shape of a submission package checklist. Every number in it is superseded.
+>
 > Superseded on 2026-08-10. Reason: records the 2026-08-03 artifact; both its checksum and its file count are superseded
 
 ---
@@ -56,7 +58,7 @@ errors. WordPress has stated the abbreviation is not covered by their trademark:
 > in any way you see fit."
 
 Every other warning family is accounted for with evidence in
-[WORDPRESS-ORG-COMPLIANCE-REPORT.md](WORDPRESS-ORG-COMPLIANCE-REPORT.md).
+[WORDPRESS-ORG-COMPLIANCE-REPORT.md](../certifications/WORDPRESS-ORG-COMPLIANCE-REPORT.md).
 
 ## Certification summary
 

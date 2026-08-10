@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the original project framing and the pre-1.0 subsystem inventory. Useful for archaeology, not for current numbers.
+>
 > Superseded on 2026-08-10. Reason: pre-1.0 project handoff from the step-numbered development era
 
 ---

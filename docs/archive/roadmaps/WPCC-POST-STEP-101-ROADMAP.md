@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the reasoning behind the runtime scope decisions that produced the 42-operation catalogue.
+>
 > Superseded on 2026-08-10. Reason: pre-1.0 roadmap; the forward plan now lives in RELEASE_HANDOFF.md §12
 
 ---

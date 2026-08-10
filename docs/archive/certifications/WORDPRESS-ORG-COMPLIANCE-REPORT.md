@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the per-category analysis of Plugin Check findings and why most were sniffer false positives. The counts are repository-wide and superseded; the analysis is not.
+>
 > Superseded on 2026-08-10. Reason: quotes the repository-wide Plugin Check figure (164) rather than the package result; the authoritative number is 0 errors / 824 warnings
 
 ---

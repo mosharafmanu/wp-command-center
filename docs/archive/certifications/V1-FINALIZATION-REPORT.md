@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the finalization-pass defect table — what was found by using the product rather than reading it.
+>
 > Superseded on 2026-08-10. Reason: certifies an artifact superseded by the 2026-08-10 security re-cut
 
 ---
@@ -14,7 +16,7 @@
 > **SUPERSEDED.** This report records an earlier stage of the V1 release
 > programme and is kept as a record. It is not current. See
 > [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) for the current
-> state, and [README.md](README.md) for the product documentation. Where this
+> state, and [README.md](../../README.md) for the product documentation. Where this
 > report disagrees with those, they are correct.
 
 **Branch:** `release/v1-finalization` (from certified `1e71d5e`, which contains `3b6fe49`)

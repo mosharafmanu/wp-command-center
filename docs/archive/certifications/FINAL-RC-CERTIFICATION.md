@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the release-candidate test matrix and its findings.
+>
 > Superseded on 2026-08-10. Reason: certifies the release candidate, not the shipped package
 
 ---
@@ -14,7 +16,7 @@
 > **SUPERSEDED.** This report records an earlier stage of the V1 release
 > programme and is kept as a record. It is not current. See
 > [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) for the current
-> state, and [README.md](README.md) for the product documentation. Where this
+> state, and [README.md](../../README.md) for the product documentation. Where this
 > report disagrees with those, they are correct.
 
 **Commit:** `984aa3c` on `release/v1-finalization`

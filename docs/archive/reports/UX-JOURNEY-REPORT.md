@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** the walked user journey and the specific confusions it found — read before changing onboarding or approvals copy.
+>
 > Superseded on 2026-08-10. Reason: point-in-time UX report for work that has shipped
 
 ---

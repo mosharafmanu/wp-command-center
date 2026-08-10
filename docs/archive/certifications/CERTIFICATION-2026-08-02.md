@@ -5,6 +5,8 @@
 >
 > **The single authoritative engineering document is [`RELEASE_HANDOFF.md`](../../../RELEASE_HANDOFF.md) at the repository root.**
 >
+> **Still useful for:** per-area certification evidence for the 2026-08-02 artifact.
+>
 > Superseded on 2026-08-10. Reason: certifies an artifact that predates the v1.0.0 freeze
 
 ---
@@ -14,7 +16,7 @@
 > **SUPERSEDED.** This report records an earlier stage of the V1 release
 > programme and is kept as a record. It is not current. See
 > [V1-CLOSEOUT-CERTIFICATION.md](V1-CLOSEOUT-CERTIFICATION.md) for the current
-> state, and [README.md](README.md) for the product documentation. Where this
+> state, and [README.md](../../README.md) for the product documentation. Where this
 > report disagrees with those, they are correct.
 
 **Date:** 2026-08-02

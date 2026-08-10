@@ -1,3 +1,23 @@
+> # SUPERSEDED — NOT THE CURRENT PRODUCT STATUS
+>
+> Despite the filename and its own claim to be "the fastest onboarding document", this
+> file is **dated 2026-06-27** and describes a pre-1.0 product. Every invariant in it is
+> now wrong:
+>
+> | It says | Actually |
+> |---|---|
+> | `WPCC_VERSION 0.2.0-rc.2` | **1.0.0** |
+> | `DB_VERSION 2.5.0` | **2.6.0** |
+> | `MCP tools 40` · `catalogue 40` | **42** and **42** |
+> | `OPERATION_MAP 34` | 34 operations carry an explicit capability mapping, of **42** total |
+>
+> **The current status document is [`../../PROJECT_STATUS.md`](../../PROJECT_STATUS.md).**
+>
+> **Still useful for:** the product positioning and the "Three Doors, One Engine" framing,
+> which are unchanged and are the clearest short statement of what the product is for.
+
+---
+
 # WP Command Center — Current Product Status
 
 > **The fastest onboarding document.** A new AI/engineer session should be able to read *this one file* and understand the product correctly. **Date:** 2026-06-27 · **As-built tip:** `87a18f2` (local `main`, ahead of `origin/main` by 39, **not pushed**) + one uncommitted CSS fix (code-block text-selection contrast) and the untracked landing page (`docs/product/landing-page/index.html`). **Production:** unchanged — Program-4 (`2657810`), AI dormant.
