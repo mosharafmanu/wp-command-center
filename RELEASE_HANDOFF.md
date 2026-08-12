@@ -47,9 +47,23 @@ by the owner. No further code, UX or release-engineering work is planned before 
 | `checkpoint/pre-v1-finalization` | Jul 2026 | Marker taken before the v1 finalization arc. |
 | **`v1.0.0`** | **2026-08-08** | First public release. Tagged at `81f7d6a`, merged to `main`, and **deployed to production**. |
 | *(security re-cut)* | 2026-08-10 | Not tagged. Fixes an uploads exposure and one Plugin Check error found in the pre-submission audit. **This is the code to submit.** See §2. |
+| *(client compatibility remediation)* | 2026-08-11/12 | **Uncommitted working-tree change.** Ten findings from real manual client testing, incl. two functional defects (a Codex/ChatGPT credential key that could never authenticate; eight tool schemas that failed GitHub Copilot's validator and blocked all 42 tools). Windsurf removed; Antigravity and Muse Code added. Held uncommitted while manual certification is pending. |
 
 > **`v1.0.0` was never published to WordPress.org.** It is what production runs, which is
 > why the tag has deliberately not been moved — see §9 and §14.
+
+> ### Release-state truth — do not blur these
+>
+> | | |
+> |---|---|
+> | On `main` / `origin/main` / **running in production** | `81f7d6a`, tagged `v1.0.0` |
+> | The **security re-cut** | branch `release/v1-security-recut` — **unmerged, untagged, undeployed**. It is *not* released. |
+> | The **compatibility remediation** | working tree only — **uncommitted** at the time of the pause, then checkpointed as documentation-only. Runtime changes remain uncommitted. |
+> | The **submission candidate** | the re-cut package in §2 — **not** the `v1.0.0` tag, which it supersedes. |
+>
+> Whether the package in §2 still represents the code to submit depends on whether the
+> compatibility remediation is intended to ship with it. It was built **before** that work
+> and therefore does **not** contain it. Decide that before rebuilding or submitting.
 
 ---
 
@@ -367,7 +381,43 @@ source "$SCRIPT_DIR/lib/private-store.sh"
 AUDIT_DIR="$(wpcc_store_dir wpcc-audit)"
 ```
 
-### Last full run (2026-08-10, security re-cut)
+### ⛔ Do not run the suites at the current resume point (2026-08-12)
+
+The local certification site was **deliberately reset to a fresh onboarding state after**
+the last full run, so that manual MCP certification exercises the real first-install
+journey. Every tier creates tokens, approvals, operation history and snapshots, and T2
+sets a developer governance baseline — **running any of them destroys that state.**
+
+The gate below is already green and needs no re-proving. See `PROJECT_STATUS.md`
+§ *PAUSED — RESUME HERE*.
+
+If you do run them later, `wpcc-env.sh` needs a newly minted full-scope token: the reset
+removed every token on purpose, and a stale `WPCC_TOKEN` produces hundreds of empty-result
+failures rather than an honest auth error.
+
+### Last full run (2026-08-12, after the client compatibility remediation)
+
+**T2: 7,318 passed, 0 failed, net-new 0** — 199 suites, developer governance baseline,
+restored at end. Supporting gates from the same pass:
+
+| Gate | Result |
+|---|---|
+| Focused — MCP client onboarding contract (new suite) | 141 / 0 |
+| Focused — governed rollback routing (new suite) | 19 / 0 |
+| MCP regression (29 suites) | 1,365 / 0 |
+| T0 | 848 / 0 |
+| T1 (56 suites) | 2,431 / 0 |
+
+An earlier T2 in the same pass reported 9 failures. All nine were **test-side expectation
+drift**, not product regressions: six hardcoded a roster of 11 clients (Windsurf was
+removed, Antigravity and Muse Code added) and three asserted Cursor's old relay field
+layout after it moved to native direct HTTP. They were rewritten as structural assertions —
+counts compared against the roster itself rather than a literal — because a pinned number
+fails as loudly for a correct change as for a defect. One had been passing *falsely*,
+matching an explanatory comment rather than a rendered string; it is now scoped to
+translatable strings.
+
+### Previous full run (2026-08-10, security re-cut)
 
 **T2: 7113 passed, 36 failed.** Every failure was attributed, none was a regression:
 

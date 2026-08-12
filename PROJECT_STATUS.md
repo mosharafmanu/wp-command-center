@@ -7,7 +7,44 @@ answers everything a resuming engineer needs before touching anything.
 Detail lives in [`RELEASE_HANDOFF.md`](RELEASE_HANDOFF.md); this file only summarises it.
 Where the two disagree, `RELEASE_HANDOFF.md` is correct.
 
-*Last updated 2026-08-10, at the close of engineering.*
+*Last updated 2026-08-12, at the pause before manual MCP certification.*
+
+---
+
+## ⏸ PAUSED — RESUME HERE
+
+> **CURRENT PHASE** — Manual MCP certification.
+>
+> **CURRENT STATE** — Fresh onboarding baseline prepared. The local certification site was
+> deliberately reset to a first-install state **after** all automated testing finished, and
+> every old localhost assistant registration was removed from every installed AI client.
+>
+> **NEXT HUMAN ACTION** — Open WP Command Center as a new user and begin manual onboarding
+> with **ChatGPT Desktop**, following the setup instructions the plugin itself displays.
+>
+> ### Do not do any of these first
+>
+> | Don't | Why |
+> |---|---|
+> | Run T0 / T1 / T2 or any MCP/REST suite | They create tokens, approvals, history, snapshots and flip protection mode. **Running one destroys the clean onboarding state this pause exists to create.** |
+> | Restore an old access token | There are none, on purpose. The first token must be created through the normal UI so the real onboarding journey is what gets certified. |
+> | Restore an old localhost client config | Removed on purpose, for the same reason. |
+> | Reconnect an assistant by hand-editing a config | The point is to prove WPCC's *displayed* instructions work. A shortcut certifies nothing. |
+>
+> ### What "fresh" means here — verified 2026-08-12
+>
+> 0 access tokens · 0 AI connections · 0 built-in AI tools on · 0 pending approvals ·
+> 0 change-history rows · assistant never connected · **Standard protection (client mode)** ·
+> schema and `wpcc_db_version` 2.6.0 intact · WordPress content untouched
+> (19,666 posts · 404 pages · 174 media · 905 users).
+>
+> An empty database here is **expected and correct**, not a symptom. Do not "repair" it.
+>
+> ### If onboarding fails
+>
+> Stop the certification and investigate before continuing. A failure at this stage is the
+> single most valuable signal available — it is exactly what a real first-time customer
+> would hit, and the automated suites cannot see it.
 
 ---
 
@@ -18,12 +55,12 @@ Where the two disagree, `RELEASE_HANDOFF.md` is correct.
 | **Project** | WP Command Center — a governed AI control plane for WordPress. An assistant connects over MCP or REST with a scoped token; changes that matter wait for human approval; everything is recorded; supported changes can be undone. |
 | **Current version** | **1.0.0** (DB schema 2.6.0) |
 | **Release status** | Engineering **complete**. **Not yet submitted** to WordPress.org. |
-| **Current branch** | `release/v1-security-recut` — 2 commits ahead of `main` |
+| **Current branch** | `release/v1-security-recut` — **unmerged**, 3 commits ahead of `main` |
 | **Latest runtime commit** | `c733244` — the security re-cut (uploads private store + one Plugin Check error) |
-| **Latest documentation commit** | the project close-out — `git log -1 --format=%h` on this branch. It follows `5b99a2f` (handoff consolidation) and touches markdown only. |
+| **Uncommitted runtime work** | **Yes — the MCP compatibility remediation** (see *Client compatibility remediation* below). Present in the working tree, deliberately **not** committed while manual certification is pending. |
 | **`main`** | `81f7d6a` = `origin/main` = **what production runs**. Untouched on purpose. |
-| **Tag** | `v1.0.0` points at `81f7d6a`. **It is superseded — do not submit it.** The re-cut is deliberately untagged. |
-| **Working tree** | **Clean.** The close-out documentation is committed. No runtime file, test or build artifact was touched by it — the commit is markdown only. |
+| **Tag** | `v1.0.0` points at `81f7d6a`. **It is superseded — do not submit it.** The re-cut is **untagged**, **unmerged** and **undeployed**: it is *not* released. |
+| **Working tree** | **Dirty on purpose.** Carries the compatibility remediation (24 modified, 4 added, 1 deleted) plus this documentation checkpoint. |
 
 ### Package identity — the artifact to submit
 
@@ -80,7 +117,8 @@ ACF, Elementor) · verified file patches · optional Built-in AI.
 > | UX work | ✅ Complete |
 > | Security fixes | ✅ Complete (uploads private store; 0 Plugin Check errors) |
 > | Release candidate | ✅ Complete — package built and verified |
-> | Regression testing | ✅ Complete — T2: 7113 passed, 36 failed, all 36 attributed as non-regressions |
+> | Regression testing | ✅ Complete — **T2: 7,318 passed, 0 failed, net-new 0** (2026-08-12, after the compatibility remediation) |
+| Client compatibility remediation | ✅ Complete — ten findings from real-client testing, see below |
 > | Documentation | ✅ Complete — consolidated into one authoritative handoff |
 > | **Manual MCP certification** | ❌ **BLOCKING — not started** |
 >
@@ -94,6 +132,34 @@ ACF, Elementor) · verified file patches · optional Built-in AI.
 > approval → audit attribution → undo → double-undo refused → reconnect).
 
 ---
+
+## Client compatibility remediation — completed 2026-08-11/12
+
+Ten findings from **real manual testing against real clients** were resolved. Two were
+functional defects, not documentation problems: the generated Codex/ChatGPT configuration
+used a key that cannot authenticate (`bearer_token = "${WPCC_TOKEN}"` — TOML does not
+interpolate, so a healthy server returned 401), and **eight** tool schemas declared an
+array without `items`, which GitHub Copilot rejects — and because it validates every tool
+before using any, one bad schema blocked all 42. Full record in `REAL_TEST_FINDINGS.md`.
+
+### Supported client matrix
+
+| Transport | Clients |
+|---|---|
+| **Direct HTTP** (nothing installed) | ChatGPT Desktop · Codex CLI · Gemini CLI · Antigravity · Cursor · OpenCode · Command Code · GitHub Copilot / VS Code · Claude Code · Muse Code |
+| **Relay** (needs Node.js) | Claude Desktop · Continue |
+| **Removed from v1** | **Windsurf** — deferred, never validated against its current real client |
+
+Notes that matter when reading the selector:
+
+- **Claude Code is the only `CERT_GOLD` client.** Everything else still needs the
+  certification level the plan requires; several moved to `CERT_ACTIVE` on the strength of
+  a live connection + tool execution, which is *not* the twelve-step checklist.
+- **Muse Code is documentation-verified only.** Meta's docs confirm MCP support and the
+  config shape, but the client was not installed here, so nothing was run against it. It is
+  deliberately `experimental`, and a test asserts that claim cannot quietly get stronger.
+- Six clients now offer a **native one-command setup** (Codex, ChatGPT Desktop, Gemini CLI,
+  OpenCode, Command Code, Claude Code) — each command was executed verbatim before shipping.
 
 ## Remaining work (owner, not engineering)
 
@@ -172,14 +238,24 @@ Follow in order. Steps 1–5 take about fifteen minutes and tell you whether any
    ```
    If `build/` is empty, that is normal — it is gitignored. Rebuild with
    `bash scripts/build-release.sh` and expect a **new** SHA256 but the **same** Content-ID.
-4. **Bring the environment up** — the suites need MySQL, a web server and a valid
-   `wpcc-env.sh` (gitignored). Sanity-check with a `tools/list` call: it must return **42**.
-   A stale `WPCC_TOKEN` makes hundreds of suites fail with empty results rather than an auth
-   error — check this before believing any mass failure.
-5. **Run `bash tests/run.sh --tier T2`.** Only T2 sets the developer governance baseline;
-   T0 and T1 deliberately leave the site's own protection mode alone, so mode-sensitive
-   suites fail there by design.
-6. **Begin manual MCP certification** — `docs/ASSISTANT-CERTIFICATION.md`.
+4. **Bring the environment up** — MySQL and a web server. Log into wp-admin and open
+   WP Command Center. It must show **Step 1 of 2 · Connect your assistant**.
+5. > ### ⛔ DO NOT RUN THE TEST SUITES AT THIS RESUME POINT
+   >
+   > This step used to say "run T2", and following it now would **undo the pause**. The
+   > local site was reset to a fresh onboarding state *after* the last full run, and every
+   > tier creates tokens, approvals, history and snapshots and flips protection mode.
+   >
+   > The automated gate is already green and recorded: **T2 7,318 / 0, net-new 0**
+   > (2026-08-12). There is nothing to re-prove.
+   >
+   > Run the suites again only *after* manual certification, or on a site you are willing
+   > to dirty. If you do, `wpcc-env.sh` needs a fresh full-scope token — the reset removed
+   > the old one, and a stale `WPCC_TOKEN` makes hundreds of suites fail with empty results
+   > rather than an auth error.
+6. **Begin manual MCP certification** — `docs/ASSISTANT-CERTIFICATION.md` §7, starting with
+   **ChatGPT Desktop**. Follow the instructions WPCC itself displays; do not shortcut the
+   configuration. Stop and investigate on the first failure.
 7. **Fix only real defects.** Reproduce first, fix the smallest thing that fixes it,
    re-test, regression-test the surrounding feature, stop.
 8. **Do not add features before WordPress.org submission.**
