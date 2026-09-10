@@ -1,6 +1,6 @@
 # MCP interface
 
-WPCC implements a Model Context Protocol server over HTTP, plus a stdio relay so
+Action Steward implements a Model Context Protocol server over HTTP, plus a stdio relay so
 stdio-only clients can reach it.
 
 **Endpoint:** `POST /wp-json/wp-command-center/v1/mcp`
@@ -22,7 +22,7 @@ curl -s -X POST https://example.com/wp-json/wp-command-center/v1/mcp \
 ```json
 {"jsonrpc":"2.0","id":1,"result":{
   "protocolVersion":"2024-11-05",
-  "serverInfo":{"name":"WP Command Center","version":"1.0.1"}}}
+  "serverInfo":{"name":"Action Steward","version":"1.0.2"}}}
 ```
 
 ## Methods

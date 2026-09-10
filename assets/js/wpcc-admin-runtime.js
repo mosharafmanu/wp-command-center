@@ -1,5 +1,5 @@
 /**
- * WP Command Center — shared admin runtime (D1 closure).
+ * Action Steward — shared admin runtime (D1 closure).
  *
  * The single home for the DOM/format/fetch/accessibility helpers that every WPCC
  * admin surface previously copy-pasted inline (escHtml, sprintf-lite, a focus trap,

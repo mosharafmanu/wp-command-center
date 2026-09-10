@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Safe Updates Operation test suite for WP Command Center (Step 28).
+# Safe Updates Operation test suite for Action Steward (Step 28).
 #
 # Verifies:
 #   - dry run

@@ -51,7 +51,7 @@ final class Cf7Seed {
 	 */
 	public function run( array $params, array $context = [] ): array|\WP_Error {
 		if ( ! class_exists( 'WPCF7_ContactForm' ) ) {
-			return new \WP_Error( 'wpcc_cf7_inactive', __( 'Contact Form 7 is not active.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cf7_inactive', __( 'Contact Form 7 is not active.', 'action-steward' ) );
 		}
 
 		// Ensure CF7 is fully loaded (sometimes needed in REST context).
@@ -65,7 +65,7 @@ final class Cf7Seed {
 		if ( ! isset( self::TEMPLATES[ $template ] ) ) {
 			return new \WP_Error(
 				'wpcc_invalid_cf7_template',
-				sprintf( /* translators: %s: value */ __( 'Invalid CF7 template "%s". Supported: contact_basic, newsletter, quote_request.', 'ai-command-center' ), $template )
+				sprintf( /* translators: %s: value */ __( 'Invalid CF7 template "%s". Supported: contact_basic, newsletter, quote_request.', 'action-steward' ), $template )
 			);
 		}
 
@@ -75,7 +75,7 @@ final class Cf7Seed {
 		$contact_form = \WPCF7_ContactForm::get_template();
 
 		if ( ! $contact_form ) {
-			return new \WP_Error( 'wpcc_cf7_init_failed', __( 'Failed to initialize CF7 form instance.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cf7_init_failed', __( 'Failed to initialize CF7 form instance.', 'action-steward' ) );
 		}
 
 		// Configure the form data.
@@ -90,7 +90,7 @@ final class Cf7Seed {
 		$id = $contact_form->save();
 
 		if ( ! $id ) {
-			return new \WP_Error( 'wpcc_cf7_save_failed', __( 'Failed to save Contact Form 7.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cf7_save_failed', __( 'Failed to save Contact Form 7.', 'action-steward' ) );
 		}
 
 		return [

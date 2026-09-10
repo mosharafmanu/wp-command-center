@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Agent Timeline test suite for WP Command Center (Step 13).
+# Agent Timeline test suite for Action Steward (Step 13).
 #
 # Verifies the unified traceable timeline:
 #   Session -> Task -> Action -> Plan -> Patch -> Apply -> Rollback

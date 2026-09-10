@@ -1,7 +1,7 @@
 <?php
 /**
  * Step 45 — MCP REST API registration.
- * Registers the MCP JSON-RPC endpoint under WP Command Center.
+ * Registers the MCP JSON-RPC endpoint under Action Steward.
  */
 
 namespace WPCommandCenter\Mcp;
@@ -35,7 +35,7 @@ final class McpRestApi {
 			// server: clients retry it as transient instead of asking for a token,
 			// and security scanners flag the endpoint. An invalid token already
 			// returns 401 via AuthTokens::validate() — a missing one must match.
-			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in WP Command Center → Settings → Connections.', 'ai-command-center' ), [ 'status' => 401 ] );
+			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in Action Steward → Settings → Connections.', 'action-steward' ), [ 'status' => 401 ] );
 		}
 		$auth  = new AuthTokens();
 		$token = $auth->validate( $raw );

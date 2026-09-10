@@ -5,7 +5,7 @@
  * The single shared outbound HTTP client for AI generation. It wraps
  * wp_remote_post, applies the caller's timeout, normalizes a transport failure
  * or a completed exchange into an AiHttpResponse, and routes any transport-error
- * message through the existing Redactor before it leaves the client. WPCC's
+ * message through the existing Redactor before it leaves the client. Action Steward's
  * outbound AI HTTP lives here.
  *
  * Phase A behaviour (deliberately constrained):

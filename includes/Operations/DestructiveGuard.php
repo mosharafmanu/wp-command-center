@@ -58,7 +58,7 @@ final class DestructiveGuard {
 						self::PHRASE_PLUGIN,
 						'slug',
 						true,
-						__( 'Permanently deletes the plugin files from disk. This cannot be undone except by restoring the pre-delete backup.', 'ai-command-center' )
+						__( 'Permanently deletes the plugin files from disk. This cannot be undone except by restoring the pre-delete backup.', 'action-steward' )
 					);
 				}
 				break;
@@ -69,7 +69,7 @@ final class DestructiveGuard {
 						self::PHRASE_THEME,
 						'slug',
 						false,
-						__( 'Permanently deletes the theme files from disk. This cannot be undone.', 'ai-command-center' )
+						__( 'Permanently deletes the theme files from disk. This cannot be undone.', 'action-steward' )
 					);
 				}
 				break;
@@ -80,7 +80,7 @@ final class DestructiveGuard {
 						self::PHRASE_USER,
 						'user_id',
 						false,
-						__( 'Permanently deletes the user account. Authored content is reassigned only when reassign_to is supplied, otherwise it is deleted with the user.', 'ai-command-center' )
+						__( 'Permanently deletes the user account. Authored content is reassigned only when reassign_to is supplied, otherwise it is deleted with the user.', 'action-steward' )
 					);
 				}
 				break;
@@ -93,7 +93,7 @@ final class DestructiveGuard {
 						self::PHRASE_MEDIA,
 						'media_id',
 						false,
-						__( 'Permanently deletes the media attachment and its files, bypassing the trash.', 'ai-command-center' )
+						__( 'Permanently deletes the media attachment and its files, bypassing the trash.', 'action-steward' )
 					);
 				}
 				break;
@@ -102,13 +102,13 @@ final class DestructiveGuard {
 				// STEP 100.9 — usage-driven cleanup. Trash-only and reversible, but
 				// still requires explicit confirmation in EVERY mode because it acts
 				// on "unused" media inferred from a scan (false-unused is possible for
-				// references WPCC cannot see). There is no permanent-delete path.
+				// references Action Steward cannot see). There is no permanent-delete path.
 				if ( 'unused_media_cleanup' === $action ) {
 					return self::descriptor(
 						self::PHRASE_CLEANUP,
 						'media_id',
 						true,
-						__( 'Sends a media attachment inferred to be unused to the trash (recoverable). A byte snapshot is taken first and the action is fully reversible; it never permanently deletes.', 'ai-command-center' )
+						__( 'Sends a media attachment inferred to be unused to the trash (recoverable). A byte snapshot is taken first and the action is fully reversible; it never permanently deletes.', 'action-steward' )
 					);
 				}
 				break;
@@ -122,7 +122,7 @@ final class DestructiveGuard {
 						self::PHRASE_CONTENT,
 						'content_id',
 						false,
-						__( 'Permanently deletes content, bypassing the trash. This cannot be undone.', 'ai-command-center' )
+						__( 'Permanently deletes content, bypassing the trash. This cannot be undone.', 'action-steward' )
 					);
 				}
 				break;
@@ -139,7 +139,7 @@ final class DestructiveGuard {
 							self::PHRASE_PATCH,
 							'patch_id',
 							true,
-							__( 'This patch modifies a high-risk file (theme functions.php, an active theme template, or a plugin main file). A bad edit can take the site down; a pre-apply snapshot is taken so it can be rolled back.', 'ai-command-center' )
+							__( 'This patch modifies a high-risk file (theme functions.php, an active theme template, or a plugin main file). A bad edit can take the site down; a pre-apply snapshot is taken so it can be rolled back.', 'action-steward' )
 						);
 					}
 				}
@@ -160,7 +160,7 @@ final class DestructiveGuard {
 							self::PHRASE_ROLLBACK,
 							'change_id',
 							true,
-							__( 'This change reverses a patch that modified a high-risk file (theme functions.php, an active theme template, or a plugin main file). Restoring the prior snapshot can equally affect site availability; the original pre-apply snapshot is restored with hash verification.', 'ai-command-center' )
+							__( 'This change reverses a patch that modified a high-risk file (theme functions.php, an active theme template, or a plugin main file). Restoring the prior snapshot can equally affect site availability; the original pre-apply snapshot is restored with hash verification.', 'action-steward' )
 						);
 					}
 				}
@@ -175,7 +175,7 @@ final class DestructiveGuard {
 						self::PHRASE_DB,
 						'search',
 						false,
-						__( 'Runs a live database search-and-replace across tables. Rows are mutated in place and cannot be automatically reverted.', 'ai-command-center' )
+						__( 'Runs a live database search-and-replace across tables. Rows are mutated in place and cannot be automatically reverted.', 'action-steward' )
 					);
 				}
 				break;

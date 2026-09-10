@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Agent discovery / manifest test suite for WP Command Center (Step 11).
+# Agent discovery / manifest test suite for Action Steward (Step 11).
 #
 # Verifies GET /agent/manifest:
 #
@@ -80,7 +80,7 @@ MANIFEST=$(api GET /agent/manifest)
 MANIFEST_STATUS=$(api_status GET /agent/manifest)
 
 assert_eq "manifest: HTTP status is 200" "200" "$MANIFEST_STATUS"
-assert_eq "manifest: plugin.name" "WP Command Center" "$(echo "$MANIFEST" | jq -r '.plugin.name // empty')"
+assert_eq "manifest: plugin.name" "Action Steward" "$(echo "$MANIFEST" | jq -r '.plugin.name // empty')"
 assert_eq "manifest: plugin.api_version" "v1" "$(echo "$MANIFEST" | jq -r '.plugin.api_version // empty')"
 assert_true "manifest: plugin.version non-empty" "$(echo "$MANIFEST" | jq -r '(.plugin.version // "") | length > 0')"
 assert_true "manifest: plugin.db_version non-empty" "$(echo "$MANIFEST" | jq -r '(.plugin.db_version // "") | length > 0')"

@@ -37,7 +37,7 @@ if ( ! isset( $wpcc_conn_panes[ $wpcc_conn_active ] ) ) {
 ?>
 <div class="wpcc-settings-connections">
 	<?php if ( count( $wpcc_conn_panes ) > 1 ) : ?>
-		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Connection types', 'ai-command-center' ); ?>">
+		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Connection types', 'action-steward' ); ?>">
 			<?php foreach ( $wpcc_conn_panes as $wpcc_ck => $wpcc_cp ) : ?>
 				<a class="wpcc-cds-subnav__item<?php echo $wpcc_ck === $wpcc_conn_active ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=' . $wpcc_ck ) ); ?>"

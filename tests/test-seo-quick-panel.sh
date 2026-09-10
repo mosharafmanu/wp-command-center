@@ -57,7 +57,7 @@ echo "== 1. Consolidated entry: SEO row link folded into ✨ AI Assist; fallback
 has  "AI Assist anchor opts into the panel chooser" "data-wpcc-action=\"assist\"" "$AAR"
 has  "AI Assist carries the applicable action ids"  "data-actions=\""             "$AAR"
 has  "AI Assist offers a no-JS fallback href"       "fallback_url"                "$AAR"
-has  "WPCC-branded visible label"                "WPCC AI"                     "$AAR"
+has  "WPCC-branded visible label"                "Action Steward AI"                     "$AAR"
 has  "SEO panel config (route) lives in the registry" "/admin/seo/generate"       "$REG"
 has  "SEO status allow-list in the registry"        "SeoMetaGenerator::is_supported_status" "$REG"
 has  "SeoRowActions retains nonce-checked fallback" "check_admin_referer"         "$SRC"

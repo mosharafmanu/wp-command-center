@@ -148,7 +148,7 @@ final class ProviderCatalog {
 		return $d ? (string) $d['default_endpoint'] : '';
 	}
 
-	/** True when WPCC's runtime can actually use this provider (via its dialect). */
+	/** True when Action Steward's runtime can actually use this provider (via its dialect). */
 	public static function runtime_usable( string $provider ): bool {
 		return Dialect::runtime_supported( self::dialect_of( $provider ) );
 	}

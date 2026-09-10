@@ -40,15 +40,15 @@ final class AiActivity {
 	/** Human label + dot color for a category. */
 	public static function category_meta( string $cat ): array {
 		$map = [
-			'rollback'   => [ __( 'Rollback', 'ai-command-center' ), '#7b3fbf' ],
-			'connection' => [ __( 'Connection', 'ai-command-center' ), '#2271b1' ],
-			'generation' => [ __( 'AI generation', 'ai-command-center' ), '#0a7a33' ],
-			'agent'      => [ __( 'AI agent', 'ai-command-center' ), '#1d62b0' ],
-			'change'     => [ __( 'Change', 'ai-command-center' ), '#8c5e00' ],
-			'operation'  => [ __( 'Operation', 'ai-command-center' ), '#50575e' ],
-			'security'   => [ __( 'Security', 'ai-command-center' ), '#d63638' ],
-			'patch'      => [ __( 'Patch', 'ai-command-center' ), '#2c3a4f' ],
-			'activity'   => [ __( 'Activity', 'ai-command-center' ), '#646970' ],
+			'rollback'   => [ __( 'Rollback', 'action-steward' ), '#7b3fbf' ],
+			'connection' => [ __( 'Connection', 'action-steward' ), '#2271b1' ],
+			'generation' => [ __( 'AI generation', 'action-steward' ), '#0a7a33' ],
+			'agent'      => [ __( 'AI agent', 'action-steward' ), '#1d62b0' ],
+			'change'     => [ __( 'Change', 'action-steward' ), '#8c5e00' ],
+			'operation'  => [ __( 'Operation', 'action-steward' ), '#50575e' ],
+			'security'   => [ __( 'Security', 'action-steward' ), '#d63638' ],
+			'patch'      => [ __( 'Patch', 'action-steward' ), '#2c3a4f' ],
+			'activity'   => [ __( 'Activity', 'action-steward' ), '#646970' ],
 		];
 		return $map[ $cat ] ?? $map['activity'];
 	}
@@ -83,9 +83,9 @@ final class AiActivity {
 			$title = \WPCommandCenter\Admin\ActionLabels::describe( $m[1], '', [], '' );
 			if ( '' !== $title ) {
 				return match ( $m[2] ) {
-					'started'   => sprintf( /* translators: %s: what the change does. */ __( '%s — started', 'ai-command-center' ), $title ),
-					'failed'    => sprintf( /* translators: %s: what the change does. */ __( '%s — did not run', 'ai-command-center' ), $title ),
-					default     => sprintf( /* translators: %s: what the change does. */ __( '%s — done', 'ai-command-center' ), $title ),
+					'started'   => sprintf( /* translators: %s: what the change does. */ __( '%s — started', 'action-steward' ), $title ),
+					'failed'    => sprintf( /* translators: %s: what the change does. */ __( '%s — did not run', 'action-steward' ), $title ),
+					default     => sprintf( /* translators: %s: what the change does. */ __( '%s — done', 'action-steward' ), $title ),
 				};
 			}
 		}
@@ -104,32 +104,32 @@ final class AiActivity {
 	private static function event_labels(): array {
 		return [
 			// The background queue. "Worker" is the engine's word for it.
-			'operation.worker.started'    => __( 'Background processing started', 'ai-command-center' ),
-			'operation.worker.completed'  => __( 'Background processing completed', 'ai-command-center' ),
-			'operation.worker.failed'     => __( 'Background processing failed', 'ai-command-center' ),
-			'operation.worker.locked'     => __( 'Background processing picked up an item', 'ai-command-center' ),
+			'operation.worker.started'    => __( 'Background processing started', 'action-steward' ),
+			'operation.worker.completed'  => __( 'Background processing completed', 'action-steward' ),
+			'operation.worker.failed'     => __( 'Background processing failed', 'action-steward' ),
+			'operation.worker.locked'     => __( 'Background processing picked up an item', 'action-steward' ),
 			// Applying an approved change.
-			'operation.execution.started'   => __( 'Applying an approved change', 'ai-command-center' ),
-			'operation.execution.completed' => __( 'Approved change applied', 'ai-command-center' ),
-			'operation.execution.failed'    => __( 'A change could not be applied', 'ai-command-center' ),
+			'operation.execution.started'   => __( 'Applying an approved change', 'action-steward' ),
+			'operation.execution.completed' => __( 'Approved change applied', 'action-steward' ),
+			'operation.execution.failed'    => __( 'A change could not be applied', 'action-steward' ),
 			// Bookkeeping the customer does not need named as bookkeeping.
-			'operation.result.created'    => __( 'Result recorded', 'ai-command-center' ),
-			'operation.result.completed'  => __( 'Result recorded', 'ai-command-center' ),
+			'operation.result.created'    => __( 'Result recorded', 'action-steward' ),
+			'operation.result.completed'  => __( 'Result recorded', 'action-steward' ),
 			// Governance moments that matter to them.
-			'operation.approval.required'        => __( 'Waiting for your approval', 'ai-command-center' ),
-			'operation.approval.auto_requested'  => __( 'Sent for your approval', 'ai-command-center' ),
-			'operation.request.approved'         => __( 'You approved a change', 'ai-command-center' ),
-			'operation.request.rejected'         => __( 'You rejected a change', 'ai-command-center' ),
+			'operation.approval.required'        => __( 'Waiting for your approval', 'action-steward' ),
+			'operation.approval.auto_requested'  => __( 'Sent for your approval', 'action-steward' ),
+			'operation.request.approved'         => __( 'You approved a change', 'action-steward' ),
+			'operation.request.rejected'         => __( 'You rejected a change', 'action-steward' ),
 			// Built-in AI generation.
-			'seo.generate.started'        => __( 'Generating SEO suggestions', 'ai-command-center' ),
-			'seo.generate.completed'      => __( 'SEO suggestions generated', 'ai-command-center' ),
-			'alt_text.generate.started'   => __( 'Generating alt text', 'ai-command-center' ),
-			'alt_text.generate.completed' => __( 'Alt text generated', 'ai-command-center' ),
-			'content.generate.started'    => __( 'Generating content suggestions', 'ai-command-center' ),
-			'content.generate.completed'  => __( 'Content suggestions generated', 'ai-command-center' ),
-			'proposal.created'            => __( 'Suggestion saved as a draft', 'ai-command-center' ),
-			'proposal.applied'            => __( 'Suggestion applied', 'ai-command-center' ),
-			'proposal.dismissed'          => __( 'Suggestion dismissed', 'ai-command-center' ),
+			'seo.generate.started'        => __( 'Generating SEO suggestions', 'action-steward' ),
+			'seo.generate.completed'      => __( 'SEO suggestions generated', 'action-steward' ),
+			'alt_text.generate.started'   => __( 'Generating alt text', 'action-steward' ),
+			'alt_text.generate.completed' => __( 'Alt text generated', 'action-steward' ),
+			'content.generate.started'    => __( 'Generating content suggestions', 'action-steward' ),
+			'content.generate.completed'  => __( 'Content suggestions generated', 'action-steward' ),
+			'proposal.created'            => __( 'Suggestion saved as a draft', 'action-steward' ),
+			'proposal.applied'            => __( 'Suggestion applied', 'action-steward' ),
+			'proposal.dismissed'          => __( 'Suggestion dismissed', 'action-steward' ),
 		];
 	}
 

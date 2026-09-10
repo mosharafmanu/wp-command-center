@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# End-to-end runtime validation suite for WP Command Center (Step 9).
+# End-to-end runtime validation suite for Action Steward (Step 9).
 #
 # Walks the full agent runtime chain in a single continuous run:
 #

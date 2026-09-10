@@ -52,11 +52,11 @@ final class WorkflowRuntimeManager {
 
 	private function get_workflow(array $p):array{
 		$id=sanitize_key((string)($p['workflow_id']??''));$w=$this->load();
-		return isset($w[$id])?['workflow'=>$w[$id]]:$this->err('nf',__('Workflow not found.','ai-command-center'));
+		return isset($w[$id])?['workflow'=>$w[$id]]:$this->err('nf',__('Workflow not found.','action-steward'));
 	}
 
 	private function create(array $p,array $cx):array{
-		$name=sanitize_text_field((string)($p['name']??''));if(''===$name)return$this->err('missing_name',__('Name required.','ai-command-center'));
+		$name=sanitize_text_field((string)($p['name']??''));if(''===$name)return$this->err('missing_name',__('Name required.','action-steward'));
 		$steps=(array)($p['steps']??[]);$id=sanitize_key($p['workflow_id']??$name);$id=sanitize_title($id).'_'.time();
 		$w=$this->load();$w[$id]=['id'=>$id,'name'=>$name,'description'=>sanitize_text_field((string)($p['description']??'')),'steps'=>$steps,'created_at'=>time(),'updated_at'=>time()];
 		$this->save($w);return['workflow_id'=>$id,'name'=>$name,'step_count'=>count($steps)];
@@ -64,7 +64,7 @@ final class WorkflowRuntimeManager {
 
 	private function update(array $p,array $cx):array{
 		$id=sanitize_key((string)($p['workflow_id']??''));$w=$this->load();
-		if(!isset($w[$id]))return$this->err('nf',__('Not found.','ai-command-center'));
+		if(!isset($w[$id]))return$this->err('nf',__('Not found.','action-steward'));
 		if(isset($p['name']))$w[$id]['name']=sanitize_text_field((string)$p['name']);
 		if(isset($p['steps']))$w[$id]['steps']=(array)$p['steps'];
 		$w[$id]['updated_at']=time();
@@ -73,7 +73,7 @@ final class WorkflowRuntimeManager {
 
 	private function delete(array $p,array $cx):array{
 		$id=sanitize_key((string)($p['workflow_id']??''));$w=$this->load();
-		if(!isset($w[$id]))return$this->err('nf',__('Not found.','ai-command-center'));
+		if(!isset($w[$id]))return$this->err('nf',__('Not found.','action-steward'));
 		$name=$w[$id]['name'];unset($w[$id]);$this->save($w);
 		return['workflow_id'=>$id,'name'=>$name,'deleted'=>true];
 	}
@@ -88,7 +88,7 @@ final class WorkflowRuntimeManager {
 	 */
 	private function execute(array $p,array $cx):array{
 		$id=sanitize_key((string)($p['workflow_id']??''));$w=$this->load();
-		if(!isset($w[$id]))return$this->err('nf',__('Not found.','ai-command-center'));
+		if(!isset($w[$id]))return$this->err('nf',__('Not found.','action-steward'));
 		$steps=array_values((array)($w[$id]['steps']??[]));
 		$on_failure=in_array(($p['on_failure']??'stop'),self::ON_FAILURE,true)?(string)$p['on_failure']:'stop';
 		$cx['within_workflow']=true; // single approval: plan approved as a unit
@@ -109,7 +109,7 @@ final class WorkflowRuntimeManager {
 			$payload=$this->resolve_refs((array)($step['payload']??[]),$step_outputs,$unresolved);
 			$s_start=microtime(true);
 			if(!empty($unresolved)){
-				$msg=__('Unresolved step reference(s): ','ai-command-center').implode(', ',$unresolved);
+				$msg=__('Unresolved step reference(s): ','action-steward').implode(', ',$unresolved);
 				$r=['success'=>false,'result'=>['error'=>true,'code'=>'wpcc_unresolved_reference','message'=>$msg],
 					'errors'=>[['code'=>'wpcc_unresolved_reference','message'=>$msg]],'created'=>[]];
 			}else{
@@ -242,11 +242,11 @@ final class WorkflowRuntimeManager {
 	/** STEP 97 — Roll back a past execution by execution_id (reverse every successful, rollbackable step). */
 	private function rollback_execution(array $p,array $cx):array{
 		$exec_id=sanitize_text_field((string)($p['execution_id']??''));
-		if(''===$exec_id)return$this->err('missing_execution_id',__('execution_id required.','ai-command-center'));
+		if(''===$exec_id)return$this->err('missing_execution_id',__('execution_id required.','action-steward'));
 		$history=get_option('wpcc_workflow_history',[]);$idx=null;
 		foreach($history as $i=>$h){if(($h['execution_id']??'')===$exec_id){$idx=$i;break;}}
-		if(null===$idx)return$this->err('execution_not_found',__('Execution not found.','ai-command-center'));
-		if(!empty($history[$idx]['rolled_back']))return$this->err('already_rolled_back',__('Execution already rolled back.','ai-command-center'));
+		if(null===$idx)return$this->err('execution_not_found',__('Execution not found.','action-steward'));
+		if(!empty($history[$idx]['rolled_back']))return$this->err('already_rolled_back',__('Execution already rolled back.','action-steward'));
 		$completed=[];
 		foreach(($history[$idx]['results']??[]) as $r){
 			if(empty($r['success']))continue;
@@ -254,7 +254,7 @@ final class WorkflowRuntimeManager {
 				$completed[]=['operation_id'=>$r['operation_id']??'','rollback_id'=>$r['rollback_id']??null,'created'=>$r['created']??[]];
 			}
 		}
-		if(!$completed)return$this->err('nothing_to_rollback',__('No rollbackable steps in this execution.','ai-command-center'));
+		if(!$completed)return$this->err('nothing_to_rollback',__('No rollbackable steps in this execution.','action-steward'));
 		$rbres=$this->rollback_steps($completed,new OperationExecutor(),$cx);
 		$verified=$this->all_verified($rbres);
 		$history[$idx]['rolled_back']=$rbres;$history[$idx]['status']=$verified?'rolled_back':'rollback_incomplete';
@@ -263,15 +263,15 @@ final class WorkflowRuntimeManager {
 	}
 
 	private function import(array $p,array $cx):array{
-		$json=(string)($p['json']??'');if(''===$json)return$this->err('missing',__('JSON required.','ai-command-center'));
-		$data=json_decode($json,true);if(!$data||!isset($data['name']))return$this->err('invalid_json',__('Invalid workflow JSON.','ai-command-center'));
+		$json=(string)($p['json']??'');if(''===$json)return$this->err('missing',__('JSON required.','action-steward'));
+		$data=json_decode($json,true);if(!$data||!isset($data['name']))return$this->err('invalid_json',__('Invalid workflow JSON.','action-steward'));
 		$id=sanitize_title($data['name']).'_'.time();$w=$this->load();$w[$id]=['id'=>$id,'name'=>$data['name'],'description'=>$data['description']??'','steps'=>$data['steps']??[],'created_at'=>time(),'updated_at'=>time()];$this->save($w);
 		return['workflow_id'=>$id,'name'=>$data['name'],'imported'=>true];
 	}
 
 	private function export(array $p):array{
 		$id=sanitize_key((string)($p['workflow_id']??''));$w=$this->load();
-		if(!isset($w[$id]))return$this->err('nf',__('Not found.','ai-command-center'));
+		if(!isset($w[$id]))return$this->err('nf',__('Not found.','action-steward'));
 		return['workflow_id'=>$id,'json'=>wp_json_encode($w[$id],JSON_PRETTY_PRINT)];
 	}
 

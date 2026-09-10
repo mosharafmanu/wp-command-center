@@ -28,15 +28,15 @@ $wpcc_links = [
 /** Status → [label, color] (honest; only known statuses). */
 $wpcc_status_meta = static function ( string $s ): array {
 	switch ( $s ) {
-		case 'completed': return [ __( 'Completed', 'ai-command-center' ), '#0a7a33' ];
-		case 'failed':    return [ __( 'Failed', 'ai-command-center' ), '#d63638' ];
-		case 'running':   return [ __( 'Running', 'ai-command-center' ), '#2271b1' ];
-		case 'cancelled': return [ __( 'Cancelled', 'ai-command-center' ), '#646970' ];
-		default:          return [ __( 'Recorded', 'ai-command-center' ), '#8a6a00' ];
+		case 'completed': return [ __( 'Completed', 'action-steward' ), '#0a7a33' ];
+		case 'failed':    return [ __( 'Failed', 'action-steward' ), '#d63638' ];
+		case 'running':   return [ __( 'Running', 'action-steward' ), '#2271b1' ];
+		case 'cancelled': return [ __( 'Cancelled', 'action-steward' ), '#646970' ];
+		default:          return [ __( 'Recorded', 'action-steward' ), '#8a6a00' ];
 	}
 };
 $wpcc_dur = static function ( $ms ): string {
-	if ( null === $ms ) { return __( 'unknown', 'ai-command-center' ); }
+	if ( null === $ms ) { return __( 'unknown', 'action-steward' ); }
 	$ms = (int) $ms;
 	return $ms >= 1000 ? sprintf( '%.1fs', $ms / 1000 ) : ( $ms . ' ms' );
 };
@@ -60,11 +60,11 @@ $wpcc_dur = static function ( $ms ): string {
  */
 $wpcc_op_label = static function ( string $name ): string {
 	$kinds = [
-		'worker'    => __( 'Background queue check', 'ai-command-center' ),
-		'execution' => __( 'Ran an approved change', 'ai-command-center' ),
-		'result'    => __( 'Recorded a result', 'ai-command-center' ),
-		'recorded'  => __( 'Recorded activity', 'ai-command-center' ),
-		'inspect'   => __( 'Looked something up', 'ai-command-center' ),
+		'worker'    => __( 'Background queue check', 'action-steward' ),
+		'execution' => __( 'Ran an approved change', 'action-steward' ),
+		'result'    => __( 'Recorded a result', 'action-steward' ),
+		'recorded'  => __( 'Recorded activity', 'action-steward' ),
+		'inspect'   => __( 'Looked something up', 'action-steward' ),
 	];
 	if ( isset( $kinds[ $name ] ) ) {
 		return $kinds[ $name ];
@@ -116,16 +116,16 @@ $wpcc_op_label = static function ( string $name ): string {
 	?>
 
 	<!-- 1. NEEDS ATTENTION -->
-	<h2><?php esc_html_e( 'Needs attention', 'ai-command-center' ); ?></h2>
+	<h2><?php esc_html_e( 'Needs attention', 'action-steward' ); ?></h2>
 	<?php if ( (int) $wpcc_attn['pending_approvals'] === 0 && empty( $wpcc_attn['failures'] ) ) : ?>
-		<div class="wpcc-oc-clear" role="status">&#10003; <?php esc_html_e( 'All clear — nothing is waiting on you and no recent operations have failed.', 'ai-command-center' ); ?></div>
+		<div class="wpcc-oc-clear" role="status">&#10003; <?php esc_html_e( 'All clear — nothing is waiting on you and no recent operations have failed.', 'action-steward' ); ?></div>
 	<?php else : ?>
 		<div class="wpcc-oc-attn" role="status">
 			<?php if ( (int) $wpcc_attn['pending_approvals'] > 0 ) : ?>
-				<p style="margin:0 0 8px;font-size:13px;"><strong><?php printf( esc_html( /* translators: %d: number */ _n( '%d change is waiting for your approval.', '%d changes are waiting for your approval.', (int) $wpcc_attn['pending_approvals'], 'ai-command-center' ) ), (int) $wpcc_attn['pending_approvals'] ); ?></strong> <?php esc_html_e( 'Nothing applies until you review it.', 'ai-command-center' ); ?> <a href="<?php echo esc_url( $wpcc_links['approvals'] ); ?>"><?php esc_html_e( 'Review now →', 'ai-command-center' ); ?></a></p>
+				<p style="margin:0 0 8px;font-size:13px;"><strong><?php printf( esc_html( /* translators: %d: number */ _n( '%d change is waiting for your approval.', '%d changes are waiting for your approval.', (int) $wpcc_attn['pending_approvals'], 'action-steward' ) ), (int) $wpcc_attn['pending_approvals'] ); ?></strong> <?php esc_html_e( 'Nothing applies until you review it.', 'action-steward' ); ?> <a href="<?php echo esc_url( $wpcc_links['approvals'] ); ?>"><?php esc_html_e( 'Review now →', 'action-steward' ); ?></a></p>
 			<?php endif; ?>
 			<?php if ( ! empty( $wpcc_attn['failures'] ) ) : ?>
-				<p style="margin:0 0 4px;font-size:13px;font-weight:600;"><?php esc_html_e( 'Recent failures:', 'ai-command-center' ); ?></p>
+				<p style="margin:0 0 4px;font-size:13px;font-weight:600;"><?php esc_html_e( 'Recent failures:', 'action-steward' ); ?></p>
 				<?php
 				/*
 				 * A failure listed here is a RECORD, not a task.
@@ -143,11 +143,11 @@ $wpcc_op_label = static function ( string $name ): string {
 				 */
 				?>
 				<p class="muted" style="margin:0 0 8px;font-size:12px;">
-					<?php esc_html_e( 'A failed operation stopped and did not finish. It will not retry on its own. Anything it changed before stopping is recorded in Changes, where it can be reviewed or undone.', 'ai-command-center' ); ?>
-					<a href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'Open Changes →', 'ai-command-center' ); ?></a>
+					<?php esc_html_e( 'A failed operation stopped and did not finish. It will not retry on its own. Anything it changed before stopping is recorded in Changes, where it can be reviewed or undone.', 'action-steward' ); ?>
+					<a href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'Open Changes →', 'action-steward' ); ?></a>
 				</p>
 				<?php foreach ( $wpcc_attn['failures'] as $frow ) : ?>
-					<div style="font-size:12px;color:#50575e;">&#10007; <strong><?php echo esc_html( $wpcc_op_label( (string) ( $frow['operation'] ?: $frow['kind'] ) ) ); ?></strong><?php if ( '' !== $frow['error_code'] ) : ?> — <code><?php echo esc_html( $frow['error_code'] ); ?></code><?php endif; ?> <span class="muted"><?php echo $frow['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'ai-command-center' ), human_time_diff( $frow['time'], time() ) ) ) : ''; ?></span></div>
+					<div style="font-size:12px;color:#50575e;">&#10007; <strong><?php echo esc_html( $wpcc_op_label( (string) ( $frow['operation'] ?: $frow['kind'] ) ) ); ?></strong><?php if ( '' !== $frow['error_code'] ) : ?> — <code><?php echo esc_html( $frow['error_code'] ); ?></code><?php endif; ?> <span class="muted"><?php echo $frow['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'action-steward' ), human_time_diff( $frow['time'], time() ) ) ) : ''; ?></span></div>
 				<?php endforeach; ?>
 			<?php endif; ?>
 		</div>
@@ -156,7 +156,7 @@ $wpcc_op_label = static function ( string $name ): string {
 	<div class="wpcc-oc-grid">
 		<!-- 2. OPERATIONS TIMELINE -->
 		<div>
-			<h2 style="margin-top:18px;"><?php esc_html_e( 'Operations timeline', 'ai-command-center' ); ?></h2>
+			<h2 style="margin-top:18px;"><?php esc_html_e( 'Operations timeline', 'action-steward' ); ?></h2>
 			<?php
 			/*
 			 * Say what this list is before showing it.
@@ -171,14 +171,14 @@ $wpcc_op_label = static function ( string $name ): string {
 			 */
 			?>
 			<p class="muted" style="font-size:12px;margin:0 0 10px;">
-				<?php esc_html_e( 'A technical record of work the plugin has run, newest first. Nothing here needs your attention — anything that does appears under Approvals.', 'ai-command-center' ); ?>
+				<?php esc_html_e( 'A technical record of work the plugin has run, newest first. Nothing here needs your attention — anything that does appears under Approvals.', 'action-steward' ); ?>
 			</p>
 			<?php if ( empty( $wpcc_tl['rows'] ) ) : ?>
-				<div class="wpcc-oc-empty"><strong><?php esc_html_e( 'No operations recorded yet.', 'ai-command-center' ); ?></strong><br><span class="muted"><?php esc_html_e( 'When AI or an agent performs governed work, each operation appears here — newest first.', 'ai-command-center' ); ?></span></div>
+				<div class="wpcc-oc-empty"><strong><?php esc_html_e( 'No operations recorded yet.', 'action-steward' ); ?></strong><br><span class="muted"><?php esc_html_e( 'When AI or an agent performs governed work, each operation appears here — newest first.', 'action-steward' ); ?></span></div>
 			<?php else : ?>
 				<div class="wpcc-oc-card">
 					<?php if ( 'audit' === $wpcc_tl['source'] ) : ?>
-						<p class="muted" style="font-size:11px;margin:0 0 6px;"><?php esc_html_e( 'Showing recorded activity (duration not measured for these events).', 'ai-command-center' ); ?></p>
+						<p class="muted" style="font-size:11px;margin:0 0 6px;"><?php esc_html_e( 'Showing recorded activity (duration not measured for these events).', 'action-steward' ); ?></p>
 					<?php endif; ?>
 					<?php foreach ( $wpcc_tl['rows'] as $row ) : [ $slabel, $scolor ] = $wpcc_status_meta( $row['status'] ); ?>
 						<div class="wpcc-oc-row">
@@ -194,7 +194,7 @@ $wpcc_op_label = static function ( string $name ): string {
 						<?php if ( null !== $row['duration_ms'] ) : ?>
 							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo esc_html( $wpcc_dur( $row['duration_ms'] ) ); ?></span>
 						<?php endif; ?>
-							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo $row['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'ai-command-center' ), human_time_diff( $row['time'], time() ) ) ) : ''; ?></span>
+							<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo $row['time'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'action-steward' ), human_time_diff( $row['time'], time() ) ) ) : ''; ?></span>
 						</div>
 					<?php endforeach; ?>
 				</div>
@@ -203,19 +203,19 @@ $wpcc_op_label = static function ( string $name ): string {
 
 		<!-- 4. SYSTEM ACTIVITY (status roll-up) + DATA HONESTY -->
 		<div>
-			<h2 style="margin-top:18px;"><?php esc_html_e( 'System activity', 'ai-command-center' ); ?></h2>
+			<h2 style="margin-top:18px;"><?php esc_html_e( 'System activity', 'action-steward' ); ?></h2>
 			<div class="wpcc-oc-card">
 				<p class="muted" style="font-size:12px;margin:0 0 8px;">
 					<?php
 					/* translators: %d: window in days */
-					printf( esc_html__( 'Last %d days', 'ai-command-center' ), (int) $wpcc_status['window_days'] );
+					printf( esc_html__( 'Last %d days', 'action-steward' ), (int) $wpcc_status['window_days'] );
 					?>
 				</p>
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Completed', 'ai-command-center' ); ?></span><strong style="color:#0a7a33;"><?php echo (int) $wpcc_status['completed']; ?></strong></div>
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Failed', 'ai-command-center' ); ?></span><strong style="color:#d63638;"><?php echo (int) $wpcc_status['failed']; ?></strong></div>
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Running', 'ai-command-center' ); ?></span><strong><?php echo (int) $wpcc_status['running']; ?></strong></div>
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Cancelled', 'ai-command-center' ); ?></span><strong><?php echo (int) $wpcc_status['cancelled']; ?></strong></div>
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Avg duration', 'ai-command-center' ); ?></span><strong><?php echo null !== $wpcc_status['avg_duration_ms'] ? esc_html( $wpcc_dur( $wpcc_status['avg_duration_ms'] ) ) : esc_html__( 'unknown', 'ai-command-center' ); ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Completed', 'action-steward' ); ?></span><strong style="color:#0a7a33;"><?php echo (int) $wpcc_status['completed']; ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Failed', 'action-steward' ); ?></span><strong style="color:#d63638;"><?php echo (int) $wpcc_status['failed']; ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Running', 'action-steward' ); ?></span><strong><?php echo (int) $wpcc_status['running']; ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Cancelled', 'action-steward' ); ?></span><strong><?php echo (int) $wpcc_status['cancelled']; ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Avg duration', 'action-steward' ); ?></span><strong><?php echo null !== $wpcc_status['avg_duration_ms'] ? esc_html( $wpcc_dur( $wpcc_status['avg_duration_ms'] ) ) : esc_html__( 'unknown', 'action-steward' ); ?></strong></div>
 				<?php
 				/*
 				 * Say what these numbers count.
@@ -229,28 +229,28 @@ $wpcc_op_label = static function ( string $name ): string {
 				 */
 				?>
 				<p class="muted" style="font-size:11px;margin:8px 0 0;">
-					<?php esc_html_e( 'Most of this is the background queue checking for work — it runs on every site, whether or not an assistant is connected. A failure means an operation stopped and was not retried. Whatever did change is listed under Changes, so that is the place to check what actually happened to your site.', 'ai-command-center' ); ?>
+					<?php esc_html_e( 'Most of this is the background queue checking for work — it runs on every site, whether or not an assistant is connected. A failure means an operation stopped and was not retried. Whatever did change is listed under Changes, so that is the place to check what actually happened to your site.', 'action-steward' ); ?>
 				</p>
 			</div>
 
 			<!-- 5. DATA HONESTY -->
-			<h2><?php esc_html_e( 'What’s measured', 'ai-command-center' ); ?></h2>
+			<h2><?php esc_html_e( 'What’s measured', 'action-steward' ); ?></h2>
 			<div class="wpcc-oc-card" style="font-size:13px;">
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Activity tracking', 'ai-command-center' ); ?></span><strong style="color:<?php echo $wpcc_honest['telemetry_active'] ? '#0a7a33' : '#646970'; ?>;"><?php echo $wpcc_honest['telemetry_active'] ? esc_html__( 'Active', 'ai-command-center' ) : esc_html__( 'No data yet', 'ai-command-center' ); ?></strong></div>
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Token usage', 'ai-command-center' ); ?></span><strong class="muted"><?php echo $wpcc_honest['tokens_tracked'] ? esc_html__( 'Partly tracked', 'ai-command-center' ) : esc_html__( 'Not tracked yet', 'ai-command-center' ); ?></strong></div>
-				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Cost', 'ai-command-center' ); ?></span><strong class="muted"><?php esc_html_e( 'Not tracked yet', 'ai-command-center' ); ?></strong></div>
-				<p class="muted" style="font-size:11px;margin:8px 0 0;"><?php esc_html_e( 'Usage and cost appear here only once AI usage reporting is available — nothing is estimated.', 'ai-command-center' ); ?></p>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Activity tracking', 'action-steward' ); ?></span><strong style="color:<?php echo $wpcc_honest['telemetry_active'] ? '#0a7a33' : '#646970'; ?>;"><?php echo $wpcc_honest['telemetry_active'] ? esc_html__( 'Active', 'action-steward' ) : esc_html__( 'No data yet', 'action-steward' ); ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Token usage', 'action-steward' ); ?></span><strong class="muted"><?php echo $wpcc_honest['tokens_tracked'] ? esc_html__( 'Partly tracked', 'action-steward' ) : esc_html__( 'Not tracked yet', 'action-steward' ); ?></strong></div>
+				<div class="wpcc-oc-row"><span style="flex:1;"><?php esc_html_e( 'Cost', 'action-steward' ); ?></span><strong class="muted"><?php esc_html_e( 'Not tracked yet', 'action-steward' ); ?></strong></div>
+				<p class="muted" style="font-size:11px;margin:8px 0 0;"><?php esc_html_e( 'Usage and cost appear here only once AI usage reporting is available — nothing is estimated.', 'action-steward' ); ?></p>
 			</div>
 		</div>
 	</div>
 
 	<!-- 3. REVIEW & UNDO -->
-	<h2><?php esc_html_e( 'Review & undo', 'ai-command-center' ); ?></h2>
+	<h2><?php esc_html_e( 'Review & undo', 'action-steward' ); ?></h2>
 	<?php if ( empty( $wpcc_rev ) ) : ?>
 		<div class="wpcc-oc-empty">
-			<strong><?php esc_html_e( 'No reversible changes recorded yet.', 'ai-command-center' ); ?></strong><br>
-			<span class="muted"><?php esc_html_e( 'Reversible changes (content, SEO, media metadata, settings, comments, users…) appear here with a Restore.', 'ai-command-center' ); ?></span>
-			<p style="margin:12px 0 0;"><a class="button button-small" href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'Open Changes', 'ai-command-center' ); ?></a></p>
+			<strong><?php esc_html_e( 'No reversible changes recorded yet.', 'action-steward' ); ?></strong><br>
+			<span class="muted"><?php esc_html_e( 'Reversible changes (content, SEO, media metadata, settings, comments, users…) appear here with a Restore.', 'action-steward' ); ?></span>
+			<p style="margin:12px 0 0;"><a class="button button-small" href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'Open Changes', 'action-steward' ); ?></a></p>
 		</div>
 	<?php else : ?>
 		<div class="wpcc-oc-card">
@@ -271,15 +271,15 @@ $wpcc_op_label = static function ( string $name ): string {
 							array_slice( (array) $s['runtimes'], 0, 3 )
 						);
 						?>
-						<strong style="font-weight:600;"><?php echo esc_html( implode( ', ', array_unique( $wpcc_oc_areas ) ) ?: __( 'change session', 'ai-command-center' ) ); ?></strong>
-						<span class="muted">· <?php printf( esc_html( /* translators: %d: number */ _n( '%d reversible change', '%d reversible changes', (int) $s['reversible_count'], 'ai-command-center' ) ), (int) $s['reversible_count'] ); ?></span>
+						<strong style="font-weight:600;"><?php echo esc_html( implode( ', ', array_unique( $wpcc_oc_areas ) ) ?: __( 'change session', 'action-steward' ) ); ?></strong>
+						<span class="muted">· <?php printf( esc_html( /* translators: %d: number */ _n( '%d reversible change', '%d reversible changes', (int) $s['reversible_count'], 'action-steward' ) ), (int) $s['reversible_count'] ); ?></span>
 						<span class="muted">· <?php echo esc_html( $s['actor_summary'] ); ?></span>
 					</span>
-					<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo (int) $s['last_at'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'ai-command-center' ), human_time_diff( (int) $s['last_at'], time() ) ) ) : ''; ?></span>
-					<a class="button button-small" href="<?php echo esc_url( add_query_arg( 'session_id', rawurlencode( (string) $s['session_id'] ), $wpcc_links['sessions'] ) ); ?>"><?php esc_html_e( 'Review & undo', 'ai-command-center' ); ?></a>
+					<span class="muted" style="white-space:nowrap;font-size:12px;"><?php echo (int) $s['last_at'] ? esc_html( sprintf( /* translators: %s: value */ __( '%s ago', 'action-steward' ), human_time_diff( (int) $s['last_at'], time() ) ) ) : ''; ?></span>
+					<a class="button button-small" href="<?php echo esc_url( add_query_arg( 'session_id', rawurlencode( (string) $s['session_id'] ), $wpcc_links['sessions'] ) ); ?>"><?php esc_html_e( 'Review & undo', 'action-steward' ); ?></a>
 				</div>
 			<?php endforeach; ?>
-			<p style="margin:10px 0 0;"><a class="button button-small" href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'All changes →', 'ai-command-center' ); ?></a></p>
+			<p style="margin:10px 0 0;"><a class="button button-small" href="<?php echo esc_url( $wpcc_links['changes'] ); ?>"><?php esc_html_e( 'All changes →', 'action-steward' ); ?></a></p>
 		</div>
 	<?php endif; ?>
 </div>

@@ -24,18 +24,18 @@ $wpcc_bai_notice = $wpcc_bai_handled ?? BuiltinAiSettings::handle_post();
 
 $wpcc_bai_status_text = static function ( string $status ): string {
 	switch ( $status ) {
-		case 'enabled':           return __( 'On', 'ai-command-center' );
-		case 'requires_provider': return __( 'On — connect a provider to generate', 'ai-command-center' );
-		case 'enabled_by_config': return __( 'On — turned on in your site’s code', 'ai-command-center' );
-		case 'disabled_by_config':return __( 'Off — turned off in your site’s code', 'ai-command-center' );
-		default:                  return __( 'Off', 'ai-command-center' );
+		case 'enabled':           return __( 'On', 'action-steward' );
+		case 'requires_provider': return __( 'On — connect a provider to generate', 'action-steward' );
+		case 'enabled_by_config': return __( 'On — turned on in your site’s code', 'action-steward' );
+		case 'disabled_by_config':return __( 'Off — turned off in your site’s code', 'action-steward' );
+		default:                  return __( 'Off', 'action-steward' );
 	}
 };
 ?>
 <section class="wpcc-cds-card" style="max-width:760px;margin:0 0 22px;" aria-labelledby="wpcc-bai-tools-h">
-	<h2 id="wpcc-bai-tools-h" style="margin:0 0 4px;font-size:15px;"><?php esc_html_e( 'Built-in AI tools', 'ai-command-center' ); ?></h2>
+	<h2 id="wpcc-bai-tools-h" style="margin:0 0 4px;font-size:15px;"><?php esc_html_e( 'Built-in AI tools', 'action-steward' ); ?></h2>
 	<p class="description" style="margin:0;">
-		<?php esc_html_e( 'Turn on the AI tools you want to use — each appears as a tab here once it’s on. Generation runs on the provider you select as the default (Anthropic or an OpenAI-compatible provider).', 'ai-command-center' ); ?>
+		<?php esc_html_e( 'Turn on the AI tools you want to use — each appears as a tab here once it’s on. Generation runs on the provider you select as the default (Anthropic or an OpenAI-compatible provider).', 'action-steward' ); ?>
 	</p>
 
 	<?php
@@ -94,7 +94,7 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 					 * switch is not the thing that controls it. Say that instead.
 					 */
 					?>
-					<span class="description" style="white-space:nowrap;" title="<?php esc_attr_e( 'A constant or filter in your site’s code controls this tool, so it cannot be changed from here.', 'ai-command-center' ); ?>"><span class="dashicons dashicons-lock" aria-hidden="true"></span> <?php esc_html_e( 'Set in code', 'ai-command-center' ); ?></span>
+					<span class="description" style="white-space:nowrap;" title="<?php esc_attr_e( 'A constant or filter in your site’s code controls this tool, so it cannot be changed from here.', 'action-steward' ); ?>"><span class="dashicons dashicons-lock" aria-hidden="true"></span> <?php esc_html_e( 'Set in code', 'action-steward' ); ?></span>
 				<?php else : ?>
 					<?php
 					/*
@@ -111,7 +111,7 @@ $wpcc_bai_status_text = static function ( string $status ): string {
 						<input type="hidden" name="wpcc_builtin_ai_tool" value="<?php echo esc_attr( $wpcc_tool_key ); ?>">
 						<input type="hidden" name="wpcc_builtin_ai_state" value="<?php echo $wpcc_is_on ? '0' : '1'; ?>">
 						<button type="submit" class="button <?php echo $wpcc_is_on ? '' : 'button-primary'; ?>"<?php echo $wpcc_bai_changed ? ' autofocus' : ''; ?>>
-							<?php echo $wpcc_is_on ? esc_html__( 'Turn off', 'ai-command-center' ) : esc_html__( 'Turn on', 'ai-command-center' ); ?>
+							<?php echo $wpcc_is_on ? esc_html__( 'Turn off', 'action-steward' ) : esc_html__( 'Turn on', 'action-steward' ); ?>
 						</button>
 					</form>
 				<?php endif; ?>

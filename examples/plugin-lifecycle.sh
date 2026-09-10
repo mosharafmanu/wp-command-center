@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# WP Command Center — Plugin Lifecycle & Snapshot/Rollback Example
+# Action Steward — Plugin Lifecycle & Snapshot/Rollback Example
 # ──────────────────────────────────────────────────────────────────────────────
 # Demonstrates:
 #   1. List plugins via plugin_manage operation
@@ -27,7 +27,7 @@ else
   exit 1
 fi
 
-echo "=== WP Command Center — Plugin Lifecycle & Rollback ==="
+echo "=== Action Steward — Plugin Lifecycle & Rollback ==="
 echo ""
 
 # ── Helper ──

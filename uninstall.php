@@ -1,10 +1,10 @@
 <?php
 /**
- * Fired when WP Command Center is deleted from the Plugins screen.
+ * Fired when Action Steward is deleted from the Plugins screen.
  *
  * POLICY — retain by default, purge only on explicit request.
  *
- * WP Command Center's tables hold an audit trail: who changed what on this site,
+ * Action Steward's tables hold an audit trail: who changed what on this site,
  * when, and what the change can be rolled back to. That is exactly the kind of
  * record a site owner may still need after uninstalling, and deleting a plugin
  * is not consent to erase it. So the default is to KEEP the data and remove only

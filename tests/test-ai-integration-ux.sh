@@ -35,7 +35,7 @@ assert_contains "config: site_url dynamic" "$(echo "$CONFIG" | jq -r '.mcpServer
 
 echo "== 3. Claude discovery metadata =="
 DISC=$(api "$WPCC_BASE/claude/discovery")
-assert_eq "discovery: server name" "WP Command Center MCP" "$(echo "$DISC" | jq -r '.server.name')"
+assert_eq "discovery: server name" "Action Steward MCP" "$(echo "$DISC" | jq -r '.server.name')"
 assert_true "discovery: tools array" "$(echo "$DISC" | jq -r 'if (.tools | type) == "array" then "true" else "false" end')"
 assert_true "discovery: tool groups array" "$(echo "$DISC" | jq -r 'if (.tool_groups | type) == "array" then "true" else "false" end')"
 assert_true "discovery: resources array" "$(echo "$DISC" | jq -r 'if (.resources | type) == "array" then "true" else "false" end')"
@@ -74,7 +74,7 @@ assert_true "prompts: plugin_maintenance exists" "$(echo "$PROMPTS" | jq -r 'any
 echo "== 8. MCP interop intact =="
 MCP_INIT=$(curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}' "$WPCC_BASE/mcp")
-assert_contains "mcp: initialize works" "$MCP_INIT" "WP Command Center"
+assert_contains "mcp: initialize works" "$MCP_INIT" "Action Steward"
 MCP_TOOLS=$(curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":2}' "$WPCC_BASE/mcp")
 assert_true "mcp: tools available" "$(echo "$MCP_TOOLS" | jq -r 'if .result.tools then "true" else "false" end')"

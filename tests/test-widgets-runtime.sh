@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Widgets & Sidebars Runtime test suite for WP Command Center (Step 73).
+# Widgets & Sidebars Runtime test suite for Action Steward (Step 73).
 #
 # Verifies:
 #   - registry discovery (manifest / context)

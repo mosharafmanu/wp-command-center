@@ -92,7 +92,7 @@ final class VSCodeIntegration extends BaseClientIntegration {
 				[
 					'type'        => 'promptString',
 					'id'          => $input_id,
-					'description' => sprintf( 'WP Command Center token for %s', $site_name ),
+					'description' => sprintf( 'Action Steward token for %s', $site_name ),
 					'password'    => true,
 				],
 			],
@@ -113,9 +113,9 @@ final class VSCodeIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'VS Code asks for your access token the first time it uses this connection and stores it in its own secure storage — it is not saved in the file. That means this file is safe to commit to a repository, and each person who uses it supplies their own token.', 'ai-command-center' ),
-			__( 'If VS Code opens an OAuth or client-ID screen, cancel it. WP Command Center does not use OAuth here. It means the saved WPCC token was missing or invalid: choose Edit Stored Input beside the token reference, paste a current token from this site, and restart wp-command-center.', 'ai-command-center' ),
-			__( 'The key must be “servers”. Every other assistant uses “mcpServers”, and VS Code simply ignores a file with the wrong key instead of reporting an error — so a config that looks right can do nothing at all.', 'ai-command-center' ),
+			__( 'VS Code asks for your access token the first time it uses this connection and stores it in its own secure storage — it is not saved in the file. That means this file is safe to commit to a repository, and each person who uses it supplies their own token.', 'action-steward' ),
+			__( 'If VS Code opens an OAuth or client-ID screen, cancel it. Action Steward does not use OAuth here. It means the saved Action Steward token was missing or invalid: choose Edit Stored Input beside the token reference, paste a current token from this site, and restart wp-command-center.', 'action-steward' ),
+			__( 'The key must be “servers”. Every other assistant uses “mcpServers”, and VS Code simply ignores a file with the wrong key instead of reporting an error — so a config that looks right can do nothing at all.', 'action-steward' ),
 		];
 	}
 }

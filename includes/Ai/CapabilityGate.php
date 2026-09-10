@@ -92,7 +92,7 @@ final class CapabilityGate {
 					'missing' => $capability,
 					'message' => sprintf(
 						/* translators: 1: provider id, 2: capability key */
-						__( 'The connected provider “%1$s” does not support “%2$s”, which this feature requires.', 'ai-command-center' ),
+						__( 'The connected provider “%1$s” does not support “%2$s”, which this feature requires.', 'action-steward' ),
 						$provider,
 						$capability
 					),

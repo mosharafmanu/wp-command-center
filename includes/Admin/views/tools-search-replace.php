@@ -53,7 +53,7 @@ $wpcc_classify_table = function ( string $suffix ): string {
 		return 'users';
 	}
 	// Auth / session / secret surfaces, including third-party ones this install
-	// may have that WP Command Center knows nothing about.
+	// may have that Action Steward knows nothing about.
 	if ( preg_match( '/(session|token|oauth|auth|login|password|secret|api_key|apikey|nonce|credential|2fa|totp)/i', $suffix ) ) {
 		return 'security';
 	}
@@ -140,9 +140,9 @@ if ( isset( $_POST['wpcc_sr_action'] ) && check_admin_referer( 'wpcc_sr_action' 
 	$sr_posted_tables = $tables;
 
 	if ( '' === $search || empty( $tables ) ) {
-		$sr_error = __( 'Search string and at least one table are required.', 'ai-command-center' );
+		$sr_error = __( 'Search string and at least one table are required.', 'action-steward' );
 	} elseif ( ! $dry_run && ! $confirmed ) {
-		$sr_error = __( 'Please confirm the Search & Replace request in the confirmation dialog before it is created, or enable Dry Run.', 'ai-command-center' );
+		$sr_error = __( 'Please confirm the Search & Replace request in the confirmation dialog before it is created, or enable Dry Run.', 'action-steward' );
 	} else {
 		$payload = [
 			'search'         => $search,
@@ -166,7 +166,7 @@ if ( isset( $_POST['wpcc_sr_action'] ) && check_admin_referer( 'wpcc_sr_action' 
 					} else {
 						$res = $sr_result['result']['result'] ?? [];
 						if ( ! empty( $sr_result['result']['errors'] ) ) {
-							$sr_error = $sr_result['result']['errors'][0]['message'] ?? __( 'Dry run failed.', 'ai-command-center' );
+							$sr_error = $sr_result['result']['errors'][0]['message'] ?? __( 'Dry run failed.', 'action-steward' );
 						} else {
 							$sr_preview = [
 								'search'          => $search,
@@ -185,7 +185,7 @@ if ( isset( $_POST['wpcc_sr_action'] ) && check_admin_referer( 'wpcc_sr_action' 
 			} else {
 				$sr_success_msg = sprintf(
 					/* translators: %s: operation request ID */
-					__( 'Live Search & Replace request "%s" created and is pending review. Approve and run it from Approvals, or wait for the background worker.', 'ai-command-center' ),
+					__( 'Live Search & Replace request "%s" created and is pending review. Approve and run it from Approvals, or wait for the background worker.', 'action-steward' ),
 					$req['request_id']
 				);
 			}
@@ -285,9 +285,9 @@ $sr_preview_js = $sr_preview ? [
 </style>
 
 <div class="wpcc-tools-wrap">
-	<h1><?php esc_html_e( 'Tools', 'ai-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Tools', 'action-steward' ); ?></h1>
 	<p class="description" style="max-width:680px;">
-		<?php esc_html_e( 'Governed maintenance tools. Each runs through the same engine as everything else: changes are previewed, approved when your protection mode requires it, and audited. A database search and replace rewrites rows in place and cannot be undone.', 'ai-command-center' ); ?>
+		<?php esc_html_e( 'Governed maintenance tools. Each runs through the same engine as everything else: changes are previewed, approved when your protection mode requires it, and audited. A database search and replace rewrites rows in place and cannot be undone.', 'action-steward' ); ?>
 	</p>
 	<?php
 	/*
@@ -311,31 +311,31 @@ $sr_preview_js = $sr_preview ? [
 	<?php endif; ?>
 
 	<div class="wpcc-tools-panel">
-		<h2 class="wpcc-tools-panel-header"><?php esc_html_e( 'Safe Search & Replace', 'ai-command-center' ); ?></h2>
+		<h2 class="wpcc-tools-panel-header"><?php esc_html_e( 'Safe Search & Replace', 'action-steward' ); ?></h2>
 		<div class="wpcc-tools-panel-body">
-			<p class="description" style="margin-top:0;"><?php esc_html_e( 'Find and replace text across database tables (for example after a domain change). Preview safely with Dry Run; a live run creates a governed request you approve under Approvals.', 'ai-command-center' ); ?></p>
+			<p class="description" style="margin-top:0;"><?php esc_html_e( 'Find and replace text across database tables (for example after a domain change). Preview safely with Dry Run; a live run creates a governed request you approve under Approvals.', 'action-steward' ); ?></p>
 			<div class="wpcc-sr-grid">
 				<div class="wpcc-sr-form">
 					<form method="post" id="wpcc-sr-form">
 						<?php wp_nonce_field( 'wpcc_sr_action' ); ?>
 						<input type="hidden" name="confirmed" id="wpcc-sr-confirmed" value="0">
 						<p>
-							<label for="wpcc-sr-search"><strong><?php esc_html_e( 'Search For:', 'ai-command-center' ); ?></strong></label>
+							<label for="wpcc-sr-search"><strong><?php esc_html_e( 'Search For:', 'action-steward' ); ?></strong></label>
 							<input type="text" name="search" id="wpcc-sr-search" placeholder="e.g. old-domain.com" value="<?php echo esc_attr( wp_unslash( (string) ( $_POST['search'] ?? '' ) ) ); ?>" required>
 						</p>
 						<p>
-							<label for="wpcc-sr-replace"><strong><?php esc_html_e( 'Replace With:', 'ai-command-center' ); ?></strong></label>
+							<label for="wpcc-sr-replace"><strong><?php esc_html_e( 'Replace With:', 'action-steward' ); ?></strong></label>
 							<input type="text" name="replace" id="wpcc-sr-replace" placeholder="e.g. new-domain.com" value="<?php echo esc_attr( wp_unslash( (string) ( $_POST['replace'] ?? '' ) ) ); ?>">
 						</p>
 						<p>
-							<label for="wpcc-sr-preset"><strong><?php esc_html_e( 'Table Preset:', 'ai-command-center' ); ?></strong></label>
+							<label for="wpcc-sr-preset"><strong><?php esc_html_e( 'Table Preset:', 'action-steward' ); ?></strong></label>
 							<select id="wpcc-sr-preset">
-								<option value=""><?php esc_html_e( '— Select a preset —', 'ai-command-center' ); ?></option>
-								<option value="content"><?php esc_html_e( 'Content Tables', 'ai-command-center' ); ?></option>
-								<option value="content_meta"><?php esc_html_e( 'Content + Meta', 'ai-command-center' ); ?></option>
-								<option value="options"><?php esc_html_e( 'Options', 'ai-command-center' ); ?></option>
-								<option value="all"><?php esc_html_e( 'All WordPress Content', 'ai-command-center' ); ?></option>
-								<option value="custom"><?php esc_html_e( 'Custom Selection', 'ai-command-center' ); ?></option>
+								<option value=""><?php esc_html_e( '— Select a preset —', 'action-steward' ); ?></option>
+								<option value="content"><?php esc_html_e( 'Content Tables', 'action-steward' ); ?></option>
+								<option value="content_meta"><?php esc_html_e( 'Content + Meta', 'action-steward' ); ?></option>
+								<option value="options"><?php esc_html_e( 'Options', 'action-steward' ); ?></option>
+								<option value="all"><?php esc_html_e( 'All WordPress Content', 'action-steward' ); ?></option>
+								<option value="custom"><?php esc_html_e( 'Custom Selection', 'action-steward' ); ?></option>
 							</select>
 						</p>
 						<?php
@@ -358,14 +358,14 @@ $sr_preview_js = $sr_preview ? [
 						 */
 						?>
 						<p>
-							<span><strong><?php esc_html_e( 'Target Tables:', 'ai-command-center' ); ?></strong></span>
+							<span><strong><?php esc_html_e( 'Target Tables:', 'action-steward' ); ?></strong></span>
 							<span id="wpcc-sr-selected-summary" class="wpcc-sr-summary" role="status"></span>
 						</p>
 
 						<details class="wpcc-sr-advanced" id="wpcc-sr-advanced">
-							<summary><?php esc_html_e( 'Choose specific tables', 'ai-command-center' ); ?></summary>
+							<summary><?php esc_html_e( 'Choose specific tables', 'action-steward' ); ?></summary>
 							<p class="description" style="margin:8px 0;">
-								<?php esc_html_e( 'Most jobs are covered by a preset above. Pick individual tables only if you know why you need them.', 'ai-command-center' ); ?>
+								<?php esc_html_e( 'Most jobs are covered by a preset above. Pick individual tables only if you know why you need them.', 'action-steward' ); ?>
 							</p>
 							<div class="wpcc-sr-tables">
 								<?php foreach ( $wp_tables as $table ) :
@@ -393,9 +393,9 @@ $sr_preview_js = $sr_preview ? [
 							?>
 							<?php if ( ! empty( $wpcc_sensitive_tables ) ) : ?>
 								<details class="wpcc-sr-sensitive" id="wpcc-sr-sensitive">
-									<summary><?php esc_html_e( 'Show sensitive tables (accounts, sessions, security, plugin internals)', 'ai-command-center' ); ?></summary>
+									<summary><?php esc_html_e( 'Show sensitive tables (accounts, sessions, security, plugin internals)', 'action-steward' ); ?></summary>
 									<p class="wpcc-sr-sensitive__warn" role="note">
-										<?php esc_html_e( 'These tables hold account records, sign-in sessions, access tokens and WP Command Center’s own approval and audit history. A text replace here can lock people out of the site or damage the record of what happened on it. Selecting any of them makes this a critical-risk run.', 'ai-command-center' ); ?>
+										<?php esc_html_e( 'These tables hold account records, sign-in sessions, access tokens and Action Steward’s own approval and audit history. A text replace here can lock people out of the site or damage the record of what happened on it. Selecting any of them makes this a critical-risk run.', 'action-steward' ); ?>
 									</p>
 									<div class="wpcc-sr-tables">
 										<?php foreach ( $wpcc_sensitive_tables as $table ) :
@@ -411,42 +411,42 @@ $sr_preview_js = $sr_preview ? [
 							<?php endif; ?>
 						</details>
 						<p>
-							<label><input type="checkbox" name="dry_run" id="wpcc-sr-dry-run" value="1" <?php checked( $wpcc_dry_run_checked ); ?>> <?php esc_html_e( 'Dry Run (Preview changes only)', 'ai-command-center' ); ?></label>
+							<label><input type="checkbox" name="dry_run" id="wpcc-sr-dry-run" value="1" <?php checked( $wpcc_dry_run_checked ); ?>> <?php esc_html_e( 'Dry Run (Preview changes only)', 'action-steward' ); ?></label>
 						</p>
 						<p>
-							<?php esc_html_e( 'Computed Risk Level:', 'ai-command-center' ); ?>
+							<?php esc_html_e( 'Computed Risk Level:', 'action-steward' ); ?>
 							<span id="wpcc-sr-risk-badge" class="wpcc-risk-badge wpcc-risk-low">LOW</span>
 						</p>
 						<p class="wpcc-sr-gate" id="wpcc-sr-gate-note" role="note" hidden>
-							<?php esc_html_e( 'Run a Dry Preview first. At this risk level the preview is what tells you how many rows a live run would rewrite — tick Dry Run, run it, then come back.', 'ai-command-center' ); ?>
+							<?php esc_html_e( 'Run a Dry Preview first. At this risk level the preview is what tells you how many rows a live run would rewrite — tick Dry Run, run it, then come back.', 'action-steward' ); ?>
 						</p>
 						<p>
-							<button type="submit" name="wpcc_sr_action" value="run" id="wpcc-sr-submit-btn" class="button button-primary"><?php esc_html_e( 'Run Dry Preview', 'ai-command-center' ); ?></button>
+							<button type="submit" name="wpcc_sr_action" value="run" id="wpcc-sr-submit-btn" class="button button-primary"><?php esc_html_e( 'Run Dry Preview', 'action-steward' ); ?></button>
 						</p>
 						<noscript>
-							<p style="color: #d63638;"><?php esc_html_e( 'JavaScript is required to create a live Search & Replace request (a confirmation dialog is shown first). Dry Run previews work without JavaScript.', 'ai-command-center' ); ?></p>
+							<p style="color: #d63638;"><?php esc_html_e( 'JavaScript is required to create a live Search & Replace request (a confirmation dialog is shown first). Dry Run previews work without JavaScript.', 'action-steward' ); ?></p>
 						</noscript>
 					</form>
 				</div>
 				<div>
 					<?php if ( $sr_preview ) : ?>
 						<div class="wpcc-tools-panel" style="margin-top: 10px; border-color: #2271b1;">
-							<h3 class="wpcc-tools-panel-header" style="font-size: 14px; padding: 10px 15px;"><?php esc_html_e( 'Dry Run Preview', 'ai-command-center' ); ?></h3>
+							<h3 class="wpcc-tools-panel-header" style="font-size: 14px; padding: 10px 15px;"><?php esc_html_e( 'Dry Run Preview', 'action-steward' ); ?></h3>
 							<div class="wpcc-tools-panel-body" style="padding: 15px;">
 								<table class="wpcc-sr-preview-table">
-									<tr><td><?php esc_html_e( 'Matches Found:', 'ai-command-center' ); ?></td><td><?php echo esc_html( (string) $sr_preview['matches_found'] ); ?></td></tr>
-									<tr><td><?php esc_html_e( 'Affected Rows:', 'ai-command-center' ); ?></td><td><?php echo esc_html( (string) $sr_preview['rows_affected'] ); ?></td></tr>
-									<tr><td><?php esc_html_e( 'Affected Tables:', 'ai-command-center' ); ?></td><td>
-										<?php echo $sr_preview['tables_affected'] ? esc_html( implode( ', ', $sr_preview['tables_affected'] ) ) : esc_html__( 'None — no matches in the selected tables.', 'ai-command-center' ); ?>
+									<tr><td><?php esc_html_e( 'Matches Found:', 'action-steward' ); ?></td><td><?php echo esc_html( (string) $sr_preview['matches_found'] ); ?></td></tr>
+									<tr><td><?php esc_html_e( 'Affected Rows:', 'action-steward' ); ?></td><td><?php echo esc_html( (string) $sr_preview['rows_affected'] ); ?></td></tr>
+									<tr><td><?php esc_html_e( 'Affected Tables:', 'action-steward' ); ?></td><td>
+										<?php echo $sr_preview['tables_affected'] ? esc_html( implode( ', ', $sr_preview['tables_affected'] ) ) : esc_html__( 'None — no matches in the selected tables.', 'action-steward' ); ?>
 									</td></tr>
-									<tr><td><?php esc_html_e( 'Risk Level:', 'ai-command-center' ); ?></td><td><span class="wpcc-risk-badge wpcc-risk-<?php echo esc_attr( $sr_preview['risk_level'] ); ?>"><?php echo esc_html( strtoupper( $sr_preview['risk_level'] ) ); ?></span></td></tr>
+									<tr><td><?php esc_html_e( 'Risk Level:', 'action-steward' ); ?></td><td><span class="wpcc-risk-badge wpcc-risk-<?php echo esc_attr( $sr_preview['risk_level'] ); ?>"><?php echo esc_html( strtoupper( $sr_preview['risk_level'] ) ); ?></span></td></tr>
 								</table>
 								<p><small><em><?php echo esc_html( $sr_preview['warning'] ); ?></em></small></p>
 							</div>
 						</div>
 					<?php else : ?>
 						<div style="background: #f6f7f7; border: 1px solid #dcdcde; border-radius: 8px; padding: 20px; text-align: center; color: #646970;">
-							<?php esc_html_e( 'Enter search parameters, choose tables, and click "Run Dry Preview" to see matches found, affected rows, affected tables, and the computed risk level.', 'ai-command-center' ); ?>
+							<?php esc_html_e( 'Enter search parameters, choose tables, and click "Run Dry Preview" to see matches found, affected rows, affected tables, and the computed risk level.', 'action-steward' ); ?>
 						</div>
 					<?php endif; ?>
 				</div>
@@ -457,18 +457,18 @@ $sr_preview_js = $sr_preview ? [
 	<!-- Confirmation dialog for live (non-dry-run) requests. -->
 	<div class="wpcc-modal-overlay" id="wpcc-sr-confirm-overlay">
 		<div class="wpcc-modal">
-			<h3><?php esc_html_e( 'Confirm Search & Replace Request', 'ai-command-center' ); ?></h3>
+			<h3><?php esc_html_e( 'Confirm Search & Replace Request', 'action-steward' ); ?></h3>
 			<table>
-				<tr><th><?php esc_html_e( 'Search For', 'ai-command-center' ); ?></th><td id="wpcc-confirm-search"></td></tr>
-				<tr><th><?php esc_html_e( 'Replace With', 'ai-command-center' ); ?></th><td id="wpcc-confirm-replace"></td></tr>
-				<tr><th><?php esc_html_e( 'Affected Tables', 'ai-command-center' ); ?></th><td id="wpcc-confirm-tables"></td></tr>
-				<tr><th><?php esc_html_e( 'Affected Rows', 'ai-command-center' ); ?></th><td id="wpcc-confirm-rows"></td></tr>
-				<tr><th><?php esc_html_e( 'Risk Level', 'ai-command-center' ); ?></th><td><span id="wpcc-confirm-risk" class="wpcc-risk-badge"></span></td></tr>
+				<tr><th><?php esc_html_e( 'Search For', 'action-steward' ); ?></th><td id="wpcc-confirm-search"></td></tr>
+				<tr><th><?php esc_html_e( 'Replace With', 'action-steward' ); ?></th><td id="wpcc-confirm-replace"></td></tr>
+				<tr><th><?php esc_html_e( 'Affected Tables', 'action-steward' ); ?></th><td id="wpcc-confirm-tables"></td></tr>
+				<tr><th><?php esc_html_e( 'Affected Rows', 'action-steward' ); ?></th><td id="wpcc-confirm-rows"></td></tr>
+				<tr><th><?php esc_html_e( 'Risk Level', 'action-steward' ); ?></th><td><span id="wpcc-confirm-risk" class="wpcc-risk-badge"></span></td></tr>
 			</table>
-			<p><?php esc_html_e( 'This creates a pending operation request only — no data changes until it is approved and executed from Approvals, or by the background worker.', 'ai-command-center' ); ?></p>
+			<p><?php esc_html_e( 'This creates a pending operation request only — no data changes until it is approved and executed from Approvals, or by the background worker.', 'action-steward' ); ?></p>
 			<div class="wpcc-modal-actions">
-				<button type="button" class="button" id="wpcc-sr-confirm-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
-				<button type="submit" class="button button-primary" name="wpcc_sr_action" value="run" form="wpcc-sr-form" id="wpcc-sr-confirm-submit"><?php esc_html_e( 'Confirm & Create Request', 'ai-command-center' ); ?></button>
+				<button type="button" class="button" id="wpcc-sr-confirm-cancel"><?php esc_html_e( 'Cancel', 'action-steward' ); ?></button>
+				<button type="submit" class="button button-primary" name="wpcc_sr_action" value="run" form="wpcc-sr-form" id="wpcc-sr-confirm-submit"><?php esc_html_e( 'Confirm & Create Request', 'action-steward' ); ?></button>
 			</div>
 		</div>
 	</div>
@@ -477,14 +477,14 @@ $sr_preview_js = $sr_preview ? [
 	( function () {
 		var PRESETS      = <?php echo wp_json_encode( $wpcc_presets ); ?>;
 		var LAST_PREVIEW = <?php echo wp_json_encode( $sr_preview_js ); ?>;
-		var LABEL_DRY_RUN   = <?php echo wp_json_encode( __( 'Run Dry Preview', 'ai-command-center' ) ); ?>;
-		var LABEL_LIVE_RUN  = <?php echo wp_json_encode( __( 'Create Replace Request', 'ai-command-center' ) ); ?>;
-		var LABEL_NONE      = <?php echo wp_json_encode( __( 'None selected', 'ai-command-center' ) ); ?>;
+		var LABEL_DRY_RUN   = <?php echo wp_json_encode( __( 'Run Dry Preview', 'action-steward' ) ); ?>;
+		var LABEL_LIVE_RUN  = <?php echo wp_json_encode( __( 'Create Replace Request', 'action-steward' ) ); ?>;
+		var LABEL_NONE      = <?php echo wp_json_encode( __( 'None selected', 'action-steward' ) ); ?>;
 		/* translators: %1$d: number of database tables selected. */
-		var LABEL_SELECTED  = <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d table(s) selected', 'ai-command-center' ) ); ?>;
-		var LABEL_NONE_SELECTED = <?php echo wp_json_encode( __( 'No tables selected yet — pick a preset above.', 'ai-command-center' ) ); ?>;
-		var LABEL_FROM_PREVIEW = <?php echo wp_json_encode( ' ' . __( '(from last Dry Preview)', 'ai-command-center' ) ); ?>;
-		var LABEL_UNKNOWN_ROWS = <?php echo wp_json_encode( __( 'Unknown — run "Run Dry Preview" first for an exact count.', 'ai-command-center' ) ); ?>;
+		var LABEL_SELECTED  = <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d table(s) selected', 'action-steward' ) ); ?>;
+		var LABEL_NONE_SELECTED = <?php echo wp_json_encode( __( 'No tables selected yet — pick a preset above.', 'action-steward' ) ); ?>;
+		var LABEL_FROM_PREVIEW = <?php echo wp_json_encode( ' ' . __( '(from last Dry Preview)', 'action-steward' ) ); ?>;
+		var LABEL_UNKNOWN_ROWS = <?php echo wp_json_encode( __( 'Unknown — run "Run Dry Preview" first for an exact count.', 'action-steward' ) ); ?>;
 
 		var form         = document.getElementById( 'wpcc-sr-form' );
 		var dryRunCb     = document.getElementById( 'wpcc-sr-dry-run' );

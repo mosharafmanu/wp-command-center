@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Plugin Management Runtime test suite for WP Command Center (Step 39).
+# Plugin Management Runtime test suite for Action Steward (Step 39).
 #
 # Verifies:
 #   - plugin discovery (manifest / context)

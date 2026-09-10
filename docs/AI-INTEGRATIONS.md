@@ -48,9 +48,9 @@ exact verdict in `validation_notes`.
 | Codex CLI 0.153.4 | **CERT_PASS** | Actual owner retest passed with the approval-aware launch: native registration, 42 tools, 7 resources and `system_info`. No governance bypass. |
 | Claude Code | **CERT_GOLD** | Actual client completed the formal 12-step lifecycle. |
 | Claude Desktop | **CERT_PASS** | Actual desktop client loaded 42 tools and completed `system_info`; no Gold/full-lifecycle claim. |
-| Gemini CLI 0.46.0 | **BLOCKED — EXTERNAL ACCOUNT/PROVIDER** | Setup contract verified; Google rejects this individual Gemini Code Assist client/account and directs the owner to Antigravity. This is external to WPCC. |
+| Gemini CLI 0.46.0 | **BLOCKED — EXTERNAL ACCOUNT/PROVIDER** | Setup contract verified; Google rejects this individual Gemini Code Assist client/account and directs the owner to Antigravity. This is external to Action Steward. |
 | Antigravity CLI (`agy`) 1.1.27 | **CERT_PASS** | Actual client: auth/init, 42 tools, 7 resources, two benign reads, Read-only write denial and reconnect. |
-| Cursor | **CERT_PASS** | Retained actual client: auth/init, 42 tools, 7 resources, `system_info` and reload/reconnect. The latest attempt loaded MCP but model High Load/account availability prevented completion; that is external, not a WPCC defect. Never Gold. |
+| Cursor | **CERT_PASS** | Retained actual client: auth/init, 42 tools, 7 resources, `system_info` and reload/reconnect. The latest attempt loaded MCP but model High Load/account availability prevented completion; that is external, not a Action Steward defect. Never Gold. |
 | Continue for VS Code | **CERT_PASS** | Actual extension client executed `system_info` and discovered 42 tools; no Gold/full-lifecycle claim. |
 | OpenCode | **CERT_PASS** | Actual native remote-HTTP client executed `system_info`; exact client-side counts were not retained. |
 | Command Code 1.51.0 | **CERT_PASS** | Owner manual test: the actual client connected and completed read-only `system_info`; no governed write/full lifecycle was run. |
@@ -63,7 +63,7 @@ Spark eligibility and Google Account linking, asks for registration credentials 
 is unavailable, and documents no arbitrary static Authorization-header input. A hosted
 Gemini surface also cannot reach this development site’s localhost URL. Supporting it
 would require public HTTPS plus an approved OAuth/account-linking product contract, so it
-is not compatible with WPCC’s current local access-token onboarding. Gemini CLI remains
+is not compatible with Action Steward’s current local access-token onboarding. Gemini CLI remains
 the supported independent Google client; ordinary Gemini chats are not represented by
 that card. Muse Code remains the standalone experimental host; Muse Spark is its
 model/API, not another client card.
@@ -86,7 +86,7 @@ Connector clients (Claude Desktop, Continue):
   "mcpServers": {
     "wp-command-center": {
       "command": "bash",
-      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/ai-command-center/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.1'; node \"$RELAY\""],
+      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/action-steward/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.2'; node \"$RELAY\""],
       "env": {
         "WPCC_MCP_URL": "https://example.com/wp-json/wp-command-center/v1/mcp",
         "WPCC_SITE_URL": "https://example.com",
@@ -115,15 +115,15 @@ silently ignored rather than rejected:
   "inputs": [{
     "type": "promptString",
     "id": "wpcc-token-EXAMPLE",
-    "description": "WP Command Center token for Example Site",
+    "description": "Action Steward token for Example Site",
     "password": true
   }]
 }
 ```
 
-VS Code prompts for that value and stores it securely. WPCC does not use OAuth for this
+VS Code prompts for that value and stores it securely. Action Steward does not use OAuth for this
 connection. If VS Code shows an OAuth/client-registration screen, cancel it and update
-the stored WPCC input with a current token.
+the stored Action Steward input with a current token.
 
 Direct HTTP, Codex CLI and Codex in ChatGPT Desktop — TOML, and the key is `mcp_servers` with an
 underscore:
@@ -200,10 +200,10 @@ connector client, a missing Node.js is the usual cause; see
 
 ## AI provider keys are separate
 
-The key an assistant uses to talk to *you* is not the key WPCC uses for its own AI
+The key an assistant uses to talk to *you* is not the key Action Steward uses for its own AI
 features (alt text, SEO drafts, draft content). Those are configured separately under
 **Settings → Advanced → Built-in AI**, and **stay off until a key is added and the
-individual tool is switched on**. WPCC makes no outbound AI call without one.
+individual tool is switched on**. Action Steward makes no outbound AI call without one.
 
 ## Antigravity CLI (`agy`) — native setup
 
@@ -219,17 +219,17 @@ The guided macOS/Linux preparation uses `umask 077` and protects an existing fil
 with `chmod 600`. Keep the command out of shell history (`unset HISTFILE` in a
 fresh setup terminal) and never commit/share the configuration or save the token
 in shell profiles. On Windows, restrict the file to your user account. Revoke the
-token in WPCC when it is no longer required.
+token in Action Steward when it is no longer required.
 
 JSON remains the **manual/advanced** fallback: add only `wp-command-center` inside
 existing `mcpServers`, with `serverUrl` and `headers.Authorization`; never replace
-an existing file wholesale. The placeholder is replaced by WPCC's browser UI,
+an existing file wholesale. The placeholder is replaced by Action Steward's browser UI,
 not by an assumed `agy` credential environment abstraction.
 
 Exit a running `agy`, start a fresh process, and check `/mcp` for the connected
-WPCC server and 42 tools. Ask for `system_info` and
+Action Steward server and 42 tools. Ask for `system_info` and
 `report_manage` / `report_site_health`. `agy mcp list` proves registration only;
-WPCC's browser endpoint test proves server/token behavior, not native connectivity.
+Action Steward's browser endpoint test proves server/token behavior, not native connectivity.
 Gemini CLI remains a separate `gemini` client with its own native command and file.
 
 Read-only tokens allow the audited information/list/get/diagnostic actions in

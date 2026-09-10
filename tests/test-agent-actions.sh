@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Agent Actions Runtime Layer test suite for WP Command Center (Step 12).
+# Agent Actions Runtime Layer test suite for Action Steward (Step 12).
 #
 # Verifies the new Action layer inserted between Task and Plan:
 #

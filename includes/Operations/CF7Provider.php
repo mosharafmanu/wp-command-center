@@ -163,7 +163,7 @@ final class CF7Provider implements FormsProvider {
 	public function test_notification( string $form_id ): ?array {
 		$mail = get_post_meta( (int) $form_id, '_mail', true );
 		if ( empty( $mail['recipient'] ) ) return [ 'sent' => false, 'error' => 'No recipient configured' ];
-		$sent = wp_mail( $mail['recipient'], 'WPCC Notification Test — ' . get_the_title( (int) $form_id ), 'This is a test notification from WP Command Center.' );
+		$sent = wp_mail( $mail['recipient'], 'Action Steward Notification Test — ' . get_the_title( (int) $form_id ), 'This is a test notification from Action Steward.' );
 		return [ 'sent' => $sent, 'recipient' => $mail['recipient'] ];
 	}
 

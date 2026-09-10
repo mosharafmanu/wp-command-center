@@ -1,5 +1,5 @@
 /**
- * WP Command Center — Governed Action Panel (generalized Quick Panel).
+ * Action Steward — Governed Action Panel (generalized Quick Panel).
  *
  * The proven SEO Quick Panel, generalized into ONE config-driven, in-context
  * governed-action surface reusable by every AI content workflow (SEO, Title,
@@ -579,7 +579,7 @@
 		generate( id );
 	}
 
-	// ── Row dropdown chooser (compact menu off the ✨ WPCC AI row action) ─────────
+	// ── Row dropdown chooser (compact menu off the ✨ Action Steward AI row action) ─────────
 	// A small WAI-ARIA menu anchored to the row action — NOT the big modal. Picking an
 	// item then opens the existing Governed Action Panel for that action. Keyboard:
 	// Up/Down/Home/End move, Enter/Space select, Esc closes (returns focus to trigger),
@@ -721,7 +721,7 @@
 			return; // let the href fallback run
 		}
 
-		// Consolidated "✨ WPCC AI" entry.
+		// Consolidated "✨ Action Steward AI" entry.
 		if ( key === 'assist' ) {
 			// Already open (hover/focus opened it on mousedown) → keep it open; the menu
 			// closes on Esc / outside click / pointer-leave / selecting an action.

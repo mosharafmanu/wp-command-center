@@ -9,13 +9,16 @@
 # default.
 #
 # Usage:  ./scripts/build-release.sh [output-dir]
-# Output: <output-dir>/ai-command-center-<version>.zip  (default: ./build)
+# Output: <output-dir>/action-steward-<version>.zip  (default: ./build)
 
 set -euo pipefail
 
 ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 OUT_DIR="${1:-$ROOT/build}"
-SLUG="ai-command-center"
+if [[ "$OUT_DIR" != /* ]]; then
+  OUT_DIR="$ROOT/$OUT_DIR"
+fi
+SLUG="action-steward"
 
 # Single source of truth for the version: the plugin header.
 VERSION="$( grep -m1 '^ \* Version:' "$ROOT/$SLUG.php" | sed -E 's/.*Version:[[:space:]]*//' | tr -d '[:space:]' )"

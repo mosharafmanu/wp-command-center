@@ -1,4 +1,4 @@
-# Assistant Certification Sprint — WP Command Center 1.0.0
+# Assistant Certification Sprint — Action Steward 1.0.0
 
 **Prepared:** 2026-08-04 · **Method:** human-in-the-loop · **Standard:** not lowered.
 
@@ -17,22 +17,22 @@ Claude records the results and assigns the final status.
 | Client/surface | Final status | Basis / limitation |
 |---|---|---|
 | Codex in ChatGPT Desktop | **CERT_PASS** | Actual Codex surface in the ChatGPT desktop app discovered 42 tools and completed `system_info`. Normal ChatGPT chats do not use the local connection; not Gold. |
-| Codex CLI 0.153.4 | **CERT_PASS** | Actual owner retest passed using the approval-aware launch: native registration, 42 tools, 7 resources and `system_info`, without changing WPCC governance. |
+| Codex CLI 0.153.4 | **CERT_PASS** | Actual owner retest passed using the approval-aware launch: native registration, 42 tools, 7 resources and `system_info`, without changing Action Steward governance. |
 | Claude Code | **CERT_GOLD** | Actual client completed the formal 12-step lifecycle. |
 | Claude Desktop | **CERT_PASS** | Actual desktop client loaded 42 tools and completed `system_info`; no Gold/full-lifecycle claim. |
-| Gemini CLI 0.46.0 | **BLOCKED — EXTERNAL ACCOUNT/PROVIDER** | Setup structurally verified; Google rejects this individual Gemini Code Assist client/account and directs the owner to Antigravity. External to WPCC. |
+| Gemini CLI 0.46.0 | **BLOCKED — EXTERNAL ACCOUNT/PROVIDER** | Setup structurally verified; Google rejects this individual Gemini Code Assist client/account and directs the owner to Antigravity. External to Action Steward. |
 | Antigravity CLI (`agy`) 1.1.27 | **CERT_PASS** | Actual client: auth/init, 42 tools, 7 resources, benign reads, Read-only write denial and reconnect. |
-| Cursor | **CERT_PASS** | Retained actual client: auth/init, 42 tools, 7 resources, `system_info` and reload/reconnect. A later High Load/model-account limitation is external to WPCC. Not Gold. |
+| Cursor | **CERT_PASS** | Retained actual client: auth/init, 42 tools, 7 resources, `system_info` and reload/reconnect. A later High Load/model-account limitation is external to Action Steward. Not Gold. |
 | Continue for VS Code | **CERT_PASS** | Actual extension client executed `system_info` and discovered 42 tools; no Gold/full-lifecycle claim. |
 | OpenCode | **CERT_PASS** | Actual native remote-HTTP client executed `system_info`; exact client-side discovery counts were not retained. |
 | Command Code 1.51.0 | **CERT_PASS** | Owner manual test: actual Command Code connected and completed read-only `system_info`; no governed write/full lifecycle was run. |
-| GitHub Copilot in VS Code | **CERT_PASS** | Fresh VS Code 1.136.2 / built-in Copilot 0.64.1 trace reproduced missing/invalid input → WPCC JSON 401 → automatic OAuth/DCR. The same supported config with the correct fresh token exposed 42 tools/6 prompts, completed `system_info` exactly once without OAuth/DCR, and reconnected. No governed write was attempted. |
+| GitHub Copilot in VS Code | **CERT_PASS** | Fresh VS Code 1.136.2 / built-in Copilot 0.64.1 trace reproduced missing/invalid input → Action Steward JSON 401 → automatic OAuth/DCR. The same supported config with the correct fresh token exposed 42 tools/6 prompts, completed `system_info` exactly once without OAuth/DCR, and reconnected. No governed write was attempted. |
 | Muse Code 1.0.3 | **CERT_PASS** | Owner manual test after Meta authentication and plan activation: actual `muse` completed read-only `system_info` and returned credible site/environment data. Experimental positioning remains; not Gold. |
 
 [Gemini Spark custom Connected Apps](https://support.google.com/gemini/answer/17209137)
 are a real hosted MCP surface, but they are excluded from v1: the current Google flow is
 eligibility/account-linking gated, provides no documented arbitrary static Bearer-header
-contract, and cannot reach a localhost WPCC endpoint. Adding it would require approved
+contract, and cannot reach a localhost Action Steward endpoint. Adding it would require approved
 public-HTTPS/OAuth product infrastructure, outside this closeout. Gemini CLI remains a
 distinct supported host with its existing external account limitation.
 
@@ -52,7 +52,7 @@ path every stdio assistant uses — and separately over **direct HTTP**.
 
 | Check | Result | Evidence |
 |---|---|---|
-| `initialize` handshake | **PASS** | protocol `2024-11-05`, serverInfo `WP Command Center 1.0.0`, caps `tools`/`resources`/`prompts` |
+| `initialize` handshake | **PASS** | protocol `2024-11-05`, serverInfo `Action Steward 1.0.0`, caps `tools`/`resources`/`prompts` |
 | Tool discovery | **PASS** | `tools/list` → **42 tools** |
 | Resource discovery | **PASS** | `resources/list` → **7 resources** |
 | JSON-RPC notification handling | **PASS** | `notifications/initialized` drew **no** response (4 messages in, 3 replies out) |
@@ -105,7 +105,7 @@ Claude Code, Cursor. **Transport B should be the recommended path for those clie
 
 | Assistant | Adoption signal | MCP | Notes |
 |---|---|---|---|
-| **GitHub Copilot** | **29% workplace adoption — #1** | Yes | Absent from WPCC's list entirely |
+| **GitHub Copilot** | **29% workplace adoption — #1** | Yes | Absent from Action Steward's list entirely |
 | **Cursor** | 18% workplace; ~$2B ARR Feb 2026 | Yes | In list |
 | **Claude Code** | 18% workplace; **46% most-loved** (JetBrains Apr 2026) | Native | Not listed separately from Claude Desktop |
 | **Claude Desktop** | Reference MCP client | Native | In list |
@@ -118,7 +118,7 @@ Claude Code, Cursor. **Transport B should be the recommended path for those clie
 | **Qoder** (ex-Tongyi Lingma) | **5M+ users**, fastest-growing agentic tool | Verify | Absent — largest China gap |
 | **Tencent CodeBuddy** | Hunyuan + DeepSeek, 200+ languages | Verify | Absent |
 | **Trae** (ByteDance) | Growing | Verify | Absent |
-| **Roo Code** | **ARCHIVED 15 May 2026** | n/a | **Still shipping in WPCC** |
+| **Roo Code** | **ARCHIVED 15 May 2026** | n/a | **Still shipping in Action Steward** |
 | **Aider** | Declining; MCP support **disputed** | Disputed | One source: configs claiming MCP are fabricated |
 
 Context: 84% of developers use AI coding tools; **70% run 2–4 tools simultaneously**, so
@@ -138,7 +138,7 @@ Every `config_generator` was hashed. Result: **1 unique config hash across 11 cl
 
 ### 4.2 The single config is wrong for most of them
 
-| Assistant | WPCC currently emits | Reality |
+| Assistant | Action Steward currently emits | Reality |
 |---|---|---|
 | Codex CLI | JSON `mcpServers` at `~/Library/Application Support/Codex/codex_config.json` | **TOML** `[mcp_servers.x]` at `~/.codex/config.toml` — wrong format *and* path |
 | ChatGPT | JSON at `~/Library/Application Support/ChatGPT/mcp.json` | Desktop **shares Codex's config**; that path does not exist |
@@ -225,7 +225,7 @@ Real adoption, config prepared, but lower confidence or unverified vendor specif
 ## 6. Corrected configurations
 
 Replace `YOUR-SITE`, and paste your token where shown. Create the token at
-**WP Command Center → Settings → Connections → Access tokens**.
+**Action Steward → Settings → Connections → Access tokens**.
 
 ### 6.1 Claude Desktop — transport A
 `~/Library/Application Support/Claude/claude_desktop_config.json`
@@ -400,7 +400,7 @@ Claude-verified only. **Nothing is Certified until section 7 is executed.**
 
 ---
 
-## 9. WPCC changes
+## 9. Action Steward changes
 
 ### Implemented in this sprint
 

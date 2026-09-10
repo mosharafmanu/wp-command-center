@@ -149,9 +149,9 @@ final class AiActionRegistry {
 		$is_title = ( 'title' === $kind );
 		return [
 			'id'           => $kind,
-			'label'        => $is_title ? __( 'Generate Title', 'ai-command-center' ) : __( 'Generate Excerpt', 'ai-command-center' ),
-			'subject'      => $is_title ? __( 'title', 'ai-command-center' ) : __( 'excerpt', 'ai-command-center' ),
-			'panel_title'  => $is_title ? __( 'Generate Title Suggestion', 'ai-command-center' ) : __( 'Generate Excerpt Suggestion', 'ai-command-center' ),
+			'label'        => $is_title ? __( 'Generate Title', 'action-steward' ) : __( 'Generate Excerpt', 'action-steward' ),
+			'subject'      => $is_title ? __( 'title', 'action-steward' ) : __( 'excerpt', 'action-steward' ),
+			'panel_title'  => $is_title ? __( 'Generate Title Suggestion', 'action-steward' ) : __( 'Generate Excerpt Suggestion', 'action-steward' ),
 			// Distinct icons so the two content actions read differently at a glance:
 			// Title = edit/pencil, Excerpt = lines-of-text.
 			'icon'         => $is_title ? 'dashicons-edit' : 'dashicons-text',
@@ -164,8 +164,8 @@ final class AiActionRegistry {
 			'suggest'      => null,
 			'fields'       => [
 				$is_title
-					? [ 'key' => 'title', 'label' => __( 'Title', 'ai-command-center' ), 'type' => 'text', 'prior' => 'title' ]
-					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'ai-command-center' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
+					? [ 'key' => 'title', 'label' => __( 'Title', 'action-steward' ), 'type' => 'text', 'prior' => 'title' ]
+					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'action-steward' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
 			],
 			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
 			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
@@ -177,9 +177,9 @@ final class AiActionRegistry {
 	private function seo_def(): array {
 		return [
 			'id'           => 'seo',
-			'label'        => __( 'Generate SEO Meta', 'ai-command-center' ),
-			'subject'      => __( 'SEO title and description', 'ai-command-center' ),
-			'panel_title'  => __( 'Generate SEO Suggestion', 'ai-command-center' ),
+			'label'        => __( 'Generate SEO Meta', 'action-steward' ),
+			'subject'      => __( 'SEO title and description', 'action-steward' ),
+			'panel_title'  => __( 'Generate SEO Suggestion', 'action-steward' ),
 			'icon'         => 'dashicons-search',
 			'object_types' => self::CONTENT_TYPES,
 			'build_flag'   => 'WPCC_SEO_META_UI',
@@ -189,8 +189,8 @@ final class AiActionRegistry {
 			'apply'        => [ 'action' => 'seo_update', 'idKey' => 'content_id', 'nest' => 'seo' ],
 			'suggest'      => 'seo',
 			'fields'       => [
-				[ 'key' => 'title', 'label' => __( 'SEO title', 'ai-command-center' ), 'type' => 'text', 'prior' => 'title' ],
-				[ 'key' => 'description', 'label' => __( 'Meta description', 'ai-command-center' ), 'type' => 'textarea', 'prior' => 'description' ],
+				[ 'key' => 'title', 'label' => __( 'SEO title', 'action-steward' ), 'type' => 'text', 'prior' => 'title' ],
+				[ 'key' => 'description', 'label' => __( 'Meta description', 'action-steward' ), 'type' => 'textarea', 'prior' => 'description' ],
 			],
 			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
 			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
@@ -202,9 +202,9 @@ final class AiActionRegistry {
 	private function alt_def(): array {
 		return [
 			'id'           => 'alt_text',
-			'label'        => __( 'Generate Alt Text', 'ai-command-center' ),
-			'subject'      => __( 'description of this image', 'ai-command-center' ),
-			'panel_title'  => __( 'Generate Alt Text', 'ai-command-center' ),
+			'label'        => __( 'Generate Alt Text', 'action-steward' ),
+			'subject'      => __( 'description of this image', 'action-steward' ),
+			'panel_title'  => __( 'Generate Alt Text', 'action-steward' ),
 			'icon'         => 'dashicons-format-image',
 			'object_types' => self::MEDIA_TYPES,
 			'build_flag'   => 'WPCC_ALT_TEXT_UI',
@@ -214,7 +214,7 @@ final class AiActionRegistry {
 			'apply'        => [ 'action' => 'media_update', 'idKey' => 'media_id' ],
 			'suggest'      => null,
 			'fields'       => [
-				[ 'key' => 'alt', 'label' => __( 'Alt text', 'ai-command-center' ), 'type' => 'textarea', 'prior' => 'alt' ],
+				[ 'key' => 'alt', 'label' => __( 'Alt text', 'action-steward' ), 'type' => 'textarea', 'prior' => 'alt' ],
 			],
 			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),
 			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),

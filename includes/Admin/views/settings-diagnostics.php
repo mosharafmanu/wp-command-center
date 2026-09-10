@@ -15,15 +15,15 @@ defined( 'ABSPATH' ) || exit;
 use WPCommandCenter\Admin\DeveloperTools;
 
 $wpcc_diag_panes = [
-	'health'          => [ 'label' => __( 'Health', 'ai-command-center' ),         'view' => 'diagnostics' ],
-	'recommendations' => [ 'label' => __( 'Recommendations', 'ai-command-center' ), 'view' => 'recommendations' ],
-	'sitereport'      => [ 'label' => __( 'Site Report', 'ai-command-center' ),     'view' => 'site-intelligence' ],
+	'health'          => [ 'label' => __( 'Health', 'action-steward' ),         'view' => 'diagnostics' ],
+	'recommendations' => [ 'label' => __( 'Recommendations', 'action-steward' ), 'view' => 'recommendations' ],
+	'sitereport'      => [ 'label' => __( 'Site Report', 'action-steward' ),     'view' => 'site-intelligence' ],
 ];
 
 // Patches edit site FILES. The operation stays available over REST/MCP under the
 // same approval policy; only this screen is hidden unless developer tools are on.
 if ( DeveloperTools::enabled() ) {
-	$wpcc_diag_panes['patches'] = [ 'label' => __( 'Patches', 'ai-command-center' ), 'view' => 'patches' ];
+	$wpcc_diag_panes['patches'] = [ 'label' => __( 'Patches', 'action-steward' ), 'view' => 'patches' ];
 }
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pane selection, no state change.
@@ -32,7 +32,7 @@ if ( ! isset( $wpcc_diag_panes[ $wpcc_diag_active ] ) ) {
 	$wpcc_diag_active = 'health';
 }
 ?>
-<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Diagnostics sections', 'ai-command-center' ); ?>">
+<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Diagnostics sections', 'action-steward' ); ?>">
 	<?php foreach ( $wpcc_diag_panes as $key => $pane ) : ?>
 		<a class="wpcc-cds-subnav__item<?php echo $key === $wpcc_diag_active ? ' is-active' : ''; ?>"
 			href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=diagnostics&dpane=' . $key ) ); ?>"

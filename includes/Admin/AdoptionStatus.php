@@ -23,7 +23,7 @@ defined( 'ABSPATH' ) || exit;
 final class AdoptionStatus {
 
 	/**
-	 * Whether WPCC's outbound AI is configured (a key is present from any source).
+	 * Whether Action Steward's outbound AI is configured (a key is present from any source).
 	 * Delegates to the single transport; no network call.
 	 */
 	public static function ai_configured(): bool {
@@ -114,37 +114,37 @@ final class AdoptionStatus {
 		return [
 			[
 				'key'   => 'security_mode',
-				'label' => __( 'Choose a safety mode', 'ai-command-center' ),
+				'label' => __( 'Choose a safety mode', 'action-steward' ),
 				'done'  => ! $self_approve, // "done" for a client site = NOT self-approving.
 				'hint'  => $self_approve
-					? __( 'Currently Developer mode: AI writes apply with no approval. Switch to Client mode before working on a client site.', 'ai-command-center' )
-					: __( 'A human-approval mode is active. Writes wait for your review.', 'ai-command-center' ),
+					? __( 'Currently Developer mode: AI writes apply with no approval. Switch to Client mode before working on a client site.', 'action-steward' )
+					: __( 'A human-approval mode is active. Writes wait for your review.', 'action-steward' ),
 				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=security' ),
 			],
 			[
 				'key'   => 'ai_key',
-				'label' => __( 'Add an AI provider key (optional)', 'ai-command-center' ),
+				'label' => __( 'Add an AI provider key (optional)', 'action-steward' ),
 				'done'  => $ai_configured,
 				'hint'  => $ai_configured
-					? __( 'An Anthropic key is configured. AI features can be used once their surface is enabled.', 'ai-command-center' )
-					: __( 'No key yet. AI stays off until you add one — WPCC works without it.', 'ai-command-center' ),
+					? __( 'An Anthropic key is configured. AI features can be used once their surface is enabled.', 'action-steward' )
+					: __( 'No key yet. AI stays off until you add one — Action Steward works without it.', 'action-steward' ),
 				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' ),
 			],
 			[
 				'key'   => 'token',
-				'label' => __( 'Create an access token for your AI agent', 'ai-command-center' ),
+				'label' => __( 'Create an access token for your AI agent', 'action-steward' ),
 				'done'  => $tokens > 0,
 				'hint'  => $tokens > 0
 					/* translators: %d: number of active tokens */
-					? sprintf( _n( '%d active token.', '%d active tokens.', $tokens, 'ai-command-center' ), $tokens )
-					: __( 'No tokens yet. Create one to let Claude or another agent connect over MCP/REST.', 'ai-command-center' ),
+					? sprintf( _n( '%d active token.', '%d active tokens.', $tokens, 'action-steward' ), $tokens )
+					: __( 'No tokens yet. Create one to let Claude or another agent connect over MCP/REST.', 'action-steward' ),
 				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=tokens' ),
 			],
 			[
 				'key'   => 'review',
-				'label' => __( 'Know where to review & undo changes', 'ai-command-center' ),
+				'label' => __( 'Know where to review & undo changes', 'action-steward' ),
 				'done'  => false, // informational; never auto-checks.
-				'hint'  => __( 'Requests waiting on you live under Approvals. Every change and its undo live under Changes.', 'ai-command-center' ),
+				'hint'  => __( 'Requests waiting on you live under Approvals. Every change and its undo live under Changes.', 'action-steward' ),
 				'url'   => admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' ),
 			],
 		];

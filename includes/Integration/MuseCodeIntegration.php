@@ -103,8 +103,8 @@ final class MuseCodeIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Keep the "schema_version": 1 line. Muse Code refuses to start with a settings file that is missing it, and the error mentions a malformed settings file rather than anything about this site.', 'ai-command-center' ),
-			__( 'Meta notes that MCP tools run outside Muse Code’s own filesystem and network sandbox. That does not weaken this site’s protection — approvals, scope limits and the change log still apply to everything this token can do — but it does mean Muse Code’s sandbox is not what is protecting your site. Your token’s scope and your approval settings are.', 'ai-command-center' ),
+			__( 'Keep the "schema_version": 1 line. Muse Code refuses to start with a settings file that is missing it, and the error mentions a malformed settings file rather than anything about this site.', 'action-steward' ),
+			__( 'Meta notes that MCP tools run outside Muse Code’s own filesystem and network sandbox. That does not weaken this site’s protection — approvals, scope limits and the change log still apply to everything this token can do — but it does mean Muse Code’s sandbox is not what is protecting your site. Your token’s scope and your approval settings are.', 'action-steward' ),
 		];
 	}
 }

@@ -73,7 +73,7 @@ final class Brand {
 	}
 
 	/**
-	 * The horizontal lockup for hero use — mark + "WP Command Center" — light surfaces.
+	 * The horizontal lockup for hero use — mark + "Action Steward" — light surfaces.
 	 *
 	 * Symbol and wordmark only. The lockup used to carry the tagline "AI-POWERED
 	 * WORDPRESS OPERATIONS PLATFORM" set at 10.5px inside a 456x72 viewBox; because
@@ -115,7 +115,7 @@ final class Brand {
 	 * verbatim copy of it — `tests/test-branding-assets.sh` asserts the two never drift.
 	 */
 	public static function menu_icon(): string {
-		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-label="WP Command Center">'
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-label="Action Steward">'
 			. '<path fill="#a7aaad" d="M3 2h6v3H5v4H2V3a1 1 0 0 1 1-1Zm8 0h6a1 1 0 0 1 1 1v6h-3V5h-4V2ZM2 11h3v4h4v3H3a1 1 0 0 1-1-1v-6Zm13 0h3v6a1 1 0 0 1-1 1h-6v-3h4v-4Z"/>'
 			. '<path fill="#a7aaad" fill-rule="evenodd" d="m10 6 4 4-4 4-4-4 4-4Zm0 2.5L8.5 10l1.5 1.5 1.5-1.5-1.5-1.5Z"/>'
 			. '</svg>';
@@ -161,7 +161,7 @@ final class Brand {
 	 * Returned as markup rather than two stacked <img>s toggled by CSS so assistive
 	 * technology encounters exactly one image with one accessible name, whichever scheme
 	 * is active. `$alt` is intentionally allowed to be empty: a mark sitting beside the
-	 * product name it depicts is decorative, and announcing "WP Command Center" twice is
+	 * product name it depicts is decorative, and announcing "Action Steward" twice is
 	 * worse than announcing it once.
 	 *
 	 * @param string $light Light-surface asset URL.

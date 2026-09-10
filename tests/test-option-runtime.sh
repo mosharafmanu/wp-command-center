@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Option Management Runtime test suite for WP Command Center (Step 38).
+# Option Management Runtime test suite for Action Steward (Step 38).
 #
 # Verifies:
 #   - registry discovery (manifest / context)

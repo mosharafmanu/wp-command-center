@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# WP Command Center — MCP Discovery Example
+# Action Steward — MCP Discovery Example
 # ──────────────────────────────────────────────────────────────────────────────
 # Demonstrates the MCP JSON-RPC protocol: initialize, resources/list,
 # tools/list, and resources/read (manifest).
@@ -24,7 +24,7 @@ else
   exit 1
 fi
 
-echo "=== WP Command Center — MCP Discovery ==="
+echo "=== Action Steward — MCP Discovery ==="
 echo ""
 
 # ── Helper: send an MCP JSON-RPC request ──

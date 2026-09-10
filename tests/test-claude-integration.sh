@@ -43,7 +43,7 @@ assert_contains "config: WPCC_TOKEN env" "$(echo "$CONFIG" | jq -r '.mcpServers[
 echo "== 2. Claude Discovery Metadata =="
 DISC=$(api "$WPCC_BASE/claude/discovery")
 assert_true "discovery: has server" "$(echo "$DISC" | jq -r 'if .server then "true" else "false" end')"
-assert_eq "discovery: server name" "WP Command Center MCP" "$(echo "$DISC" | jq -r '.server.name')"
+assert_eq "discovery: server name" "Action Steward MCP" "$(echo "$DISC" | jq -r '.server.name')"
 assert_contains "discovery: server version non-empty" "$(echo "$DISC" | jq -r '.server.version')" "."
 assert_eq "discovery: protocol" "JSON-RPC 2.0" "$(echo "$DISC" | jq -r '.server.protocol')"
 assert_contains "discovery: mcp_version" "$(echo "$DISC" | jq -r '.server.mcp_version')" "2024-11-05"

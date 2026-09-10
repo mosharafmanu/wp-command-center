@@ -49,7 +49,7 @@ final class CPTRuntimeManager {
 			CPTRegistry::ACTION_TAXONOMY_CREATE => $this->taxonomy_create( $params, $context ),
 			CPTRegistry::ACTION_TAXONOMY_UPDATE => $this->taxonomy_update( $params, $context ),
 			'cpt_rollback'                      => $this->cpt_rollback( $params, $context ),
-			default                             => new \WP_Error( 'wpcc_invalid_cpt_action', __( 'Unknown CPT action.', 'ai-command-center' ) ),
+			default                             => new \WP_Error( 'wpcc_invalid_cpt_action', __( 'Unknown CPT action.', 'action-steward' ) ),
 		};
 	}
 
@@ -64,12 +64,12 @@ final class CPTRuntimeManager {
 	private function cpt_get( array $params ): array|\WP_Error {
 		$name = sanitize_text_field( $params['name'] ?? '' );
 		if ( '' === $name ) {
-			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'action-steward' ) );
 		}
 
 		$pt = $this->registry->get_post_type( $name );
 		if ( null === $pt ) {
-			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found.', 'action-steward' ) );
 		}
 
 		$this->audit( 'cpt.get', [ 'name' => $name ] );
@@ -85,18 +85,18 @@ final class CPTRuntimeManager {
 		$config = $params['config'] ?? [];
 
 		if ( '' === $name ) {
-			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'action-steward' ) );
 		}
 		if ( '' === $label ) {
-			return new \WP_Error( 'wpcc_missing_cpt_label', __( 'CPT label is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_cpt_label', __( 'CPT label is required.', 'action-steward' ) );
 		}
 
 		if ( ! preg_match( '/^[a-z][a-z0-9_]*$/', $name ) ) {
-			return new \WP_Error( 'wpcc_invalid_cpt_name', __( 'CPT name must be lowercase alphanumeric with underscores only.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_cpt_name', __( 'CPT name must be lowercase alphanumeric with underscores only.', 'action-steward' ) );
 		}
 
 		if ( post_type_exists( $name ) ) {
-			return new \WP_Error( 'wpcc_cpt_exists', __( 'Post type already exists.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cpt_exists', __( 'Post type already exists.', 'action-steward' ) );
 		}
 
 		$default_config = [
@@ -145,12 +145,12 @@ final class CPTRuntimeManager {
 		$config = $params['config'] ?? [];
 
 		if ( '' === $name ) {
-			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'action-steward' ) );
 		}
 
 		$configs = get_option( 'wpcc_cpt_configs', [] );
 		if ( ! isset( $configs[ $name ] ) ) {
-			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in WPCC configs.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in Action Steward configuration.', 'action-steward' ) );
 		}
 
 		$old_config = $configs[ $name ]['config'];
@@ -176,12 +176,12 @@ final class CPTRuntimeManager {
 		$name = sanitize_text_field( $params['name'] ?? '' );
 
 		if ( '' === $name ) {
-			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_cpt_name', __( 'CPT name is required.', 'action-steward' ) );
 		}
 
 		$configs = get_option( 'wpcc_cpt_configs', [] );
 		if ( ! isset( $configs[ $name ] ) ) {
-			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in WPCC configs.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in Action Steward configuration.', 'action-steward' ) );
 		}
 
 		$old_config = $configs[ $name ];
@@ -219,18 +219,18 @@ final class CPTRuntimeManager {
 		$config     = $params['config'] ?? [];
 
 		if ( '' === $name ) {
-			return new \WP_Error( 'wpcc_missing_taxonomy_name', __( 'Taxonomy name is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_taxonomy_name', __( 'Taxonomy name is required.', 'action-steward' ) );
 		}
 		if ( '' === $label ) {
-			return new \WP_Error( 'wpcc_missing_taxonomy_label', __( 'Taxonomy label is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_taxonomy_label', __( 'Taxonomy label is required.', 'action-steward' ) );
 		}
 
 		if ( ! preg_match( '/^[a-z][a-z0-9_]*$/', $name ) ) {
-			return new \WP_Error( 'wpcc_invalid_taxonomy_name', __( 'Taxonomy name must be lowercase alphanumeric with underscores only.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_taxonomy_name', __( 'Taxonomy name must be lowercase alphanumeric with underscores only.', 'action-steward' ) );
 		}
 
 		if ( taxonomy_exists( $name ) ) {
-			return new \WP_Error( 'wpcc_taxonomy_exists', __( 'Taxonomy already exists.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_taxonomy_exists', __( 'Taxonomy already exists.', 'action-steward' ) );
 		}
 
 		$default_config = [
@@ -266,7 +266,7 @@ final class CPTRuntimeManager {
 		$config = $params['config'] ?? [];
 
 		if ( '' === $name ) {
-			return new \WP_Error( 'wpcc_missing_taxonomy_name', __( 'Taxonomy name is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_taxonomy_name', __( 'Taxonomy name is required.', 'action-steward' ) );
 		}
 
 		$tax = taxonomy_exists( $name ) ? get_taxonomy( $name ) : null;
@@ -302,17 +302,17 @@ final class CPTRuntimeManager {
 	private function cpt_rollback( array $params, array $context ): array|\WP_Error {
 		$rollback_id = sanitize_text_field( $params['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'action-steward' ) );
 		}
 
 		$records = get_option( 'wpcc_cpt_rollbacks', [] );
 		if ( ! isset( $records[ $rollback_id ] ) ) {
-			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'action-steward' ) );
 		}
 
 		$record = $records[ $rollback_id ];
 		if ( ! empty( $record['rollback_applied'] ) ) {
-			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'action-steward' ) );
 		}
 
 		$action = $record['action'];
@@ -364,7 +364,7 @@ final class CPTRuntimeManager {
 				break;
 
 			default:
-				return new \WP_Error( 'wpcc_rollback_unsupported', __( 'Rollback not supported for this action.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_rollback_unsupported', __( 'Rollback not supported for this action.', 'action-steward' ) );
 		}
 
 		$records[ $rollback_id ]['rollback_applied'] = true;

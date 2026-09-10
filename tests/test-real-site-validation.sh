@@ -39,7 +39,7 @@ echo "== 2. Recommendations, Action & Plan =="
 SCAN=$(api POST /recommendations/scan '{}')
 ok "recommendation scan completed" "$(echo "$SCAN" | jq -r 'has("recommendations") and has("created") and has("updated")')"
 SESSION=$(api POST /agent/sessions '{"source":"api","label":"Step 36 real-site validation"}'); SID=$(echo "$SESSION" | jq -r '.session_id // empty')
-TASK=$(api POST /agent/tasks "$(jq -nc --arg sid "$SID" '{session_id:$sid,source:"api",user_prompt:"Validate the WP Command Center V1 beta workflow"}')"); TID=$(echo "$TASK" | jq -r '.task_id // empty')
+TASK=$(api POST /agent/tasks "$(jq -nc --arg sid "$SID" '{session_id:$sid,source:"api",user_prompt:"Validate the Action Steward V1 beta workflow"}')"); TID=$(echo "$TASK" | jq -r '.task_id // empty')
 ACTION=$(api POST /agent/actions "$(jq -nc --arg sid "$SID" --arg tid "$TID" '{session_id:$sid,task_id:$tid,type:"maintenance",title:"Run reversible beta validation",description:"Execute a reviewed draft-content operation and verify all runtime layers."}')"); AID=$(echo "$ACTION" | jq -r '.action_id // empty')
 ok "session created" "$([ -n "$SID" ] && echo true || echo false)"; ok "task created" "$([ -n "$TID" ] && echo true || echo false)"; eq "action proposed" proposed "$(echo "$ACTION" | jq -r '.status')"
 api POST "/agent/actions/$AID/accept" '{}' >/dev/null

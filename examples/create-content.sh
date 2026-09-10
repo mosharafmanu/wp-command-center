@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# WP Command Center — Create Content Workflow Example
+# Action Steward — Create Content Workflow Example
 # ──────────────────────────────────────────────────────────────────────────────
 # Demonstrates the operation request → approve → execute → check results
 # lifecycle using the REST API.
@@ -27,7 +27,7 @@ else
   exit 1
 fi
 
-echo "=== WP Command Center — Create Content Workflow ==="
+echo "=== Action Steward — Create Content Workflow ==="
 echo ""
 
 # ── Helper ──

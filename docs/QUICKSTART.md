@@ -6,7 +6,7 @@ Assumes WordPress 6.4+ and PHP 8.0+ on a single site (not multisite).
 
 ## 1. Install and activate
 
-Upload `ai-command-center-1.0.1.zip` through **Plugins → Add New → Upload Plugin**, then
+Upload `action-steward-1.0.2.zip` through **Plugins → Add New → Upload Plugin**, then
 activate it.
 
 On activation the plugin creates its tables and sets protection to **Standard
@@ -15,7 +15,7 @@ to configure anything to be protected.
 
 ## 2. Create a token
 
-**WP Command Center → Settings → Connections → Tokens → Add token.**
+**Action Steward → Settings → Connections → Tokens → Add token.**
 
 Choose a scope:
 
@@ -39,7 +39,7 @@ configuration. It looks like this:
   "mcpServers": {
     "wp-command-center": {
       "command": "bash",
-      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/ai-command-center/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.1'; node \"$RELAY\""],
+      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/action-steward/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.2'; node \"$RELAY\""],
       "env": {
         "WPCC_MCP_URL": "https://example.com/wp-json/wp-command-center/v1/mcp",
         "WPCC_SITE_URL": "https://example.com",
@@ -76,7 +76,7 @@ It should call `system_info` and answer immediately — reads are never gated.
 > "Create a draft post titled 'Hello from my assistant'."
 
 In Standard protection the assistant will report that the change is **waiting for
-approval** and give you a link. Open **WP Command Center → Approvals**, review exactly
+approval** and give you a link. Open **Action Steward → Approvals**, review exactly
 what will change, and approve it.
 
 The queue worker runs on WP-Cron every five minutes; approving from the admin executes
@@ -84,7 +84,7 @@ the change immediately.
 
 ## 6. Undo it
 
-Open **WP Command Center → Changes**, find the entry, and choose **Undo**. An undo is
+Open **Action Steward → Changes**, find the entry, and choose **Undo**. An undo is
 itself a governed change and follows the same approval rules.
 
 ---

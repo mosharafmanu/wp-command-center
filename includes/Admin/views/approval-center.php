@@ -32,7 +32,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 }
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'Approvals', 'ai-command-center' ); ?>
+	<h1><?php esc_html_e( 'Approvals', 'action-steward' ); ?>
 		<span id="wpcc-pending-badge" style="display:none;margin-left:8px;background:var(--wpcc-red-600);color:var(--wpcc-white);font-size:12px;border-radius:10px;padding:2px 8px;vertical-align:middle;"></span>
 	</h1>
 
@@ -45,7 +45,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	<?php if ( $human_only ) : ?>
 		<p class="description">
 			<span class="dashicons dashicons-lock" style="color:var(--wpcc-gray-600);" aria-hidden="true"></span>
-			<?php esc_html_e( 'Only you can approve these. An AI assistant cannot approve its own request.', 'ai-command-center' ); ?>
+			<?php esc_html_e( 'Only you can approve these. An AI assistant cannot approve its own request.', 'action-steward' ); ?>
 		</p>
 	<?php endif; ?>
 
@@ -72,11 +72,11 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 			<?php
 			printf(
 				/* translators: %d: number of suggested fixes awaiting approval */
-				esc_html( _n( '%d suggested fix is awaiting your review.', '%d suggested fixes are awaiting your review.', $wpcc_pending_plan_cnt, 'ai-command-center' ) ),
+				esc_html( _n( '%d suggested fix is awaiting your review.', '%d suggested fixes are awaiting your review.', $wpcc_pending_plan_cnt, 'action-steward' ) ),
 				(int) $wpcc_pending_plan_cnt
 			);
 			?>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=diagnostics&dpane=recommendations' ) ); ?>"><?php esc_html_e( 'Review in Recommendations →', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=diagnostics&dpane=recommendations' ) ); ?>"><?php esc_html_e( 'Review in Recommendations →', 'action-steward' ); ?></a>
 		</p>
 		<?php
 	endif;
@@ -84,52 +84,52 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 
 	<?php if ( '' !== $detail_id ) : ?>
 	<?php // Back to the pending queue — where the reader came from, not the Decided tab. ?>
-	<p><a href="<?php echo esc_url( $base_url . '&tab=pending' ); ?>" class="wpcc-detail-back">&larr; <?php esc_html_e( 'Back to Approvals', 'ai-command-center' ); ?></a></p>
+	<p><a href="<?php echo esc_url( $base_url . '&tab=pending' ); ?>" class="wpcc-detail-back">&larr; <?php esc_html_e( 'Back to Approvals', 'action-steward' ); ?></a></p>
 	<div id="wpcc-detail" data-id="<?php echo esc_attr( $detail_id ); ?>">
-		<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
+		<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></p>
 	</div>
 	<?php else : ?>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="<?php echo esc_url( $base_url . '&tab=pending' ); ?>" class="nav-tab <?php echo 'pending' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'pending' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Pending', 'ai-command-center' ); ?></a>
-		<a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'history' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Decided', 'ai-command-center' ); ?></a>
-		<a href="<?php echo esc_url( $base_url . '&tab=queue' ); ?>" class="nav-tab <?php echo 'queue' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'queue' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Execution', 'ai-command-center' ); ?></a>
+		<a href="<?php echo esc_url( $base_url . '&tab=pending' ); ?>" class="nav-tab <?php echo 'pending' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'pending' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Pending', 'action-steward' ); ?></a>
+		<a href="<?php echo esc_url( $base_url . '&tab=history' ); ?>" class="nav-tab <?php echo 'history' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'history' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Decided', 'action-steward' ); ?></a>
+		<a href="<?php echo esc_url( $base_url . '&tab=queue' ); ?>" class="nav-tab <?php echo 'queue' === $active_tab ? 'nav-tab-active' : ''; ?>"<?php echo 'queue' === $active_tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Execution', 'action-steward' ); ?></a>
 	</h2>
 
 	<div id="wpcc-tab-pending" class="wpcc-tab" style="<?php echo 'pending' === $active_tab ? '' : 'display:none;'; ?>">
 		<div id="wpcc-approvals-list">
-			<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
+			<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></p>
 		</div>
 	</div>
 
 	<div id="wpcc-tab-history" class="wpcc-tab" style="<?php echo 'history' === $active_tab ? '' : 'display:none;'; ?>">
 		<div id="wpcc-history-list">
-			<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
+			<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></p>
 		</div>
 	</div>
 
 	<div id="wpcc-tab-queue" class="wpcc-tab" style="<?php echo 'queue' === $active_tab ? '' : 'display:none;'; ?>">
 		<div id="wpcc-queue-list">
-			<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
+			<p><span class="spinner is-active" style="float:none;margin:0 6px 0 0;vertical-align:middle;"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></p>
 		</div>
 	</div>
 	<?php endif; ?>
 
 	<div id="wpcc-confirm-modal" class="wpcc-modal-backdrop" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-confirm-title" aria-describedby="wpcc-confirm-warning">
 		<div class="wpcc-modal">
-			<h2 id="wpcc-confirm-title"><?php esc_html_e( 'Confirm destructive approval', 'ai-command-center' ); ?></h2>
+			<h2 id="wpcc-confirm-title"><?php esc_html_e( 'Confirm destructive approval', 'action-steward' ); ?></h2>
 			<div id="wpcc-confirm-warning" class="wpcc-card-destructive" role="alert"></div>
 			<p>
-				<label for="wpcc-confirm-phrase"><?php esc_html_e( 'Type the confirmation phrase to proceed:', 'ai-command-center' ); ?> <code id="wpcc-confirm-phrase-hint"></code></label><br>
+				<label for="wpcc-confirm-phrase"><?php esc_html_e( 'Type the confirmation phrase to proceed:', 'action-steward' ); ?> <code id="wpcc-confirm-phrase-hint"></code></label><br>
 				<input type="text" id="wpcc-confirm-phrase" class="regular-text" autocomplete="off">
 			</p>
 			<p>
-				<label for="wpcc-confirm-reason"><?php esc_html_e( 'Reason (required):', 'ai-command-center' ); ?></label><br>
+				<label for="wpcc-confirm-reason"><?php esc_html_e( 'Reason (required):', 'action-steward' ); ?></label><br>
 				<textarea id="wpcc-confirm-reason" rows="2" class="large-text"></textarea>
 			</p>
 			<p>
-				<button type="button" class="button button-primary wpcc-reject-btn" id="wpcc-confirm-go" disabled><?php esc_html_e( 'Approve &amp; Run', 'ai-command-center' ); ?></button>
-				<button type="button" class="button" id="wpcc-confirm-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
+				<button type="button" class="button button-primary wpcc-reject-btn" id="wpcc-confirm-go" disabled><?php esc_html_e( 'Approve &amp; Run', 'action-steward' ); ?></button>
+				<button type="button" class="button" id="wpcc-confirm-cancel"><?php esc_html_e( 'Cancel', 'action-steward' ); ?></button>
 			</p>
 		</div>
 	</div>
@@ -343,12 +343,12 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	var baseUrl    = <?php echo wp_json_encode( $base_url ); ?>;
 
 	var i18n = {
-		readOnly:    <?php echo wp_json_encode( __( 'Read Only', 'ai-command-center' ) ); ?>,
-		review:      <?php echo wp_json_encode( __( 'Review', 'ai-command-center' ) ); ?>,
-		approve:     <?php echo wp_json_encode( __( 'Approve', 'ai-command-center' ) ); ?>,
-		reject:      <?php echo wp_json_encode( __( 'Reject', 'ai-command-center' ) ); ?>,
-		approved:    <?php echo wp_json_encode( __( 'Done — your site has been updated.', 'ai-command-center' ) ); ?>,
-		approvedLink:<?php echo wp_json_encode( __( 'See it in Changes', 'ai-command-center' ) ); ?>,
+		readOnly:    <?php echo wp_json_encode( __( 'Read Only', 'action-steward' ) ); ?>,
+		review:      <?php echo wp_json_encode( __( 'Review', 'action-steward' ) ); ?>,
+		approve:     <?php echo wp_json_encode( __( 'Approve', 'action-steward' ) ); ?>,
+		reject:      <?php echo wp_json_encode( __( 'Reject', 'action-steward' ) ); ?>,
+		approved:    <?php echo wp_json_encode( __( 'Done — your site has been updated.', 'action-steward' ) ); ?>,
+		approvedLink:<?php echo wp_json_encode( __( 'See it in Changes', 'action-steward' ) ); ?>,
 		/*
 		 * The end of the journey, on the one page that had none.
 		 *
@@ -356,9 +356,9 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		 * result and an audit trail — a technical record, with nothing to do next.
 		 * The customer had just changed their live site and was left on a log.
 		 */
-		doneTitle:   <?php echo wp_json_encode( __( 'This change has been applied to your site.', 'ai-command-center' ) ); ?>,
-		doneUndo:    <?php echo wp_json_encode( __( 'It is recorded and can be undone from Changes.', 'ai-command-center' ) ); ?>,
-		doneBackAi:  <?php echo wp_json_encode( __( 'Back to Built-in AI', 'ai-command-center' ) ); ?>,
+		doneTitle:   <?php echo wp_json_encode( __( 'This change has been applied to your site.', 'action-steward' ) ); ?>,
+		doneUndo:    <?php echo wp_json_encode( __( 'It is recorded and can be undone from Changes.', 'action-steward' ) ); ?>,
+		doneBackAi:  <?php echo wp_json_encode( __( 'Back to Built-in AI', 'action-steward' ) ); ?>,
 		builtinUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai' ) ); ?>,
 		<?php
 		/*
@@ -379,9 +379,9 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		?>
 		hasBuiltinAi:<?php echo wp_json_encode( count( \WPCommandCenter\Admin\AppShell::builtin_tabs() ) > 1 ); ?>,
 		approvalsUrl:<?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>,
-		doneMore:    <?php echo wp_json_encode( __( 'Review other approvals', 'ai-command-center' ) ); ?>,
+		doneMore:    <?php echo wp_json_encode( __( 'Review other approvals', 'action-steward' ) ); ?>,
 		changesUrl:  <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-history' ) ); ?>,
-		rejected:    <?php echo wp_json_encode( __( 'Rejected.', 'ai-command-center' ) ); ?>,
+		rejected:    <?php echo wp_json_encode( __( 'Rejected.', 'action-steward' ) ); ?>,
 		/*
 		 * Four things a failure has to say: what happened, whether the site
 		 * changed, what to do, and where the detail is. "Approved but execution
@@ -392,77 +392,77 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		 * recorded, and the change did NOT run — so the site is untouched. That is
 		 * the fact the customer is actually anxious about.
 		 */
-		approvedErr: <?php echo wp_json_encode( __( 'You approved this, but it could not run — so nothing on your site has changed. It stays in Approvals; you can try it again from the Execution tab.', 'ai-command-center' ) ); ?>,
-		unknownErr:  <?php echo wp_json_encode( __( 'Unknown error.', 'ai-command-center' ) ); ?>,
+		approvedErr: <?php echo wp_json_encode( __( 'You approved this, but it could not run — so nothing on your site has changed. It stays in Approvals; you can try it again from the Execution tab.', 'action-steward' ) ); ?>,
+		unknownErr:  <?php echo wp_json_encode( __( 'Unknown error.', 'action-steward' ) ); ?>,
 		/*
 		 * This one fires from .catch() — the request never completed, so we
 		 * genuinely do not know whether the server recorded the decision. Saying
 		 * "Request failed. Please try again." invites a second approval of
 		 * something that may already be approved. Say what is actually known.
 		 */
-		reqFailed:   <?php echo wp_json_encode( __( 'Could not reach your site, so this decision may not have been saved. Reload the page to see where the request stands before deciding again.', 'ai-command-center' ) ); ?>,
-		destructive: <?php echo wp_json_encode( __( 'DESTRUCTIVE — this permanently deletes data and cannot be undone.', 'ai-command-center' ) ); ?>,
-		auditNote:   <?php echo wp_json_encode( __( 'This action will be logged in the audit trail.', 'ai-command-center' ) ); ?>,
-		noPending:   <?php echo wp_json_encode( __( 'Nothing is waiting for you. Requests that need approval appear here for your decision.', 'ai-command-center' ) ); ?>,
-		clearTitle:  <?php echo wp_json_encode( __( 'Nothing is waiting for you', 'ai-command-center' ) ); ?>,
+		reqFailed:   <?php echo wp_json_encode( __( 'Could not reach your site, so this decision may not have been saved. Reload the page to see where the request stands before deciding again.', 'action-steward' ) ); ?>,
+		destructive: <?php echo wp_json_encode( __( 'DESTRUCTIVE — this permanently deletes data and cannot be undone.', 'action-steward' ) ); ?>,
+		auditNote:   <?php echo wp_json_encode( __( 'This action will be logged in the audit trail.', 'action-steward' ) ); ?>,
+		noPending:   <?php echo wp_json_encode( __( 'Nothing is waiting for you. Requests that need approval appear here for your decision.', 'action-steward' ) ); ?>,
+		clearTitle:  <?php echo wp_json_encode( __( 'Nothing is waiting for you', 'action-steward' ) ); ?>,
 		<?php // Mode-aware: on a Development site nothing will ever appear here to approve. ?>
 		clearDetail: <?php echo wp_json_encode( \WPCommandCenter\Operations\SecurityModeManager::approvals_empty_detail() ); ?>,
-		selectAll:   <?php echo wp_json_encode( __( 'Select all on this page', 'ai-command-center' ) ); ?>,
-		selectOne:   <?php echo wp_json_encode( __( 'Select this request', 'ai-command-center' ) ); ?>,
+		selectAll:   <?php echo wp_json_encode( __( 'Select all on this page', 'action-steward' ) ); ?>,
+		selectOne:   <?php echo wp_json_encode( __( 'Select this request', 'action-steward' ) ); ?>,
 		/* translators: 1: range such as "1–25", 2: total count */
-		showingRange: <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Showing %1$s of %2$s', 'ai-command-center' ) ); ?>,
+		showingRange: <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Showing %1$s of %2$s', 'action-steward' ) ); ?>,
 		/* translators: 1: current page, 2: total pages */
-		pageOf:      <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Page %1$s of %2$s', 'ai-command-center' ) ); ?>,
-		prev:        <?php echo wp_json_encode( __( 'Previous', 'ai-command-center' ) ); ?>,
-		next:        <?php echo wp_json_encode( __( 'Next', 'ai-command-center' ) ); ?>,
+		pageOf:      <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Page %1$s of %2$s', 'action-steward' ) ); ?>,
+		prev:        <?php echo wp_json_encode( __( 'Previous', 'action-steward' ) ); ?>,
+		next:        <?php echo wp_json_encode( __( 'Next', 'action-steward' ) ); ?>,
 		/* translators: %d: number of selected requests */
-		nSelected:   <?php echo wp_json_encode( /* translators: %d: number */ __( '%d selected', 'ai-command-center' ) ); ?>,
-		approveSelected: <?php echo wp_json_encode( __( 'Approve selected', 'ai-command-center' ) ); ?>,
-		rejectSelected:  <?php echo wp_json_encode( __( 'Reject selected', 'ai-command-center' ) ); ?>,
+		nSelected:   <?php echo wp_json_encode( /* translators: %d: number */ __( '%d selected', 'action-steward' ) ); ?>,
+		approveSelected: <?php echo wp_json_encode( __( 'Approve selected', 'action-steward' ) ); ?>,
+		rejectSelected:  <?php echo wp_json_encode( __( 'Reject selected', 'action-steward' ) ); ?>,
 		/* translators: %d: number of requests */
-		confirmBulkApprove: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Approve %d requests? Each one runs through the same checks as approving it individually. Requests that permanently delete something are skipped and must be approved one at a time.', 'ai-command-center' ) ); ?>,
+		confirmBulkApprove: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Approve %d requests? Each one runs through the same checks as approving it individually. Requests that permanently delete something are skipped and must be approved one at a time.', 'action-steward' ) ); ?>,
 		/* translators: %d: number of requests */
-		confirmBulkReject:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Reject %d requests?', 'ai-command-center' ) ); ?>,
-		bulkReason:  <?php echo wp_json_encode( __( 'Rejected in bulk by administrator.', 'ai-command-center' ) ); ?>,
+		confirmBulkReject:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Reject %d requests?', 'action-steward' ) ); ?>,
+		bulkReason:  <?php echo wp_json_encode( __( 'Rejected in bulk by administrator.', 'action-steward' ) ); ?>,
 		/* translators: %d: total number of pending requests */
-		moreQueued:  <?php echo wp_json_encode( /* translators: %d: number */ __( '(%d pending in total)', 'ai-command-center' ) ); ?>,
-		noHistory:   <?php echo wp_json_encode( __( 'Nothing decided yet. Once you approve or reject something, it is kept here as a record.', 'ai-command-center' ) ); ?>,
-		noQueue:     <?php echo wp_json_encode( __( 'The execution queue is empty.', 'ai-command-center' ) ); ?>,
+		moreQueued:  <?php echo wp_json_encode( /* translators: %d: number */ __( '(%d pending in total)', 'action-steward' ) ); ?>,
+		noHistory:   <?php echo wp_json_encode( __( 'Nothing decided yet. Once you approve or reject something, it is kept here as a record.', 'action-steward' ) ); ?>,
+		noQueue:     <?php echo wp_json_encode( __( 'The execution queue is empty.', 'action-steward' ) ); ?>,
 		// Reading, not writing: nothing was attempted, so nothing changed. The
 		// wording matches Changes and Access tokens, which already say this well.
-		loadFailed:  <?php echo wp_json_encode( __( 'Could not load this list — nothing has changed on your site. Your admin session may have expired; reload the page to try again.', 'ai-command-center' ) ); ?>,
-		loadMore:    <?php echo wp_json_encode( __( 'Load more', 'ai-command-center' ) ); ?>,
-		colOp:       <?php echo wp_json_encode( __( 'Operation', 'ai-command-center' ) ); ?>,
-		colAction:   <?php echo wp_json_encode( __( 'Action', 'ai-command-center' ) ); ?>,
-		colRisk:     <?php echo wp_json_encode( __( 'Risk', 'ai-command-center' ) ); ?>,
-		colStatus:   <?php echo wp_json_encode( __( 'Status', 'ai-command-center' ) ); ?>,
-		colResolved: <?php echo wp_json_encode( __( 'Resolved by', 'ai-command-center' ) ); ?>,
-		colWhen:     <?php echo wp_json_encode( __( 'Requested', 'ai-command-center' ) ); ?>,
-		colQueueId:  <?php echo wp_json_encode( __( 'Queue item', 'ai-command-center' ) ); ?>,
-		colAttempts: <?php echo wp_json_encode( __( 'Attempts', 'ai-command-center' ) ); ?>,
-		colError:    <?php echo wp_json_encode( __( 'Error', 'ai-command-center' ) ); ?>,
-		unavailable: <?php echo wp_json_encode( __( 'unavailable', 'ai-command-center' ) ); ?>,
-		chipPending: <?php echo wp_json_encode( __( 'Pending', 'ai-command-center' ) ); ?>,
-		chipCrit:    <?php echo wp_json_encode( __( 'Critical pending', 'ai-command-center' ) ); ?>,
-		chipResolved:<?php echo wp_json_encode( __( 'Resolved (all-time)', 'ai-command-center' ) ); ?>,
-		chipFailed:  <?php echo wp_json_encode( __( 'Failed in queue', 'ai-command-center' ) ); ?>,
-		details:     <?php echo wp_json_encode( __( 'Details', 'ai-command-center' ) ); ?>,
-		secReason:   <?php echo wp_json_encode( __( 'Reason', 'ai-command-center' ) ); ?>,
-		secRequest:  <?php echo wp_json_encode( __( 'Request', 'ai-command-center' ) ); ?>,
-		secChangeset:<?php echo wp_json_encode( __( 'Change set', 'ai-command-center' ) ); ?>,
-		secDiff:     <?php echo wp_json_encode( __( 'Diff', 'ai-command-center' ) ); ?>,
-		secWhatChanges: <?php echo wp_json_encode( __( 'What will change', 'ai-command-center' ) ); ?>,
+		loadFailed:  <?php echo wp_json_encode( __( 'Could not load this list — nothing has changed on your site. Your admin session may have expired; reload the page to try again.', 'action-steward' ) ); ?>,
+		loadMore:    <?php echo wp_json_encode( __( 'Load more', 'action-steward' ) ); ?>,
+		colOp:       <?php echo wp_json_encode( __( 'Operation', 'action-steward' ) ); ?>,
+		colAction:   <?php echo wp_json_encode( __( 'Action', 'action-steward' ) ); ?>,
+		colRisk:     <?php echo wp_json_encode( __( 'Risk', 'action-steward' ) ); ?>,
+		colStatus:   <?php echo wp_json_encode( __( 'Status', 'action-steward' ) ); ?>,
+		colResolved: <?php echo wp_json_encode( __( 'Resolved by', 'action-steward' ) ); ?>,
+		colWhen:     <?php echo wp_json_encode( __( 'Requested', 'action-steward' ) ); ?>,
+		colQueueId:  <?php echo wp_json_encode( __( 'Queue item', 'action-steward' ) ); ?>,
+		colAttempts: <?php echo wp_json_encode( __( 'Attempts', 'action-steward' ) ); ?>,
+		colError:    <?php echo wp_json_encode( __( 'Error', 'action-steward' ) ); ?>,
+		unavailable: <?php echo wp_json_encode( __( 'unavailable', 'action-steward' ) ); ?>,
+		chipPending: <?php echo wp_json_encode( __( 'Pending', 'action-steward' ) ); ?>,
+		chipCrit:    <?php echo wp_json_encode( __( 'Critical pending', 'action-steward' ) ); ?>,
+		chipResolved:<?php echo wp_json_encode( __( 'Resolved (all-time)', 'action-steward' ) ); ?>,
+		chipFailed:  <?php echo wp_json_encode( __( 'Failed in queue', 'action-steward' ) ); ?>,
+		details:     <?php echo wp_json_encode( __( 'Details', 'action-steward' ) ); ?>,
+		secReason:   <?php echo wp_json_encode( __( 'Reason', 'action-steward' ) ); ?>,
+		secRequest:  <?php echo wp_json_encode( __( 'Request', 'action-steward' ) ); ?>,
+		secChangeset:<?php echo wp_json_encode( __( 'Change set', 'action-steward' ) ); ?>,
+		secDiff:     <?php echo wp_json_encode( __( 'Diff', 'action-steward' ) ); ?>,
+		secWhatChanges: <?php echo wp_json_encode( __( 'What will change', 'action-steward' ) ); ?>,
 		// Past tense once the decision is made — on a request that has already run,
 		// "What will change" describes a future that has happened.
-		secWhatChanged: <?php echo wp_json_encode( __( 'What changed', 'ai-command-center' ) ); ?>,
-		secWhatWouldHave: <?php echo wp_json_encode( __( 'What this would have changed', 'ai-command-center' ) ); ?>,
-		lblUndoes:      <?php echo wp_json_encode( __( 'Undoes', 'ai-command-center' ) ); ?>,
-		undoUnknown:    <?php echo wp_json_encode( __( 'A change that is no longer in your history', 'ai-command-center' ) ); ?>,
-		lblChangeId:    <?php echo wp_json_encode( __( 'Change id', 'ai-command-center' ) ); ?>,
-		secPayload:  <?php echo wp_json_encode( __( 'Technical details', 'ai-command-center' ) ); ?>,
-		yes:         <?php echo wp_json_encode( __( 'Yes', 'ai-command-center' ) ); ?>,
-		no:          <?php echo wp_json_encode( __( 'No', 'ai-command-center' ) ); ?>,
-		emptyValue:  <?php echo wp_json_encode( __( '(empty)', 'ai-command-center' ) ); ?>,
+		secWhatChanged: <?php echo wp_json_encode( __( 'What changed', 'action-steward' ) ); ?>,
+		secWhatWouldHave: <?php echo wp_json_encode( __( 'What this would have changed', 'action-steward' ) ); ?>,
+		lblUndoes:      <?php echo wp_json_encode( __( 'Undoes', 'action-steward' ) ); ?>,
+		undoUnknown:    <?php echo wp_json_encode( __( 'A change that is no longer in your history', 'action-steward' ) ); ?>,
+		lblChangeId:    <?php echo wp_json_encode( __( 'Change id', 'action-steward' ) ); ?>,
+		secPayload:  <?php echo wp_json_encode( __( 'Technical details', 'action-steward' ) ); ?>,
+		yes:         <?php echo wp_json_encode( __( 'Yes', 'action-steward' ) ); ?>,
+		no:          <?php echo wp_json_encode( __( 'No', 'action-steward' ) ); ?>,
+		emptyValue:  <?php echo wp_json_encode( __( '(empty)', 'action-steward' ) ); ?>,
 		/*
 		 * Field names a site owner recognises, for the "What will change" table.
 		 *
@@ -475,71 +475,71 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		 * belongs in the shared map.
 		 */
 		fieldNames:  <?php echo wp_json_encode( array_merge( \WPCommandCenter\Admin\ActionLabels::option_labels(), [
-			'post_title'      => __( 'Title', 'ai-command-center' ),
-			'post_content'    => __( 'Content', 'ai-command-center' ),
-			'post_status'     => __( 'Status', 'ai-command-center' ),
-			'post_excerpt'    => __( 'Excerpt', 'ai-command-center' ),
-			'post_id'         => __( 'Item', 'ai-command-center' ),
-			'option_id'       => __( 'Setting', 'ai-command-center' ),
-			'user_id'         => __( 'User', 'ai-command-center' ),
-			'comment_id'      => __( 'Comment', 'ai-command-center' ),
-			'display_name'    => __( 'Display name', 'ai-command-center' ),
-			'user_email'      => __( 'Email address', 'ai-command-center' ),
-			'role'            => __( 'Role', 'ai-command-center' ),
-			'slug'            => __( 'Slug', 'ai-command-center' ),
-			'value'           => __( 'New value', 'ai-command-center' ),
-			'ids'             => __( 'Items', 'ai-command-center' ),
-			'alt_text'        => __( 'Alt text', 'ai-command-center' ),
-			'caption'         => __( 'Caption', 'ai-command-center' ),
-			'start_url'       => __( 'Site address', 'ai-command-center' ),
+			'post_title'      => __( 'Title', 'action-steward' ),
+			'post_content'    => __( 'Content', 'action-steward' ),
+			'post_status'     => __( 'Status', 'action-steward' ),
+			'post_excerpt'    => __( 'Excerpt', 'action-steward' ),
+			'post_id'         => __( 'Item', 'action-steward' ),
+			'option_id'       => __( 'Setting', 'action-steward' ),
+			'user_id'         => __( 'User', 'action-steward' ),
+			'comment_id'      => __( 'Comment', 'action-steward' ),
+			'display_name'    => __( 'Display name', 'action-steward' ),
+			'user_email'      => __( 'Email address', 'action-steward' ),
+			'role'            => __( 'Role', 'action-steward' ),
+			'slug'            => __( 'Slug', 'action-steward' ),
+			'value'           => __( 'New value', 'action-steward' ),
+			'ids'             => __( 'Items', 'action-steward' ),
+			'alt_text'        => __( 'Alt text', 'action-steward' ),
+			'caption'         => __( 'Caption', 'action-steward' ),
+			'start_url'       => __( 'Site address', 'action-steward' ),
 		] ) ); ?>,
 		/* Audit events, in words. Unknown ids fall back to their tidied last segment. */
 		auditNames:  <?php echo wp_json_encode( [
-			'operation.approval.auto_requested' => __( 'Sent for your approval', 'ai-command-center' ),
-			'operation.approval.approved'       => __( 'Approved', 'ai-command-center' ),
-			'operation.approval.rejected'       => __( 'Rejected', 'ai-command-center' ),
-			'operation.approval.cancelled'      => __( 'Cancelled', 'ai-command-center' ),
-			'operation.queued'                  => __( 'Added to the queue', 'ai-command-center' ),
-			'operation.executed'                => __( 'Carried out', 'ai-command-center' ),
-			'operation.failed'                  => __( 'Failed to run', 'ai-command-center' ),
+			'operation.approval.auto_requested' => __( 'Sent for your approval', 'action-steward' ),
+			'operation.approval.approved'       => __( 'Approved', 'action-steward' ),
+			'operation.approval.rejected'       => __( 'Rejected', 'action-steward' ),
+			'operation.approval.cancelled'      => __( 'Cancelled', 'action-steward' ),
+			'operation.queued'                  => __( 'Added to the queue', 'action-steward' ),
+			'operation.executed'                => __( 'Carried out', 'action-steward' ),
+			'operation.failed'                  => __( 'Failed to run', 'action-steward' ),
 		] ); ?>,
-		secQueue:    <?php echo wp_json_encode( __( 'Queue', 'ai-command-center' ) ); ?>,
-		secResults:  <?php echo wp_json_encode( __( 'Execution result', 'ai-command-center' ) ); ?>,
-		secAudit:    <?php echo wp_json_encode( __( 'Audit trail', 'ai-command-center' ) ); ?>,
-		lblResolved: <?php echo wp_json_encode( __( 'Resolved by', 'ai-command-center' ) ); ?>,
-		lblArea:     <?php echo wp_json_encode( __( 'Area', 'ai-command-center' ) ); ?>,
-		lblRequested:<?php echo wp_json_encode( __( 'Requested', 'ai-command-center' ) ); ?>,
-		lblApproved: <?php echo wp_json_encode( __( 'Approved', 'ai-command-center' ) ); ?>,
-		lblRejected: <?php echo wp_json_encode( __( 'Rejected', 'ai-command-center' ) ); ?>,
-		lblExecuted: <?php echo wp_json_encode( __( 'Executed', 'ai-command-center' ) ); ?>,
-		lblFailedAt: <?php echo wp_json_encode( __( 'Failed', 'ai-command-center' ) ); ?>,
-		lblCancelled:<?php echo wp_json_encode( __( 'Cancelled', 'ai-command-center' ) ); ?>,
-		lblFiles:    <?php echo wp_json_encode( __( 'files', 'ai-command-center' ) ); ?>,
-		lblHighRisk: <?php echo wp_json_encode( __( 'HIGH-RISK paths included', 'ai-command-center' ) ); ?>,
-		diffUnavail: <?php echo wp_json_encode( __( 'No diff stored for this request.', 'ai-command-center' ) ); ?>,
-		noResult:    <?php echo wp_json_encode( __( 'This has not run yet.', 'ai-command-center' ) ); ?>,
-		noAudit:     <?php echo wp_json_encode( __( 'No audit events recorded for this request.', 'ai-command-center' ) ); ?>,
-		notFound:    <?php echo wp_json_encode( __( 'Request not found.', 'ai-command-center' ) ); ?>,
-		counts:      <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value, %3$s: value, %4$s: value */ __( 'Created %1$s · Updated %2$s · Skipped %3$s · Errors %4$s', 'ai-command-center' ) ); ?>,
-		retry:       <?php echo wp_json_encode( __( 'Retry', 'ai-command-center' ) ); ?>,
-		retrying:    <?php echo wp_json_encode( __( 'Retrying…', 'ai-command-center' ) ); ?>,
-		retryConfirm:<?php echo wp_json_encode( __( 'Re-queue this failed item for another attempt?', 'ai-command-center' ) ); ?>,
-		retryYes:    <?php echo wp_json_encode( __( 'Try again', 'ai-command-center' ) ); ?>,
-		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'ai-command-center' ) ); ?>,
+		secQueue:    <?php echo wp_json_encode( __( 'Queue', 'action-steward' ) ); ?>,
+		secResults:  <?php echo wp_json_encode( __( 'Execution result', 'action-steward' ) ); ?>,
+		secAudit:    <?php echo wp_json_encode( __( 'Audit trail', 'action-steward' ) ); ?>,
+		lblResolved: <?php echo wp_json_encode( __( 'Resolved by', 'action-steward' ) ); ?>,
+		lblArea:     <?php echo wp_json_encode( __( 'Area', 'action-steward' ) ); ?>,
+		lblRequested:<?php echo wp_json_encode( __( 'Requested', 'action-steward' ) ); ?>,
+		lblApproved: <?php echo wp_json_encode( __( 'Approved', 'action-steward' ) ); ?>,
+		lblRejected: <?php echo wp_json_encode( __( 'Rejected', 'action-steward' ) ); ?>,
+		lblExecuted: <?php echo wp_json_encode( __( 'Executed', 'action-steward' ) ); ?>,
+		lblFailedAt: <?php echo wp_json_encode( __( 'Failed', 'action-steward' ) ); ?>,
+		lblCancelled:<?php echo wp_json_encode( __( 'Cancelled', 'action-steward' ) ); ?>,
+		lblFiles:    <?php echo wp_json_encode( __( 'files', 'action-steward' ) ); ?>,
+		lblHighRisk: <?php echo wp_json_encode( __( 'HIGH-RISK paths included', 'action-steward' ) ); ?>,
+		diffUnavail: <?php echo wp_json_encode( __( 'No diff stored for this request.', 'action-steward' ) ); ?>,
+		noResult:    <?php echo wp_json_encode( __( 'This has not run yet.', 'action-steward' ) ); ?>,
+		noAudit:     <?php echo wp_json_encode( __( 'No audit events recorded for this request.', 'action-steward' ) ); ?>,
+		notFound:    <?php echo wp_json_encode( __( 'Request not found.', 'action-steward' ) ); ?>,
+		counts:      <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value, %3$s: value, %4$s: value */ __( 'Created %1$s · Updated %2$s · Skipped %3$s · Errors %4$s', 'action-steward' ) ); ?>,
+		retry:       <?php echo wp_json_encode( __( 'Retry', 'action-steward' ) ); ?>,
+		retrying:    <?php echo wp_json_encode( __( 'Retrying…', 'action-steward' ) ); ?>,
+		retryConfirm:<?php echo wp_json_encode( __( 'Re-queue this failed item for another attempt?', 'action-steward' ) ); ?>,
+		retryYes:    <?php echo wp_json_encode( __( 'Try again', 'action-steward' ) ); ?>,
+		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'action-steward' ) ); ?>,
 		/* translators: 1: current item number, 2: total items */
-		bulkProgress: <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Working — %1$s of %2$s', 'ai-command-center' ) ); ?>,
-		bulkApproveBody: <?php echo wp_json_encode( __( 'Each one runs through the engine exactly as if you had approved it on its own. Anything needing its own destructive confirmation is skipped.', 'ai-command-center' ) ); ?>,
-		bulkRejectBody:  <?php echo wp_json_encode( __( 'Nothing will run. The requests are recorded as rejected and your site is left unchanged.', 'ai-command-center' ) ); ?>,
-		retryFailed: <?php echo wp_json_encode( __( 'Retry failed: ', 'ai-command-center' ) ); ?>,
-		nonceExpired:<?php echo wp_json_encode( __( 'Your session expired. Please reload the page and try again.', 'ai-command-center' ) ); ?>,
-		detailsFor:  <?php echo wp_json_encode( __( 'View details for this request', 'ai-command-center' ) ); ?>
+		bulkProgress: <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ __( 'Working — %1$s of %2$s', 'action-steward' ) ); ?>,
+		bulkApproveBody: <?php echo wp_json_encode( __( 'Each one runs through the engine exactly as if you had approved it on its own. Anything needing its own destructive confirmation is skipped.', 'action-steward' ) ); ?>,
+		bulkRejectBody:  <?php echo wp_json_encode( __( 'Nothing will run. The requests are recorded as rejected and your site is left unchanged.', 'action-steward' ) ); ?>,
+		retryFailed: <?php echo wp_json_encode( __( 'Retry failed: ', 'action-steward' ) ); ?>,
+		nonceExpired:<?php echo wp_json_encode( __( 'Your session expired. Please reload the page and try again.', 'action-steward' ) ); ?>,
+		detailsFor:  <?php echo wp_json_encode( __( 'View details for this request', 'action-steward' ) ); ?>
 	};
 
 	var riskLabels = {
-		critical:   <?php echo wp_json_encode( __( 'Critical', 'ai-command-center' ) ); ?>,
-		high:       <?php echo wp_json_encode( __( 'High Risk', 'ai-command-center' ) ); ?>,
-		medium:     <?php echo wp_json_encode( __( 'Medium Risk', 'ai-command-center' ) ); ?>,
-		low:        <?php echo wp_json_encode( __( 'Low Risk', 'ai-command-center' ) ); ?>,
+		critical:   <?php echo wp_json_encode( __( 'Critical', 'action-steward' ) ); ?>,
+		high:       <?php echo wp_json_encode( __( 'High Risk', 'action-steward' ) ); ?>,
+		medium:     <?php echo wp_json_encode( __( 'Medium Risk', 'action-steward' ) ); ?>,
+		low:        <?php echo wp_json_encode( __( 'Low Risk', 'action-steward' ) ); ?>,
 		diagnostic: i18n.readOnly
 	};
 	/*
@@ -562,25 +562,25 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 	 * one label that must never be shared. That is exactly why these are two maps.
 	 */
 	var statusLabels = {
-		pending_review: <?php echo wp_json_encode( __( 'Waiting for you', 'ai-command-center' ) ); ?>,
-		approved:       <?php echo wp_json_encode( __( 'Approved', 'ai-command-center' ) ); ?>,
-		rejected:       <?php echo wp_json_encode( __( 'Rejected', 'ai-command-center' ) ); ?>,
-		executed:       <?php echo wp_json_encode( __( 'Applied', 'ai-command-center' ) ); ?>,
-		failed:         <?php echo wp_json_encode( __( 'Did not run', 'ai-command-center' ) ); ?>,
-		cancelled:      <?php echo wp_json_encode( __( 'Cancelled', 'ai-command-center' ) ); ?>,
-		queued:         <?php echo wp_json_encode( __( 'Waiting to run', 'ai-command-center' ) ); ?>,
-		running:        <?php echo wp_json_encode( __( 'Running', 'ai-command-center' ) ); ?>,
-		completed:      <?php echo wp_json_encode( __( 'Applied', 'ai-command-center' ) ); ?>
+		pending_review: <?php echo wp_json_encode( __( 'Waiting for you', 'action-steward' ) ); ?>,
+		approved:       <?php echo wp_json_encode( __( 'Approved', 'action-steward' ) ); ?>,
+		rejected:       <?php echo wp_json_encode( __( 'Rejected', 'action-steward' ) ); ?>,
+		executed:       <?php echo wp_json_encode( __( 'Applied', 'action-steward' ) ); ?>,
+		failed:         <?php echo wp_json_encode( __( 'Did not run', 'action-steward' ) ); ?>,
+		cancelled:      <?php echo wp_json_encode( __( 'Cancelled', 'action-steward' ) ); ?>,
+		queued:         <?php echo wp_json_encode( __( 'Waiting to run', 'action-steward' ) ); ?>,
+		running:        <?php echo wp_json_encode( __( 'Running', 'action-steward' ) ); ?>,
+		completed:      <?php echo wp_json_encode( __( 'Applied', 'action-steward' ) ); ?>
 	};
 	// Queue-item overrides: same tokens, different meaning inside the queue.
 	var queueStatusLabels = {
-		completed:      <?php echo wp_json_encode( __( 'Applied', 'ai-command-center' ) ); ?>,
-		queued:         <?php echo wp_json_encode( __( 'Waiting to run', 'ai-command-center' ) ); ?>,
-		running:        <?php echo wp_json_encode( __( 'Running now', 'ai-command-center' ) ); ?>,
-		failed:         <?php echo wp_json_encode( __( 'This attempt did not run', 'ai-command-center' ) ); ?>,
+		completed:      <?php echo wp_json_encode( __( 'Applied', 'action-steward' ) ); ?>,
+		queued:         <?php echo wp_json_encode( __( 'Waiting to run', 'action-steward' ) ); ?>,
+		running:        <?php echo wp_json_encode( __( 'Running now', 'action-steward' ) ); ?>,
+		failed:         <?php echo wp_json_encode( __( 'This attempt did not run', 'action-steward' ) ); ?>,
 		// NOT "Cancelled": the change itself may well have been applied by another
 		// attempt. This says what happened to the attempt, and nothing more.
-		cancelled:      <?php echo wp_json_encode( __( 'Attempt stopped', 'ai-command-center' ) ); ?>
+		cancelled:      <?php echo wp_json_encode( __( 'Attempt stopped', 'action-steward' ) ); ?>
 	};
 	function statusLabel( s, kind ) {
 		if ( 'queue' === kind && queueStatusLabels[ s ] ) { return queueStatusLabels[ s ]; }

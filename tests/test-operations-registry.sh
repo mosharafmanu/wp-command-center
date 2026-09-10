@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Operations Registry test suite for WP Command Center (Step 15).
+# Operations Registry test suite for Action Steward (Step 15).
 #
 # Verifies:
 #   - registry loads

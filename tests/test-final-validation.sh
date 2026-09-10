@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Step 75 — Final Platform Validation (65+ assertions)
-# Verifies the entire WP Command Center platform end-to-end.
+# Verifies the entire Action Steward platform end-to-end.
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../wpcc-env.sh"
@@ -20,7 +20,7 @@ api_code() { curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $W
 mcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp"; }
 perf_ms() { local s=$(date +%s%N); "$@" >/dev/null 2>&1; local e=$(date +%s%N); echo $(( (e - s) / 1000000 )); }
 
-echo "=== WP Command Center — Final Platform Validation ==="
+echo "=== Action Steward — Final Platform Validation ==="
 echo "Date: $(date)"
 echo ""
 
@@ -105,7 +105,7 @@ echo "= 4. MCP — ALL ENDPOINTS (initialize, resources, tools, discovery) ="
 # ═══════════════════════════════════════════════════════════════════
 INIT=$(mcp '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}')
 assert_contains "mcp: protocol version" "$INIT" "2024-11-05"
-assert_contains "mcp: server info" "$INIT" "WP Command Center"
+assert_contains "mcp: server info" "$INIT" "Action Steward"
 assert_true "mcp: server name present" "$(echo "$INIT" | jq -r 'if .result.serverInfo.name then "true" else "false" end')"
 
 RSC=$(mcp '{"jsonrpc":"2.0","method":"resources/list","id":2}')

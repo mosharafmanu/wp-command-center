@@ -58,7 +58,7 @@ final class GeminiIntegration extends BaseClientIntegration {
 	 *
 	 * This is the answer to the merge hazard in this finding. Gemini CLI users already
 	 * have a settings.json holding authentication, IDE and UI preferences; during real
-	 * testing, hand-merging WPCC's block into it produced a JSON syntax error. The
+	 * testing, hand-merging Action Steward's block into it produced a JSON syntax error. The
 	 * command edits the file correctly and leaves every unrelated key untouched — which
 	 * was confirmed here, not assumed.
 	 *
@@ -110,9 +110,9 @@ final class GeminiIntegration extends BaseClientIntegration {
 	 */
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Use the native gemini mcp add command above when possible. It is the recommended path because it adds only WP Command Center and preserves every existing Gemini setting.', 'ai-command-center' ),
-			__( 'Gemini CLI stores the bearer token inline in ~/.gemini/settings.json for both native and manual setup. Do not commit or share that file, and keep the token-bearing setup command out of terminal history and shared logs. Revoke the token in WPCC to remove access.', 'ai-command-center' ),
-			__( 'Gemini CLI turns MCP servers off in a folder it has not been told to trust. If it lists WP Command Center as “Disabled”, that is the folder’s trust setting, not a failed connection — trust the folder in Gemini CLI and it will come back. Do not turn the trust check off globally.', 'ai-command-center' ),
+			__( 'Use the native gemini mcp add command above when possible. It is the recommended path because it adds only Action Steward and preserves every existing Gemini setting.', 'action-steward' ),
+			__( 'Gemini CLI stores the bearer token inline in ~/.gemini/settings.json for both native and manual setup. Do not commit or share that file, and keep the token-bearing setup command out of terminal history and shared logs. Revoke the token in Action Steward to remove access.', 'action-steward' ),
+			__( 'Gemini CLI turns MCP servers off in a folder it has not been told to trust. If it lists Action Steward as “Disabled”, that is the folder’s trust setting, not a failed connection — trust the folder in Gemini CLI and it will come back. Do not turn the trust check off globally.', 'action-steward' ),
 		];
 	}
 }

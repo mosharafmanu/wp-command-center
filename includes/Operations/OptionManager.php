@@ -80,12 +80,12 @@ final class OptionManager {
 		}
 
 		if ( '' === $option_id ) {
-			return new \WP_Error( 'wpcc_missing_option_id', __( 'option_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_option_id', __( 'option_id is required.', 'action-steward' ) );
 		}
 
 		$option = $this->registry->get_option( $option_id );
 		if ( null === $option ) {
-			return new \WP_Error( 'wpcc_invalid_option_id', __( 'Unknown option ID.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_option_id', __( 'Unknown option ID.', 'action-steward' ) );
 		}
 
 		switch ( $action ) {
@@ -96,7 +96,7 @@ final class OptionManager {
 			case 'option_rollback':
 				return $this->option_rollback( $option, $params['rollback_id'] ?? '', $context );
 			default:
-				return new \WP_Error( 'wpcc_invalid_option_action', sprintf( /* translators: %s: value */ __( 'Invalid action: %s. Use option_get or option_update.', 'ai-command-center' ), esc_html( $action ) ) );
+				return new \WP_Error( 'wpcc_invalid_option_action', sprintf( /* translators: %s: value */ __( 'Invalid action: %s. Use option_get or option_update.', 'action-steward' ), esc_html( $action ) ) );
 		}
 	}
 
@@ -180,7 +180,7 @@ final class OptionManager {
 				'old_value' => $old_value,
 				'new_value' => $new_value,
 			], $context );
-			return new \WP_Error( 'wpcc_option_update_failed', __( 'Failed to update the option.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_option_update_failed', __( 'Failed to update the option.', 'action-steward' ) );
 		}
 
 		$this->audit( 'option.update.completed', $option, [
@@ -206,22 +206,22 @@ final class OptionManager {
 	 */
 	private function option_rollback( array $option, string $rollback_id, array $context ): array|\WP_Error {
 		if ( '' === $rollback_id ) {
-			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required for rollback.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required for rollback.', 'action-steward' ) );
 		}
 
 		$record = $this->get_rollback( $rollback_id );
 		if ( null === $record ) {
-			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'action-steward' ) );
 		}
 
 		if ( $record['rollback_applied'] ) {
-			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback has already been applied.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback has already been applied.', 'action-steward' ) );
 		}
 
 		$updated = update_option( $record['option_name'], $record['old_value'] );
 
 		if ( ! $updated ) {
-			return new \WP_Error( 'wpcc_rollback_failed', __( 'Failed to restore the previous option value.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_failed', __( 'Failed to restore the previous option value.', 'action-steward' ) );
 		}
 
 		// Mark rollback as applied.

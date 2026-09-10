@@ -35,7 +35,7 @@
  * server to whatever directory the user happened to be standing in.
  *
  * OAUTH PROBE. On registration Command Code inspects the endpoint and reports "Server
- * requires OAuth authentication" — it reads WPCC's 401 as an OAuth challenge. The server
+ * requires OAuth authentication" — it reads Action Steward's 401 as an OAuth challenge. The server
  * is still added and the bearer header still authenticates it, but the message invites
  * someone to go looking for an OAuth flow that does not exist here, so post_setup_notes()
  * says so plainly.
@@ -98,7 +98,7 @@ final class CommandCodeIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'When you add the server, Command Code may say “Server requires OAuth authentication”. It is reading this site’s refusal of an unauthenticated request as an OAuth challenge. There is no OAuth sign-in to complete — the access token in the header above is the whole of it, and the server is added and enabled regardless.', 'ai-command-center' ),
+			__( 'When you add the server, Command Code may say “Server requires OAuth authentication”. It is reading this site’s refusal of an unauthenticated request as an OAuth challenge. There is no OAuth sign-in to complete — the access token in the header above is the whole of it, and the server is added and enabled regardless.', 'action-steward' ),
 		];
 	}
 }

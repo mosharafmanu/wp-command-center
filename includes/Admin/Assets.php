@@ -65,14 +65,14 @@ final class Assets {
 			'mode' => $default_mode,
 			'nav'  => AppShell::nav_map(),
 			'i18n' => [
-				'section'         => __( 'Section', 'ai-command-center' ),
-				'paletteLabel'    => __( 'Search WP Command Center', 'ai-command-center' ),
+				'section'         => __( 'Section', 'action-steward' ),
+				'paletteLabel'    => __( 'Search Action Steward', 'action-steward' ),
 				// The palette reaches every screen, not just the four top sections
 				// — "Jump to a section…" described a smaller product than the one
 				// the customer is searching.
-				'paletteSearch'   => __( 'Search for a screen…', 'ai-command-center' ),
-				'paletteNone'     => __( 'Nothing here matches that.', 'ai-command-center' ),
-				'paletteNoneHint' => __( 'Try a shorter word — or clear the box to see every screen.', 'ai-command-center' ),
+				'paletteSearch'   => __( 'Search for a screen…', 'action-steward' ),
+				'paletteNone'     => __( 'Nothing here matches that.', 'action-steward' ),
+				'paletteNoneHint' => __( 'Try a shorter word — or clear the box to see every screen.', 'action-steward' ),
 			],
 		] );
 	}

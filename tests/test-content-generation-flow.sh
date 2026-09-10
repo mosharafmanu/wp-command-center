@@ -5,7 +5,7 @@
 #
 # An independent first-time-customer test enabled Content, opened its screen, and found
 # no way to generate anything. The backend was complete and correct — ContentFieldGenerator
-# → ProposalStore → approval → apply → undo all worked, and a "✨ WPCC AI" row action on
+# → ProposalStore → approval → apply → undo all worked, and a "✨ Action Steward AI" row action on
 # the Posts list drove it — but the tool's own screen had only Suggestions and Applied
 # tabs, and its empty state read "Generate some from a post or page" without naming a
 # page, linking anywhere, or mentioning what the row action is called. SEO and Alt Text

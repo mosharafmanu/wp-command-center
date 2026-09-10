@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Background Worker Using WP-Cron test suite for WP Command Center (Step 25).
+# Background Worker Using WP-Cron test suite for Action Steward (Step 25).
 #
 # Verifies:
 #   - worker processes queued item

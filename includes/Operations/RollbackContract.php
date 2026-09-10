@@ -63,7 +63,7 @@ final class RollbackContract {
 				'undo_with'         => [
 					'tool'      => 'patch_manage',
 					'arguments' => [ 'action' => 'patch_status', 'patch_id' => $rollback_id ],
-					'note'      => __( 'A patch is reversed through the patch engine, which restores the per-file snapshot taken before it was applied.', 'ai-command-center' ),
+					'note'      => __( 'A patch is reversed through the patch engine, which restores the per-file snapshot taken before it was applied.', 'action-steward' ),
 				],
 				'approval_required' => $approval,
 			];

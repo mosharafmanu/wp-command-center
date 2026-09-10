@@ -95,7 +95,7 @@ final class InvalidActionContract {
 		if ( null === $entry ) {
 			return sprintf(
 				/* translators: 1: the action that was requested, 2: the operation id, 3: comma-separated list of valid actions. */
-				__( 'Invalid action "%1$s" for %2$s. Valid actions: %3$s.', 'ai-command-center' ),
+				__( 'Invalid action "%1$s" for %2$s. Valid actions: %3$s.', 'action-steward' ),
 				$action,
 				$operation_id,
 				implode( ', ', $valid )

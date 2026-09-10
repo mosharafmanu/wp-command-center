@@ -48,7 +48,7 @@ final class WidgetsRuntimeManager {
 			WidgetsRegistry::ACTION_SIDEBAR_ASSIGN => $this->sidebar_assign( $params, $context ),
 			WidgetsRegistry::ACTION_SIDEBAR_REMOVE => $this->sidebar_remove( $params, $context ),
 			'widgets_rollback'                      => $this->widgets_rollback( $params, $context ),
-			default                                 => new \WP_Error( 'wpcc_invalid_widgets_action', __( 'Unknown widgets action.', 'ai-command-center' ) ),
+			default                                 => new \WP_Error( 'wpcc_invalid_widgets_action', __( 'Unknown widgets action.', 'action-steward' ) ),
 		};
 	}
 
@@ -63,12 +63,12 @@ final class WidgetsRuntimeManager {
 	private function widget_get( array $params ): array|\WP_Error {
 		$widget_id = sanitize_text_field( $params['widget_id'] ?? '' );
 		if ( '' === $widget_id ) {
-			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'action-steward' ) );
 		}
 
 		$widget = $this->registry->get_widget( $widget_id );
 		if ( null === $widget ) {
-			return new \WP_Error( 'wpcc_widget_not_found', __( 'Widget not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_widget_not_found', __( 'Widget not found.', 'action-steward' ) );
 		}
 
 		$this->audit( 'widgets.get', [ 'widget_id' => $widget_id ] );
@@ -84,10 +84,10 @@ final class WidgetsRuntimeManager {
 		$settings    = $params['widget_settings'] ?? [];
 
 		if ( '' === $widget_type ) {
-			return new \WP_Error( 'wpcc_missing_widget_type', __( 'widget_type is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_widget_type', __( 'widget_type is required.', 'action-steward' ) );
 		}
 		if ( '' === $sidebar_id ) {
-			return new \WP_Error( 'wpcc_missing_sidebar_id', __( 'sidebar_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_sidebar_id', __( 'sidebar_id is required.', 'action-steward' ) );
 		}
 
 		global $wp_registered_widgets;
@@ -143,7 +143,7 @@ final class WidgetsRuntimeManager {
 		$settings  = $params['widget_settings'] ?? [];
 
 		if ( '' === $widget_id ) {
-			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'action-steward' ) );
 		}
 
 		// Find widget in sidebars to verify existence
@@ -156,7 +156,7 @@ final class WidgetsRuntimeManager {
 			}
 		}
 		if ( ! $found ) {
-			return new \WP_Error( 'wpcc_widget_not_found', __( 'Widget not found in any sidebar.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_widget_not_found', __( 'Widget not found in any sidebar.', 'action-steward' ) );
 		}
 
 		// Determine type from widget ID
@@ -196,7 +196,7 @@ final class WidgetsRuntimeManager {
 		$widget_id = sanitize_text_field( $params['widget_id'] ?? '' );
 
 		if ( '' === $widget_id ) {
-			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'action-steward' ) );
 		}
 
 		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
@@ -209,7 +209,7 @@ final class WidgetsRuntimeManager {
 		}
 
 		if ( null === $found_sidebar ) {
-			return new \WP_Error( 'wpcc_widget_not_found', __( 'Widget not found in any sidebar.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_widget_not_found', __( 'Widget not found in any sidebar.', 'action-steward' ) );
 		}
 
 		$rollback_id = $this->store_rollback( 'widget_remove', [
@@ -242,10 +242,10 @@ final class WidgetsRuntimeManager {
 		$sidebar_id = sanitize_text_field( $params['sidebar_id'] ?? '' );
 
 		if ( '' === $widget_id ) {
-			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'action-steward' ) );
 		}
 		if ( '' === $sidebar_id ) {
-			return new \WP_Error( 'wpcc_missing_sidebar_id', __( 'sidebar_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_sidebar_id', __( 'sidebar_id is required.', 'action-steward' ) );
 		}
 
 		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
@@ -293,16 +293,16 @@ final class WidgetsRuntimeManager {
 		$sidebar_id = sanitize_text_field( $params['sidebar_id'] ?? '' );
 
 		if ( '' === $widget_id || '' === $sidebar_id ) {
-			return new \WP_Error( 'wpcc_missing_params', __( 'widget_id and sidebar_id are required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_params', __( 'widget_id and sidebar_id are required.', 'action-steward' ) );
 		}
 
 		$sidebars_widgets = WidgetsRegistry::sidebars_widgets();
 		if ( ! isset( $sidebars_widgets[ $sidebar_id ] ) ) {
-			return new \WP_Error( 'wpcc_sidebar_not_found', __( 'Sidebar not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_sidebar_not_found', __( 'Sidebar not found.', 'action-steward' ) );
 		}
 
 		if ( ! in_array( $widget_id, $sidebars_widgets[ $sidebar_id ], true ) ) {
-			return new \WP_Error( 'wpcc_widget_not_in_sidebar', __( 'Widget not found in this sidebar.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_widget_not_in_sidebar', __( 'Widget not found in this sidebar.', 'action-steward' ) );
 		}
 
 		$rollback_id = $this->store_rollback( 'sidebar_remove', [
@@ -333,17 +333,17 @@ final class WidgetsRuntimeManager {
 	private function widgets_rollback( array $params, array $context ): array|\WP_Error {
 		$rollback_id = sanitize_text_field( $params['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'action-steward' ) );
 		}
 
 		$records = get_option( 'wpcc_widgets_rollbacks', [] );
 		if ( ! isset( $records[ $rollback_id ] ) ) {
-			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'action-steward' ) );
 		}
 
 		$record = $records[ $rollback_id ];
 		if ( ! empty( $record['rollback_applied'] ) ) {
-			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'action-steward' ) );
 		}
 
 		$action = $record['action'];
@@ -399,7 +399,7 @@ final class WidgetsRuntimeManager {
 				break;
 
 			default:
-				return new \WP_Error( 'wpcc_rollback_unsupported', __( 'Rollback not supported for this action.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_rollback_unsupported', __( 'Rollback not supported for this action.', 'action-steward' ) );
 		}
 
 		$records[ $rollback_id ]['rollback_applied'] = true;

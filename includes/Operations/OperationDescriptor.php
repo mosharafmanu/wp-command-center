@@ -112,7 +112,7 @@ final class OperationDescriptor {
 			'supported'         => ! empty( $sample['reversible'] ),
 			'undo_with'         => $sample['undo_with'] ?? null,
 			'approval_required' => $sample['approval_required'] ?? null,
-			'note'              => __( 'Substitute the rollback_id the write returns. An undo is itself a change and follows the same approval rules.', 'ai-command-center' ),
+			'note'              => __( 'Substitute the rollback_id the write returns. An undo is itself a change and follows the same approval rules.', 'action-steward' ),
 		];
 	}
 

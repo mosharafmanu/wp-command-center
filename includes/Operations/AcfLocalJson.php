@@ -5,7 +5,7 @@
  * acf-json is the artefact an agency commits and deploys. ACF writes it only from
  * `acf/update_field_group`, i.e. when the GROUP is saved. Every field mutation this
  * plugin performs goes through acf_update_field()/acf_delete_field(), which never
- * touch that file — so a group built through WPCC was correct in the database and
+ * touch that file — so a group built through Action Steward was correct in the database and
  * empty on disk, and the next deploy would have restored the empty version.
  *
  * The trap, measured on a real site rather than assumed:

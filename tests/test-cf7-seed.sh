@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CF7 Seeder Operation test suite for WP Command Center (Step 18).
+# CF7 Seeder Operation test suite for Action Steward (Step 18).
 #
 # Verifies:
 #   - operation discovery

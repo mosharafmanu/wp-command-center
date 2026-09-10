@@ -117,8 +117,8 @@ final class CodexIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Why the launch command: the current codex mcp add command can register the URL and token-variable name, but it cannot safely set or merge Codex’s server-specific approval mode. The copy-ready on-request launch keeps client approvals available without changing your global Codex settings.', 'ai-command-center' ),
-			__( 'Advanced persistent option: Codex supports default_tools_approval_mode = "writes" inside [mcp_servers.wp-command-center]. It skips the client prompt only for tools WPCC truthfully marks read-only and prompts for other WPCC tools. Add it manually only if you are comfortable merging TOML; WPCC never edits the file itself.', 'ai-command-center' ),
+			__( 'Why the launch command: the current codex mcp add command can register the URL and token-variable name, but it cannot safely set or merge Codex’s server-specific approval mode. The copy-ready on-request launch keeps client approvals available without changing your global Codex settings.', 'action-steward' ),
+			__( 'Advanced persistent option: Codex supports default_tools_approval_mode = "writes" inside [mcp_servers.wp-command-center]. It skips the client prompt only for tools Action Steward truthfully marks read-only and prompts for other Action Steward tools. Add it manually only if you are comfortable merging TOML; Action Steward never edits the file itself.', 'action-steward' ),
 		];
 	}
 }

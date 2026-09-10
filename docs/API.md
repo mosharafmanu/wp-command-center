@@ -17,7 +17,7 @@ curl -s "$BASE/health" -H "Authorization: Bearer $TOKEN"
 ```
 
 ```json
-{"status":"ok","plugin_version":"1.0.1", …}
+{"status":"ok","plugin_version":"1.0.2", …}
 ```
 
 ## Discovery

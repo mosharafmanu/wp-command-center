@@ -79,13 +79,13 @@ final class PatchManager {
 
 	public static function status_label( string $status ): string {
 		$labels = [
-			self::STATUS_DRAFT            => __( 'Draft', 'ai-command-center' ),
-			self::STATUS_PENDING_APPROVAL => __( 'Pending Approval', 'ai-command-center' ),
-			self::STATUS_APPROVED         => __( 'Approved', 'ai-command-center' ),
-			self::STATUS_REJECTED         => __( 'Rejected', 'ai-command-center' ),
-			self::STATUS_APPLIED          => __( 'Applied', 'ai-command-center' ),
-			self::STATUS_FAILED           => __( 'Failed', 'ai-command-center' ),
-			self::STATUS_ROLLED_BACK      => __( 'Rolled Back', 'ai-command-center' ),
+			self::STATUS_DRAFT            => __( 'Draft', 'action-steward' ),
+			self::STATUS_PENDING_APPROVAL => __( 'Pending Approval', 'action-steward' ),
+			self::STATUS_APPROVED         => __( 'Approved', 'action-steward' ),
+			self::STATUS_REJECTED         => __( 'Rejected', 'action-steward' ),
+			self::STATUS_APPLIED          => __( 'Applied', 'action-steward' ),
+			self::STATUS_FAILED           => __( 'Failed', 'action-steward' ),
+			self::STATUS_ROLLED_BACK      => __( 'Rolled Back', 'action-steward' ),
 		];
 
 		return $labels[ $status ] ?? $status;
@@ -112,10 +112,10 @@ final class PatchManager {
 
 	public static function source_label( string $source ): string {
 		$labels = [
-			self::SOURCE_CLAUDE => __( 'Claude', 'ai-command-center' ),
-			self::SOURCE_CODEX  => __( 'Codex', 'ai-command-center' ),
-			self::SOURCE_MANUAL => __( 'Manual', 'ai-command-center' ),
-			self::SOURCE_API    => __( 'API', 'ai-command-center' ),
+			self::SOURCE_CLAUDE => __( 'Claude', 'action-steward' ),
+			self::SOURCE_CODEX  => __( 'Codex', 'action-steward' ),
+			self::SOURCE_MANUAL => __( 'Manual', 'action-steward' ),
+			self::SOURCE_API    => __( 'API', 'action-steward' ),
 		];
 
 		return $labels[ $source ] ?? $source;
@@ -123,9 +123,9 @@ final class PatchManager {
 
 	public static function risk_label( string $risk ): string {
 		$labels = [
-			self::RISK_LOW    => __( 'Low', 'ai-command-center' ),
-			self::RISK_MEDIUM => __( 'Medium', 'ai-command-center' ),
-			self::RISK_HIGH   => __( 'High', 'ai-command-center' ),
+			self::RISK_LOW    => __( 'Low', 'action-steward' ),
+			self::RISK_MEDIUM => __( 'Medium', 'action-steward' ),
+			self::RISK_HIGH   => __( 'High', 'action-steward' ),
 		];
 
 		return $labels[ $risk ] ?? $risk;
@@ -156,7 +156,7 @@ final class PatchManager {
 	 */
 	public function create( array $files, string $explanation = '', string $risk_level = self::RISK_LOW, string $source = self::SOURCE_MANUAL, array $actor = [], ?string $session_id = null, ?string $task_id = null, ?string $plan_id = null ): array|\WP_Error {
 		if ( empty( $files ) ) {
-			return new \WP_Error( 'wpcc_no_files', __( 'A patch must include at least one file.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_no_files', __( 'A patch must include at least one file.', 'action-steward' ) );
 		}
 
 		$session_id = $session_id ?: null;
@@ -167,13 +167,13 @@ final class PatchManager {
 			$plan = $this->find_agent_plan( $plan_id );
 
 			if ( null === $plan ) {
-				return new \WP_Error( 'wpcc_plan_not_found', __( 'Agent plan not found.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_plan_not_found', __( 'Agent plan not found.', 'action-steward' ) );
 			}
 
 			if ( self::PLAN_STATUS_APPROVED !== $plan['status'] ) {
 				return new \WP_Error(
 					'wpcc_plan_not_approved',
-					__( 'Only an approved plan can be linked to a patch.', 'ai-command-center' )
+					__( 'Only an approved plan can be linked to a patch.', 'action-steward' )
 				);
 			}
 
@@ -188,11 +188,11 @@ final class PatchManager {
 		}
 
 		if ( ! in_array( $risk_level, self::VALID_RISK_LEVELS, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_risk_level', __( 'Invalid risk level.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_risk_level', __( 'Invalid risk level.', 'action-steward' ) );
 		}
 
 		if ( ! in_array( $source, self::VALID_SOURCES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_source', __( 'Invalid patch source.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_source', __( 'Invalid patch source.', 'action-steward' ) );
 		}
 
 		$file_records = [];
@@ -203,7 +203,7 @@ final class PatchManager {
 			$modified = (string) ( $file['modified'] ?? '' );
 
 			if ( '' === $path ) {
-				return new \WP_Error( 'wpcc_invalid_path', __( 'Each file must have a path.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_path', __( 'Each file must have a path.', 'action-steward' ) );
 			}
 
 			$real = $this->path_guard->resolve( $path );
@@ -213,11 +213,11 @@ final class PatchManager {
 			}
 
 			if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-				return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'action-steward' ) );
 			}
 
 			if ( filesize( $real ) > self::MAX_FILE_BYTES ) {
-				return new \WP_Error( 'wpcc_file_too_large', __( 'File is too large to patch.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_file_too_large', __( 'File is too large to patch.', 'action-steward' ) );
 			}
 
 			$original = (string) file_get_contents( $real );
@@ -248,7 +248,7 @@ final class PatchManager {
 		}
 
 		if ( ! $has_changes ) {
-			return new \WP_Error( 'wpcc_no_changes', __( 'The patch does not change any file.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_no_changes', __( 'The patch does not change any file.', 'action-steward' ) );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -352,13 +352,13 @@ final class PatchManager {
 		$file = trailingslashit( $dir ) . $id . '.json';
 
 		if ( ! is_readable( $file ) ) {
-			return new \WP_Error( 'wpcc_patch_not_found', __( 'Patch not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_patch_not_found', __( 'Patch not found.', 'action-steward' ) );
 		}
 
 		$record = json_decode( (string) file_get_contents( $file ), true );
 
 		if ( ! is_array( $record ) ) {
-			return new \WP_Error( 'wpcc_patch_corrupt', __( 'Patch record could not be read.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_patch_corrupt', __( 'Patch record could not be read.', 'action-steward' ) );
 		}
 
 		$record['session_id'] ??= null;
@@ -377,7 +377,7 @@ final class PatchManager {
 	 */
 	public function update_status( string $id, string $status, array $extra = [] ): array|\WP_Error {
 		if ( ! in_array( $status, self::VALID_STATUSES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'Invalid patch status.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'Invalid patch status.', 'action-steward' ) );
 		}
 
 		$record = $this->get( $id );
@@ -492,7 +492,7 @@ final class PatchManager {
 			) );
 
 			if ( ! $session_exists ) {
-				return new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_session_not_found', __( 'Agent session not found.', 'action-steward' ) );
 			}
 		}
 
@@ -503,13 +503,13 @@ final class PatchManager {
 			), ARRAY_A );
 
 			if ( ! is_array( $task ) ) {
-				return new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_task_not_found', __( 'Agent task not found.', 'action-steward' ) );
 			}
 
 			if ( null !== $session_id && $task['session_id'] !== $session_id ) {
 				return new \WP_Error(
 					'wpcc_task_session_mismatch',
-					__( 'The agent task does not belong to the supplied session.', 'ai-command-center' )
+					__( 'The agent task does not belong to the supplied session.', 'action-steward' )
 				);
 			}
 		}
@@ -559,7 +559,7 @@ final class PatchManager {
 	private function get_storage_dir(): string|\WP_Error {
 		return \WPCommandCenter\Security\PrivateStore::dir(
 			self::DIR_NAME,
-			__( 'Failed to create the patch storage directory.', 'ai-command-center' )
+			__( 'Failed to create the patch storage directory.', 'action-steward' )
 		);
 	}
 

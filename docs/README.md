@@ -1,6 +1,6 @@
-# WP Command Center — Documentation
+# Action Steward — Documentation
 
-Documentation for **version 1.0.1**. Every document here describes the shipped product and
+Documentation for **version 1.0.2**. Every document here describes the shipped product and
 is verified against it; where a number appears (42 tools, 23 capabilities, 3 protection
 modes) it was read from the running plugin, not from memory.
 
@@ -28,7 +28,7 @@ modes) it was read from the running plugin, not from memory.
 | [CAPABILITIES.md](CAPABILITIES.md) | The 23 capabilities and how to scope a token |
 | [AI-INTEGRATIONS.md](AI-INTEGRATIONS.md) | Supported clients and their configuration |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Symptoms and fixes |
-| [RELEASE.md](RELEASE.md) | Superseded — release process now lives in [../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) §7–§9 |
+| [RELEASE.md](RELEASE.md) | Current v1.0.2 release process, package identity, gates, and lifecycle checks |
 
 ## Certification
 
@@ -41,8 +41,7 @@ modes) it was read from the running plugin, not from memory.
 The V1 and release-candidate certifications, the WordPress.org compliance report and the
 2026-08-02 certifications have moved to [`archive/certifications/`](archive/certifications/).
 They certify artifacts that the 2026-08-10 security re-cut superseded, and each carries a
-banner saying so. The authoritative Plugin Check result — **0 errors, 828 classified warnings against
-the extracted package** — is in [../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) §2.
+banner saying so. The v1.0.2 Plugin Check result is recorded in the final release report.
 
 ## Archive
 

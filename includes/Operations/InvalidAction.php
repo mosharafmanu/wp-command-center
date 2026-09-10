@@ -32,14 +32,14 @@ final class InvalidAction {
 		$hint     = '' !== $describe
 			? ' ' . sprintf(
 				/* translators: %s: the describe action name */
-				__( 'Call action="%s" for details.', 'ai-command-center' ),
+				__( 'Call action="%s" for details.', 'action-steward' ),
 				$describe
 			)
 			: '';
 
 		return sprintf(
 			/* translators: 1: runtime noun, 2: the invalid action supplied, 3: comma-separated list of valid actions, 4: optional describe hint */
-			__( 'Invalid %1$s action "%2$s". Valid actions: %3$s.%4$s', 'ai-command-center' ),
+			__( 'Invalid %1$s action "%2$s". Valid actions: %3$s.%4$s', 'action-steward' ),
 			$noun,
 			$supplied,
 			implode( ', ', $valid ),

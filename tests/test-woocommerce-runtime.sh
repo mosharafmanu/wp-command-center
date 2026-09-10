@@ -493,7 +493,7 @@ fi
 
 echo "== 83. MCP Initialize =="
 MCP_INIT=$(mcp '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}')
-assert_contains "mcp: init" "$MCP_INIT" "WP Command Center"
+assert_contains "mcp: init" "$MCP_INIT" "Action Steward"
 
 echo "== 84. Operation Map Entries =="
 OPMAP=$(echo "$DISC" | jq -r '.capabilities.operation_map | length')

@@ -31,7 +31,7 @@ final class ThemeManager {
 		}
 
 		if ( ThemeRegistry::ACTION_LIST !== $action && 'theme_rollback' !== $action && '' === $slug ) {
-			return new \WP_Error( 'wpcc_missing_theme_slug', __( 'Theme slug is required for this action.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_theme_slug', __( 'Theme slug is required for this action.', 'action-steward' ) );
 		}
 
 		if ( '' !== $slug ) {
@@ -48,7 +48,7 @@ final class ThemeManager {
 			ThemeRegistry::ACTION_UPDATE  => $this->theme_update( $slug, $context ),
 			ThemeRegistry::ACTION_DELETE  => $this->theme_delete( $slug, $context ),
 			'theme_rollback'               => $this->theme_rollback_action( $params, $context ),
-			default => new \WP_Error( 'wpcc_invalid_theme_action', __( 'Unknown theme action.', 'ai-command-center' ) ),
+			default => new \WP_Error( 'wpcc_invalid_theme_action', __( 'Unknown theme action.', 'action-steward' ) ),
 		};
 	}
 
@@ -57,15 +57,15 @@ final class ThemeManager {
 	private function theme_rollback_action( array $params, array $context ): array|\WP_Error {
 		$rid = sanitize_text_field( $params['rollback_id'] ?? '' );
 		if ( '' === $rid ) {
-			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'action-steward' ) );
 		}
 		$records = get_option( 'wpcc_theme_rollbacks', [] );
 		if ( ! isset( $records[ $rid ] ) ) {
-			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'action-steward' ) );
 		}
 		$r = $records[ $rid ];
 		if ( ! empty( $r['rollback_applied'] ) ) {
-			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'action-steward' ) );
 		}
 		$slug   = $r['theme_slug'];
 		$before = $r['before_state'];
@@ -90,7 +90,7 @@ final class ThemeManager {
 
 	private function theme_install( string $slug, array $context ): array|\WP_Error {
 		if ( $this->registry->is_installed( $slug ) ) {
-			return new \WP_Error( 'wpcc_theme_already_installed', __( 'Theme is already installed.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_already_installed', __( 'Theme is already installed.', 'action-steward' ) );
 		}
 
 		if ( ! function_exists( 'themes_api' ) ) {
@@ -135,10 +135,10 @@ final class ThemeManager {
 	private function theme_activate( string $slug, array $context ): array|\WP_Error {
 		$target = $this->registry->get_theme( $slug );
 		if ( null === $target ) {
-			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'action-steward' ) );
 		}
 		if ( $target['active'] ) {
-			return new \WP_Error( 'wpcc_theme_already_active', __( 'Theme is already active.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_already_active', __( 'Theme is already active.', 'action-steward' ) );
 		}
 
 		$previous = $this->registry->get_active_theme();
@@ -185,10 +185,10 @@ final class ThemeManager {
 	private function theme_update( string $slug, array $context ): array|\WP_Error {
 		$info = $this->registry->get_theme( $slug );
 		if ( null === $info ) {
-			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'action-steward' ) );
 		}
 		if ( ! $info['update_available'] ) {
-			return new \WP_Error( 'wpcc_theme_no_update', __( 'No update available for this theme.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_no_update', __( 'No update available for this theme.', 'action-steward' ) );
 		}
 
 		$old = $info['version'];
@@ -225,7 +225,7 @@ final class ThemeManager {
 			// files on disk and captures no rollback artifact, so it is NOT reversible. Stated
 			// explicitly so the contract is truthful (additive field; no registry/contract change).
 			'reversible'      => false,
-			'reversible_note' => __( 'Theme updates are not automatically reversible; no rollback is captured. Snapshot before updating if reversibility is required.', 'ai-command-center' ),
+			'reversible_note' => __( 'Theme updates are not automatically reversible; no rollback is captured. Snapshot before updating if reversibility is required.', 'action-steward' ),
 		];
 	}
 
@@ -234,10 +234,10 @@ final class ThemeManager {
 	private function theme_delete( string $slug, array $context ): array|\WP_Error {
 		$info = $this->registry->get_theme( $slug );
 		if ( null === $info ) {
-			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'action-steward' ) );
 		}
 		if ( $info['active'] ) {
-			return new \WP_Error( 'wpcc_theme_delete_active', __( 'Cannot delete the active theme. Activate another theme first.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_delete_active', __( 'Cannot delete the active theme. Activate another theme first.', 'action-steward' ) );
 		}
 
 		$before = [ 'slug' => $slug, 'version' => $info['version'], 'name' => $info['name'] ];

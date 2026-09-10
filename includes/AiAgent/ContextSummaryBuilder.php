@@ -66,7 +66,7 @@ final class ContextSummaryBuilder {
 		return [
 			'context_mode' => 'compact',
 			'plugin'       => [
-				'name'    => 'WP Command Center',
+				'name'    => 'Action Steward',
 				'version' => WPCC_VERSION,
 			],
 			'security'     => [

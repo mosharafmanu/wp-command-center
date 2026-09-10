@@ -18,14 +18,14 @@ final class CleanupManager {
 		$audit     = new AuditLog();
 
 		if ( empty( $resources ) ) {
-			return new \WP_Error( 'wpcc_invalid_cleanup_resources', __( 'Select at least one cleanup resource.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_cleanup_resources', __( 'Select at least one cleanup resource.', 'action-steward' ) );
 		}
 		if ( ! $dry_run && 'production' === $mode && ( empty( $params['allow_production'] ) || 'DELETE PRODUCTION DATA' !== $confirm ) ) {
 			$audit->record( 'system.cleanup.blocked', [ 'environment' => $mode, 'reason' => 'production_confirmation_required', 'actor' => AuditLog::resolve_actor( $actor ) ] );
-			return new \WP_Error( 'wpcc_production_cleanup_blocked', __( 'Production cleanup requires allow_production=true and the exact confirmation phrase.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_production_cleanup_blocked', __( 'Production cleanup requires allow_production=true and the exact confirmation phrase.', 'action-steward' ) );
 		}
 		if ( ! $dry_run && 'production' !== $mode && 'CLEANUP' !== $confirm ) {
-			return new \WP_Error( 'wpcc_cleanup_confirmation_required', __( 'Live cleanup requires the confirmation phrase CLEANUP.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cleanup_confirmation_required', __( 'Live cleanup requires the confirmation phrase CLEANUP.', 'action-steward' ) );
 		}
 
 		$cutoff = time() - ( $days * DAY_IN_SECONDS );

@@ -203,7 +203,7 @@ final class BuiltinAiSettings {
 			return [
 				'type'    => 'warning',
 				/* translators: %s: tool name */
-				'message' => sprintf( __( '%s is controlled by your site configuration and can’t be changed here.', 'ai-command-center' ), $label ),
+				'message' => sprintf( __( '%s is controlled by your site configuration and can’t be changed here.', 'action-steward' ), $label ),
 			];
 		}
 		if ( self::set( $key, $on ) ) {
@@ -214,11 +214,11 @@ final class BuiltinAiSettings {
 		}
 		if ( ! $on ) {
 			/* translators: %s: tool name */
-			return [ 'type' => 'success', 'message' => sprintf( __( '%s is now turned off.', 'ai-command-center' ), $label ) ];
+			return [ 'type' => 'success', 'message' => sprintf( __( '%s is now turned off.', 'action-steward' ), $label ) ];
 		}
 		if ( ! AdoptionStatus::ai_configured() ) {
 			/* translators: %s: tool name */
-			return [ 'type' => 'success', 'message' => sprintf( __( '%s is on. Connect an AI provider to start generating.', 'ai-command-center' ), $label ) ];
+			return [ 'type' => 'success', 'message' => sprintf( __( '%s is on. Connect an AI provider to start generating.', 'action-steward' ), $label ) ];
 		}
 		/*
 		 * Turning a tool on succeeds and then says so — and stops.
@@ -235,7 +235,7 @@ final class BuiltinAiSettings {
 		return [
 			'type'    => 'success',
 			/* translators: 1: tool name, 2: the same tool name, as the tab that has just appeared. */
-			'message' => sprintf( __( '%1$s is on and ready — open the %2$s tab above to use it.', 'ai-command-center' ), $label, $label ),
+			'message' => sprintf( __( '%1$s is on and ready — open the %2$s tab above to use it.', 'action-steward' ), $label, $label ),
 		];
 	}
 }

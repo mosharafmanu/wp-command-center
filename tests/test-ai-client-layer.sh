@@ -171,7 +171,7 @@ assert_true "routes: legacy /claude/config exists" "$(echo "$MANIFEST" | jq -r '
 echo "== 18. MCP interop preserved =="
 MCP_INIT=$(curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}' "$WPCC_BASE/mcp")
-assert_contains "mcp: still works" "$MCP_INIT" "WP Command Center"
+assert_contains "mcp: still works" "$MCP_INIT" "Action Steward"
 assert_contains "mcp: protocol version" "$MCP_INIT" "2024-11-05"
 
 echo "== 19. Timeline has AI Client events =="

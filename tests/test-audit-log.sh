@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# AuditLog rotation test suite for WP Command Center (STEP 104.0).
+# AuditLog rotation test suite for Action Steward (STEP 104.0).
 #
 # Verifies the size-based rotation hardening of the append-only audit log
 # (includes/Security/AuditLog.php):

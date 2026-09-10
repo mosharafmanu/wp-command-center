@@ -1,13 +1,7 @@
-> **SUPERSEDED — the release process now lives in
-> [`../RELEASE_HANDOFF.md`](../RELEASE_HANDOFF.md) §7 (build), §8 (test) and §9 (release).**
->
-> This file is retained for its invariants list. Where it disagrees with the handoff — in
-> particular on artifact identity, Plugin Check figures and the tag — the handoff is
-> correct.
+# Action Steward release process
 
----
-
-# Release process
+This is the current release procedure for v1.0.2. The root `RELEASE_HANDOFF.md` records
+the immutable v1.0.1 release and remains historical evidence.
 
 ---
 
@@ -30,22 +24,22 @@ migration where applicable.
 
 ## Slug and product name
 
-They are deliberately different, and neither is an accident.
+The public name, folder, main file, and text domain are deliberately aligned for the first
+WordPress.org release.
 
 | | Value | Why |
 |---|---|---|
-| WordPress.org slug | `ai-command-center` | The slug is derived from the plugin at submission and **cannot be changed after approval**. A `wp-` prefixed slug is flagged by WordPress.org's automated checks — not because "WP" is trademarked (it is not) but to close a rename loophole. Spending a rename before submission was cheaper than discovering it in review. |
-| Product / display name | **WP Command Center** | Unchanged. It is the brand, and it appears in the plugin header, `readme.txt`, and every customer-facing surface. |
-| Text domain | `ai-command-center` | Must equal the slug, or wordpress.org language packs will not load. |
+| WordPress.org slug | `action-steward` | The slug is derived from the plugin at submission and **cannot be changed after approval**. A `wp-` prefixed slug is flagged by WordPress.org's automated checks — not because "WP" is trademarked (it is not) but to close a rename loophole. Spending a rename before submission was cheaper than discovering it in review. |
+| Product / display name | **Action Steward** | It is the brand, and it appears in the plugin header, `readme.txt`, and every customer-facing surface. |
+| Text domain | `action-steward` | Must equal the slug, or wordpress.org language packs will not load. |
 
-Two `trademarked_term` warnings remain, both on the display name and both
-warnings rather than errors. Aligning the display name would clear them; keeping the
-brand is the deliberate trade.
+The name does not begin with `WP` or `WordPress`, and it is not based on another software
+product's brand. Plugin Check must report no restricted-name error.
 
 **Never change with the slug** — these are contracts, not branding:
 
 - REST namespace `wp-command-center/v1` — changing it breaks every client config in use.
-- MCP server key `wp-command-center` — user-facing, and matches the retained product name.
+- MCP server key `wp-command-center` — a certified legacy protocol identifier used in client configurations.
 - Admin menu slug `HOME_SLUG` — an existing admin URL.
 - PHP namespaces `WPCommandCenter\` and DB prefix `wpcc_` — internal; renaming them would
   force a data migration for no gain.
@@ -57,7 +51,7 @@ A rename previously broke 27 assertions across 11 suites, every one a hardcoded 
 
 Four places must agree:
 
-1. `ai-command-center.php` header `Version:`
+1. `action-steward.php` header `Version:`
 2. `WPCC_VERSION` constant
 3. `readme.txt` `Stable tag:`
 4. the changelog entry
@@ -75,12 +69,12 @@ The build is an **allowlist**, not a blocklist — anything not explicitly inclu
 out. It asserts `sdk/javascript/wpcc-mcp-relay.mjs` is present and **exits 1** if it is
 not; without the relay every generated client configuration would point at a 404.
 
-Output: `build/ai-command-center-<version>.zip`.
+Output: `build/action-steward-<version>.zip`.
 
 Verify no development files leaked:
 
 ```bash
-unzip -l build/ai-command-center-1.0.1.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
+unzip -l build/action-steward-1.0.2.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
 ```
 
 Expect no matches. `docs/` and `tests/` do not ship.
@@ -96,9 +90,9 @@ bash tests/run.sh --tier T2          # everything — required before release
 Run T2 **standalone**. Several suites switch protection mode globally, so a concurrent
 run against the same database produces meaningless failures.
 
-`tests/regression-baseline.tsv` records accepted failures. It must be **empty** for a
-release: an assertion that fails is either a real regression or a stale expectation, and
-both need fixing rather than recording.
+`tests/regression-baseline.tsv` records the explicitly reviewed historical baseline. The
+release gate must report **zero net-new failures**, and rename-related suites must pass
+without relying on that baseline.
 
 ## Compliance
 
@@ -106,8 +100,8 @@ Plugin Check must be run against the **built artifact**, not the checkout — th
 contains `build/`, `tests/`, `.git` and `.DS_Store`, none of which ship:
 
 ```bash
-unzip -q build/ai-command-center-1.0.1.zip -d /tmp/pkg
-wp plugin check /tmp/pkg/ai-command-center --format=csv --fields=type,code,file,line
+unzip -q build/action-steward-1.0.2.zip -d /tmp/pkg
+wp plugin check /tmp/pkg/action-steward --format=csv --fields=type,code,file,line
 ```
 
 Required: **0 errors**.

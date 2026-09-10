@@ -58,7 +58,7 @@ echo "== 3. The inlined admin menu icon has not drifted from its source asset ==
 # of the source.
 DECODED="$( "$PHP_BIN" -r '
 	define( "ABSPATH", "/" );
-	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/ai-command-center/" );
+	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/action-steward/" );
 	require "includes/Admin/Brand.php";
 	$uri = WPCommandCenter\Admin\Brand::menu_icon();
 	$prefix = "data:image/svg+xml;base64,";
@@ -121,7 +121,7 @@ for f in wpcc-logo.svg wpcc-logo-dark.svg; do
   TAG="$( grep -c 'AI-POWERED\|AI-powered' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
   assert_eq "$f carries no tagline" "0" "$TAG"
   # The wordmark itself must still be there — this is a lockup, not a bare mark.
-  WORD="$( grep -c 'WP Command Center' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
+  WORD="$( grep -c 'Action Steward' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
   [ "$WORD" -ge 1 ] && pass "$f still carries the wordmark" || fail "$f lost the wordmark"
 done
 
@@ -142,7 +142,7 @@ echo "== 7. Brand asset URLs are cache-keyed to the artwork, not to the release 
 # had already loaded the admin. Brand::url() now appends the file mtime.
 VER_URL="$( "$PHP_BIN" -r '
 	define( "ABSPATH", "/" );
-	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/ai-command-center/" );
+	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/action-steward/" );
 	define( "WPCC_PLUGIN_DIR", getcwd() . "/" );
 	define( "WPCC_VERSION", "9.9.9" );
 	require "includes/Admin/Brand.php";
@@ -157,12 +157,12 @@ esac
 # a missing WPCC_PLUGIN_DIR/WPCC_VERSION must degrade to the bare URL, never fatal.
 BARE_URL="$( "$PHP_BIN" -r '
 	define( "ABSPATH", "/" );
-	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/ai-command-center/" );
+	define( "WPCC_PLUGIN_URL", "https://example.test/wp-content/plugins/action-steward/" );
 	require "includes/Admin/Brand.php";
 	echo WPCommandCenter\Admin\Brand::logo();
 ' 2>/dev/null )"
 assert_eq "falls back to a bare URL when the plugin dir is unknown" \
-  "https://example.test/wp-content/plugins/ai-command-center/assets/brand/wpcc-logo.svg" "$BARE_URL"
+  "https://example.test/wp-content/plugins/action-steward/assets/brand/wpcc-logo.svg" "$BARE_URL"
 
 echo
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

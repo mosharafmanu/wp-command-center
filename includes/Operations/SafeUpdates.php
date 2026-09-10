@@ -38,11 +38,11 @@ final class SafeUpdates {
 		$dry_run = filter_var( $params['dry_run'] ?? true, FILTER_VALIDATE_BOOLEAN );
 
 		if ( empty( $type ) || ! in_array( $type, [ 'plugin', 'theme' ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_update_type', __( 'Invalid update type. Supported: plugin, theme.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_update_type', __( 'Invalid update type. Supported: plugin, theme.', 'action-steward' ) );
 		}
 
 		if ( empty( $slug ) ) {
-			return new \WP_Error( 'wpcc_missing_slug', __( 'Plugin or theme slug is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_slug', __( 'Plugin or theme slug is required.', 'action-steward' ) );
 		}
 
 		// file.php defines request_filesystem_credentials(), required by WP_Upgrader_Skin.
@@ -74,7 +74,7 @@ final class SafeUpdates {
 		global $wp_filesystem;
 
 		if ( ! function_exists( 'WP_Filesystem' ) ) {
-			return new \WP_Error( 'filesystem_not_writable', __( 'WP_Filesystem function unavailable.', 'ai-command-center' ) );
+			return new \WP_Error( 'filesystem_not_writable', __( 'WP_Filesystem function unavailable.', 'action-steward' ) );
 		}
 
 		// request_filesystem_credentials() with false as the URL tries direct
@@ -84,14 +84,14 @@ final class SafeUpdates {
 		if ( false === $creds ) {
 			return new \WP_Error(
 				'wp_filesystem_credentials_required',
-				__( 'WP Filesystem requires FTP/SSH credentials. Set FS_METHOD=\'direct\' in wp-config.php or provide credentials.', 'ai-command-center' )
+				__( 'WP Filesystem requires FTP/SSH credentials. Set FS_METHOD=\'direct\' in wp-config.php or provide credentials.', 'action-steward' )
 			);
 		}
 
 		if ( ! WP_Filesystem( $creds ) ) {
 			return new \WP_Error(
 				'filesystem_not_writable',
-				__( 'Could not initialise WP Filesystem. Check file permissions.', 'ai-command-center' )
+				__( 'Could not initialise WP Filesystem. Check file permissions.', 'action-steward' )
 			);
 		}
 
@@ -100,7 +100,7 @@ final class SafeUpdates {
 				'filesystem_not_writable',
 				sprintf(
 					/* translators: %s: directory path */
-					__( 'Directory is not writable: %s', 'ai-command-center' ),
+					__( 'Directory is not writable: %s', 'action-steward' ),
 					$target_dir
 				)
 			);
@@ -127,13 +127,13 @@ final class SafeUpdates {
 		}
 
 		if ( ! isset( $plugins[ $plugin_file ] ) ) {
-			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'action-steward' ) );
 		}
 
 		$before_version = $plugins[ $plugin_file ]['Version'] ?? 'unknown';
 
 		if ( ! isset( $current->response[ $plugin_file ] ) ) {
-			return new \WP_Error( 'wpcc_no_update_available', __( 'No update available for this plugin.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_no_update_available', __( 'No update available for this plugin.', 'action-steward' ) );
 		}
 
 		$after_version  = $current->response[ $plugin_file ]->new_version ?? 'unknown';
@@ -144,7 +144,7 @@ final class SafeUpdates {
 		}
 
 		if ( ! class_exists( 'ZipArchive' ) && ! function_exists( 'unzip_file' ) ) {
-			return new \WP_Error( 'zip_validation_failed', __( 'PHP ZipArchive extension is required for plugin updates.', 'ai-command-center' ) );
+			return new \WP_Error( 'zip_validation_failed', __( 'PHP ZipArchive extension is required for plugin updates.', 'action-steward' ) );
 		}
 
 		// Capture active state before upgrade.
@@ -175,7 +175,7 @@ final class SafeUpdates {
 
 		$health = $this->run_health_check();
 		if ( is_wp_error( $health ) ) {
-			return new \WP_Error( 'wpcc_health_check_failed', sprintf( /* translators: %s: value */ __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'ai-command-center' ), $health->get_error_message() ) );
+			return new \WP_Error( 'wpcc_health_check_failed', sprintf( /* translators: %s: value */ __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'action-steward' ), $health->get_error_message() ) );
 		}
 
 		return [
@@ -197,13 +197,13 @@ final class SafeUpdates {
 		$theme   = wp_get_theme( $slug );
 
 		if ( ! $theme->exists() ) {
-			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_theme_not_found', __( 'Theme not found.', 'action-steward' ) );
 		}
 
 		$before_version = $theme->get( 'Version' ) ?: 'unknown';
 
 		if ( ! isset( $current->response[ $slug ] ) ) {
-			return new \WP_Error( 'wpcc_no_update_available', __( 'No update available for this theme.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_no_update_available', __( 'No update available for this theme.', 'action-steward' ) );
 		}
 
 		$after_version = $current->response[ $slug ]['new_version'] ?? 'unknown';
@@ -214,7 +214,7 @@ final class SafeUpdates {
 		}
 
 		if ( ! class_exists( 'ZipArchive' ) && ! function_exists( 'unzip_file' ) ) {
-			return new \WP_Error( 'zip_validation_failed', __( 'PHP ZipArchive extension is required for theme updates.', 'ai-command-center' ) );
+			return new \WP_Error( 'zip_validation_failed', __( 'PHP ZipArchive extension is required for theme updates.', 'action-steward' ) );
 		}
 
 		$skin = new \WP_Ajax_Upgrader_Skin();
@@ -235,7 +235,7 @@ final class SafeUpdates {
 
 		$health = $this->run_health_check();
 		if ( is_wp_error( $health ) ) {
-			return new \WP_Error( 'wpcc_health_check_failed', sprintf( /* translators: %s: value */ __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'ai-command-center' ), $health->get_error_message() ) );
+			return new \WP_Error( 'wpcc_health_check_failed', sprintf( /* translators: %s: value */ __( 'Update succeeded, but health check failed: %s. Rollback recommended.', 'action-steward' ), $health->get_error_message() ) );
 		}
 
 		return [
@@ -265,7 +265,7 @@ final class SafeUpdates {
 	): array|\WP_Error {
 		// Zip extension (same check as live)
 		if ( ! class_exists( 'ZipArchive' ) && ! function_exists( 'unzip_file' ) ) {
-			return new \WP_Error( 'zip_validation_failed', __( 'PHP ZipArchive extension is required for updates.', 'ai-command-center' ) );
+			return new \WP_Error( 'zip_validation_failed', __( 'PHP ZipArchive extension is required for updates.', 'action-steward' ) );
 		}
 
 		// Download URL reachability (HEAD request, no file download)
@@ -274,7 +274,7 @@ final class SafeUpdates {
 			if ( is_wp_error( $head ) ) {
 				return new \WP_Error(
 					'download_failed',
-					sprintf( /* translators: %s: value */ __( 'Dry-run: update package unreachable: %s', 'ai-command-center' ), $head->get_error_message() )
+					sprintf( /* translators: %s: value */ __( 'Dry-run: update package unreachable: %s', 'action-steward' ), $head->get_error_message() )
 				);
 			}
 			$status = wp_remote_retrieve_response_code( $head );
@@ -284,7 +284,7 @@ final class SafeUpdates {
 					$code,
 					sprintf(
 						/* translators: 1: HTTP status code, 2: download URL */
-						__( 'Dry-run: update server returned HTTP %1$d for package URL. %2$s', 'ai-command-center' ),
+						__( 'Dry-run: update server returned HTTP %1$d for package URL. %2$s', 'action-steward' ),
 						$status,
 						$download_url
 					)
@@ -317,7 +317,7 @@ final class SafeUpdates {
 		$messages = method_exists( $skin, 'get_upgrade_messages' ) ? $skin->get_upgrade_messages() : [];
 		$message  = ! empty( $messages ) ? implode( ' ', array_map( 'wp_strip_all_tags', $messages ) ) : '';
 		$code     = $this->classify_message( $message ) ?: $fallback_code;
-		$text     = $message ?: __( 'Update failed with no specific error message. Check file permissions and disk space.', 'ai-command-center' );
+		$text     = $message ?: __( 'Update failed with no specific error message. Check file permissions and disk space.', 'action-steward' );
 		return new \WP_Error( $code, $text );
 	}
 
@@ -371,12 +371,12 @@ final class SafeUpdates {
 		$response = wp_remote_get( home_url(), [ 'timeout' => 10 ] );
 
 		if ( is_wp_error( $response ) ) {
-			return new \WP_Error( 'wpcc_loopback_failed', __( 'Loopback check failed: ', 'ai-command-center' ) . $response->get_error_message() );
+			return new \WP_Error( 'wpcc_loopback_failed', __( 'Loopback check failed: ', 'action-steward' ) . $response->get_error_message() );
 		}
 
 		$code = wp_remote_retrieve_response_code( $response );
 		if ( $code >= 500 ) {
-			return new \WP_Error( 'wpcc_fatal_error', sprintf( /* translators: %d: number */ __( 'Site returned a %d error after update.', 'ai-command-center' ), $code ) );
+			return new \WP_Error( 'wpcc_fatal_error', sprintf( /* translators: %d: number */ __( 'Site returned a %d error after update.', 'action-steward' ), $code ) );
 		}
 
 		return true;

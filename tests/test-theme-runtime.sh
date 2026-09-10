@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Theme Management Runtime test suite for WP Command Center (Step 40).
+# Theme Management Runtime test suite for Action Steward (Step 40).
 # Usage: bash tests/test-theme-runtime.sh
 
 set -uo pipefail

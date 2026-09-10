@@ -18,7 +18,7 @@ final class EnvironmentManager {
 	public function set( string $mode ): string|\WP_Error {
 		$mode = sanitize_key( $mode );
 		if ( ! in_array( $mode, self::MODES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_environment_mode', __( 'Environment mode must be development, staging, or production.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_environment_mode', __( 'Environment mode must be development, staging, or production.', 'action-steward' ) );
 		}
 		update_option( 'wpcc_environment_mode', $mode, false );
 		return $mode;

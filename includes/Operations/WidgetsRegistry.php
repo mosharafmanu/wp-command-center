@@ -123,7 +123,7 @@ final class WidgetsRegistry {
 		if ( ! empty( $sidebars_widgets['wp_inactive_widgets'] ) ) {
 			$result[] = [
 				'sidebar_id'   => 'wp_inactive_widgets',
-				'name'         => __( 'Inactive Widgets', 'ai-command-center' ),
+				'name'         => __( 'Inactive Widgets', 'action-steward' ),
 				'widgets'      => $sidebars_widgets['wp_inactive_widgets'],
 				'widget_count' => count( $sidebars_widgets['wp_inactive_widgets'] ),
 			];

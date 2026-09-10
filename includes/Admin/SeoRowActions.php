@@ -103,7 +103,7 @@ class SeoRowActions {
 		$id = isset( $_GET['post'] ) ? (int) $_GET['post'] : 0;
 
 		if ( ! current_user_can( 'manage_options' ) || ! $this->ui_enabled() || ! FeatureGate::allows( self::FEATURE ) ) {
-			wp_die( esc_html__( 'You are not allowed to do this.', 'ai-command-center' ), 403 );
+			wp_die( esc_html__( 'You are not allowed to do this.', 'action-steward' ), 403 );
 		}
 		check_admin_referer( self::ACTION . '_' . $id );
 
@@ -169,7 +169,7 @@ class SeoRowActions {
 		if ( ! $this->allowed() ) {
 			return $actions;
 		}
-		$actions[ self::ACTION ] = __( 'Generate SEO Suggestions', 'ai-command-center' );
+		$actions[ self::ACTION ] = __( 'Generate SEO Suggestions', 'action-steward' );
 		return $actions;
 	}
 

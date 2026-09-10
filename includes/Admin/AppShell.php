@@ -2,7 +2,7 @@
 /**
  * Experience Layer — App Shell + the "Three Doors, One Engine" information architecture.
  *
- * The single source of truth for WP Command Center's navigation. It presents FIVE
+ * The single source of truth for Action Steward's navigation. It presents FIVE
  * product-language sections — Home · Connect · Activity · History · Settings —
  * each rendered as a branded shell (header + sub-tab bar) hosting the EXISTING view
  * files in a content canvas. It adds no REST routes, operations, capabilities, MCP
@@ -267,16 +267,16 @@ final class AppShell {
 	 */
 	public static function builtin_tabs(): array {
 		$tabs = [
-			'providers' => [ 'label' => __( 'Providers', 'ai-command-center' ), 'view' => 'ai-setup', 'feature' => null ],
+			'providers' => [ 'label' => __( 'Providers', 'action-steward' ), 'view' => 'ai-setup', 'feature' => null ],
 		];
 		if ( self::flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
-			$tabs['seo'] = [ 'label' => __( 'SEO', 'ai-command-center' ), 'view' => 'seo-meta', 'feature' => null ];
+			$tabs['seo'] = [ 'label' => __( 'SEO', 'action-steward' ), 'view' => 'seo-meta', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_ALT_TEXT_UI', 'wpcc_alt_text_ui' ) && FeatureGate::allows( 'ai_alt_text' ) ) {
-			$tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'ai-command-center' ), 'view' => 'ai-alt-text', 'feature' => null ];
+			$tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'action-steward' ), 'view' => 'ai-alt-text', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_AI_CONTENT_UI', 'wpcc_ai_content_ui' ) && ( FeatureGate::allows( 'title_generator' ) || FeatureGate::allows( 'excerpt_generator' ) ) ) {
-			$tabs['content'] = [ 'label' => __( 'Content', 'ai-command-center' ), 'view' => 'ai-content', 'feature' => null ];
+			$tabs['content'] = [ 'label' => __( 'Content', 'action-steward' ), 'view' => 'ai-content', 'feature' => null ];
 		}
 		return $tabs;
 	}
@@ -337,7 +337,7 @@ final class AppShell {
 		 */
 		$tree = [
 			self::HOME_SLUG => [
-				'label'  => __( 'Home', 'ai-command-center' ),
+				'label'  => __( 'Home', 'action-steward' ),
 				/*
 				 * Home's subtitle is the product's promise, not a description of the
 				 * page — so it has to follow the mode. It ended with "You approve
@@ -348,12 +348,12 @@ final class AppShell {
 				 */
 				'desc'   => sprintf(
 					/* translators: %s: the mode-aware guarantee sentence. */
-					__( 'Ask your AI assistant to change this site, in your own words and your own language. %s', 'ai-command-center' ),
+					__( 'Ask your AI assistant to change this site, in your own words and your own language. %s', 'action-steward' ),
 					SecurityModeManager::promise()
 				),
 				'detail' => true,
 				'tabs'  => [
-					'home' => [ 'label' => __( 'Home', 'ai-command-center' ), 'view' => 'command-home', 'feature' => null ],
+					'home' => [ 'label' => __( 'Home', 'action-steward' ), 'view' => 'command-home', 'feature' => null ],
 				],
 			],
 			// Was "Activity" — a word that describes nothing a customer wants. This
@@ -361,28 +361,28 @@ final class AppShell {
 			// draft surface that used to share it are engine internals; they moved to
 			// Settings › Advanced where the rest of the machinery lives.
 			self::ACTIVITY_SLUG => [
-				'label'  => __( 'Approvals', 'ai-command-center' ),
+				'label'  => __( 'Approvals', 'action-steward' ),
 				// Mode-aware: on a Development site nothing new is held here, but a
 				// queue built up before the switch still is. See approvals_desc().
 				'desc'   => SecurityModeManager::approvals_desc(),
 				'detail' => true,
 				'tabs'  => [
-					'approvals' => [ 'label' => __( 'Approvals', 'ai-command-center' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
+					'approvals' => [ 'label' => __( 'Approvals', 'action-steward' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
 				],
 			],
 			// Was "History" — the system's word for it. The customer calls these
 			// changes, and comes here to see or undo one.
 			self::HISTORY_SLUG => [
-				'label'  => __( 'Changes', 'ai-command-center' ),
-				'desc'   => __( 'Everything that has changed on this site. Supported changes can be undone from here.', 'ai-command-center' ),
+				'label'  => __( 'Changes', 'action-steward' ),
+				'desc'   => __( 'Everything that has changed on this site. Supported changes can be undone from here.', 'action-steward' ),
 				'detail' => true,
 				'tabs'  => [
-					'changes' => [ 'label' => __( 'Changes', 'ai-command-center' ), 'view' => 'change-history', 'feature' => 'change_history' ],
+					'changes' => [ 'label' => __( 'Changes', 'action-steward' ), 'view' => 'change-history', 'feature' => 'change_history' ],
 				],
 			],
 			self::SETTINGS_SLUG => [
-				'label'  => __( 'Settings', 'ai-command-center' ),
-				'desc'   => __( 'How this site is protected, who can reach it, and everything advanced.', 'ai-command-center' ),
+				'label'  => __( 'Settings', 'action-steward' ),
+				'desc'   => __( 'How this site is protected, who can reach it, and everything advanced.', 'action-steward' ),
 				// No Detailed view: Settings screens are already the detailed ones.
 				// Advanced is, by its own subtitle, "everything a normal customer
 				// never needs to open" — there is nothing here to progressively
@@ -393,9 +393,9 @@ final class AppShell {
 				//   Connections — who is allowed to reach this site?
 				//   Advanced    — everything a normal customer never needs.
 				'tabs'  => [
-					'security'    => [ 'label' => __( 'Protection', 'ai-command-center' ),  'view' => 'settings',             'feature' => null ],
-					'connections' => [ 'label' => __( 'Connections', 'ai-command-center' ), 'view' => 'settings-connections', 'feature' => null ],
-					'advanced'    => [ 'label' => __( 'Advanced', 'ai-command-center' ),    'view' => 'settings-advanced',    'feature' => null ],
+					'security'    => [ 'label' => __( 'Protection', 'action-steward' ),  'view' => 'settings',             'feature' => null ],
+					'connections' => [ 'label' => __( 'Connections', 'action-steward' ), 'view' => 'settings-connections', 'feature' => null ],
+					'advanced'    => [ 'label' => __( 'Advanced', 'action-steward' ),    'view' => 'settings-advanced',    'feature' => null ],
 				],
 			],
 		];
@@ -438,19 +438,19 @@ final class AppShell {
 	public static function connection_panes(): array {
 		$panes = [
 			'assistants' => [
-				'label'    => __( 'Assistants', 'ai-command-center' ),
+				'label'    => __( 'Assistants', 'action-steward' ),
 				'view'     => 'ai-integrations',
 				'feature'  => null,
 				'keywords' => 'assistant ai claude chatgpt cursor codex gemini copilot continue opencode antigravity muse connect client mcp setup',
 			],
 			'api'        => [
-				'label'    => __( 'Your own software', 'ai-command-center' ),
+				'label'    => __( 'Your own software', 'action-steward' ),
 				'view'     => 'api-integrations',
 				'feature'  => null,
 				'keywords' => 'api rest developer integration endpoint openapi code',
 			],
 			'tokens'     => [
-				'label'    => __( 'Access tokens', 'ai-command-center' ),
+				'label'    => __( 'Access tokens', 'action-steward' ),
 				'view'     => 'token-capability-manager',
 				'feature'  => 'token_capability_manager',
 				'keywords' => 'token tokens access key secret revoke expire scope capabilities permission',
@@ -472,25 +472,25 @@ final class AppShell {
 	public static function advanced_panes(): array {
 		$panes = [
 			'ai'           => [
-				'label'    => __( 'Built-in AI', 'ai-command-center' ),
+				'label'    => __( 'Built-in AI', 'action-steward' ),
 				'view'     => 'settings-ai',
 				'feature'  => null,
 				'keywords' => 'ai provider anthropic openai api key model seo alt text content generate',
 			],
 			'diagnostics'  => [
-				'label'    => __( 'Diagnostics', 'ai-command-center' ),
+				'label'    => __( 'Diagnostics', 'action-steward' ),
 				'view'     => 'settings-diagnostics',
 				'feature'  => null,
 				'keywords' => 'diagnostics health troubleshoot problem report recommendations patches status check',
 			],
 			'system'       => [
-				'label'    => __( 'System', 'ai-command-center' ),
+				'label'    => __( 'System', 'action-steward' ),
 				'view'     => 'operations-center',
 				'feature'  => null,
 				'keywords' => 'system engine runtime live feed operations activity queue',
 			],
 			'capabilities' => [
-				'label'    => __( 'Capabilities', 'ai-command-center' ),
+				'label'    => __( 'Capabilities', 'action-steward' ),
 				'view'     => 'operations-explorer',
 				'feature'  => 'operations_explorer',
 				'keywords' => 'capabilities capability operations permissions allowed map what can it do',
@@ -500,7 +500,7 @@ final class AppShell {
 		// Dev-only proposal surface: build-flagged, off on a stock install.
 		if ( self::proposals_ui_enabled() ) {
 			$panes['drafts'] = [
-				'label'    => __( 'Drafts (Dev)', 'ai-command-center' ),
+				'label'    => __( 'Drafts (Dev)', 'action-steward' ),
 				'view'     => 'proposals',
 				'feature'  => null,
 				'keywords' => 'drafts proposals pending suggestions',
@@ -511,13 +511,13 @@ final class AppShell {
 		// REST/MCP; these screens appear only when developer tools are switched on.
 		if ( DeveloperTools::enabled() ) {
 			$panes['files'] = [
-				'label'    => __( 'File access', 'ai-command-center' ),
+				'label'    => __( 'File access', 'action-steward' ),
 				'view'     => 'file-access',
 				'feature'  => null,
 				'keywords' => 'files file access browse read theme plugin code',
 			];
 			$panes['tools'] = [
-				'label'    => __( 'Search & replace', 'ai-command-center' ),
+				'label'    => __( 'Search & replace', 'action-steward' ),
 				'view'     => 'tools-search-replace',
 				'feature'  => null,
 				'keywords' => 'search replace database find text bulk',
@@ -570,7 +570,7 @@ final class AppShell {
 	 * fuzzily: the longer and more varied a searchable string, the more likely some
 	 * unrelated query's letters appear across it in order. Feeding it the inherited
 	 * words was enough to make "protection" rank Changes above Protection — Changes
-	 * does not contain the word at all, but "WP Command Center: Changes … rollback
+	 * does not contain the word at all, but "Action Steward: Changes … rollback
 	 * revert restore …" contains its letters in sequence. The plugin's own palette
 	 * matches contiguously and is unaffected, so it keeps using `keywords`; see
 	 * CommandPaletteIntegration for the other consumer.
@@ -610,7 +610,7 @@ final class AppShell {
 			if ( self::HOME_SLUG === $slug || count( $section['tabs'] ) <= 1 ) {
 				$add(
 					$section['label'],
-					__( 'Section', 'ai-command-center' ),
+					__( 'Section', 'action-steward' ),
 					admin_url( 'admin.php?page=' . $slug ),
 					$keywords
 				);
@@ -750,7 +750,7 @@ final class AppShell {
 			 * core and every other plugin render normally, just in one predictable band.
 			 */
 			?>
-			<div class="wpcc-shell__notices" role="region" aria-label="<?php esc_attr_e( 'WordPress notices', 'ai-command-center' ); ?>">
+			<div class="wpcc-shell__notices" role="region" aria-label="<?php esc_attr_e( 'WordPress notices', 'action-steward' ); ?>">
 				<hr class="wp-header-end" />
 			</div>
 
@@ -801,16 +801,16 @@ final class AppShell {
 						printf(
 							'<img src="%1$s" alt="%2$s" class="wpcc-shell__brand-mark" width="26" height="26" decoding="async" />',
 							esc_url( Brand::mark() ),
-							esc_attr__( 'WP Command Center', 'ai-command-center' )
+							esc_attr__( 'Action Steward', 'action-steward' )
 						);
 						?>
 						<?php
 						/*
 						 * NAMING HIERARCHY — each surface names one thing, once.
 						 *
-						 *   admin menu       -> "WP Command Center"  (which product, globally)
+						 *   admin menu       -> "Action Steward"  (which product, globally)
 						 *   shell header     -> the current area     (where you are, now)
-						 *   first-run lockup -> "WP Command Center"  (the introduction)
+						 *   first-run lockup -> "Action Steward"  (the introduction)
 						 *
 						 * This heading used to read "Command Center / Approvals": a third spelling
 						 * of the product name, repeated on every screen at 18px, with the one word
@@ -837,7 +837,7 @@ final class AppShell {
 					<?php endif; ?>
 				</div>
 				<div class="wpcc-shell__tools">
-					<span class="wpcc-shell__posture" data-mode="<?php echo esc_attr( $mode ); ?>" title="<?php esc_attr_e( 'Current security mode', 'ai-command-center' ); ?>">
+					<span class="wpcc-shell__posture" data-mode="<?php echo esc_attr( $mode ); ?>" title="<?php esc_attr_e( 'Current security mode', 'action-steward' ); ?>">
 						<?php echo esc_html( $label ); ?>
 					</span>
 					<?php
@@ -847,9 +847,9 @@ final class AppShell {
 					// to decide how much detail they wanted.
 					?>
 					<?php if ( $has_started && ! empty( $section['detail'] ) ) : ?>
-						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'ai-command-center' ); ?>">
-							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'ai-command-center' ); ?></button>
-							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'ai-command-center' ); ?></button>
+						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'action-steward' ); ?>">
+							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'action-steward' ); ?></button>
+							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'action-steward' ); ?></button>
 						</div>
 					<?php endif; ?>
 					<?php
@@ -858,7 +858,7 @@ final class AppShell {
 					?>
 					<?php if ( $has_started ) : ?>
 						<button type="button" class="wpcc-shell__cmdk" aria-haspopup="dialog">
-							<?php esc_html_e( 'Search', 'ai-command-center' ); ?> <kbd>&#8984;K</kbd>
+							<?php esc_html_e( 'Search', 'action-steward' ); ?> <kbd>&#8984;K</kbd>
 						</button>
 					<?php endif; ?>
 				</div>
@@ -902,9 +902,9 @@ final class AppShell {
 	private function render_empty_section( string $label ): void {
 		?>
 		<div class="wpcc-cds-empty" role="status">
-			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'ai-command-center' ), $label ) ); ?></strong></p>
-			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in WP Command Center stays available.', 'ai-command-center' ); ?></p>
-			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'ai-command-center' ); ?></a></p>
+			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'action-steward' ), $label ) ); ?></strong></p>
+			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in Action Steward stays available.', 'action-steward' ); ?></p>
+			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'action-steward' ); ?></a></p>
 		</div>
 		<?php
 	}

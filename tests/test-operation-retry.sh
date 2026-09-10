@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Operation Retry Engine test suite for WP Command Center (Step 24).
+# Operation Retry Engine test suite for Action Steward (Step 24).
 #
 # Verifies:
 #   - failed item can retry

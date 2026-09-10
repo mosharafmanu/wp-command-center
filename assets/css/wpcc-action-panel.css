@@ -1,5 +1,5 @@
 /**
- * WP Command Center — Governed Action Panel styles.
+ * Action Steward — Governed Action Panel styles.
  *
  * Generalized from the proven seo-quick-panel.css, re-expressed against the WPCC
  * design tokens (wpcc-tokens.css) so the panel can be re-skinned/themed without
@@ -338,7 +338,7 @@ textarea.wpcc-qp-ed { resize: vertical; }
 	.wpcc-qp-modal { animation: none; }
 }
 
-/* ✨ WPCC AI — compact row dropdown menu (anchored off the row action; NOT the modal). */
+/* ✨ Action Steward AI — compact row dropdown menu (anchored off the row action; NOT the modal). */
 .wpcc-ai-menu {
 	min-width: 200px;
 	padding: 4px;
@@ -382,7 +382,7 @@ textarea.wpcc-qp-ed { resize: vertical; }
 	white-space: nowrap;
 }
 
-/* While the WPCC AI menu is open, keep the row's native action strip visible — the menu
+/* While the Action Steward AI menu is open, keep the row's native action strip visible — the menu
    lives on <body>, so the pointer leaves the <tr> and WP's hover-only strip would hide.
    WP core hides the strip by pushing it off-screen ( .row-actions { position: relative;
    left: -9999em } ) and reveals it with `position: static` (the same mechanism as WP's

@@ -58,7 +58,7 @@ final class SnapshotManager {
 		}
 
 		if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'action-steward' ) );
 		}
 
 		// STEP 105.6 — large-file protection: cap the snapshot size up front so a
@@ -72,7 +72,7 @@ final class SnapshotManager {
 				'wpcc_snapshot_too_large',
 				sprintf(
 					/* translators: 1: file size, 2: limit */
-					__( 'File is too large to snapshot (%1$d bytes > %2$d limit). Set WPCC_SNAPSHOT_MAX_BYTES to raise the cap.', 'ai-command-center' ),
+					__( 'File is too large to snapshot (%1$d bytes > %2$d limit). Set WPCC_SNAPSHOT_MAX_BYTES to raise the cap.', 'action-steward' ),
 					$fsize,
 					$max
 				)
@@ -85,10 +85,10 @@ final class SnapshotManager {
 		$contents = file_get_contents( $real );
 
 		if ( false === $contents ) {
-			return new \WP_Error( 'wpcc_read_failed', __( 'Failed to read the file.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_read_failed', __( 'Failed to read the file.', 'action-steward' ) );
 		}
 		if ( microtime( true ) > $deadline ) {
-			return new \WP_Error( 'wpcc_snapshot_timeout', __( 'Snapshot read exceeded the time budget.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_snapshot_timeout', __( 'Snapshot read exceeded the time budget.', 'action-steward' ) );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -108,12 +108,12 @@ final class SnapshotManager {
 		// rename() is atomic on the same filesystem.
 		$tmp = $dest . '.' . wp_generate_password( 8, false ) . '.tmp';
 		if ( false === file_put_contents( $tmp, $contents ) ) {
-			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to store the snapshot.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to store the snapshot.', 'action-steward' ) );
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- atomic temp-then-replace. WP_Filesystem::move() gives no atomicity guarantee and is not atomic at all over its FTP/SSH transports; snapshot and audit integrity depend on a reader seeing either the whole old file or the whole new one.
 		if ( ! @rename( $tmp, $dest ) ) {
 			wp_delete_file( $tmp );
-			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to finalize the snapshot.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_write_failed', __( 'Failed to finalize the snapshot.', 'action-steward' ) );
 		}
 
 		$record = [
@@ -176,7 +176,7 @@ final class SnapshotManager {
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}wpcc_snapshots WHERE snapshot_id = %s", $id ), ARRAY_A );
 
 		if ( ! is_array( $row ) ) {
-			return new \WP_Error( 'wpcc_snapshot_not_found', __( 'Snapshot not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_snapshot_not_found', __( 'Snapshot not found.', 'action-steward' ) );
 		}
 
 		return $this->row_to_record( $row );
@@ -198,7 +198,7 @@ final class SnapshotManager {
 		$file = trailingslashit( $dir ) . $id . '.snapshot';
 
 		if ( ! is_readable( $file ) ) {
-			return new \WP_Error( 'wpcc_snapshot_missing', __( 'Snapshot file is missing on disk.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_snapshot_missing', __( 'Snapshot file is missing on disk.', 'action-steward' ) );
 		}
 
 		return (string) file_get_contents( $file );
@@ -254,7 +254,7 @@ final class SnapshotManager {
 	private function get_storage_dir(): string|\WP_Error {
 		return \WPCommandCenter\Security\PrivateStore::dir(
 			self::DIR_NAME,
-			__( 'Failed to create the snapshot storage directory.', 'ai-command-center' )
+			__( 'Failed to create the snapshot storage directory.', 'action-steward' )
 		);
 	}
 

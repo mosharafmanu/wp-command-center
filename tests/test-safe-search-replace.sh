@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Safe Search & Replace Operation test suite for WP Command Center (Step 26).
+# Safe Search & Replace Operation test suite for Action Steward (Step 26).
 #
 # Verifies:
 #   - dry run works

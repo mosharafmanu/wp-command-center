@@ -53,7 +53,7 @@ final class SelectionContract {
 	public static function from_array( array $a ): self|\WP_Error {
 		$by = (string) ( $a['by'] ?? self::BY_CRITERIA );
 		if ( ! in_array( $by, [ self::BY_IDS, self::BY_CRITERIA ], true ) ) {
-			return new \WP_Error( 'wpcc_selection_bad_by', __( 'Selection "by" must be "ids" or "criteria".', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_selection_bad_by', __( 'Selection "by" must be "ids" or "criteria".', 'action-steward' ) );
 		}
 
 		// Cap: clamp caller input into [1, HARD_CAP]; default to the hard cap.

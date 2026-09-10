@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# WooCommerce Product Seeder Operation test suite for WP Command Center (Step 19).
+# WooCommerce Product Seeder Operation test suite for Action Steward (Step 19).
 #
 # Verifies:
 #   - operation discovery

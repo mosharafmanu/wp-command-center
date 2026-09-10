@@ -48,27 +48,27 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-tokens">
-	<h1><?php esc_html_e( 'Access', 'ai-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Access', 'action-steward' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'A token is how an assistant reaches this site. Create one for each assistant you connect, and see exactly what it is allowed to do. The token is shown once when you create it — copy it then. You can revoke any token instantly.', 'ai-command-center' ); ?>
+		<?php esc_html_e( 'A token is how an assistant reaches this site. Create one for each assistant you connect, and see exactly what it is allowed to do. The token is shown once when you create it — copy it then. You can revoke any token instantly.', 'action-steward' ); ?>
 	</p>
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'action-steward' ); ?></a>
 		</p>
 		<div id="wpcc-token-detail" data-token-id="<?php echo esc_attr( $view_id ); ?>">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading token…', 'ai-command-center' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading token…', 'action-steward' ); ?></p>
 		</div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'ai-command-center' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'capabilities' ) ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'ai-command-center' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'operations' ) ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'ai-command-center' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'capabilities' ) ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'operations' ) ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'action-steward' ); ?></a>
 		</h2>
 
 		<div id="wpcc-tokens-panel">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></p>
 		</div>
 	<?php endif; ?>
 </div>
@@ -95,25 +95,25 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 ?>
 <div id="wpcc-tok-dialog" class="wpcc-modal wpcc-tokdlg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-tokdlg-title">
 	<div class="wpcc-modal-box wpcc-tokdlg__box" role="document">
-		<h2 id="wpcc-tokdlg-title"><?php esc_html_e( 'Create an access token', 'ai-command-center' ); ?></h2>
+		<h2 id="wpcc-tokdlg-title"><?php esc_html_e( 'Create an access token', 'action-steward' ); ?></h2>
 
 		<?php // ── The form. Hidden once the secret is on screen. ── ?>
 		<div id="wpcc-tokdlg-form">
 			<p class="description" style="margin-top:0;">
-				<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'ai-command-center' ); ?>
+				<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'action-steward' ); ?>
 			</p>
 
 			<div class="wpcc-tokdlg__field">
-				<label class="wpcc-tokdlg__label" for="wpcc-new-label"><?php esc_html_e( 'Name this token', 'ai-command-center' ); ?></label>
+				<label class="wpcc-tokdlg__label" for="wpcc-new-label"><?php esc_html_e( 'Name this token', 'action-steward' ); ?></label>
 				<input type="text" id="wpcc-new-label" class="regular-text" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="wpcc-tokdlg-label-hint" />
 				<p class="wpcc-tokdlg__hint" id="wpcc-tokdlg-label-hint">
-					<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'ai-command-center' ); ?>
+					<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'action-steward' ); ?>
 				</p>
 				<p class="wpcc-tokdlg__dupe" id="wpcc-tokdlg-dupe" role="status" hidden></p>
 			</div>
 
 			<fieldset class="wpcc-tokdlg__field">
-				<legend class="wpcc-tokdlg__label"><?php esc_html_e( 'What this token may do', 'ai-command-center' ); ?></legend>
+				<legend class="wpcc-tokdlg__label"><?php esc_html_e( 'What this token may do', 'action-steward' ); ?></legend>
 
 				<?php
 				/*
@@ -129,32 +129,32 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 				<label class="wpcc-tokdlg__choice">
 					<input type="radio" name="wpcc-new-scope" value="read_only" checked />
 					<span>
-						<strong><?php esc_html_e( 'Read-only — inspect the site, no changes', 'ai-command-center' ); ?></strong>
-						<em><?php esc_html_e( 'Can read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'ai-command-center' ); ?></em>
+						<strong><?php esc_html_e( 'Read-only — inspect the site, no changes', 'action-steward' ); ?></strong>
+						<em><?php esc_html_e( 'Can read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'action-steward' ); ?></em>
 					</span>
 				</label>
 
 				<label class="wpcc-tokdlg__choice">
 					<input type="radio" name="wpcc-new-scope" value="full" />
 					<span>
-						<strong><?php esc_html_e( 'Full access — read the site and request changes', 'ai-command-center' ); ?></strong>
-						<em><?php esc_html_e( 'Can answer questions about the whole site and ask to change it. This is what a connected assistant normally needs.', 'ai-command-center' ); ?></em>
+						<strong><?php esc_html_e( 'Full access — read the site and request changes', 'action-steward' ); ?></strong>
+						<em><?php esc_html_e( 'Can answer questions about the whole site and ask to change it. This is what a connected assistant normally needs.', 'action-steward' ); ?></em>
 					</span>
 				</label>
 			</fieldset>
 
 			<div class="wpcc-tokdlg__field">
-				<label class="wpcc-tokdlg__label" for="wpcc-new-expires"><?php esc_html_e( 'Stop working after', 'ai-command-center' ); ?></label>
+				<label class="wpcc-tokdlg__label" for="wpcc-new-expires"><?php esc_html_e( 'Stop working after', 'action-steward' ); ?></label>
 				<?php
 				// 30 days is the default; Never remains available as a deliberate
 				// choice rather than an inherited one. See the note in
 				// ai-integrations.php — both forms behave the same way.
 				?>
 				<select id="wpcc-new-expires">
-					<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'ai-command-center' ); ?></option>
-					<option value="90d"><?php esc_html_e( '90 days', 'ai-command-center' ); ?></option>
-					<option value="1y"><?php esc_html_e( '1 year', 'ai-command-center' ); ?></option>
-					<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'ai-command-center' ); ?></option>
+					<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'action-steward' ); ?></option>
+					<option value="90d"><?php esc_html_e( '90 days', 'action-steward' ); ?></option>
+					<option value="1y"><?php esc_html_e( '1 year', 'action-steward' ); ?></option>
+					<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'action-steward' ); ?></option>
 				</select>
 			</div>
 
@@ -167,7 +167,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 			// expiry to fall back on if it leaks. Shown only when both are chosen.
 			?>
 			<p class="wpcc-tokdlg__warn wpcc-tokdlg__warn--danger" id="wpcc-tokdlg-longlived" hidden>
-				<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'ai-command-center' ); ?>
+				<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'action-steward' ); ?>
 			</p>
 
 			<p class="wpcc-tokdlg__warn<?php echo esc_attr( $wpcc_tok_protected ? '' : ' wpcc-tokdlg__warn--danger' ); ?>" id="wpcc-tokdlg-warn" hidden>
@@ -176,21 +176,21 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 					echo esc_html(
 						sprintf(
 							/* translators: %s: the site's protection mode, e.g. "Standard protection". */
-							__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'ai-command-center' ),
+							__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'action-steward' ),
 							$wpcc_tok_mode
 						)
 					);
 					?>
 				<?php else : ?>
-					<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'ai-command-center' ); ?>
+					<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'action-steward' ); ?>
 				<?php endif; ?>
 			</p>
 
 			<div id="wpcc-tokdlg-result" class="wpcc-cap-result" style="display:none;" role="status" aria-live="polite"></div>
 
 			<p class="wpcc-modal-actions">
-				<button type="button" class="button" id="wpcc-tokdlg-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
-				<button type="button" class="button button-primary" id="wpcc-tokdlg-create"><?php esc_html_e( 'Create token', 'ai-command-center' ); ?></button>
+				<button type="button" class="button" id="wpcc-tokdlg-cancel"><?php esc_html_e( 'Cancel', 'action-steward' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-create"><?php esc_html_e( 'Create token', 'action-steward' ); ?></button>
 			</p>
 		</div>
 
@@ -198,15 +198,15 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		<div id="wpcc-tokdlg-secret" hidden>
 			<p class="wpcc-tokdlg__ready" id="wpcc-tokdlg-ready"></p>
 			<p class="wpcc-tokdlg__hint">
-				<?php esc_html_e( 'This is the only time it will be shown. Copy it now and paste it into your assistant — if you lose it, revoke this token and create another.', 'ai-command-center' ); ?>
+				<?php esc_html_e( 'This is the only time it will be shown. Copy it now and paste it into your assistant — if you lose it, revoke this token and create another.', 'action-steward' ); ?>
 			</p>
 			<div class="wpcc-tokdlg__secretrow">
 				<input type="text" id="wpcc-tokdlg-value" class="large-text code" readonly />
-				<button type="button" class="button button-primary" id="wpcc-tokdlg-copy"><?php esc_html_e( 'Copy', 'ai-command-center' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-copy"><?php esc_html_e( 'Copy', 'action-steward' ); ?></button>
 			</div>
-			<p class="wpcc-tokdlg__copied" id="wpcc-tokdlg-copied" role="status" hidden><?php esc_html_e( 'Copied to your clipboard.', 'ai-command-center' ); ?></p>
+			<p class="wpcc-tokdlg__copied" id="wpcc-tokdlg-copied" role="status" hidden><?php esc_html_e( 'Copied to your clipboard.', 'action-steward' ); ?></p>
 			<p class="wpcc-modal-actions">
-				<button type="button" class="button button-primary" id="wpcc-tokdlg-done"><?php esc_html_e( 'Done', 'ai-command-center' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-done"><?php esc_html_e( 'Done', 'action-steward' ); ?></button>
 			</p>
 		</div>
 	</div>
@@ -215,12 +215,12 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 <?php // STEP 107.3/107.4 — one shared confirm modal for capability writes AND token lifecycle. ?>
 <div id="wpcc-cap-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-cap-modal-title" aria-describedby="wpcc-cap-modal-msg">
 	<div class="wpcc-modal-box" role="document">
-		<h2 id="wpcc-cap-modal-title"><?php esc_html_e( 'Please confirm', 'ai-command-center' ); ?></h2>
+		<h2 id="wpcc-cap-modal-title"><?php esc_html_e( 'Please confirm', 'action-steward' ); ?></h2>
 		<p id="wpcc-cap-modal-msg"></p>
 		<div id="wpcc-cap-modal-result" class="wpcc-cap-result" style="display:none;" role="status" aria-live="polite"></div>
 		<p class="wpcc-modal-actions">
-			<button type="button" class="button button-primary" id="wpcc-cap-modal-confirm"><?php esc_html_e( 'Confirm', 'ai-command-center' ); ?></button>
-			<button type="button" class="button" id="wpcc-cap-modal-cancel"><?php esc_html_e( 'Cancel', 'ai-command-center' ); ?></button>
+			<button type="button" class="button button-primary" id="wpcc-cap-modal-confirm"><?php esc_html_e( 'Confirm', 'action-steward' ); ?></button>
+			<button type="button" class="button" id="wpcc-cap-modal-cancel"><?php esc_html_e( 'Cancel', 'action-steward' ); ?></button>
 		</p>
 	</div>
 </div>
@@ -293,98 +293,98 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		page:    <?php echo wp_json_encode( $page ); ?>
 	};
 	var i18n = {
-		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'ai-command-center' ) ); ?>,
-		emptyTokens: <?php echo wp_json_encode( __( 'No access tokens yet. Create one above, then paste it into your assistant to connect it.', 'ai-command-center' ) ); ?>,
-		emptyActive: <?php echo wp_json_encode( __( 'No active tokens. Create one above, or show revoked tokens to review past access.', 'ai-command-center' ) ); ?>,
+		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'action-steward' ) ); ?>,
+		emptyTokens: <?php echo wp_json_encode( __( 'No access tokens yet. Create one above, then paste it into your assistant to connect it.', 'action-steward' ) ); ?>,
+		emptyActive: <?php echo wp_json_encode( __( 'No active tokens. Create one above, or show revoked tokens to review past access.', 'action-steward' ) ); ?>,
 		/* translators: %1$d and %2$d are both the number of revoked or expired tokens */
-		showRevoked: <?php echo wp_json_encode( /* translators: %1$d: number */ __( 'Show %1$d revoked or expired token(s)', 'ai-command-center' ) ); ?>,
-		emptyCaps:   <?php echo wp_json_encode( __( 'No capabilities are defined.', 'ai-command-center' ) ); ?>,
-		emptyOps:    <?php echo wp_json_encode( __( 'No operations are mapped.', 'ai-command-center' ) ); ?>,
-		notFound:    <?php echo wp_json_encode( __( 'Token not found. It may have been deleted.', 'ai-command-center' ) ); ?>,
-		none:        <?php echo wp_json_encode( __( 'None', 'ai-command-center' ) ); ?>,
-		never:       <?php echo wp_json_encode( __( 'Never', 'ai-command-center' ) ); ?>,
-		view:        <?php echo wp_json_encode( __( 'View', 'ai-command-center' ) ); ?>,
-		allow:       <?php echo wp_json_encode( __( 'Allowed', 'ai-command-center' ) ); ?>,
-		deny:        <?php echo wp_json_encode( __( 'Denied', 'ai-command-center' ) ); ?>,
-		colLabel:    <?php echo wp_json_encode( __( 'Label', 'ai-command-center' ) ); ?>,
-		colToken:    <?php echo wp_json_encode( __( 'Token', 'ai-command-center' ) ); ?>,
-		colScope:    <?php echo wp_json_encode( __( 'Scope', 'ai-command-center' ) ); ?>,
-		colStatus:   <?php echo wp_json_encode( __( 'Status', 'ai-command-center' ) ); ?>,
-		colAccess:   <?php echo wp_json_encode( __( 'Operation access', 'ai-command-center' ) ); ?>,
-		colLastUsed: <?php echo wp_json_encode( __( 'Last used', 'ai-command-center' ) ); ?>,
-		colCap:      <?php echo wp_json_encode( __( 'Capability', 'ai-command-center' ) ); ?>,
-		colUnlocks:  <?php echo wp_json_encode( __( 'Unlocks operations', 'ai-command-center' ) ); ?>,
-		colOp:       <?php echo wp_json_encode( __( 'Operation', 'ai-command-center' ) ); ?>,
-		colReqCap:   <?php echo wp_json_encode( __( 'Required capability', 'ai-command-center' ) ); ?>,
-		colReadOnly: <?php echo wp_json_encode( __( 'Read-only scope', 'ai-command-center' ) ); ?>,
-		colAccessOp: <?php echo wp_json_encode( __( 'Access', 'ai-command-center' ) ); ?>,
-		yes:         <?php echo wp_json_encode( __( 'Yes', 'ai-command-center' ) ); ?>,
-		no:          <?php echo wp_json_encode( __( 'No', 'ai-command-center' ) ); ?>,
+		showRevoked: <?php echo wp_json_encode( /* translators: %1$d: number */ __( 'Show %1$d revoked or expired token(s)', 'action-steward' ) ); ?>,
+		emptyCaps:   <?php echo wp_json_encode( __( 'No capabilities are defined.', 'action-steward' ) ); ?>,
+		emptyOps:    <?php echo wp_json_encode( __( 'No operations are mapped.', 'action-steward' ) ); ?>,
+		notFound:    <?php echo wp_json_encode( __( 'Token not found. It may have been deleted.', 'action-steward' ) ); ?>,
+		none:        <?php echo wp_json_encode( __( 'None', 'action-steward' ) ); ?>,
+		never:       <?php echo wp_json_encode( __( 'Never', 'action-steward' ) ); ?>,
+		view:        <?php echo wp_json_encode( __( 'View', 'action-steward' ) ); ?>,
+		allow:       <?php echo wp_json_encode( __( 'Allowed', 'action-steward' ) ); ?>,
+		deny:        <?php echo wp_json_encode( __( 'Denied', 'action-steward' ) ); ?>,
+		colLabel:    <?php echo wp_json_encode( __( 'Label', 'action-steward' ) ); ?>,
+		colToken:    <?php echo wp_json_encode( __( 'Token', 'action-steward' ) ); ?>,
+		colScope:    <?php echo wp_json_encode( __( 'Scope', 'action-steward' ) ); ?>,
+		colStatus:   <?php echo wp_json_encode( __( 'Status', 'action-steward' ) ); ?>,
+		colAccess:   <?php echo wp_json_encode( __( 'Operation access', 'action-steward' ) ); ?>,
+		colLastUsed: <?php echo wp_json_encode( __( 'Last used', 'action-steward' ) ); ?>,
+		colCap:      <?php echo wp_json_encode( __( 'Capability', 'action-steward' ) ); ?>,
+		colUnlocks:  <?php echo wp_json_encode( __( 'Unlocks operations', 'action-steward' ) ); ?>,
+		colOp:       <?php echo wp_json_encode( __( 'Operation', 'action-steward' ) ); ?>,
+		colReqCap:   <?php echo wp_json_encode( __( 'Required capability', 'action-steward' ) ); ?>,
+		colReadOnly: <?php echo wp_json_encode( __( 'Read-only scope', 'action-steward' ) ); ?>,
+		colAccessOp: <?php echo wp_json_encode( __( 'Access', 'action-steward' ) ); ?>,
+		yes:         <?php echo wp_json_encode( __( 'Yes', 'action-steward' ) ); ?>,
+		no:          <?php echo wp_json_encode( __( 'No', 'action-steward' ) ); ?>,
 		/* translators: %1$d allowed operations, %2$d total operations */
-		accessFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d operations', 'ai-command-center' ) ); ?>,
-		dLabel:      <?php echo wp_json_encode( __( 'Label', 'ai-command-center' ) ); ?>,
-		dPreview:    <?php echo wp_json_encode( __( 'Token preview', 'ai-command-center' ) ); ?>,
-		dScope:      <?php echo wp_json_encode( __( 'Scope', 'ai-command-center' ) ); ?>,
-		dStatus:     <?php echo wp_json_encode( __( 'Status', 'ai-command-center' ) ); ?>,
-		dCaps:       <?php echo wp_json_encode( __( 'Assigned capabilities', 'ai-command-center' ) ); ?>,
-		dCreated:    <?php echo wp_json_encode( __( 'Created', 'ai-command-center' ) ); ?>,
-		dExpires:    <?php echo wp_json_encode( __( 'Expires', 'ai-command-center' ) ); ?>,
-		dLastUsed:   <?php echo wp_json_encode( __( 'Last used', 'ai-command-center' ) ); ?>,
-		dAccess:     <?php echo wp_json_encode( __( 'Operation access', 'ai-command-center' ) ); ?>,
-		matrixTitle: <?php echo wp_json_encode( __( 'Operation access matrix', 'ai-command-center' ) ); ?>,
-		adminNote:   <?php echo wp_json_encode( __( 'This token has system.admin (full access). It can run every operation regardless of individual capabilities.', 'ai-command-center' ) ); ?>,
-		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted (system.admin)', 'ai-command-center' ) ); ?>,
-		reasonAdmin: <?php echo wp_json_encode( __( 'system.admin', 'ai-command-center' ) ); ?>,
-		reasonRead: <?php echo wp_json_encode( __( 'supported read actions only', 'ai-command-center' ) ); ?>,
-		reasonScope: <?php echo wp_json_encode( __( 'blocked by read-only scope', 'ai-command-center' ) ); ?>,
-		reasonMiss:  <?php echo wp_json_encode( __( 'missing capability', 'ai-command-center' ) ); ?>,
-		reasonHas:   <?php echo wp_json_encode( __( 'capability assigned', 'ai-command-center' ) ); ?>,
-		auditTitle:  <?php echo wp_json_encode( __( 'Capability audit trail', 'ai-command-center' ) ); ?>,
-		auditEmpty:  <?php echo wp_json_encode( __( 'No capability changes recorded for this token yet.', 'ai-command-center' ) ); ?>,
-		colWhen:     <?php echo wp_json_encode( __( 'When', 'ai-command-center' ) ); ?>,
-		colEvent:    <?php echo wp_json_encode( __( 'Event', 'ai-command-center' ) ); ?>,
-		colCapEvt:   <?php echo wp_json_encode( __( 'Capability', 'ai-command-center' ) ); ?>,
-		colActor:    <?php echo wp_json_encode( __( 'Actor', 'ai-command-center' ) ); ?>,
-		unknownActor:<?php echo wp_json_encode( __( 'unknown', 'ai-command-center' ) ); ?>,
-		manageTitle: <?php echo wp_json_encode( __( 'Manage capabilities', 'ai-command-center' ) ); ?>,
-		manageHelp:  <?php echo wp_json_encode( __( 'Assigning or removing a capability runs through the same audited engine, security mode, and approval gates as the agent API.', 'ai-command-center' ) ); ?>,
-		noAssigned:  <?php echo wp_json_encode( __( 'No capabilities assigned. A read-only-scope token without capabilities can run nothing until one is assigned.', 'ai-command-center' ) ); ?>,
-		addLabel:    <?php echo wp_json_encode( __( 'Add capability', 'ai-command-center' ) ); ?>,
-		assignBtn:   <?php echo wp_json_encode( __( 'Assign', 'ai-command-center' ) ); ?>,
-		removeBtn:   <?php echo wp_json_encode( __( 'Remove', 'ai-command-center' ) ); ?>,
-		allAssigned: <?php echo wp_json_encode( __( 'All assignable capabilities are already granted.', 'ai-command-center' ) ); ?>,
-		adminLocked: <?php echo wp_json_encode( __( 'Capability editing is disabled for this token because system.admin already grants every operation.', 'ai-command-center' ) ); ?>,
+		accessFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d operations', 'action-steward' ) ); ?>,
+		dLabel:      <?php echo wp_json_encode( __( 'Label', 'action-steward' ) ); ?>,
+		dPreview:    <?php echo wp_json_encode( __( 'Token preview', 'action-steward' ) ); ?>,
+		dScope:      <?php echo wp_json_encode( __( 'Scope', 'action-steward' ) ); ?>,
+		dStatus:     <?php echo wp_json_encode( __( 'Status', 'action-steward' ) ); ?>,
+		dCaps:       <?php echo wp_json_encode( __( 'Assigned capabilities', 'action-steward' ) ); ?>,
+		dCreated:    <?php echo wp_json_encode( __( 'Created', 'action-steward' ) ); ?>,
+		dExpires:    <?php echo wp_json_encode( __( 'Expires', 'action-steward' ) ); ?>,
+		dLastUsed:   <?php echo wp_json_encode( __( 'Last used', 'action-steward' ) ); ?>,
+		dAccess:     <?php echo wp_json_encode( __( 'Operation access', 'action-steward' ) ); ?>,
+		matrixTitle: <?php echo wp_json_encode( __( 'Operation access matrix', 'action-steward' ) ); ?>,
+		adminNote:   <?php echo wp_json_encode( __( 'This token has system.admin (full access). It can run every operation regardless of individual capabilities.', 'action-steward' ) ); ?>,
+		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted (system.admin)', 'action-steward' ) ); ?>,
+		reasonAdmin: <?php echo wp_json_encode( __( 'system.admin', 'action-steward' ) ); ?>,
+		reasonRead: <?php echo wp_json_encode( __( 'supported read actions only', 'action-steward' ) ); ?>,
+		reasonScope: <?php echo wp_json_encode( __( 'blocked by read-only scope', 'action-steward' ) ); ?>,
+		reasonMiss:  <?php echo wp_json_encode( __( 'missing capability', 'action-steward' ) ); ?>,
+		reasonHas:   <?php echo wp_json_encode( __( 'capability assigned', 'action-steward' ) ); ?>,
+		auditTitle:  <?php echo wp_json_encode( __( 'Capability audit trail', 'action-steward' ) ); ?>,
+		auditEmpty:  <?php echo wp_json_encode( __( 'No capability changes recorded for this token yet.', 'action-steward' ) ); ?>,
+		colWhen:     <?php echo wp_json_encode( __( 'When', 'action-steward' ) ); ?>,
+		colEvent:    <?php echo wp_json_encode( __( 'Event', 'action-steward' ) ); ?>,
+		colCapEvt:   <?php echo wp_json_encode( __( 'Capability', 'action-steward' ) ); ?>,
+		colActor:    <?php echo wp_json_encode( __( 'Actor', 'action-steward' ) ); ?>,
+		unknownActor:<?php echo wp_json_encode( __( 'unknown', 'action-steward' ) ); ?>,
+		manageTitle: <?php echo wp_json_encode( __( 'Manage capabilities', 'action-steward' ) ); ?>,
+		manageHelp:  <?php echo wp_json_encode( __( 'Assigning or removing a capability runs through the same audited engine, security mode, and approval gates as the agent API.', 'action-steward' ) ); ?>,
+		noAssigned:  <?php echo wp_json_encode( __( 'No capabilities assigned. A read-only-scope token without capabilities can run nothing until one is assigned.', 'action-steward' ) ); ?>,
+		addLabel:    <?php echo wp_json_encode( __( 'Add capability', 'action-steward' ) ); ?>,
+		assignBtn:   <?php echo wp_json_encode( __( 'Assign', 'action-steward' ) ); ?>,
+		removeBtn:   <?php echo wp_json_encode( __( 'Remove', 'action-steward' ) ); ?>,
+		allAssigned: <?php echo wp_json_encode( __( 'All assignable capabilities are already granted.', 'action-steward' ) ); ?>,
+		adminLocked: <?php echo wp_json_encode( __( 'Capability editing is disabled for this token because system.admin already grants every operation.', 'action-steward' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmAssign: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Assign the capability "%s" to this token?', 'ai-command-center' ) ); ?>,
+		confirmAssign: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Assign the capability "%s" to this token?', 'action-steward' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmRemove: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Remove the capability "%s" from this token?', 'ai-command-center' ) ); ?>,
-		working:     <?php echo wp_json_encode( __( 'Working…', 'ai-command-center' ) ); ?>,
-		doneReload:  <?php echo wp_json_encode( __( 'Done. Reloading…', 'ai-command-center' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This change needs your approval. It has been sent to Approvals.', 'ai-command-center' ) ); ?>,
-		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'ai-command-center' ) ); ?>,
+		confirmRemove: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Remove the capability "%s" from this token?', 'action-steward' ) ); ?>,
+		working:     <?php echo wp_json_encode( __( 'Working…', 'action-steward' ) ); ?>,
+		doneReload:  <?php echo wp_json_encode( __( 'Done. Reloading…', 'action-steward' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This change needs your approval. It has been sent to Approvals.', 'action-steward' ) ); ?>,
+		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'action-steward' ) ); ?>,
 		// Says what happened, that nothing changed, and what to do next. "The
 		// change could not be completed." left the customer to guess all three.
-		genericFail: <?php echo wp_json_encode( __( 'That did not go through, so nothing has changed. Check your connection and try again — if it keeps happening, look under Settings › Advanced › Diagnostics.', 'ai-command-center' ) ); ?>,
-		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'ai-command-center' ) ); ?>,
-		createHelp:  <?php echo wp_json_encode( __( 'A token is how one assistant reaches this site. You choose what it may do and when it stops working; it is shown once, when you create it.', 'ai-command-center' ) ); ?>,
-		createBtn:   <?php echo wp_json_encode( __( 'Create token', 'ai-command-center' ) ); ?>,
-		creating:    <?php echo wp_json_encode( __( 'Creating…', 'ai-command-center' ) ); ?>,
-		labelReq:    <?php echo wp_json_encode( __( 'Give this token a name first — you will need it to tell your tokens apart later.', 'ai-command-center' ) ); ?>,
+		genericFail: <?php echo wp_json_encode( __( 'That did not go through, so nothing has changed. Check your connection and try again — if it keeps happening, look under Settings › Advanced › Diagnostics.', 'action-steward' ) ); ?>,
+		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'action-steward' ) ); ?>,
+		createHelp:  <?php echo wp_json_encode( __( 'A token is how one assistant reaches this site. You choose what it may do and when it stops working; it is shown once, when you create it.', 'action-steward' ) ); ?>,
+		createBtn:   <?php echo wp_json_encode( __( 'Create token', 'action-steward' ) ); ?>,
+		creating:    <?php echo wp_json_encode( __( 'Creating…', 'action-steward' ) ); ?>,
+		labelReq:    <?php echo wp_json_encode( __( 'Give this token a name first — you will need it to tell your tokens apart later.', 'action-steward' ) ); ?>,
 		/* translators: %s: the name the customer gave the token. */
-		tokenReady:  <?php echo wp_json_encode( /* translators: %s: value */ __( '“%s” is ready', 'ai-command-center' ) ); ?>,
+		tokenReady:  <?php echo wp_json_encode( /* translators: %s: value */ __( '“%s” is ready', 'action-steward' ) ); ?>,
 		/* translators: %s: the name of an existing active token. */
-		dupeWarn:    <?php echo wp_json_encode( /* translators: %s: value */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'ai-command-center' ) ); ?>,
-		colActions:  <?php echo wp_json_encode( __( 'Actions', 'ai-command-center' ) ); ?>,
-		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'ai-command-center' ) ); ?>,
-		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'ai-command-center' ) ); ?>,
+		dupeWarn:    <?php echo wp_json_encode( /* translators: %s: value */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'action-steward' ) ); ?>,
+		colActions:  <?php echo wp_json_encode( __( 'Actions', 'action-steward' ) ); ?>,
+		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'action-steward' ) ); ?>,
+		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'action-steward' ) ); ?>,
 		/* translators: %s: token label */
-		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any assistant using it loses access immediately.', 'ai-command-center' ) ); ?>,
+		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any assistant using it loses access immediately.', 'action-steward' ) ); ?>,
 		/* translators: %s: token label */
-		confirmDelete: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Permanently delete the token "%s"? This cannot be undone.', 'ai-command-center' ) ); ?>,
-		prev:          <?php echo wp_json_encode( __( '← Previous', 'ai-command-center' ) ); ?>,
-		next:          <?php echo wp_json_encode( __( 'Next →', 'ai-command-center' ) ); ?>,
+		confirmDelete: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Permanently delete the token "%s"? This cannot be undone.', 'action-steward' ) ); ?>,
+		prev:          <?php echo wp_json_encode( __( '← Previous', 'action-steward' ) ); ?>,
+		next:          <?php echo wp_json_encode( __( 'Next →', 'action-steward' ) ); ?>,
 		/* translators: %1$d first row on page, %2$d last row on page, %3$d total */
-		pageInfo:      <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Tokens %1$d–%2$d of %3$d', 'ai-command-center' ) ); ?>
+		pageInfo:      <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Tokens %1$d–%2$d of %3$d', 'action-steward' ) ); ?>
 	};
 
 	function escHtml( s ) {

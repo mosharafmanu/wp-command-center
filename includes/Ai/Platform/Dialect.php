@@ -14,7 +14,7 @@
  *   gemini            → Google Generative Language API
  *
  * `runtime_supported` is honest: as of Phase D the Anthropic and OpenAI-compatible
- * dialects are wired to WPCC's feature generators. Gemini is CONFIGURABLE +
+ * dialects are wired to Action Steward's feature generators. Gemini is CONFIGURABLE +
  * TESTABLE, but not used by the runtime — never faked.
  */
 
@@ -34,7 +34,7 @@ final class Dialect {
 	public static function all(): array {
 		return [
 			self::ANTHROPIC => [
-				'label'             => __( 'Anthropic Messages', 'ai-command-center' ),
+				'label'             => __( 'Anthropic Messages', 'action-steward' ),
 				'auth'              => 'x-api-key',
 				'endpoint_editable' => false, // fixed SDK endpoint.
 				'default_endpoint'  => 'https://api.anthropic.com',
@@ -42,7 +42,7 @@ final class Dialect {
 				'runtime_supported' => true,  // the ONLY runtime-wired dialect today.
 			],
 			self::OPENAI => [
-				'label'             => __( 'OpenAI-compatible', 'ai-command-center' ),
+				'label'             => __( 'OpenAI-compatible', 'action-steward' ),
 				'auth'              => 'bearer',
 				'endpoint_editable' => true,  // base_url — enables OpenRouter/Groq/Ollama/LM Studio/self-hosted.
 				'default_endpoint'  => 'https://api.openai.com/v1',
@@ -50,7 +50,7 @@ final class Dialect {
 				'runtime_supported' => true,  // Phase D: OpenAI-compatible generation transport.
 			],
 			self::GEMINI => [
-				'label'             => __( 'Google Gemini', 'ai-command-center' ),
+				'label'             => __( 'Google Gemini', 'action-steward' ),
 				'auth'              => 'query-key',
 				'endpoint_editable' => false,
 				'default_endpoint'  => 'https://generativelanguage.googleapis.com/v1beta',

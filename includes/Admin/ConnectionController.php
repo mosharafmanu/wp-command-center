@@ -35,10 +35,10 @@ final class ConnectionController {
 			return null;
 		}
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return $this->n( 'error', __( 'You do not have permission to change AI settings.', 'ai-command-center' ) );
+			return $this->n( 'error', __( 'You do not have permission to change AI settings.', 'action-steward' ) );
 		}
 		if ( ! check_admin_referer( self::NONCE ) ) {
-			return $this->n( 'error', __( 'Security check failed. Please try again.', 'ai-command-center' ) );
+			return $this->n( 'error', __( 'Security check failed. Please try again.', 'action-steward' ) );
 		}
 		$action = sanitize_key( wp_unslash( (string) $_POST['wpcc_conn_action'] ) );
 		$id     = isset( $_POST['wpcc_conn_id'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['wpcc_conn_id'] ) ) : '';
@@ -54,14 +54,14 @@ final class ConnectionController {
 			case 'delete':      return $this->delete( $id );
 			case 'test':        return $this->test( $id );
 			case 'save_routes': return $this->save_routes();
-			default:            return $this->n( 'error', __( 'Unknown action.', 'ai-command-center' ) );
+			default:            return $this->n( 'error', __( 'Unknown action.', 'action-steward' ) );
 		}
 	}
 
 	private function create(): array {
 		$provider = isset( $_POST['wpcc_provider'] ) ? sanitize_key( wp_unslash( (string) $_POST['wpcc_provider'] ) ) : '';
 		if ( ! ProviderCatalog::is_valid( $provider ) ) {
-			return $this->n( 'error', __( 'Choose a provider.', 'ai-command-center' ) );
+			return $this->n( 'error', __( 'Choose a provider.', 'action-steward' ) );
 		}
 		$name  = $this->str( 'wpcc_name', 60 );
 		$model = $this->model_value( $provider );
@@ -88,12 +88,12 @@ final class ConnectionController {
 		}
 		$this->store->sync_runtime();
 		$this->audit( 'ai.connection.created', [ 'connection' => $id, 'provider' => $provider ] );
-		return $this->n( 'success', __( 'Connection created.', 'ai-command-center' ), 'create', $id );
+		return $this->n( 'success', __( 'Connection created.', 'action-steward' ), 'create', $id );
 	}
 
 	private function update( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'action-steward' ) ); }
 		$endpoint = $this->endpoint_value( (string) $conn['provider'] );
 		if ( is_array( $endpoint ) ) { return $endpoint; }
 		$fields = [
@@ -105,70 +105,70 @@ final class ConnectionController {
 		];
 		$this->store->update( $id, $fields );
 		$this->audit( 'ai.connection.updated', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Connection saved.', 'ai-command-center' ), 'update', $id );
+		return $this->n( 'success', __( 'Connection saved.', 'action-steward' ), 'update', $id );
 	}
 
 	private function update_key( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'action-steward' ) ); }
 		if ( $this->store->credentials()->is_constant_backed( $conn ) ) {
-			return $this->n( 'warning', __( 'This key is defined in wp-config.php (a constant) and cannot be changed here.', 'ai-command-center' ) );
+			return $this->n( 'warning', __( 'This key is defined in wp-config.php (a constant) and cannot be changed here.', 'action-steward' ) );
 		}
 		$raw = $this->raw_key();
-		if ( '' === $raw ) { return $this->n( 'error', __( 'Please paste an API key, or use Remove key.', 'ai-command-center' ) ); }
+		if ( '' === $raw ) { return $this->n( 'error', __( 'Please paste an API key, or use Remove key.', 'action-steward' ) ); }
 		$k = $this->clean_key( $raw );
 		if ( is_array( $k ) ) { return $k; }
 		$this->store->credentials()->set_secret( $id, $k );
 		$this->store->record_test( $id, false, 'untested' );
 		$this->store->sync_runtime();
 		$this->audit( 'ai.connection.key.updated', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'API key saved. It is stored on this site and never shown again.', 'ai-command-center' ), 'update_key', $id );
+		return $this->n( 'success', __( 'API key saved. It is stored on this site and never shown again.', 'action-steward' ), 'update_key', $id );
 	}
 
 	private function clear_key( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'action-steward' ) ); }
 		if ( $this->store->credentials()->is_constant_backed( $conn ) ) {
-			return $this->n( 'warning', __( 'The active key is a constant in wp-config.php and cannot be removed here.', 'ai-command-center' ) );
+			return $this->n( 'warning', __( 'The active key is a constant in wp-config.php and cannot be removed here.', 'action-steward' ) );
 		}
 		$this->store->credentials()->clear_secret( $id );
 		$this->audit( 'ai.connection.key.cleared', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'API key removed.', 'ai-command-center' ), 'clear_key', $id );
+		return $this->n( 'success', __( 'API key removed.', 'action-steward' ), 'clear_key', $id );
 	}
 
 	private function set_default( string $id ): array {
 		if ( ! $this->store->set_default( $id ) ) {
-			return $this->n( 'error', __( 'This connection cannot be the default — WP Command Center cannot use its provider for AI features yet.', 'ai-command-center' ) );
+			return $this->n( 'error', __( 'This connection cannot be the default — Action Steward cannot use its provider for AI features yet.', 'action-steward' ) );
 		}
 		$this->audit( 'ai.connection.default.set', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Default connection updated.', 'ai-command-center' ), 'set_default', $id );
+		return $this->n( 'success', __( 'Default connection updated.', 'action-steward' ), 'set_default', $id );
 	}
 
 	private function set_enabled( string $id ): array {
 		$enabled = ! empty( $_POST['wpcc_enabled'] );
 		$this->store->set_enabled( $id, $enabled );
 		$this->audit( 'ai.connection.enabled', [ 'connection' => $id, 'enabled' => $enabled ] );
-		return $this->n( 'success', $enabled ? __( 'Connection enabled.', 'ai-command-center' ) : __( 'Connection disabled.', 'ai-command-center' ), 'set_enabled', $id );
+		return $this->n( 'success', $enabled ? __( 'Connection enabled.', 'action-steward' ) : __( 'Connection disabled.', 'action-steward' ), 'set_enabled', $id );
 	}
 
 	private function duplicate( string $id ): array {
 		$new = $this->store->duplicate( $id );
-		if ( '' === $new ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
+		if ( '' === $new ) { return $this->n( 'error', __( 'Connection not found.', 'action-steward' ) ); }
 		$this->audit( 'ai.connection.duplicated', [ 'from' => $id, 'connection' => $new ] );
-		return $this->n( 'success', __( 'Connection duplicated (without its key — add a key to the copy).', 'ai-command-center' ), 'duplicate', $new );
+		return $this->n( 'success', __( 'Connection duplicated (without its key — add a key to the copy).', 'action-steward' ), 'duplicate', $new );
 	}
 
 	private function delete( string $id ): array {
 		$this->store->delete( $id );
 		$this->audit( 'ai.connection.deleted', [ 'connection' => $id ] );
-		return $this->n( 'success', __( 'Connection deleted.', 'ai-command-center' ) );
+		return $this->n( 'success', __( 'Connection deleted.', 'action-steward' ) );
 	}
 
 	private function test( string $id ): array {
 		$conn = $this->store->get( $id );
-		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'ai-command-center' ) ); }
+		if ( ! $conn ) { return $this->n( 'error', __( 'Connection not found.', 'action-steward' ) ); }
 		if ( ! $this->store->testable( $conn ) ) {
-			return $this->n( 'warning', __( 'A connection test is not available for this provider yet.', 'ai-command-center' ) );
+			return $this->n( 'warning', __( 'A connection test is not available for this provider yet.', 'action-steward' ) );
 		}
 		$key    = $this->store->credentials()->secret( $conn );
 		$t0     = microtime( true );
@@ -178,10 +178,10 @@ final class ConnectionController {
 		$code   = sanitize_text_field( (string) ( $result['code'] ?? 'error' ) );
 		$this->store->record_test( $id, $ok, $code, [ 'latency_ms' => $ms, 'models' => (int) ( $result['models'] ?? 0 ), 'models_list' => is_array( $result['models_list'] ?? null ) ? $result['models_list'] : [] ] );
 		$this->audit( 'ai.connection.test', [ 'connection' => $id, 'dialect' => $conn['dialect'], 'result' => $code ] );
-		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'ai-command-center' ), 'test', $id ); }
+		if ( $ok ) { return $this->n( 'success', __( 'Connection succeeded.', 'action-steward' ), 'test', $id ); }
 		$detail = sanitize_text_field( (string) ( $result['message'] ?? '' ) );
 		/* translators: %s: secret-free error detail */
-		return $this->n( 'error', sprintf( __( 'Connection failed: %s', 'ai-command-center' ), '' !== $detail ? $detail : $code ), 'test', $id );
+		return $this->n( 'error', sprintf( __( 'Connection failed: %s', 'action-steward' ), '' !== $detail ? $detail : $code ), 'test', $id );
 	}
 
 	private function save_routes(): array {
@@ -203,11 +203,11 @@ final class ConnectionController {
 		 * count of zero dressed up as a result.
 		 */
 		if ( 0 === $changed ) {
-			return $this->n( 'success', __( 'Routing is unchanged — every feature already points where you selected.', 'ai-command-center' ), 'save_routes' );
+			return $this->n( 'success', __( 'Routing is unchanged — every feature already points where you selected.', 'action-steward' ), 'save_routes' );
 		}
 		return $this->n( 'success', sprintf(
 			/* translators: %d: number of feature routes updated */
-			_n( '%d feature route saved.', '%d feature routes saved.', $changed, 'ai-command-center' ),
+			_n( '%d feature route saved.', '%d feature routes saved.', $changed, 'action-steward' ),
 			$changed
 		), 'save_routes' );
 	}
@@ -222,7 +222,7 @@ final class ConnectionController {
 	private function clean_key( string $raw ) {
 		$key = sanitize_text_field( $raw );
 		if ( strlen( $key ) < 8 || ! preg_match( '/^[A-Za-z0-9._\-]+$/', $key ) ) {
-			return $this->n( 'error', __( 'That does not look like a valid API key.', 'ai-command-center' ) );
+			return $this->n( 'error', __( 'That does not look like a valid API key.', 'action-steward' ) );
 		}
 		return $key;
 	}
@@ -258,7 +258,7 @@ final class ConnectionController {
 		if ( '' === $raw ) {
 			// Required for providers that need a custom endpoint (Azure/local/custom).
 			if ( ! empty( $def['needs_endpoint'] ) ) {
-				return $this->n( 'error', __( 'This provider needs a base URL / endpoint.', 'ai-command-center' ) );
+				return $this->n( 'error', __( 'This provider needs a base URL / endpoint.', 'action-steward' ) );
 			}
 			return ''; // store empty → normalize() fills the default.
 		}
@@ -267,7 +267,7 @@ final class ConnectionController {
 		}
 		$url = esc_url_raw( $raw, [ 'http', 'https' ] );
 		if ( '' === $url ) {
-			return $this->n( 'error', __( 'Enter a valid http(s) base URL.', 'ai-command-center' ) );
+			return $this->n( 'error', __( 'Enter a valid http(s) base URL.', 'action-steward' ) );
 		}
 		return $url;
 	}

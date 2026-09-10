@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# WP-CLI Bridge Operation test suite for WP Command Center (Step 29).
+# WP-CLI Bridge Operation test suite for Action Steward (Step 29).
 #
 # Verifies:
 #   - unavailable environment returns unavailable

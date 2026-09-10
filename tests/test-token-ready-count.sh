@@ -140,8 +140,8 @@ assert_true "count string goes through _n()" \
 	"$(grep -q "_n( '%d access token ready.', '%d access tokens ready.'" "$VIEW" && echo true || echo false)"
 GRAMMAR=$(wp eval '
 echo wp_json_encode( [
-	"one"  => sprintf( _n( "%d access token ready.", "%d access tokens ready.", 1, "ai-command-center" ), 1 ),
-	"two"  => sprintf( _n( "%d access token ready.", "%d access tokens ready.", 2, "ai-command-center" ), 2 ),
+	"one"  => sprintf( _n( "%d access token ready.", "%d access tokens ready.", 1, "action-steward" ), 1 ),
+	"two"  => sprintf( _n( "%d access token ready.", "%d access tokens ready.", 2, "action-steward" ), 2 ),
 ] );
 ' --path="$WP_PATH" 2>/dev/null)
 assert_eq "1 usable token reads singular"  "1 access token ready."   "$(echo "$GRAMMAR" | jq -r '.one')"

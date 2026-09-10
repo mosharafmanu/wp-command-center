@@ -1,6 +1,6 @@
 {
-	"name": "mosharafmanu/wp-command-center",
-	"description": "Connect Claude, Codex, GPT, and other AI agents to WordPress using only WordPress Admin access.",
+	"name": "mosharafmanu/action-steward",
+	"description": "Safe AI operations for WordPress with scoped access, approvals, audit trails, and rollback.",
 	"type": "wordpress-plugin",
 	"authors": [
 		{

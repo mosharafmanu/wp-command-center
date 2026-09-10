@@ -38,7 +38,7 @@ final class ElementorRuntimeManager {
 
 	public function run( array $payload, array $context = [] ): array {
 		if ( ! defined( 'ELEMENTOR_VERSION' ) ) {
-			return $this->error( 'wpcc_elementor_inactive', __( 'Elementor is not active.', 'ai-command-center' ) );
+			return $this->error( 'wpcc_elementor_inactive', __( 'Elementor is not active.', 'action-steward' ) );
 		}
 		$action = (string) ( $payload['action'] ?? '' );
 		if ( ! in_array( $action, ElementorRegistry::ACTIONS, true ) ) {
@@ -52,7 +52,7 @@ final class ElementorRuntimeManager {
 			ElementorRegistry::ACTION_UPDATE_TEXT      => $this->update_text( $payload, $context ),
 			ElementorRegistry::ACTION_UPDATE_IMAGE     => $this->update_image( $payload, $context ),
 			ElementorRegistry::ACTION_UPDATE_BUTTON    => $this->update_button( $payload, $context ),
-			default => $this->error( 'wpcc_invalid_elementor_action', __( 'Invalid Elementor action.', 'ai-command-center' ) ),
+			default => $this->error( 'wpcc_invalid_elementor_action', __( 'Invalid Elementor action.', 'action-steward' ) ),
 		};
 	}
 
@@ -61,7 +61,7 @@ final class ElementorRuntimeManager {
 	private function get_page( array $p ): array {
 		$id = $this->page_id( $p );
 		$data = $this->load_data( $id );
-		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'ai-command-center' ) );
+		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'action-steward' ) );
 
 		$this->audit->record( 'elementor.get_page', [ 'page_id' => $id ] );
 		return [ 'action' => 'elementor_get_page', 'page_id' => $id, 'title' => get_the_title( $id ), 'data' => $data ];
@@ -70,7 +70,7 @@ final class ElementorRuntimeManager {
 	private function export_structure( array $p ): array {
 		$id = $this->page_id( $p );
 		$data = $this->load_data( $id );
-		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'ai-command-center' ) );
+		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'action-steward' ) );
 
 		return [ 'action' => 'elementor_export_structure', 'page_id' => $id, 'structure' => array_map( [ $this, 'summarize_element' ], $data ) ];
 	}
@@ -78,7 +78,7 @@ final class ElementorRuntimeManager {
 	private function list_widgets( array $p ): array {
 		$id = $this->page_id( $p );
 		$data = $this->load_data( $id );
-		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'ai-command-center' ) );
+		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'action-steward' ) );
 
 		$widgets = [];
 		$this->walk_widgets( $data, function ( array $w ) use ( &$widgets ) {
@@ -106,7 +106,7 @@ final class ElementorRuntimeManager {
 	private function update_image( array $p, array $cx ): array {
 		$url = esc_url_raw( (string) ( $p['image_url'] ?? '' ) );
 		if ( '' === $url && empty( $p['image_id'] ) ) {
-			return $this->error( 'wpcc_missing_image', __( 'image_url or image_id is required.', 'ai-command-center' ) );
+			return $this->error( 'wpcc_missing_image', __( 'image_url or image_id is required.', 'action-steward' ) );
 		}
 		return $this->edit_widget( $p, $cx, 'elementor_update_image', function ( array $settings ) use ( $p, $url ) {
 			$img = is_array( $settings['image'] ?? null ) ? $settings['image'] : [];
@@ -119,7 +119,7 @@ final class ElementorRuntimeManager {
 
 	private function update_button( array $p, array $cx ): array {
 		if ( ! isset( $p['text'] ) && ! isset( $p['url'] ) ) {
-			return $this->error( 'wpcc_missing_button_fields', __( 'Provide text and/or url for the button.', 'ai-command-center' ) );
+			return $this->error( 'wpcc_missing_button_fields', __( 'Provide text and/or url for the button.', 'action-steward' ) );
 		}
 		return $this->edit_widget( $p, $cx, 'elementor_update_button', function ( array $settings ) use ( $p ) {
 			if ( isset( $p['text'] ) ) $settings['text'] = sanitize_text_field( (string) $p['text'] );
@@ -139,10 +139,10 @@ final class ElementorRuntimeManager {
 	private function edit_widget( array $p, array $cx, string $action, callable $mutator ): array {
 		$id = $this->page_id( $p );
 		$widget_id = sanitize_text_field( (string) ( $p['widget_id'] ?? '' ) );
-		if ( '' === $widget_id ) return $this->error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'ai-command-center' ) );
+		if ( '' === $widget_id ) return $this->error( 'wpcc_missing_widget_id', __( 'widget_id is required.', 'action-steward' ) );
 
 		$data = $this->load_data( $id );
-		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'ai-command-center' ) );
+		if ( is_string( $data ) ) return $this->error( $data, __( 'Not an Elementor page.', 'action-steward' ) );
 
 		// PROGRAM-4.10 — capture the WHOLE pre-edit _elementor_data document atomically (never
 		// decomposed), drift-aware via the RollbackDelta core. Replaces the unconditional
@@ -151,7 +151,7 @@ final class ElementorRuntimeManager {
 		$prior = RollbackDelta::capture( $acc, $id, [ 'data' ] );
 
 		$found = $this->mutate_widget( $data, $widget_id, $mutator );
-		if ( ! $found ) return $this->error( 'wpcc_widget_not_found', sprintf( /* translators: %s: value */ __( 'Widget %s not found on this page.', 'ai-command-center' ), esc_html( $widget_id ) ) );
+		if ( ! $found ) return $this->error( 'wpcc_widget_not_found', sprintf( /* translators: %s: value */ __( 'Widget %s not found on this page.', 'action-steward' ), esc_html( $widget_id ) ) );
 
 		$this->save_data( $id, $data );
 
@@ -170,7 +170,7 @@ final class ElementorRuntimeManager {
 
 	public function rollback( array $payload, array $context = [] ): array {
 		$rid = (string) ( $payload['rollback_id'] ?? '' );
-		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'ai-command-center' ) );
+		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'action-steward' ) );
 
 		// PROGRAM-4.10 — v2 whole-document delta records live in postmeta (per page), resolved by id.
 		$store    = new PostMetaRollbackStore( self::RB_PREFIX );
@@ -183,8 +183,8 @@ final class ElementorRuntimeManager {
 		$rollbacks = get_option( 'wpcc_elementor_rollbacks', [] );
 		$idx = null;
 		foreach ( $rollbacks as $i => $r ) { if ( ( $r['id'] ?? null ) === $rid ) { $idx = $i; break; } }
-		if ( null === $idx ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'ai-command-center' ) );
-		if ( ! empty( $rollbacks[ $idx ]['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'ai-command-center' ) );
+		if ( null === $idx ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'action-steward' ) );
+		if ( ! empty( $rollbacks[ $idx ]['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'action-steward' ) );
 
 		$rec = $rollbacks[ $idx ];
 		$id  = (int) $rec['entity_id'];
@@ -208,7 +208,7 @@ final class ElementorRuntimeManager {
 	private function rollback_data_delta( PostMetaRollbackStore $store, string $rid, array $resolved ): array {
 		$rec = $resolved['record'];
 		$id  = (int) ( $resolved['entity_id'] ?? ( $rec['page_id'] ?? 0 ) );
-		if ( ! empty( $rec['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'ai-command-center' ) );
+		if ( ! empty( $rec['rollback_applied'] ) ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'action-steward' ) );
 
 		$o = RollbackDelta::restore( new ElementorDataAccessor(), $id, (array) ( $rec['fields'] ?? [] ) );
 

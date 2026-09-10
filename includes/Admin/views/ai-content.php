@@ -59,7 +59,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
  * The Content screen used to consist of two review tabs and nothing else. Its empty
  * state read "No suggestions yet. Generate some from a post or page." — a true sentence
  * that named no page, linked nowhere, and did not mention that the thing to look for is
- * a row action called "✨ WPCC AI". SEO and Alt Text both have a Review tab where you
+ * a row action called "✨ Action Steward AI". SEO and Alt Text both have a Review tab where you
  * pick items and press Generate; Content was the only built-in tool with no way to start
  * from its own screen, so an independent tester enabled it, opened it, found four stale
  * drafts and concluded there was no generation path at all.
@@ -75,16 +75,16 @@ $has_provider  = \WPCommandCenter\Admin\AdoptionStatus::ai_configured();
 $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 ?>
 <div class="wrap wpcc-wrap wpcc-aic">
-	<h1><?php esc_html_e( 'Content', 'ai-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Content', 'action-steward' ); ?></h1>
 	<p class="description" style="max-width:720px;">
-		<?php esc_html_e( 'Draft titles and excerpts for your posts and pages with AI. Review and edit each suggestion, then approve to apply — you’re always in control.', 'ai-command-center' ); ?>
+		<?php esc_html_e( 'Draft titles and excerpts for your posts and pages with AI. Review and edit each suggestion, then approve to apply — you’re always in control.', 'action-steward' ); ?>
 	</p>
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-review"><?php esc_html_e( 'Review', 'ai-command-center' ); ?></a>
-		<a href="#" class="nav-tab" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'ai-command-center' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>
-		<a href="#" class="nav-tab" id="wpcc-aic-tab-applied"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-applied"></span></a>
+		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-review"><?php esc_html_e( 'Review', 'action-steward' ); ?></a>
+		<a href="#" class="nav-tab" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'action-steward' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>
+		<a href="#" class="nav-tab" id="wpcc-aic-tab-applied"><?php esc_html_e( 'Applied', 'action-steward' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-applied"></span></a>
 	</h2>
 
 	<?php // Result of a contextual "Generate" row/bulk action (set via the wpcc_content_gen
@@ -99,37 +99,37 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 			// that can only fail. ?>
 			<div class="notice notice-warning inline" style="margin:12px 0;max-width:1100px;">
 				<p>
-					<strong><?php esc_html_e( 'No AI provider key yet.', 'ai-command-center' ); ?></strong>
-					<?php esc_html_e( 'Content is switched on, but generating a title or excerpt needs your own provider key. Nothing on your site has changed, and adding a key alone will not change anything either — you choose what to generate, and every suggestion still needs your approval.', 'ai-command-center' ); ?>
-					<a href="<?php echo esc_url( $ai_url ); ?>"><?php esc_html_e( 'Add a key on Built-in AI › Providers', 'ai-command-center' ); ?></a>
+					<strong><?php esc_html_e( 'No AI provider key yet.', 'action-steward' ); ?></strong>
+					<?php esc_html_e( 'Content is switched on, but generating a title or excerpt needs your own provider key. Nothing on your site has changed, and adding a key alone will not change anything either — you choose what to generate, and every suggestion still needs your approval.', 'action-steward' ); ?>
+					<a href="<?php echo esc_url( $ai_url ); ?>"><?php esc_html_e( 'Add a key on Built-in AI › Providers', 'action-steward' ); ?></a>
 				</p>
 			</div>
 		<?php endif; ?>
 
 		<p style="margin:12px 0;max-width:900px;">
-			<span class="description"><?php esc_html_e( 'Pick the posts or pages you want a suggestion for, choose whether to draft a title or an excerpt, then generate. Each suggestion is saved as a draft for you to review — nothing is applied to your site here.', 'ai-command-center' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Pick the posts or pages you want a suggestion for, choose whether to draft a title or an excerpt, then generate. Each suggestion is saved as a draft for you to review — nothing is applied to your site here.', 'action-steward' ); ?></span>
 		</p>
 
 		<div class="wpcc-aic-filters" id="wpcc-aic-rv-controls">
-			<label for="wpcc-aic-rv-kind"><?php esc_html_e( 'Generate:', 'ai-command-center' ); ?></label>
+			<label for="wpcc-aic-rv-kind"><?php esc_html_e( 'Generate:', 'action-steward' ); ?></label>
 			<select id="wpcc-aic-rv-kind">
-				<option value="title"><?php esc_html_e( 'Titles', 'ai-command-center' ); ?></option>
-				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'ai-command-center' ); ?></option>
+				<option value="title"><?php esc_html_e( 'Titles', 'action-steward' ); ?></option>
+				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'action-steward' ); ?></option>
 			</select>
 
-			<label for="wpcc-aic-rv-type"><?php esc_html_e( 'From:', 'ai-command-center' ); ?></label>
+			<label for="wpcc-aic-rv-type"><?php esc_html_e( 'From:', 'action-steward' ); ?></label>
 			<select id="wpcc-aic-rv-type">
-				<option value="posts"><?php esc_html_e( 'Posts', 'ai-command-center' ); ?></option>
-				<option value="pages"><?php esc_html_e( 'Pages', 'ai-command-center' ); ?></option>
+				<option value="posts"><?php esc_html_e( 'Posts', 'action-steward' ); ?></option>
+				<option value="pages"><?php esc_html_e( 'Pages', 'action-steward' ); ?></option>
 			</select>
 
-			<label><input type="checkbox" id="wpcc-aic-rv-selectall"> <?php esc_html_e( 'Select all on this page', 'ai-command-center' ); ?></label>
+			<label><input type="checkbox" id="wpcc-aic-rv-selectall"> <?php esc_html_e( 'Select all on this page', 'action-steward' ); ?></label>
 
-			<button type="button" class="button button-primary" id="wpcc-aic-rv-generate" disabled<?php echo $has_provider ? '' : ' title="' . esc_attr__( 'Add a provider key first.', 'ai-command-center' ) . '"'; ?>><?php esc_html_e( 'Generate suggestions', 'ai-command-center' ); ?></button>
+			<button type="button" class="button button-primary" id="wpcc-aic-rv-generate" disabled<?php echo $has_provider ? '' : ' title="' . esc_attr__( 'Add a provider key first.', 'action-steward' ) . '"'; ?>><?php esc_html_e( 'Generate suggestions', 'action-steward' ); ?></button>
 			<span class="description"><?php
 				printf(
 					/* translators: %d: maximum items per generation run. */
-					esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'ai-command-center' ),
+					esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'action-steward' ),
 					25
 				);
 			?></span>
@@ -141,15 +141,15 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 		<table class="widefat striped wpcc-aic-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:34px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'ai-command-center' ); ?></span></th>
-					<th scope="col" style="width:30%;"><?php esc_html_e( 'Content', 'ai-command-center' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Current value', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:160px;"><?php esc_html_e( 'Source content', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:140px;"><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:34px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'action-steward' ); ?></span></th>
+					<th scope="col" style="width:30%;"><?php esc_html_e( 'Content', 'action-steward' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Current value', 'action-steward' ); ?></th>
+					<th scope="col" style="width:160px;"><?php esc_html_e( 'Source content', 'action-steward' ); ?></th>
+					<th scope="col" style="width:140px;"><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-aic-rv-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-aic-rv-pager" class="wpcc-aic-pager"></div>
@@ -158,29 +158,29 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 	<!-- ============ SUGGESTIONS TAB ============ -->
 	<div id="wpcc-aic-panel-suggestions" style="display:none;">
 		<div class="wpcc-aic-filters">
-			<label for="wpcc-aic-kind"><?php esc_html_e( 'Show:', 'ai-command-center' ); ?></label>
+			<label for="wpcc-aic-kind"><?php esc_html_e( 'Show:', 'action-steward' ); ?></label>
 			<select id="wpcc-aic-kind">
-				<option value="all"><?php esc_html_e( 'All', 'ai-command-center' ); ?></option>
-				<option value="title"><?php esc_html_e( 'Titles', 'ai-command-center' ); ?></option>
-				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'ai-command-center' ); ?></option>
+				<option value="all"><?php esc_html_e( 'All', 'action-steward' ); ?></option>
+				<option value="title"><?php esc_html_e( 'Titles', 'action-steward' ); ?></option>
+				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'action-steward' ); ?></option>
 			</select>
 			<span id="wpcc-aic-sg-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</div>
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or excerpt, dismiss a suggestion, or apply it. Nothing is applied to your site until you choose to.', 'ai-command-center' ); ?></span>
+			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or excerpt, dismiss a suggestion, or apply it. Nothing is applied to your site until you choose to.', 'action-steward' ); ?></span>
 		</p>
 		<table class="widefat striped wpcc-aic-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:22%;"><?php esc_html_e( 'Content', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:26%;"><?php esc_html_e( 'Current', 'ai-command-center' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Suggested (editable)', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:150px;"><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:22%;"><?php esc_html_e( 'Content', 'action-steward' ); ?></th>
+					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'action-steward' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Current', 'action-steward' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Suggested (editable)', 'action-steward' ); ?></th>
+					<th scope="col" style="width:150px;"><?php esc_html_e( 'Actions', 'action-steward' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-aic-sg-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-aic-sg-pager" class="wpcc-aic-pager"></div>
@@ -189,28 +189,28 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 	<!-- ============ APPLIED TAB ============ -->
 	<div id="wpcc-aic-panel-applied" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'Applied titles and excerpts, plus items awaiting approval.', 'ai-command-center' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Applied titles and excerpts, plus items awaiting approval.', 'action-steward' ); ?></span>
 			<span id="wpcc-aic-ap-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
 		<?php // Segmented, single-status pagination — each segment is one paginated
 		// /admin/proposals read; default = Applied. ?>
-		<div class="wpcc-aic-segbar" id="wpcc-aic-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'ai-command-center' ); ?>">
-			<button type="button" class="button button-primary wpcc-aic-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?></button>
-			<button type="button" class="button wpcc-aic-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'ai-command-center' ); ?></button>
-			<button type="button" class="button wpcc-aic-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'ai-command-center' ); ?></button>
+		<div class="wpcc-aic-segbar" id="wpcc-aic-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'action-steward' ); ?>">
+			<button type="button" class="button button-primary wpcc-aic-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'action-steward' ); ?></button>
+			<button type="button" class="button wpcc-aic-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'action-steward' ); ?></button>
+			<button type="button" class="button wpcc-aic-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'action-steward' ); ?></button>
 		</div>
 		<table class="widefat striped wpcc-aic-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:26%;"><?php esc_html_e( 'Content', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'ai-command-center' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Applied value', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:160px;"><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th>
-					<th scope="col" style="width:120px;"><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Content', 'action-steward' ); ?></th>
+					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'action-steward' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Applied value', 'action-steward' ); ?></th>
+					<th scope="col" style="width:160px;"><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
+					<th scope="col" style="width:120px;"><?php esc_html_e( 'Actions', 'action-steward' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-aic-ap-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'ai-command-center' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-aic-ap-pager" class="wpcc-aic-pager"></div>
@@ -274,51 +274,51 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 	const OP = 'content_manage';
 	const TT_TITLE = 'content_title', TT_EXCERPT = 'content_excerpt';
 	const STR = {
-		loading:  <?php echo wp_json_encode( esc_html__( 'Loading…', 'ai-command-center' ) ); ?>,
-		error:    <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'ai-command-center' ) ); ?>,
-		none:     <?php echo wp_json_encode( esc_html__( '(not set)', 'ai-command-center' ) ); ?>,
-		fieldTitle:   <?php echo wp_json_encode( esc_html__( 'Title', 'ai-command-center' ) ); ?>,
-		fieldExcerpt: <?php echo wp_json_encode( esc_html__( 'Excerpt', 'ai-command-center' ) ); ?>,
-		byAI:     <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'ai-command-center' ) ); ?>,
-		edited:   <?php echo wp_json_encode( esc_html__( 'Edited', 'ai-command-center' ) ); ?>,
-		save:     <?php echo wp_json_encode( esc_html__( 'Save', 'ai-command-center' ) ); ?>,
-		saved:    <?php echo wp_json_encode( esc_html__( 'Saved', 'ai-command-center' ) ); ?>,
-		dismiss:  <?php echo wp_json_encode( esc_html__( 'Dismiss', 'ai-command-center' ) ); ?>,
-		reviewApproval: <?php echo wp_json_encode( esc_html__( 'Review approval', 'ai-command-center' ) ); ?>,
+		loading:  <?php echo wp_json_encode( esc_html__( 'Loading…', 'action-steward' ) ); ?>,
+		error:    <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'action-steward' ) ); ?>,
+		none:     <?php echo wp_json_encode( esc_html__( '(not set)', 'action-steward' ) ); ?>,
+		fieldTitle:   <?php echo wp_json_encode( esc_html__( 'Title', 'action-steward' ) ); ?>,
+		fieldExcerpt: <?php echo wp_json_encode( esc_html__( 'Excerpt', 'action-steward' ) ); ?>,
+		byAI:     <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'action-steward' ) ); ?>,
+		edited:   <?php echo wp_json_encode( esc_html__( 'Edited', 'action-steward' ) ); ?>,
+		save:     <?php echo wp_json_encode( esc_html__( 'Save', 'action-steward' ) ); ?>,
+		saved:    <?php echo wp_json_encode( esc_html__( 'Saved', 'action-steward' ) ); ?>,
+		dismiss:  <?php echo wp_json_encode( esc_html__( 'Dismiss', 'action-steward' ) ); ?>,
+		reviewApproval: <?php echo wp_json_encode( esc_html__( 'Review approval', 'action-steward' ) ); ?>,
 		/* translators: %1$s: the reason items were skipped. */
-		skipWhy:      <?php echo wp_json_encode( /* translators: %1$s: value */ esc_html__( 'Skipped because they %1$s.', 'ai-command-center' ) ); ?>,
-		skHasDraft:   <?php echo wp_json_encode( esc_html__( 'already have a draft waiting for review', 'ai-command-center' ) ); ?>,
-		skUpToDate:   <?php echo wp_json_encode( esc_html__( 'are already up to date', 'ai-command-center' ) ); ?>,
-		skStatus:     <?php echo wp_json_encode( esc_html__( 'are trashed or not started yet', 'ai-command-center' ) ); ?>,
-		skNoProvider: <?php echo wp_json_encode( esc_html__( 'have no provider key', 'ai-command-center' ) ); ?>,
-		skUnsupported:<?php echo wp_json_encode( esc_html__( 'do not support this kind of suggestion', 'ai-command-center' ) ); ?>,
-		skNotFound:   <?php echo wp_json_encode( esc_html__( 'no longer exist', 'ai-command-center' ) ); ?>,
-		skOther:      <?php echo wp_json_encode( esc_html__( 'needed nothing generating', 'ai-command-center' ) ); ?>,
-		skReview:     <?php echo wp_json_encode( esc_html__( 'Open Suggestions to review the drafts already waiting.', 'ai-command-center' ) ); ?>,
+		skipWhy:      <?php echo wp_json_encode( /* translators: %1$s: value */ esc_html__( 'Skipped because they %1$s.', 'action-steward' ) ); ?>,
+		skHasDraft:   <?php echo wp_json_encode( esc_html__( 'already have a draft waiting for review', 'action-steward' ) ); ?>,
+		skUpToDate:   <?php echo wp_json_encode( esc_html__( 'are already up to date', 'action-steward' ) ); ?>,
+		skStatus:     <?php echo wp_json_encode( esc_html__( 'are trashed or not started yet', 'action-steward' ) ); ?>,
+		skNoProvider: <?php echo wp_json_encode( esc_html__( 'have no provider key', 'action-steward' ) ); ?>,
+		skUnsupported:<?php echo wp_json_encode( esc_html__( 'do not support this kind of suggestion', 'action-steward' ) ); ?>,
+		skNotFound:   <?php echo wp_json_encode( esc_html__( 'no longer exist', 'action-steward' ) ); ?>,
+		skOther:      <?php echo wp_json_encode( esc_html__( 'needed nothing generating', 'action-steward' ) ); ?>,
+		skReview:     <?php echo wp_json_encode( esc_html__( 'Open Suggestions to review the drafts already waiting.', 'action-steward' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		reviewApprovalFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Review the approval for %s', 'ai-command-center' ) ); ?>,
+		reviewApprovalFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Review the approval for %s', 'action-steward' ) ); ?>,
 		/* Row-level accessible names — the visible button keeps its short label. */
 		/* translators: %s: the post or page title. */
-		applyDevFor:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Approve and apply suggestion for %s', 'ai-command-center' ) ); ?>,
+		applyDevFor:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Approve and apply suggestion for %s', 'action-steward' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		applyGateFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Submit suggestion for %s for approval', 'ai-command-center' ) ); ?>,
+		applyGateFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Submit suggestion for %s for approval', 'action-steward' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		saveFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Save edited suggestion for %s', 'ai-command-center' ) ); ?>,
+		saveFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Save edited suggestion for %s', 'action-steward' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		dismissFor:   <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Dismiss suggestion for %s', 'ai-command-center' ) ); ?>,
+		dismissFor:   <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Dismiss suggestion for %s', 'action-steward' ) ); ?>,
 		/*
 		 * The old text here was "No suggestions yet. Generate some from a post or page."
 		 * It was true and it was useless: it named no screen, linked nowhere, and the
-		 * thing it was pointing at is a row action labelled "✨ WPCC AI" that a first-time
+		 * thing it was pointing at is a row action labelled "✨ Action Steward AI" that a first-time
 		 * customer has no reason to look for. An empty state on the tool's own screen
 		 * should point at the tool's own first step.
 		 */
-		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions waiting. Open the Review tab to pick a post or page and generate one.', 'ai-command-center' ) ); ?>,
-		noSugGo:  <?php echo wp_json_encode( esc_html__( 'Go to Review', 'ai-command-center' ) ); ?>,
+		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions waiting. Open the Review tab to pick a post or page and generate one.', 'action-steward' ) ); ?>,
+		noSugGo:  <?php echo wp_json_encode( esc_html__( 'Go to Review', 'action-steward' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
-		ccTitle:  <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'ai-command-center' ) ); ?>,
+		ccTitle:  <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'action-steward' ) ); ?>,
 		/* translators: %1$d current length */
-		ccExcerpt: <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d characters', 'ai-command-center' ) ); ?>,
+		ccExcerpt: <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d characters', 'action-steward' ) ); ?>,
 		// Apply + Applied tab (mode-aware label; outcome from response).
 		/*
 		 * __() not esc_html__(): every STR value is escaped again by the JS `esc()`
@@ -327,75 +327,75 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 		 * shows it — the button rendered literally as "Approve &amp; Apply" on the
 		 * suggestions table. Anything added here must stay insert-time escaped.
 		 */
-		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'ai-command-center' ) ); ?>,
-		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'ai-command-center' ) ); ?>,
-		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'ai-command-center' ) ); ?>,
-		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'ai-command-center' ) ); ?>,
-		stAwaiting:<?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'ai-command-center' ) ); ?>,
-		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'ai-command-center' ) ); ?>,
-		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'ai-command-center' ) ); ?>,
-		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'ai-command-center' ) ); ?>,
+		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'action-steward' ) ); ?>,
+		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'action-steward' ) ); ?>,
+		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'action-steward' ) ); ?>,
+		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'action-steward' ) ); ?>,
+		stAwaiting:<?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'action-steward' ) ); ?>,
+		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'action-steward' ) ); ?>,
+		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'action-steward' ) ); ?>,
+		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'action-steward' ) ); ?>,
 		// Per-item Undo (reuses the governed change-history rollback).
-		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'ai-command-center' ) ); ?>,
-		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'ai-command-center' ) ); ?>,
-		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'ai-command-center' ) ); ?>,
-		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'ai-command-center' ) ); ?>,
-		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'ai-command-center' ) ); ?>,
+		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'action-steward' ) ); ?>,
+		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'action-steward' ) ); ?>,
+		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'action-steward' ) ); ?>,
+		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'action-steward' ) ); ?>,
+		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'action-steward' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
-		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'ai-command-center' ) ); ?>,
+		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'action-steward' ) ); ?>,
 		// Post-apply confirmation toast.
-		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'ai-command-center' ) ); ?>,
-		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'ai-command-center' ) ); ?>,
-		chipReversible: <?php echo wp_json_encode( esc_html__( 'Reversible', 'ai-command-center' ) ); ?>,
-		chipAudited:    <?php echo wp_json_encode( esc_html__( 'Audited', 'ai-command-center' ) ); ?>,
-		toastView:      <?php echo wp_json_encode( esc_html__( 'View in Applied', 'ai-command-center' ) ); ?>,
-		toastUndone:    <?php echo wp_json_encode( esc_html__( 'Reverted', 'ai-command-center' ) ); ?>,
-		toastClose:     <?php echo wp_json_encode( esc_html__( 'Dismiss notification', 'ai-command-center' ) ); ?>,
+		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'action-steward' ) ); ?>,
+		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'action-steward' ) ); ?>,
+		chipReversible: <?php echo wp_json_encode( esc_html__( 'Reversible', 'action-steward' ) ); ?>,
+		chipAudited:    <?php echo wp_json_encode( esc_html__( 'Audited', 'action-steward' ) ); ?>,
+		toastView:      <?php echo wp_json_encode( esc_html__( 'View in Applied', 'action-steward' ) ); ?>,
+		toastUndone:    <?php echo wp_json_encode( esc_html__( 'Reverted', 'action-steward' ) ); ?>,
+		toastClose:     <?php echo wp_json_encode( esc_html__( 'Dismiss notification', 'action-steward' ) ); ?>,
 		// Contextual entry-point notices (wpcc_content_gen / wpcc_content_bulk).
-		genCreated:    <?php echo wp_json_encode( esc_html__( 'Suggestion created. Review it below and apply when you’re ready.', 'ai-command-center' ) ); ?>,
-		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'ai-command-center' ) ); ?>,
-		genNoProvider: <?php echo wp_json_encode( esc_html__( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key on Built-in AI › Providers.', 'ai-command-center' ) ); ?>,
-		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive suggestions (e.g. trashed or auto-draft) and were skipped.', 'ai-command-center' ) ); ?>,
-		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'ai-command-center' ) ); ?>,
-		genSkipped:    <?php echo wp_json_encode( esc_html__( 'Nothing was generated for the selected items.', 'ai-command-center' ) ); ?>,
-		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open Built-in AI › Providers', 'ai-command-center' ) ); ?>,
+		genCreated:    <?php echo wp_json_encode( esc_html__( 'Suggestion created. Review it below and apply when you’re ready.', 'action-steward' ) ); ?>,
+		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'action-steward' ) ); ?>,
+		genNoProvider: <?php echo wp_json_encode( esc_html__( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key on Built-in AI › Providers.', 'action-steward' ) ); ?>,
+		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive suggestions (e.g. trashed or auto-draft) and were skipped.', 'action-steward' ) ); ?>,
+		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'action-steward' ) ); ?>,
+		genSkipped:    <?php echo wp_json_encode( esc_html__( 'Nothing was generated for the selected items.', 'action-steward' ) ); ?>,
+		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open Built-in AI › Providers', 'action-steward' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'ai-command-center' ) ); ?>,
+		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'action-steward' ) ); ?>,
 
 		// ---- Review tab (pick content → generate) ----
-		rvNone:      <?php echo wp_json_encode( esc_html__( 'Nothing here to generate for yet.', 'ai-command-center' ) ); ?>,
-		rvNoneHint:  <?php echo wp_json_encode( esc_html__( 'Publish or draft a post or page first, then come back.', 'ai-command-center' ) ); ?>,
-		rvNotSet:    <?php echo wp_json_encode( esc_html__( '(not set)', 'ai-command-center' ) ); ?>,
-		rvReady:     <?php echo wp_json_encode( esc_html__( 'Ready', 'ai-command-center' ) ); ?>,
-		rvHasDraft:  <?php echo wp_json_encode( esc_html__( 'Draft waiting', 'ai-command-center' ) ); ?>,
-		rvHasDraftT: <?php echo wp_json_encode( esc_html__( 'A suggestion for this field is already waiting on the Suggestions tab.', 'ai-command-center' ) ); ?>,
+		rvNone:      <?php echo wp_json_encode( esc_html__( 'Nothing here to generate for yet.', 'action-steward' ) ); ?>,
+		rvNoneHint:  <?php echo wp_json_encode( esc_html__( 'Publish or draft a post or page first, then come back.', 'action-steward' ) ); ?>,
+		rvNotSet:    <?php echo wp_json_encode( esc_html__( '(not set)', 'action-steward' ) ); ?>,
+		rvReady:     <?php echo wp_json_encode( esc_html__( 'Ready', 'action-steward' ) ); ?>,
+		rvHasDraft:  <?php echo wp_json_encode( esc_html__( 'Draft waiting', 'action-steward' ) ); ?>,
+		rvHasDraftT: <?php echo wp_json_encode( esc_html__( 'A suggestion for this field is already waiting on the Suggestions tab.', 'action-steward' ) ); ?>,
 		/* translators: %s: number of words in the post's content. */
-		rvWords:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s words', 'ai-command-center' ) ); ?>,
-		rvThin:      <?php echo wp_json_encode( esc_html__( 'Thin', 'ai-command-center' ) ); ?>,
-		rvThinT:     <?php echo wp_json_encode( esc_html__( 'There is little content here to work from, so a suggestion may stay close to what you already have. It will still generate.', 'ai-command-center' ) ); ?>,
+		rvWords:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s words', 'action-steward' ) ); ?>,
+		rvThin:      <?php echo wp_json_encode( esc_html__( 'Thin', 'action-steward' ) ); ?>,
+		rvThinT:     <?php echo wp_json_encode( esc_html__( 'There is little content here to work from, so a suggestion may stay close to what you already have. It will still generate.', 'action-steward' ) ); ?>,
 		/* translators: %1$s: number done, %2$s: total to do. */
-		rvProgress:  <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Generating %1$s of %2$s…', 'ai-command-center' ) ); ?>,
+		rvProgress:  <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Generating %1$s of %2$s…', 'action-steward' ) ); ?>,
 		/* translators: %s: number of suggestions created. */
-		rvDone:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s ready to review.', 'ai-command-center' ) ); ?>,
-		rvDoneGo:    <?php echo wp_json_encode( esc_html__( 'Review suggestions', 'ai-command-center' ) ); ?>,
-		rvNothing:   <?php echo wp_json_encode( esc_html__( 'Nothing was generated.', 'ai-command-center' ) ); ?>,
+		rvDone:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s ready to review.', 'action-steward' ) ); ?>,
+		rvDoneGo:    <?php echo wp_json_encode( esc_html__( 'Review suggestions', 'action-steward' ) ); ?>,
+		rvNothing:   <?php echo wp_json_encode( esc_html__( 'Nothing was generated.', 'action-steward' ) ); ?>,
 		/* translators: %s: number of items whose source content was thin. */
-		rvThinNote:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s had little content to work from, so those suggestions may stay close to what is already there. Adding more body content usually produces a stronger suggestion.', 'ai-command-center' ) ); ?>,
-		rvNoProvider:<?php echo wp_json_encode( esc_html__( 'No provider key, so nothing was generated and nothing on your site changed.', 'ai-command-center' ) ); ?>,
-		rvGenBusy:   <?php echo wp_json_encode( esc_html__( 'Generating…', 'ai-command-center' ) ); ?>,
-		rvGenLabel:  <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'ai-command-center' ) ); ?>,
+		rvThinNote:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s had little content to work from, so those suggestions may stay close to what is already there. Adding more body content usually produces a stronger suggestion.', 'action-steward' ) ); ?>,
+		rvNoProvider:<?php echo wp_json_encode( esc_html__( 'No provider key, so nothing was generated and nothing on your site changed.', 'action-steward' ) ); ?>,
+		rvGenBusy:   <?php echo wp_json_encode( esc_html__( 'Generating…', 'action-steward' ) ); ?>,
+		rvGenLabel:  <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'action-steward' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		rvSelectFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select %s', 'ai-command-center' ) ); ?>,
+		rvSelectFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select %s', 'action-steward' ) ); ?>,
 
 		// ---- Regenerate (ask for another draft) ----
-		regen:        <?php echo wp_json_encode( esc_html__( 'Regenerate', 'ai-command-center' ) ); ?>,
-		regenBusy:    <?php echo wp_json_encode( esc_html__( 'Asking again…', 'ai-command-center' ) ); ?>,
-		regenOk:      <?php echo wp_json_encode( esc_html__( 'New suggestion ready', 'ai-command-center' ) ); ?>,
-		regenFail:    <?php echo wp_json_encode( esc_html__( 'Couldn’t get another suggestion — your current one is unchanged.', 'ai-command-center' ) ); ?>,
+		regen:        <?php echo wp_json_encode( esc_html__( 'Regenerate', 'action-steward' ) ); ?>,
+		regenBusy:    <?php echo wp_json_encode( esc_html__( 'Asking again…', 'action-steward' ) ); ?>,
+		regenOk:      <?php echo wp_json_encode( esc_html__( 'New suggestion ready', 'action-steward' ) ); ?>,
+		regenFail:    <?php echo wp_json_encode( esc_html__( 'Couldn’t get another suggestion — your current one is unchanged.', 'action-steward' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		regenFor:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Ask for a different suggestion for %s', 'ai-command-center' ) ); ?>,
+		regenFor:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Ask for a different suggestion for %s', 'action-steward' ) ); ?>,
 		// Shown when the returned draft simply restates what is already there.
-		echoNote:     <?php echo wp_json_encode( esc_html__( 'This matches your current value. With little content to work from, the AI stays close to what you have rather than inventing something about the page.', 'ai-command-center' ) ); ?>
+		echoNote:     <?php echo wp_json_encode( esc_html__( 'This matches your current value. With little content to work from, the AI stays close to what you have rather than inventing something about the page.', 'action-steward' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );

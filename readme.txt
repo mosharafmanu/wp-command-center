@@ -1,18 +1,18 @@
-=== WP Command Center ===
+=== Action Steward ===
 Contributors: mosharafmanu
-Tags: ai, mcp, claude, automation, approvals
+Tags: ai, mcp, automation, approvals, security
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Connect an AI assistant to your site. Changes that matter wait for your approval, everything is recorded, and supported changes can be undone.
+Safe AI operations for WordPress. Scope access, assess risk, require approval, and keep an audit trail with rollback for supported changes.
 
 == Description ==
 
-WP Command Center lets you connect an AI assistant — Claude, Cursor, Codex, ChatGPT, Gemini, or any other MCP-compatible client — to one WordPress site, and then ask for changes in your own words — in whatever language you and your assistant use.
+Action Steward is a governance gateway between an AI assistant and one WordPress site. Connect Claude, Cursor, Codex, ChatGPT, Gemini, or another MCP-compatible client, then ask for changes in your own words — in whatever language you and your assistant use.
 
 The point of the plugin is not the AI. It is the control around it:
 
@@ -24,14 +24,14 @@ The point of the plugin is not the AI. It is the control around it:
 = How it works =
 
 1. Install and activate. The site starts in **Standard protection** — higher-impact changes need your approval; low-risk operations run immediately.
-2. Go to **WP Command Center → Settings → Connections**, pick your assistant, and create an access token.
+2. Go to **Action Steward → Settings → Connections**, pick your assistant, and create an access token.
 3. Copy the generated setup into your assistant.
 4. Ask your assistant to do something on the site.
 5. Approve it under **Approvals**, then review or undo it under **Changes**.
 
 = You do not need an AI provider API key =
 
-Connecting an assistant over MCP uses *your assistant's* AI. WP Command Center does not need an API key of its own for this, and does not call any AI service.
+Connecting an assistant over MCP uses *your assistant's* AI. Action Steward does not need an API key of its own for this, and does not call any AI service.
 
 There is a separate, entirely optional "Built-in AI" section where you can add your own provider key if you want the plugin itself to generate content for you. It is off unless you configure it.
 
@@ -99,7 +99,7 @@ If you add an AI provider key, it is stored in the WordPress options table on yo
 
 = When you delete the plugin =
 
-By default your data is **kept**, so an audit trail is not destroyed just because the plugin was removed. If you want everything erased instead, tick *"Also delete all WP Command Center data when the plugin is deleted"* under **Settings → Protection** before deleting. With that set, uninstalling removes all of the plugin's tables, options, user settings, and upload directories. Scheduled jobs are always removed.
+By default your data is **kept**, so an audit trail is not destroyed just because the plugin was removed. If you want everything erased instead, tick *"Also delete all Action Steward data when the plugin is deleted"* under **Settings → Protection** before deleting. With that set, uninstalling removes all of the plugin's tables, options, user settings, and upload directories. Scheduled jobs are always removed.
 
 == Frequently Asked Questions ==
 
@@ -176,11 +176,16 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 
 == Installation ==
 
-1. Upload the plugin to `/wp-content/plugins/ai-command-center`, or install it from the Plugins screen.
+1. Upload the plugin to `/wp-content/plugins/action-steward`, or install it from the Plugins screen.
 2. Activate it through the **Plugins** menu.
 3. Open **Command Center** in the admin sidebar and follow the single next step shown on the Home screen.
 
 == Changelog ==
+
+= 1.0.2 =
+* Rename the public product, package folder, main file, and text domain to Action Steward.
+* Preserve the certified `wp-command-center` MCP identifier, REST namespace, and all `wpcc_*` data so existing development state remains compatible.
+* Refresh customer-facing setup, approval, rollback, and release documentation for the new identity.
 
 = 1.0.1 =
 * Harden private runtime storage and release-gate state restoration.
@@ -200,6 +205,9 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 * Documented uninstall behaviour: data is retained unless you opt in to deletion.
 
 == Upgrade Notice ==
+
+= 1.0.2 =
+Public-brand and package-identity update. Existing settings, tokens, tables, history, approvals, and rollback data are preserved.
 
 = 1.0.1 =
 Security, compatibility, and rollback-reliability update. Existing settings and history are preserved.

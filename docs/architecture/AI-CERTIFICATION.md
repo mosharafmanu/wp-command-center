@@ -2,7 +2,7 @@
 
 ## Overview
 
-All AI clients that connect to WP Command Center go through a unified certification framework. This ensures consistent validation of MCP compatibility, security posture, and operational reliability — regardless of which vendor produced the client.
+All AI clients that connect to Action Steward go through a unified certification framework. This ensures consistent validation of MCP compatibility, security posture, and operational reliability — regardless of which vendor produced the client.
 
 ## Certification Levels
 
@@ -48,7 +48,7 @@ To certify a new AI client:
 
 ## Client-Specific vs Model-Agnostic
 
-WP Command Center certifies **AI clients** (applications that connect via MCP), not AI models. A single client may use different AI models:
+Action Steward certifies **AI clients** (applications that connect via MCP), not AI models. A single client may use different AI models:
 
 | Client | Models It Can Use |
 |---|---|
@@ -61,7 +61,7 @@ WP Command Center certifies **AI clients** (applications that connect via MCP), 
 | OpenCode | Any (DeepSeek, Qwen, Llama, etc.) |
 | Aider | Any (DeepSeek, Qwen, Llama, etc.) |
 
-This means: certifying "Cursor + Qwen" is the same as certifying "Cursor" — the client handles model selection. WP Command Center interacts with the client, not the model.
+This means: certifying "Cursor + Qwen" is the same as certifying "Cursor" — the client handles model selection. Action Steward interacts with the client, not the model.
 
 ## Current Certification Status
 
@@ -82,7 +82,7 @@ This means: certifying "Cursor + Qwen" is the same as certifying "Cursor" — th
 ## Architecture
 
 ```
-AI Client → MCP → WP Command Center → Capability → Approval → Queue → Execute → Verify → Audit → Rollback
+AI Client → MCP → Action Steward → Capability → Approval → Queue → Execute → Verify → Audit → Rollback
 ```
 
 All clients use the same MCP endpoint (`POST /wp-json/wp-command-center/v1/mcp`). No per-client runtimes exist. Shared-runtime compatibility does not by itself constitute client-specific Gold certification.

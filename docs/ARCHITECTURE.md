@@ -110,7 +110,7 @@ Upload directories: `wpcc-tokens`, `wpcc-patches`, `wpcc-audit`, `wpcc-snapshots
 Network activation is **refused**. `Activator` calls `wp_die()` with an explanation, and
 an admin notice repeats it.
 
-This is a deliberate limit rather than a bug. WPCC's governance model is per-site: tokens,
+This is a deliberate limit rather than a bug. Action Steward's governance model is per-site: tokens,
 protection mode, approvals and change history all assume one site's `options` table and
 one set of `wpcc_` tables. A network activation would create ambiguity about which site an
 approval belongs to. Per-site activation inside a network works normally.

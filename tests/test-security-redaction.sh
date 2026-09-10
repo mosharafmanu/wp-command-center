@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Security hardening test suite for WP Command Center (Step 10).
+# Security hardening test suite for Action Steward (Step 10).
 #
 # Verifies the credential protection & redaction layer:
 #

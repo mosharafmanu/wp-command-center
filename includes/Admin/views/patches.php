@@ -31,7 +31,7 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 
 		$notice = is_wp_error( $result )
 			? [ 'type' => 'error', 'message' => $result->get_error_message() ]
-			: [ 'type' => 'success', 'message' => __( 'Patch created and pending approval.', 'ai-command-center' ) ];
+			: [ 'type' => 'success', 'message' => __( 'Patch created and pending approval.', 'action-steward' ) ];
 	} elseif ( in_array( $action, [ 'approve_patch', 'reject_patch', 'apply_patch', 'rollback_patch', 'delete_patch' ], true ) ) {
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 
@@ -50,7 +50,7 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 				}
 
 				if ( PatchManager::STATUS_APPLIED === $patch['status'] ) {
-					return new \WP_Error( 'wpcc_invalid_status', __( 'Roll back this patch before deleting it.', 'ai-command-center' ) );
+					return new \WP_Error( 'wpcc_invalid_status', __( 'Roll back this patch before deleting it.', 'action-steward' ) );
 				}
 
 				return $patch_manager->delete( $id );
@@ -60,14 +60,14 @@ if ( isset( $_POST['wpcc_action'] ) ) {
 		if ( is_wp_error( $result ) ) {
 			$notice = [ 'type' => 'error', 'message' => $result->get_error_message() ];
 		} elseif ( 'apply_patch' === $action && PatchManager::STATUS_FAILED === ( $result['status'] ?? '' ) ) {
-			$notice = [ 'type' => 'error', 'message' => __( 'Patch failed verification and the affected file(s) were automatically reverted.', 'ai-command-center' ) ];
+			$notice = [ 'type' => 'error', 'message' => __( 'Patch failed verification and the affected file(s) were automatically reverted.', 'action-steward' ) ];
 		} else {
 			$messages = [
-				'approve_patch'  => __( 'Patch approved.', 'ai-command-center' ),
-				'reject_patch'   => __( 'Patch rejected.', 'ai-command-center' ),
-				'apply_patch'    => __( 'Patch applied successfully. A snapshot was taken automatically.', 'ai-command-center' ),
-				'rollback_patch' => __( 'Patch rolled back. The affected file(s) were restored.', 'ai-command-center' ),
-				'delete_patch'   => __( 'Patch deleted.', 'ai-command-center' ),
+				'approve_patch'  => __( 'Patch approved.', 'action-steward' ),
+				'reject_patch'   => __( 'Patch rejected.', 'action-steward' ),
+				'apply_patch'    => __( 'Patch applied successfully. A snapshot was taken automatically.', 'action-steward' ),
+				'rollback_patch' => __( 'Patch rolled back. The affected file(s) were restored.', 'action-steward' ),
+				'delete_patch'   => __( 'Patch deleted.', 'action-steward' ),
 			];
 
 			$notice = [ 'type' => 'success', 'message' => $messages[ $action ] ?? '' ];
@@ -94,8 +94,8 @@ $prefill_path = isset( $_GET['path'] ) ? trim( wp_unslash( $_GET['path'] ), '/' 
 $patches = $patch_manager->list();
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'Patches', 'ai-command-center' ); ?></h1>
-	<p><?php esc_html_e( 'AI-generated and manual patches — review the diff, explanation, and risk level, then approve, apply, or roll back.', 'ai-command-center' ); ?></p>
+	<h1><?php esc_html_e( 'Patches', 'action-steward' ); ?></h1>
+	<p><?php esc_html_e( 'AI-generated and manual patches — review the diff, explanation, and risk level, then approve, apply, or roll back.', 'action-steward' ); ?></p>
 
 	<?php if ( $notice ) : ?>
 		<div class="notice inline notice-<?php echo esc_attr( $notice['type'] ); ?>"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
@@ -111,27 +111,27 @@ $patches = $patch_manager->list();
 
 		<?php else : ?>
 
-			<h2><?php esc_html_e( 'Patch Details', 'ai-command-center' ); ?></h2>
+			<h2><?php esc_html_e( 'Patch Details', 'action-steward' ); ?></h2>
 
 			<table class="form-table" role="presentation">
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Patch ID', 'ai-command-center' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Patch ID', 'action-steward' ); ?></th>
 					<td><code><?php echo esc_html( $patch['id'] ); ?></code></td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Source', 'ai-command-center' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Source', 'action-steward' ); ?></th>
 					<td><?php echo esc_html( PatchManager::source_label( $patch['source'] ) ); ?></td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
 					<td><?php echo wp_kses_post( PatchManager::status_badge( $patch['status'] ) ); ?></td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Risk Level', 'ai-command-center' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Risk Level', 'action-steward' ); ?></th>
 					<td><?php echo wp_kses_post( PatchManager::risk_badge( $patch['risk_level'] ) ); ?></td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Target File(s)', 'ai-command-center' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Target File(s)', 'action-steward' ); ?></th>
 					<td>
 						<?php foreach ( $patch['files'] as $file ) : ?>
 							<code><?php echo esc_html( $file['path'] ); ?></code><br />
@@ -139,25 +139,25 @@ $patches = $patch_manager->list();
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Created', 'ai-command-center' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Created', 'action-steward' ); ?></th>
 					<td><?php echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $patch['created_at'] ) ); ?></td>
 				</tr>
 				<?php if ( ! empty( $patch['applied_at'] ) ) : ?>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Applied', 'ai-command-center' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Applied', 'action-steward' ); ?></th>
 						<td><?php echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $patch['applied_at'] ) ); ?></td>
 					</tr>
 				<?php endif; ?>
 				<?php if ( '' !== $patch['explanation'] ) : ?>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Explanation', 'ai-command-center' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Explanation', 'action-steward' ); ?></th>
 						<td><?php echo nl2br( esc_html( $patch['explanation'] ) ); ?></td>
 					</tr>
 				<?php endif; ?>
 			</table>
 
 			<?php if ( ! empty( $patch['verification'] ) ) : ?>
-				<h2><?php esc_html_e( 'Verification', 'ai-command-center' ); ?></h2>
+				<h2><?php esc_html_e( 'Verification', 'action-steward' ); ?></h2>
 				<ul class="ul-disc">
 					<?php foreach ( $patch['verification']['checks'] as $path => $check ) : ?>
 						<li>
@@ -169,21 +169,21 @@ $patches = $patch_manager->list();
 				</ul>
 			<?php endif; ?>
 
-			<h2><?php esc_html_e( 'Diff Preview', 'ai-command-center' ); ?></h2>
+			<h2><?php esc_html_e( 'Diff Preview', 'action-steward' ); ?></h2>
 			<?php
 			// Shared renderer (also used by Change History). Patches default to
 			// expanded so the review diff is visible without an extra click.
 			echo DiffRenderer::render_accordion( $patch['files'], true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderer escapes all content.
 			?>
 
-			<h2><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></h2>
+			<h2><?php esc_html_e( 'Actions', 'action-steward' ); ?></h2>
 			<p class="wpcc-actions">
 				<?php if ( in_array( $patch['status'], [ PatchManager::STATUS_DRAFT, PatchManager::STATUS_PENDING_APPROVAL ], true ) ) : ?>
 					<form method="post" class="wpcc-inline-form">
 						<?php wp_nonce_field( 'wpcc_patches' ); ?>
 						<input type="hidden" name="wpcc_action" value="approve_patch" />
 						<input type="hidden" name="id" value="<?php echo esc_attr( $patch['id'] ); ?>" />
-						<?php submit_button( __( 'Approve Patch', 'ai-command-center' ), 'primary', '', false ); ?>
+						<?php submit_button( __( 'Approve Patch', 'action-steward' ), 'primary', '', false ); ?>
 					</form>
 				<?php endif; ?>
 
@@ -192,7 +192,7 @@ $patches = $patch_manager->list();
 						<?php wp_nonce_field( 'wpcc_patches' ); ?>
 						<input type="hidden" name="wpcc_action" value="apply_patch" />
 						<input type="hidden" name="id" value="<?php echo esc_attr( $patch['id'] ); ?>" />
-						<?php submit_button( __( 'Apply Patch', 'ai-command-center' ), 'primary', '', false ); ?>
+						<?php submit_button( __( 'Apply Patch', 'action-steward' ), 'primary', '', false ); ?>
 					</form>
 				<?php endif; ?>
 
@@ -201,30 +201,30 @@ $patches = $patch_manager->list();
 						<?php wp_nonce_field( 'wpcc_patches' ); ?>
 						<input type="hidden" name="wpcc_action" value="reject_patch" />
 						<input type="hidden" name="id" value="<?php echo esc_attr( $patch['id'] ); ?>" />
-						<?php submit_button( __( 'Reject Patch', 'ai-command-center' ), 'secondary', '', false ); ?>
+						<?php submit_button( __( 'Reject Patch', 'action-steward' ), 'secondary', '', false ); ?>
 					</form>
 				<?php endif; ?>
 
 				<?php if ( PatchManager::STATUS_APPLIED === $patch['status'] ) : ?>
-					<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Roll back this patch and restore the affected file(s)?', 'ai-command-center' ) ); ?>');">
+					<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Roll back this patch and restore the affected file(s)?', 'action-steward' ) ); ?>');">
 						<?php wp_nonce_field( 'wpcc_patches' ); ?>
 						<input type="hidden" name="wpcc_action" value="rollback_patch" />
 						<input type="hidden" name="id" value="<?php echo esc_attr( $patch['id'] ); ?>" />
-						<?php submit_button( __( 'Roll Back Patch', 'ai-command-center' ), 'secondary', '', false ); ?>
+						<?php submit_button( __( 'Roll Back Patch', 'action-steward' ), 'secondary', '', false ); ?>
 					</form>
 				<?php endif; ?>
 
 				<?php if ( PatchManager::STATUS_APPLIED !== $patch['status'] ) : ?>
-					<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Delete this patch? This cannot be undone.', 'ai-command-center' ) ); ?>');">
+					<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Delete this patch? This cannot be undone.', 'action-steward' ) ); ?>');">
 						<?php wp_nonce_field( 'wpcc_patches' ); ?>
 						<input type="hidden" name="wpcc_action" value="delete_patch" />
 						<input type="hidden" name="id" value="<?php echo esc_attr( $patch['id'] ); ?>" />
-						<?php submit_button( __( 'Delete Patch', 'ai-command-center' ), 'delete', '', false ); ?>
+						<?php submit_button( __( 'Delete Patch', 'action-steward' ), 'delete', '', false ); ?>
 					</form>
 				<?php endif; ?>
 			</p>
 
-			<p><a href="<?php echo esc_url( $page_url() ); ?>"><?php esc_html_e( '← Back to all patches', 'ai-command-center' ); ?></a></p>
+			<p><a href="<?php echo esc_url( $page_url() ); ?>"><?php esc_html_e( '← Back to all patches', 'action-steward' ); ?></a></p>
 
 		<?php endif; ?>
 
@@ -233,18 +233,18 @@ $patches = $patch_manager->list();
 		<table class="widefat striped wpcc-table">
 			<thead>
 				<tr>
-					<th><?php esc_html_e( 'Patch ID', 'ai-command-center' ); ?></th>
-					<th><?php esc_html_e( 'Source', 'ai-command-center' ); ?></th>
-					<th><?php esc_html_e( 'Target File(s)', 'ai-command-center' ); ?></th>
-					<th><?php esc_html_e( 'Date Created', 'ai-command-center' ); ?></th>
-					<th><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th>
-					<th><?php esc_html_e( 'Actions', 'ai-command-center' ); ?></th>
+					<th><?php esc_html_e( 'Patch ID', 'action-steward' ); ?></th>
+					<th><?php esc_html_e( 'Source', 'action-steward' ); ?></th>
+					<th><?php esc_html_e( 'Target File(s)', 'action-steward' ); ?></th>
+					<th><?php esc_html_e( 'Date Created', 'action-steward' ); ?></th>
+					<th><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
+					<th><?php esc_html_e( 'Actions', 'action-steward' ); ?></th>
 				</tr>
 			</thead>
 			<tbody>
 			<?php if ( empty( $patches ) ) : ?>
 				<tr>
-					<td colspan="6"><?php esc_html_e( 'No patches yet.', 'ai-command-center' ); ?></td>
+					<td colspan="6"><?php esc_html_e( 'No patches yet.', 'action-steward' ); ?></td>
 				</tr>
 			<?php endif; ?>
 			<?php foreach ( $patches as $summary ) : ?>
@@ -263,14 +263,14 @@ $patches = $patch_manager->list();
 					<td><?php echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $summary['created_at'] ) ); ?></td>
 					<td><?php echo wp_kses_post( PatchManager::status_badge( $summary['status'] ) ); ?></td>
 					<td class="wpcc-actions">
-						<a class="button button-small" href="<?php echo esc_url( $page_url( [ 'view' => $summary['id'] ] ) ); ?>"><?php esc_html_e( 'View', 'ai-command-center' ); ?></a>
+						<a class="button button-small" href="<?php echo esc_url( $page_url( [ 'view' => $summary['id'] ] ) ); ?>"><?php esc_html_e( 'View', 'action-steward' ); ?></a>
 
 						<?php if ( in_array( $summary['status'], [ PatchManager::STATUS_DRAFT, PatchManager::STATUS_PENDING_APPROVAL ], true ) ) : ?>
 							<form method="post" class="wpcc-inline-form">
 								<?php wp_nonce_field( 'wpcc_patches' ); ?>
 								<input type="hidden" name="wpcc_action" value="approve_patch" />
 								<input type="hidden" name="id" value="<?php echo esc_attr( $summary['id'] ); ?>" />
-								<?php submit_button( __( 'Approve', 'ai-command-center' ), 'small primary', '', false ); ?>
+								<?php submit_button( __( 'Approve', 'action-steward' ), 'small primary', '', false ); ?>
 							</form>
 						<?php endif; ?>
 
@@ -279,16 +279,16 @@ $patches = $patch_manager->list();
 								<?php wp_nonce_field( 'wpcc_patches' ); ?>
 								<input type="hidden" name="wpcc_action" value="apply_patch" />
 								<input type="hidden" name="id" value="<?php echo esc_attr( $summary['id'] ); ?>" />
-								<?php submit_button( __( 'Apply', 'ai-command-center' ), 'small primary', '', false ); ?>
+								<?php submit_button( __( 'Apply', 'action-steward' ), 'small primary', '', false ); ?>
 							</form>
 						<?php endif; ?>
 
 						<?php if ( PatchManager::STATUS_APPLIED === $summary['status'] ) : ?>
-							<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Roll back this patch and restore the affected file(s)?', 'ai-command-center' ) ); ?>');">
+							<form method="post" class="wpcc-inline-form" onsubmit="return confirm('<?php echo esc_js( __( 'Roll back this patch and restore the affected file(s)?', 'action-steward' ) ); ?>');">
 								<?php wp_nonce_field( 'wpcc_patches' ); ?>
 								<input type="hidden" name="wpcc_action" value="rollback_patch" />
 								<input type="hidden" name="id" value="<?php echo esc_attr( $summary['id'] ); ?>" />
-								<?php submit_button( __( 'Roll Back', 'ai-command-center' ), 'small', '', false ); ?>
+								<?php submit_button( __( 'Roll Back', 'action-steward' ), 'small', '', false ); ?>
 							</form>
 						<?php endif; ?>
 					</td>
@@ -298,14 +298,14 @@ $patches = $patch_manager->list();
 		</table>
 
 		<details id="create-patch"<?php echo '' !== $prefill_path ? ' open' : ''; ?>>
-			<summary><?php esc_html_e( 'Create Patch Manually', 'ai-command-center' ); ?></summary>
+			<summary><?php esc_html_e( 'Create Patch Manually', 'action-steward' ); ?></summary>
 
 			<form method="get" class="wpcc-search-form">
 				<input type="hidden" name="page" value="wpcc-patches" />
-				<label for="wpcc-patch-load-path" class="screen-reader-text"><?php esc_html_e( 'File path', 'ai-command-center' ); ?></label>
+				<label for="wpcc-patch-load-path" class="screen-reader-text"><?php esc_html_e( 'File path', 'action-steward' ); ?></label>
 				<input type="text" id="wpcc-patch-load-path" name="path" class="regular-text" value="<?php echo esc_attr( $prefill_path ); ?>" placeholder="plugins/my-plugin/file.php" />
-				<?php submit_button( __( 'Load File', 'ai-command-center' ), 'secondary', '', false ); ?>
-				<p class="description"><?php esc_html_e( 'Load the current contents of a file (relative to wp-content/), edit it below, and submit to create a patch for review.', 'ai-command-center' ); ?></p>
+				<?php submit_button( __( 'Load File', 'action-steward' ), 'secondary', '', false ); ?>
+				<p class="description"><?php esc_html_e( 'Load the current contents of a file (relative to wp-content/), edit it below, and submit to create a patch for review.', 'action-steward' ); ?></p>
 			</form>
 
 			<?php if ( '' !== $prefill_path ) : ?>
@@ -320,19 +320,19 @@ $patches = $patch_manager->list();
 						<input type="hidden" name="path" value="<?php echo esc_attr( $loaded['path'] ); ?>" />
 						<table class="form-table" role="presentation">
 							<tr>
-								<th scope="row"><?php esc_html_e( 'File', 'ai-command-center' ); ?></th>
+								<th scope="row"><?php esc_html_e( 'File', 'action-steward' ); ?></th>
 								<td><code><?php echo esc_html( $loaded['path'] ); ?></code></td>
 							</tr>
 							<tr>
-								<th scope="row"><label for="wpcc-patch-modified"><?php esc_html_e( 'New Contents', 'ai-command-center' ); ?></label></th>
+								<th scope="row"><label for="wpcc-patch-modified"><?php esc_html_e( 'New Contents', 'action-steward' ); ?></label></th>
 								<td><textarea name="modified" id="wpcc-patch-modified" class="large-text code" rows="20" spellcheck="false"><?php echo esc_textarea( $loaded['contents'] ); ?></textarea></td>
 							</tr>
 							<tr>
-								<th scope="row"><label for="wpcc-patch-explanation"><?php esc_html_e( 'Explanation', 'ai-command-center' ); ?></label></th>
-								<td><textarea name="explanation" id="wpcc-patch-explanation" class="large-text" rows="3" placeholder="<?php esc_attr_e( 'What does this change do and why?', 'ai-command-center' ); ?>"></textarea></td>
+								<th scope="row"><label for="wpcc-patch-explanation"><?php esc_html_e( 'Explanation', 'action-steward' ); ?></label></th>
+								<td><textarea name="explanation" id="wpcc-patch-explanation" class="large-text" rows="3" placeholder="<?php esc_attr_e( 'What does this change do and why?', 'action-steward' ); ?>"></textarea></td>
 							</tr>
 							<tr>
-								<th scope="row"><label for="wpcc-patch-risk"><?php esc_html_e( 'Risk Level', 'ai-command-center' ); ?></label></th>
+								<th scope="row"><label for="wpcc-patch-risk"><?php esc_html_e( 'Risk Level', 'action-steward' ); ?></label></th>
 								<td>
 									<select name="risk_level" id="wpcc-patch-risk">
 										<?php foreach ( $risk_labels as $value => $label ) : ?>
@@ -342,7 +342,7 @@ $patches = $patch_manager->list();
 								</td>
 							</tr>
 						</table>
-						<?php submit_button( __( 'Create Patch', 'ai-command-center' ) ); ?>
+						<?php submit_button( __( 'Create Patch', 'action-steward' ) ); ?>
 					</form>
 				<?php endif; ?>
 			<?php endif; ?>

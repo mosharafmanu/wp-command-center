@@ -1,11 +1,11 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "WP Command Center REST API",
+    "title": "Action Steward REST API",
     "description": "REST API for managing WordPress sites — Site Intelligence, Diagnostics, File Access, Patch Engine, Operations, MCP, and Agent orchestration.",
     "version": "0.1.0",
     "contact": {
-      "name": "WP Command Center",
+      "name": "Action Steward",
       "url": "https://github.com/anomalyco/wp-command-center"
     },
     "license": {
@@ -30,7 +30,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "WPCC API Token",
-        "description": "WP Command Center API token created from Settings → API Tokens. Read-only tokens access GET routes; full-access tokens are required for POST/PATCH/DELETE write actions."
+        "description": "Action Steward API token created from Settings → API Tokens. Read-only tokens access GET routes; full-access tokens are required for POST/PATCH/DELETE write actions."
       }
     },
     "schemas": {
@@ -124,7 +124,7 @@
     "/system/environment": {
       "get": {
         "tags": ["System"],
-        "summary": "Get the current WP Command Center environment mode",
+        "summary": "Get the current Action Steward environment mode",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {

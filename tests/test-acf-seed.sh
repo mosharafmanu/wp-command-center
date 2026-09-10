@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ACF Seeder Operation test suite for WP Command Center (Step 17).
+# ACF Seeder Operation test suite for Action Steward (Step 17).
 #
 # Verifies:
 #   - ACF inactive (simulated if possible, but here it's active)

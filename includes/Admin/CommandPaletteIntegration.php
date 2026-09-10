@@ -15,14 +15,14 @@ defined( 'ABSPATH' ) || exit;
  *     token       → Go to: Marketing · Marketing > Coupons · Rank Math SEO > …
  *     protection  → nothing
  *
- * Neither result mentions WP Command Center, and the first is actively wrong — the
+ * Neither result mentions Action Steward, and the first is actively wrong — the
  * customer asked for access tokens and was offered a coupons screen.
  *
  * The matcher is WordPress's and is not ours to change. What was missing is its
  * input: real, exactly-named destinations. Registering one command per screen —
  * the same destinations the plugin's own palette already offers, from the same
  * AppShell::nav_map() — means the query has something true to match. Measured on
- * a live install: "token" now answers "WP Command Center: Access tokens" first,
+ * a live install: "token" now answers "Action Steward: Access tokens" first,
  * with the Marketing rows below it, and "protection", "security mode" and
  * "built-in AI" each answer with their own screen.
  *
@@ -106,7 +106,7 @@ final class CommandPaletteIntegration {
 			'destinations' => $destinations,
 			'i18n'         => [
 				/* translators: %s: destination name, e.g. "Access tokens". */
-				'commandLabel' => __( 'WP Command Center: %s', 'ai-command-center' ),
+				'commandLabel' => __( 'Action Steward: %s', 'action-steward' ),
 				/*
 				 * The product name on its own, so the searchable string can END with
 				 * it rather than begin with it. Prefixing every row with the same
@@ -115,9 +115,9 @@ final class CommandPaletteIntegration {
 				 * tokens too, because its leading "p" only had to be found in
 				 * "W-P Command Center". Moving the prefix to the end put every
 				 * required query on its own screen. It stays present so
-				 * "wp command center" still finds them all.
+				 * The legacy three-word product query still finds them all.
 				 */
-				'product'      => __( 'WP Command Center', 'ai-command-center' ),
+				'product'      => __( 'Action Steward', 'action-steward' ),
 			],
 		] );
 	}
@@ -138,7 +138,7 @@ final class CommandPaletteIntegration {
 	 *
 	 * Breadcrumb labels are reduced to the screen's own name for the same reason
 	 * and one more: the palette prefixes every row with the product name already,
-	 * so "WP Command Center: Settings › Connections › Access tokens" says "Settings"
+	 * so "Action Steward: Settings › Connections › Access tokens" says "Settings"
 	 * twice and buries the only word the customer typed at the far end of the row.
 	 *
 	 * @return array<int, array{name:string, label:string, search:string, url:string}>
@@ -165,7 +165,7 @@ final class CommandPaletteIntegration {
 			$out[] = [
 				// Stable, namespaced and derived from the URL, so re-registering on a
 				// later page load replaces the same command rather than doubling it.
-				'name'   => 'ai-command-center/' . md5( $url ),
+				'name'   => 'action-steward/' . md5( $url ),
 				'label'  => $leaf,
 				'search' => self::search_terms( (string) ( $item['aliases'] ?? $item['keywords'] ?? '' ) ),
 				'url'    => $url,

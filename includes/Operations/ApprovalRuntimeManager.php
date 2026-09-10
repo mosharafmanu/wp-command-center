@@ -47,7 +47,7 @@ final class ApprovalRuntimeManager {
 					'wpcc_approval_requires_human',
 					sprintf(
 						/* translators: %s: security mode label */
-						__( 'Approvals must be granted by a WordPress administrator in %s. Use the WordPress admin approval interface to approve or reject this request.', 'ai-command-center' ),
+						__( 'Approvals must be granted by a WordPress administrator in %s. Use the WordPress admin approval interface to approve or reject this request.', 'action-steward' ),
 						SecurityModeManager::label()
 					)
 				);
@@ -85,7 +85,7 @@ final class ApprovalRuntimeManager {
 	private function request_create( array $p, array $actor ): array|\WP_Error {
 		$operation_id = sanitize_key( (string) ( $p['operation_id'] ?? '' ) );
 		if ( '' === $operation_id ) {
-			return new \WP_Error( 'wpcc_missing_operation_id', __( 'operation_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_operation_id', __( 'operation_id is required.', 'action-steward' ) );
 		}
 
 		$payload = (array) ( $p['payload'] ?? [] );
@@ -196,11 +196,11 @@ final class ApprovalRuntimeManager {
 
 	private function require_request( string $id ): array|\WP_Error {
 		if ( '' === $id ) {
-			return new \WP_Error( 'wpcc_missing_request_id', __( 'request_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_request_id', __( 'request_id is required.', 'action-steward' ) );
 		}
 		$row = ( new OperationManager() )->get_request( $id );
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'action-steward' ) );
 		}
 		return $row;
 	}
@@ -309,11 +309,11 @@ final class ApprovalRuntimeManager {
 
 	private function require_queue_item( string $id ): array|\WP_Error {
 		if ( '' === $id ) {
-			return new \WP_Error( 'wpcc_missing_queue_id', __( 'queue_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_queue_id', __( 'queue_id is required.', 'action-steward' ) );
 		}
 		$item = ( new OperationQueue() )->get_item( $id );
 		if ( ! $item ) {
-			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'action-steward' ) );
 		}
 		return $item;
 	}
@@ -323,11 +323,11 @@ final class ApprovalRuntimeManager {
 	private function results_get( array $p ): array|\WP_Error {
 		$id = (string) ( $p['result_id'] ?? '' );
 		if ( '' === $id ) {
-			return new \WP_Error( 'wpcc_missing_result_id', __( 'result_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_result_id', __( 'result_id is required.', 'action-steward' ) );
 		}
 		$row = ( new OperationResults() )->get_result( $id );
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_result_not_found', __( 'Operation result not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_result_not_found', __( 'Operation result not found.', 'action-steward' ) );
 		}
 		return [ 'action' => ApprovalRegistry::A_RESULTS_GET, 'result' => $row ];
 	}

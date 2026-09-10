@@ -54,7 +54,7 @@ final class SiteScanner {
 			'is_multisite'        => is_multisite(),
 			'locale'              => get_locale(),
 			'timezone'            => wp_timezone_string(),
-			'permalink_structure' => get_option( 'permalink_structure' ) ?: __( 'Plain', 'ai-command-center' ),
+			'permalink_structure' => get_option( 'permalink_structure' ) ?: __( 'Plain', 'action-steward' ),
 			'is_ssl'              => is_ssl(),
 		];
 	}

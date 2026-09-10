@@ -162,7 +162,7 @@ final class PatchOperation {
 			'verification'       => [
 				'method' => 'tokenizer',
 				'stage'  => 'preview-in-memory',
-				'note'   => __( 'Preview uses an in-memory tokenizer check; apply re-verifies the written file with php -l when available.', 'ai-command-center' ),
+				'note'   => __( 'Preview uses an in-memory tokenizer check; apply re-verifies the written file with php -l when available.', 'action-steward' ),
 			],
 			'dangerous_files'    => $dangerous,
 			'persisted'          => false,
@@ -189,11 +189,11 @@ final class PatchOperation {
 			'confirmation_params'   => [
 				'confirm'             => true,
 				'confirmation_phrase' => DestructiveGuard::PHRASE_PATCH,
-				'reason'              => __( 'a human-readable reason for applying this high-risk change', 'ai-command-center' ),
+				'reason'              => __( 'a human-readable reason for applying this high-risk change', 'action-steward' ),
 			],
 			'confirmation_hint'     => sprintf(
 				/* translators: 1: comma-separated high-risk paths, 2: required phrase */
-				__( 'This change touches high-risk file(s): %1$s. To apply, call patch_apply with confirm=true, confirmation_phrase="%2$s", and a reason.', 'ai-command-center' ),
+				__( 'This change touches high-risk file(s): %1$s. To apply, call patch_apply with confirm=true, confirmation_phrase="%2$s", and a reason.', 'action-steward' ),
 				implode( ', ', $dangerous ),
 				DestructiveGuard::PHRASE_PATCH
 			),
@@ -264,7 +264,7 @@ final class PatchOperation {
 			'risk_level'    => $change_set['risk_level'],
 			'change_set'    => $change_set,
 			'deploy_tracked'      => $deploy_tracked,
-			'deploy_tracked_note' => empty( $deploy_tracked ) ? '' : __( 'One or more target files are inside a version-controlled (git) directory. If this site uses a deploy pipeline, changes applied here may be overwritten by the next deploy — commit them to the source repository as well.', 'ai-command-center' ),
+			'deploy_tracked_note' => empty( $deploy_tracked ) ? '' : __( 'One or more target files are inside a version-controlled (git) directory. If this site uses a deploy pipeline, changes applied here may be overwritten by the next deploy — commit them to the source repository as well.', 'action-steward' ),
 			// Echo how each file's edit was interpreted so the agent can confirm a
 			// partial edit was not silently treated as a whole-file replacement.
 			'files'         => array_map(
@@ -285,7 +285,7 @@ final class PatchOperation {
 		$patch_id = sanitize_text_field( (string) ( $params['patch_id'] ?? '' ) );
 
 		if ( '' === $patch_id ) {
-			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'action-steward' ) );
 		}
 
 		$patches  = new PatchManager();
@@ -364,7 +364,7 @@ final class PatchOperation {
 		$patch_id = sanitize_text_field( (string) ( $params['patch_id'] ?? '' ) );
 
 		if ( '' === $patch_id ) {
-			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'action-steward' ) );
 		}
 
 		$patch = ( new PatchManager() )->get( $patch_id );
@@ -415,7 +415,7 @@ final class PatchOperation {
 		$patch_id = sanitize_text_field( (string) ( $params['patch_id'] ?? '' ) );
 
 		if ( '' === $patch_id ) {
-			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required.', 'action-steward' ) );
 		}
 
 		$patch = ( new PatchManager() )->get( $patch_id );
@@ -448,7 +448,7 @@ final class PatchOperation {
 	 */
 	private function normalize_files( $files ): array|\WP_Error {
 		if ( ! is_array( $files ) || empty( $files ) ) {
-			return new \WP_Error( 'wpcc_no_files', __( 'A patch must include at least one file. Each entry needs a path plus the fields for its mode (default whole_file uses { path, modified }).', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_no_files', __( 'A patch must include at least one file. Each entry needs a path plus the fields for its mode (default whole_file uses { path, modified }).', 'action-steward' ) );
 		}
 
 		$guard      = new PathGuard();
@@ -458,14 +458,14 @@ final class PatchOperation {
 
 		foreach ( $files as $file ) {
 			if ( ! is_array( $file ) ) {
-				return new \WP_Error( 'wpcc_invalid_file', __( 'Each file must be an object with a path and the fields for its patch mode.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_file', __( 'Each file must be an object with a path and the fields for its patch mode.', 'action-steward' ) );
 			}
 
 			// Accept wp-content-prefixed / absolute paths and canonicalize to the
 			// wp-content-relative form (e.g. "themes/foo/functions.php").
 			$path = isset( $file['path'] ) ? $guard->normalize_relative( (string) $file['path'] ) : '';
 			if ( '' === $path ) {
-				return new \WP_Error( 'wpcc_invalid_path', __( 'Each file must have a path.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_invalid_path', __( 'Each file must have a path.', 'action-steward' ) );
 			}
 
 			$real = $guard->resolve( $path );
@@ -480,7 +480,7 @@ final class PatchOperation {
 						'wpcc_patch_target_missing',
 						sprintf(
 							/* translators: %s: the wp-content-relative file path that was requested */
-							__( 'There is no file at "%s". A patch edits a file that already exists — it cannot create one. Create the file another way first, then patch it.', 'ai-command-center' ),
+							__( 'There is no file at "%s". A patch edits a file that already exists — it cannot create one. Create the file another way first, then patch it.', 'action-steward' ),
 							$path
 						)
 					);
@@ -488,7 +488,7 @@ final class PatchOperation {
 				return $real;
 			}
 			if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-				return new \WP_Error( 'wpcc_not_readable', sprintf( /* translators: %s: value */ __( '%s is not readable.', 'ai-command-center' ), $path ) );
+				return new \WP_Error( 'wpcc_not_readable', sprintf( /* translators: %s: value */ __( '%s is not readable.', 'action-steward' ), $path ) );
 			}
 
 			// Multiple ops on the same file within one change set must compose: each
@@ -523,7 +523,7 @@ final class PatchOperation {
 						'wpcc_change_set_conflict',
 						sprintf(
 							/* translators: 1: file path, 2: underlying resolver message */
-							__( 'Conflicting edits on "%1$s" in one change set: a later op could not apply on the result of the earlier op(s) — %2$s. The whole change set was rejected so no partial change is written; re-express the edits against the evolving content, or split them into separate change sets.', 'ai-command-center' ),
+							__( 'Conflicting edits on "%1$s" in one change set: a later op could not apply on the result of the earlier op(s) — %2$s. The whole change set was rejected so no partial change is written; re-express the edits against the evolving content, or split them into separate change sets.', 'action-steward' ),
 							$path,
 							$resolved->get_error_message()
 						)
@@ -622,7 +622,7 @@ final class PatchOperation {
 			'wpcc_unknown_patch_field',
 			sprintf(
 				/* translators: 1: unknown parameter names, 2: allowed parameter names */
-				__( 'Unknown parameter(s): %1$s. Allowed: %2$s. File contents go inside files[] (e.g. { path, modified }).', 'ai-command-center' ),
+				__( 'Unknown parameter(s): %1$s. Allowed: %2$s. File contents go inside files[] (e.g. { path, modified }).', 'action-steward' ),
 				implode( ', ', $unknown ),
 				implode( ', ', self::KNOWN_PARAMS )
 			)
@@ -742,8 +742,8 @@ final class PatchOperation {
 
 		$summary = sprintf(
 			/* translators: 1: "Change set"/"Single-file patch", 2: file count, 3: modes, 4: added, 5: removed, 6: risk, 7: high-risk suffix */
-			__( '%1$s: %2$d file(s) [%3$s], +%4$d/-%5$d lines, risk: %6$s%7$s.', 'ai-command-center' ),
-			$is_change_set ? __( 'Change set', 'ai-command-center' ) : __( 'Single-file patch', 'ai-command-center' ),
+			__( '%1$s: %2$d file(s) [%3$s], +%4$d/-%5$d lines, risk: %6$s%7$s.', 'action-steward' ),
+			$is_change_set ? __( 'Change set', 'action-steward' ) : __( 'Single-file patch', 'action-steward' ),
 			$count,
 			implode( ', ', $umodes ),
 			$added,
@@ -751,7 +751,7 @@ final class PatchOperation {
 			$risk,
 			$has_high_risk ? sprintf(
 				/* translators: %d: number of high-risk paths */
-				__( '; %d high-risk path(s) included', 'ai-command-center' ),
+				__( '; %d high-risk path(s) included', 'action-steward' ),
 				count( $dangerous )
 			) : ''
 		);

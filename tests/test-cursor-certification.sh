@@ -44,7 +44,7 @@ assert_contains "cursor: config carries a credential"               "$CURSOR_BLO
 # ===================================================================
 echo "== 3. Bronze — MCP Discovery (Initialize) =="
 INIT=$(mcp '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}')
-assert_contains "cursor: MCP init ok" "$INIT" "WP Command Center"
+assert_contains "cursor: MCP init ok" "$INIT" "Action Steward"
 assert_contains "cursor: protocol version" "$INIT" "2024-11-05"
 
 echo "== 4. Bronze — Resource Discovery =="

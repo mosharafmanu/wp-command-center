@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Operation Requests test suite for WP Command Center (Step 20).
+# Operation Requests test suite for Action Steward (Step 20).
 #
 # Verifies:
 #   - create request

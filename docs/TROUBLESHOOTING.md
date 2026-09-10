@@ -9,7 +9,7 @@
 **Cause:** some server configurations (commonly Apache with CGI/FastCGI) never populate
 `$_SERVER['HTTP_AUTHORIZATION']`, so WordPress's own header lookup sees nothing.
 
-WPCC already checks the alternative sources core and the ecosystem use, so this usually
+Action Steward already checks the alternative sources core and the ecosystem use, so this usually
 resolves itself. If it persists, add to `.htaccess`:
 
 ```apache
@@ -38,7 +38,7 @@ not resolve.
 https://example.com/index.php?rest_route=/wp-command-center/v1/health
 ```
 
-Configurations WPCC generates already use whichever form is correct for your site.
+Configurations Action Steward generates already use whichever form is correct for your site.
 
 ---
 
@@ -49,7 +49,7 @@ Work through these in order:
 1. **Is Node installed** on the machine running the client? `node --version`.
 2. **Is the relay reachable?**
    ```bash
-   curl -sI https://example.com/wp-content/plugins/ai-command-center/sdk/javascript/wpcc-mcp-relay.mjs
+   curl -sI https://example.com/wp-content/plugins/action-steward/sdk/javascript/wpcc-mcp-relay.mjs
    ```
    Expect `200`. A `404` means the plugin files are not where the config expects.
 3. **Does the endpoint answer?**
@@ -67,7 +67,7 @@ Work through these in order:
 
 Working as designed. Standard protection gates every medium-risk or higher change.
 
-- Approve at **WP Command Center → Approvals**.
+- Approve at **Action Steward → Approvals**.
 - To let low-risk writes through automatically, that is already Standard protection's
   behaviour; Strict approval gates those too.
 - Development mode removes approval entirely — **local and staging only**.
@@ -125,7 +125,7 @@ current values) so you can decide what to do about each.
 
 ## Network activation is refused
 
-Intentional. WPCC 1.0.1 is single-site: tokens, protection mode, approvals and history are
+Intentional. Action Steward 1.0.2 is single-site: tokens, protection mode, approvals and history are
 per-site. Activate it on individual sites within the network instead. See
 [ARCHITECTURE.md](ARCHITECTURE.md#multisite).
 

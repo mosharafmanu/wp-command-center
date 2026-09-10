@@ -14,7 +14,7 @@ mcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type:
 echo "== 1. Initialize =="
 INIT=$(mcp '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}')
 assert_contains "init: protocol ok" "$INIT" "2024-11-05"
-assert_contains "init: server name" "$INIT" "WP Command Center"
+assert_contains "init: server name" "$INIT" "Action Steward"
 
 echo "== 2. Resources list =="
 RSC=$(mcp '{"jsonrpc":"2.0","method":"resources/list","id":2}')

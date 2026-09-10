@@ -1,5 +1,5 @@
 /**
- * WP Command Center — thin design tokens.
+ * Action Steward — thin design tokens.
  *
  * The minimal, reusable token foundation for the AI Content Platform surfaces.
  * NOT the full Command Design System (CDS #20) — only the primitives → semantic →
@@ -107,7 +107,7 @@
 	--wpcc-state-danger-fg: var( --wpcc-red-600 );
 	--wpcc-state-danger-bg: var( --wpcc-red-soft );
 
-	/* Risk tiers — semantic, NOT decorative (WPCC's signature). fg/bg/border per tier. */
+	/* Risk tiers — semantic, NOT decorative (Action Steward's signature). fg/bg/border per tier. */
 	--wpcc-risk-diagnostic-fg: var( --wpcc-green-700 );
 	--wpcc-risk-diagnostic-bg: var( --wpcc-green-soft );
 	--wpcc-risk-low-fg: var( --wpcc-teal-700 );

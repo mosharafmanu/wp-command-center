@@ -50,7 +50,7 @@ final class PatchApproval {
 		}
 
 		if ( ! in_array( $patch['status'], [ PatchManager::STATUS_DRAFT, PatchManager::STATUS_PENDING_APPROVAL ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'Only patches awaiting approval can be approved.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'Only patches awaiting approval can be approved.', 'action-steward' ) );
 		}
 
 		$result = $this->patches->update_status( $id, PatchManager::STATUS_APPROVED );
@@ -83,7 +83,7 @@ final class PatchApproval {
 		}
 
 		if ( ! in_array( $patch['status'], [ PatchManager::STATUS_DRAFT, PatchManager::STATUS_PENDING_APPROVAL, PatchManager::STATUS_APPROVED ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'This patch can no longer be rejected.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'This patch can no longer be rejected.', 'action-steward' ) );
 		}
 
 		$result = $this->patches->update_status( $id, PatchManager::STATUS_REJECTED );
@@ -121,7 +121,7 @@ final class PatchApproval {
 		}
 
 		if ( PatchManager::STATUS_APPROVED !== $patch['status'] ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'Only approved patches can be applied.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'Only approved patches can be applied.', 'action-steward' ) );
 		}
 
 		// Pre-flight: resolve every target file and make sure none of them
@@ -138,7 +138,7 @@ final class PatchApproval {
 			if ( ! wp_is_writable( $real ) ) {
 				return new \WP_Error( 'wpcc_not_writable', sprintf(
 					/* translators: %s: file path */
-					__( '%s is not writable.', 'ai-command-center' ),
+					__( '%s is not writable.', 'action-steward' ),
 					$file['path']
 				) );
 			}
@@ -146,7 +146,7 @@ final class PatchApproval {
 			if ( file_get_contents( $real ) !== $file['original'] ) {
 				return new \WP_Error( 'wpcc_file_changed', sprintf(
 					/* translators: %s: file path */
-					__( '%s has changed since this patch was generated. Regenerate the patch and try again.', 'ai-command-center' ),
+					__( '%s has changed since this patch was generated. Regenerate the patch and try again.', 'action-steward' ),
 					$file['path']
 				) );
 			}
@@ -179,7 +179,7 @@ final class PatchApproval {
 				$target['path'],
 				sprintf(
 					/* translators: %s: patch ID */
-					__( 'Before applying patch %s', 'ai-command-center' ),
+					__( 'Before applying patch %s', 'action-steward' ),
 					$id
 				),
 				$id
@@ -339,11 +339,11 @@ final class PatchApproval {
 		}
 
 		if ( PatchManager::STATUS_APPLIED !== $patch['status'] ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'Only applied patches can be rolled back.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'Only applied patches can be rolled back.', 'action-steward' ) );
 		}
 
 		if ( empty( $patch['snapshot_ids'] ) ) {
-			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'action-steward' ) );
 		}
 
 		$results      = [];
@@ -376,7 +376,7 @@ final class PatchApproval {
 
 			return new \WP_Error(
 				'wpcc_rollback_verification_failed',
-				__( 'One or more files could not be verified after rollback. The files have been restored, but the patch status was not changed — please investigate.', 'ai-command-center' ),
+				__( 'One or more files could not be verified after rollback. The files have been restored, but the patch status was not changed — please investigate.', 'action-steward' ),
 				[
 					'status'           => 500,
 					'rollback_results' => $results,
@@ -456,7 +456,7 @@ final class PatchApproval {
 		if ( 'php' !== strtolower( pathinfo( $real_path, PATHINFO_EXTENSION ) ) ) {
 			return [
 				'passed'  => true,
-				'message' => __( 'Not a PHP file — syntax check skipped.', 'ai-command-center' ),
+				'message' => __( 'Not a PHP file — syntax check skipped.', 'action-steward' ),
 				'method'  => 'none',
 				'code'    => 'ok',
 				'reason'  => 'none',
@@ -471,7 +471,7 @@ final class PatchApproval {
 			if ( $lint['passed'] ) {
 				return [
 					'passed'  => true,
-					'message' => trim( $lint['output'] ) ?: __( 'No syntax errors detected.', 'ai-command-center' ),
+					'message' => trim( $lint['output'] ) ?: __( 'No syntax errors detected.', 'action-steward' ),
 					'method'  => 'php -l',
 					'code'    => 'ok',
 					'reason'  => 'none',
@@ -528,7 +528,7 @@ final class PatchApproval {
 		if ( ! function_exists( 'token_get_all' ) || ! defined( 'TOKEN_PARSE' ) ) {
 			return [
 				'passed'  => true,
-				'message' => __( 'Syntax check skipped (tokenizer unavailable).', 'ai-command-center' ),
+				'message' => __( 'Syntax check skipped (tokenizer unavailable).', 'action-steward' ),
 				'method'  => 'none',
 			];
 		}
@@ -537,7 +537,7 @@ final class PatchApproval {
 			token_get_all( $code, TOKEN_PARSE );
 			return [
 				'passed'  => true,
-				'message' => __( 'No syntax errors detected (tokenizer).', 'ai-command-center' ),
+				'message' => __( 'No syntax errors detected (tokenizer).', 'action-steward' ),
 				'method'  => 'tokenizer',
 			];
 		} catch ( \ParseError $e ) {
@@ -586,14 +586,14 @@ final class PatchApproval {
 		$warning = null;
 		if ( $fallback ) {
 			$why = [
-				'php_cli_not_found'      => __( 'no PHP CLI binary was found', 'ai-command-center' ),
-				'php_cli_not_executable' => __( 'the configured PHP binary is not an executable CLI', 'ai-command-center' ),
-				'verification_timeout'   => __( 'php -l exceeded the time budget', 'ai-command-center' ),
+				'php_cli_not_found'      => __( 'no PHP CLI binary was found', 'action-steward' ),
+				'php_cli_not_executable' => __( 'the configured PHP binary is not an executable CLI', 'action-steward' ),
+				'verification_timeout'   => __( 'php -l exceeded the time budget', 'action-steward' ),
 			];
 			$warning = sprintf(
 				/* translators: %s: reason php -l was unavailable */
-				__( 'Syntax verified with the tokenizer fallback because %s. Set the WPCC_PHP_BINARY constant/option to a PHP CLI path for full `php -l` verification.', 'ai-command-center' ),
-				$why[ $reason ] ?? __( 'php -l was unavailable', 'ai-command-center' )
+				__( 'Syntax verified with the tokenizer fallback because %s. Set the WPCC_PHP_BINARY constant/option to a PHP CLI path for full `php -l` verification.', 'action-steward' ),
+				$why[ $reason ] ?? __( 'php -l was unavailable', 'action-steward' )
 			);
 		}
 

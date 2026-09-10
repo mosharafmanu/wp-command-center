@@ -85,13 +85,13 @@ final class ProposalStore {
 		$target_type  = (string) ( $args['target_type'] ?? '' );
 
 		if ( '' === $operation_id ) {
-			return new \WP_Error( 'wpcc_proposal_missing_operation_id', __( 'operation_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_missing_operation_id', __( 'operation_id is required.', 'action-steward' ) );
 		}
 		if ( '' === $target_type ) {
-			return new \WP_Error( 'wpcc_proposal_missing_target_type', __( 'target_type is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_missing_target_type', __( 'target_type is required.', 'action-steward' ) );
 		}
 		if ( ! array_key_exists( 'payload', $args ) || ! is_array( $args['payload'] ) ) {
-			return new \WP_Error( 'wpcc_proposal_missing_payload', __( 'payload (array) is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_missing_payload', __( 'payload (array) is required.', 'action-steward' ) );
 		}
 
 		$proposal_id = wp_generate_uuid4();
@@ -134,11 +134,11 @@ final class ProposalStore {
 
 		$inserted = $wpdb->insert( $this->table(), $data, $formats );
 		if ( false === $inserted ) {
-			return new \WP_Error( 'wpcc_proposal_create_failed', __( 'Failed to create proposal.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_create_failed', __( 'Failed to create proposal.', 'action-steward' ) );
 		}
 
 		$row = $this->get( $proposal_id );
-		return $row ?: new \WP_Error( 'wpcc_proposal_create_failed', __( 'Proposal created but could not be read back.', 'ai-command-center' ) );
+		return $row ?: new \WP_Error( 'wpcc_proposal_create_failed', __( 'Proposal created but could not be read back.', 'action-steward' ) );
 	}
 
 	/** Fetch one proposal by its proposal_id (uuid). */
@@ -212,12 +212,12 @@ final class ProposalStore {
 
 		$row = $this->get( $proposal_id );
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'action-steward' ) );
 		}
 		if ( self::STATUS_DRAFT !== $row['status'] ) {
 			return new \WP_Error(
 				'wpcc_proposal_not_editable',
-				sprintf( /* translators: %s: value */ __( 'final_payload is editable only while draft (current: %s).', 'ai-command-center' ), (string) $row['status'] )
+				sprintf( /* translators: %s: value */ __( 'final_payload is editable only while draft (current: %s).', 'action-steward' ), (string) $row['status'] )
 			);
 		}
 
@@ -229,9 +229,9 @@ final class ProposalStore {
 			[ '%s', '%s' ]
 		);
 		if ( false === $updated ) {
-			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal payload.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal payload.', 'action-steward' ) );
 		}
-		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
+		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'action-steward' ) );
 	}
 
 	/**
@@ -249,7 +249,7 @@ final class ProposalStore {
 	 */
 	public function mark_pending_approval( string $proposal_id, string $request_id ): array|\WP_Error {
 		if ( '' === $request_id ) {
-			return new \WP_Error( 'wpcc_proposal_request_id_required', __( 'request_id is required to mark a proposal pending_approval.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_request_id_required', __( 'request_id is required to mark a proposal pending_approval.', 'action-steward' ) );
 		}
 		return $this->transition( $proposal_id, self::STATUS_PENDING_APPROVAL, [ 'request_id' => $request_id ] );
 	}
@@ -261,7 +261,7 @@ final class ProposalStore {
 	 */
 	public function mark_applied( string $proposal_id, string $change_id, ?array $applied_by = null ): array|\WP_Error {
 		if ( '' === $change_id ) {
-			return new \WP_Error( 'wpcc_proposal_change_id_required', __( 'change_id is required to mark a proposal applied.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_change_id_required', __( 'change_id is required to mark a proposal applied.', 'action-steward' ) );
 		}
 		$fields = [ 'change_id' => $change_id ];
 		if ( null !== $applied_by ) {
@@ -277,7 +277,7 @@ final class ProposalStore {
 	public function mark_failed( string $proposal_id, array|string $error ): array|\WP_Error {
 		$error_json = is_string( $error ) ? $error : (string) wp_json_encode( $error );
 		if ( '' === $error_json || '[]' === $error_json || 'null' === $error_json ) {
-			return new \WP_Error( 'wpcc_proposal_error_required', __( 'A non-empty error is required to mark a proposal failed.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_error_required', __( 'A non-empty error is required to mark a proposal failed.', 'action-steward' ) );
 		}
 		return $this->transition( $proposal_id, self::STATUS_FAILED, [ 'error_json' => $error_json ] );
 	}
@@ -296,7 +296,7 @@ final class ProposalStore {
 
 		$row = $this->get( $proposal_id );
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'action-steward' ) );
 		}
 		$from = (string) $row['status'];
 
@@ -308,7 +308,7 @@ final class ProposalStore {
 		if ( in_array( $from, self::TERMINAL, true ) ) {
 			return new \WP_Error(
 				'wpcc_proposal_terminal',
-				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Proposal is terminal (%1$s); cannot transition to %2$s.', 'ai-command-center' ), $from, $to )
+				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Proposal is terminal (%1$s); cannot transition to %2$s.', 'action-steward' ), $from, $to )
 			);
 		}
 		// Legality.
@@ -316,7 +316,7 @@ final class ProposalStore {
 		if ( ! in_array( $to, $allowed, true ) ) {
 			return new \WP_Error(
 				'wpcc_proposal_invalid_transition',
-				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Illegal transition %1$s -> %2$s.', 'ai-command-center' ), $from, $to )
+				sprintf( /* translators: 1: current status, 2: requested status */ __( 'Illegal transition %1$s -> %2$s.', 'action-steward' ), $from, $to )
 			);
 		}
 
@@ -332,7 +332,7 @@ final class ProposalStore {
 		);
 
 		if ( false === $updated ) {
-			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal status.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_update_failed', __( 'Failed to update proposal status.', 'action-steward' ) );
 		}
 		if ( 0 === $updated ) {
 			// The row changed under us between read and write. Re-read: if it
@@ -342,9 +342,9 @@ final class ProposalStore {
 			if ( $fresh && $to === $fresh['status'] ) {
 				return $fresh;
 			}
-			return new \WP_Error( 'wpcc_proposal_conflict', __( 'Proposal state changed concurrently; transition not applied.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_conflict', __( 'Proposal state changed concurrently; transition not applied.', 'action-steward' ) );
 		}
 
-		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
+		return $this->get( $proposal_id ) ?: new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'action-steward' ) );
 	}
 }

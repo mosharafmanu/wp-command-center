@@ -5,7 +5,7 @@
  * V1 refinement: Built-in AI is no longer a primary section. It is optional —
  * its generation tools are build-flagged OFF by default — while the core V1
  * journey (connect an MCP assistant) needs no provider key at all. Promoting it
- * to the top level made users believe WP Command Center could not talk to Claude
+ * to the top level made users believe Action Steward could not talk to Claude
  * or Cursor until they had pasted an API key into WordPress. It could.
  *
  * This hub hosts the EXISTING views unchanged (Providers · SEO · Alt Text ·
@@ -44,14 +44,14 @@ if ( ! isset( $wpcc_ai_panes[ $wpcc_ai_active ] ) ) {
 $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 ?>
 <div class="wpcc-settings-ai">
-	<h1><?php esc_html_e( 'Built-in AI', 'ai-command-center' ); ?></h1>
+	<h1><?php esc_html_e( 'Built-in AI', 'action-steward' ); ?></h1>
 	<p class="description" style="max-width:680px;font-size:14px;">
 		<?php
 		// The second sentence is a consent claim, not decoration: it is the same
 		// promise the readme makes to WordPress.org reviewers, so it has to be on
 		// the screen where a key is entered. It previously lived in the provider
 		// hero that this refinement removed.
-		esc_html_e( 'Optional. Add your own AI provider key here if you want WP Command Center itself to generate content for you. AI stays off until you turn a feature on — adding a key alone changes nothing. You do not need this to connect Claude, Cursor, or any other AI assistant; that works without a key.', 'ai-command-center' );
+		esc_html_e( 'Optional. Add your own AI provider key here if you want Action Steward itself to generate content for you. AI stays off until you turn a feature on — adding a key alone changes nothing. You do not need this to connect Claude, Cursor, or any other AI assistant; that works without a key.', 'action-steward' );
 		?>
 	</p>
 
@@ -62,7 +62,7 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 	 * Everything on this screen assumed the reader already knew that "AI assistant" and
 	 * "AI provider" are different things. They are the most confusable pair of words in
 	 * the product: both contain "AI", both involve a key-like value, and only one of
-	 * them is needed to use WP Command Center at all. Someone who conflates them
+	 * them is needed to use Action Steward at all. Someone who conflates them
 	 * concludes they must buy an API key before they can connect Claude — which is the
 	 * exact opposite of true, and an expensive misunderstanding to leave in place.
 	 *
@@ -73,22 +73,22 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 	?>
 	<div class="wpcc-ai-paths">
 		<div class="wpcc-ai-path">
-			<span class="wpcc-ai-path__tag"><?php esc_html_e( 'Path 1 — the main way', 'ai-command-center' ); ?></span>
-			<strong><?php esc_html_e( 'Your own AI assistant', 'ai-command-center' ); ?></strong>
+			<span class="wpcc-ai-path__tag"><?php esc_html_e( 'Path 1 — the main way', 'action-steward' ); ?></span>
+			<strong><?php esc_html_e( 'Your own AI assistant', 'action-steward' ); ?></strong>
 			<p><?php
 				printf(
 					/* translators: %s: the mode-aware guarantee sentence. */
-					esc_html__( 'You work in Claude, Cursor or ChatGPT and ask it to change this site. It brings its own AI, so no key is needed here. %s', 'ai-command-center' ),
+					esc_html__( 'You work in Claude, Cursor or ChatGPT and ask it to change this site. It brings its own AI, so no key is needed here. %s', 'action-steward' ),
 					esc_html( \WPCommandCenter\Operations\SecurityModeManager::promise() )
 				);
 			?></p>
-			<span class="wpcc-ai-path__note"><?php esc_html_e( 'No provider key required', 'ai-command-center' ); ?></span>
+			<span class="wpcc-ai-path__note"><?php esc_html_e( 'No provider key required', 'action-steward' ); ?></span>
 		</div>
 		<div class="wpcc-ai-path">
-			<span class="wpcc-ai-path__tag"><?php esc_html_e( 'Path 2 — optional extra', 'ai-command-center' ); ?></span>
-			<strong><?php esc_html_e( 'Built-in AI (this screen)', 'ai-command-center' ); ?></strong>
-			<p><?php esc_html_e( 'The plugin generates text itself — SEO descriptions, image alt text, draft content — without you opening an assistant. This is the part that needs your own provider key, and only for the tools you switch on.', 'ai-command-center' ); ?></p>
-			<span class="wpcc-ai-path__note"><?php esc_html_e( 'Needs a provider key', 'ai-command-center' ); ?></span>
+			<span class="wpcc-ai-path__tag"><?php esc_html_e( 'Path 2 — optional extra', 'action-steward' ); ?></span>
+			<strong><?php esc_html_e( 'Built-in AI (this screen)', 'action-steward' ); ?></strong>
+			<p><?php esc_html_e( 'The plugin generates text itself — SEO descriptions, image alt text, draft content — without you opening an assistant. This is the part that needs your own provider key, and only for the tools you switch on.', 'action-steward' ); ?></p>
+			<span class="wpcc-ai-path__note"><?php esc_html_e( 'Needs a provider key', 'action-steward' ); ?></span>
 		</div>
 	</div>
 	<p class="description" style="max-width:680px;margin:0 0 18px;">
@@ -102,7 +102,7 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 		 */
 		printf(
 			/* translators: %s: the mode-aware guarantee sentence. */
-			esc_html__( 'Both paths obey the same rules. %s', 'ai-command-center' ),
+			esc_html__( 'Both paths obey the same rules. %s', 'action-steward' ),
 			esc_html( \WPCommandCenter\Operations\SecurityModeManager::promise() )
 		);
 		?>
@@ -110,10 +110,10 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 
 	<?php if ( $wpcc_ai_tools_off ) : ?>
 		<p class="wpcc-builtin-note" role="note" style="margin:14px 0;padding:10px 14px;background:#f0f6fc;border-left:3px solid #2271b1;border-radius:0 4px 4px 0;max-width:680px;font-size:13px;color:#1d2327;">
-			<?php esc_html_e( 'The SEO, Alt Text, and Content tools are not switched on for this site. They appear here once enabled — adding a provider key on its own does not turn them on.', 'ai-command-center' ); ?>
+			<?php esc_html_e( 'The SEO, Alt Text, and Content tools are not switched on for this site. They appear here once enabled — adding a provider key on its own does not turn them on.', 'action-steward' ); ?>
 		</p>
 	<?php else : ?>
-		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Built-in AI sections', 'ai-command-center' ); ?>">
+		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Built-in AI sections', 'action-steward' ); ?>">
 			<?php foreach ( $wpcc_ai_panes as $wpcc_ai_key => $wpcc_ai_pane ) : ?>
 				<a class="wpcc-cds-subnav__item<?php echo $wpcc_ai_key === $wpcc_ai_active ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=' . $wpcc_ai_key ) ); ?>"

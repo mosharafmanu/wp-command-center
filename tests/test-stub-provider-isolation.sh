@@ -66,7 +66,7 @@ assert_eq "the explicit opt-in lifts the refusal" "yes" "$(echo "$PROV_ON" | gre
 # ===================================================================
 echo ""
 echo "== 2. Nothing shipped defines the opt-in =="
-SHIPPED="$(grep -rl "define( *['\"]WPCC_ALLOW_TEST_AI_PROVIDER" "$SRC" "$SCRIPT_DIR/../ai-command-center.php" 2>/dev/null | wc -l | tr -d ' ')"
+SHIPPED="$(grep -rl "define( *['\"]WPCC_ALLOW_TEST_AI_PROVIDER" "$SRC" "$SCRIPT_DIR/../action-steward.php" 2>/dev/null | wc -l | tr -d ' ')"
 assert_eq "no shipped PHP file defines WPCC_ALLOW_TEST_AI_PROVIDER" "0" "$SHIPPED"
 # The constant name is referenced in exactly one place: the guard that reads it.
 DECL="$(grep -rl "WPCC_ALLOW_TEST_AI_PROVIDER" "$SRC" 2>/dev/null | wc -l | tr -d ' ')"

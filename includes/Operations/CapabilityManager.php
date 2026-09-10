@@ -30,7 +30,7 @@ final class CapabilityManager {
 			CapabilityRegistry::ACTION_ASSIGN   => $this->assign( $params, $context ),
 			CapabilityRegistry::ACTION_REMOVE   => $this->remove_cap( $params, $context ),
 			CapabilityRegistry::ACTION_VALIDATE => $this->validate_op( $params, $context ),
-			default => new \WP_Error( 'wpcc_invalid_capability_action', __( 'Unknown action.', 'ai-command-center' ) ),
+			default => new \WP_Error( 'wpcc_invalid_capability_action', __( 'Unknown action.', 'action-steward' ) ),
 		};
 	}
 
@@ -42,7 +42,7 @@ final class CapabilityManager {
 		$subject    = sanitize_key( $params['subject'] ?? 'token' );
 		$subject_id = sanitize_text_field( $params['subject_id'] ?? '' );
 		if ( '' === $subject_id ) {
-			return new \WP_Error( 'wpcc_missing_subject_id', __( 'subject_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_subject_id', __( 'subject_id is required.', 'action-steward' ) );
 		}
 		return [
 			'action'      => 'capability_get',
@@ -58,10 +58,10 @@ final class CapabilityManager {
 		$capability = sanitize_text_field( $params['capability'] ?? '' );
 
 		if ( '' === $subject_id ) {
-			return new \WP_Error( 'wpcc_missing_subject_id', __( 'subject_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_subject_id', __( 'subject_id is required.', 'action-steward' ) );
 		}
 		if ( '' === $capability ) {
-			return new \WP_Error( 'wpcc_missing_capability', __( 'capability is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_capability', __( 'capability is required.', 'action-steward' ) );
 		}
 
 		$result = $this->registry->assign( $subject, $subject_id, $capability );
@@ -86,10 +86,10 @@ final class CapabilityManager {
 		$capability = sanitize_text_field( $params['capability'] ?? '' );
 
 		if ( '' === $subject_id ) {
-			return new \WP_Error( 'wpcc_missing_subject_id', __( 'subject_id is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_subject_id', __( 'subject_id is required.', 'action-steward' ) );
 		}
 		if ( '' === $capability ) {
-			return new \WP_Error( 'wpcc_missing_capability', __( 'capability is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_capability', __( 'capability is required.', 'action-steward' ) );
 		}
 
 		$result = $this->registry->remove( $subject, $subject_id, $capability );
@@ -114,7 +114,7 @@ final class CapabilityManager {
 		$subject_id = sanitize_text_field( $params['subject_id'] ?? '' );
 
 		if ( '' === $operation ) {
-			return new \WP_Error( 'wpcc_missing_operation', __( 'operation is required.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_missing_operation', __( 'operation is required.', 'action-steward' ) );
 		}
 
 		$result = $this->registry->validate( $operation, $subject, $subject_id );

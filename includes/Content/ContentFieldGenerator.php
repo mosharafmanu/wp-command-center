@@ -90,7 +90,7 @@ final class ContentFieldGenerator {
 
 		// Validate the requested field kind.
 		if ( ! in_array( $kind, self::KINDS, true ) ) {
-			$failed[] = [ 'post_id' => $post_id, 'code' => 'invalid_kind', 'message' => __( 'Unknown content field kind.', 'ai-command-center' ) ];
+			$failed[] = [ 'post_id' => $post_id, 'code' => 'invalid_kind', 'message' => __( 'Unknown content field kind.', 'action-steward' ) ];
 			return $this->envelope( $kind, $batch_id, '', '', $created, $skipped, $failed );
 		}
 
@@ -133,7 +133,7 @@ final class ContentFieldGenerator {
 		if ( '' !== $replacing && ! $this->is_replaceable( $replacing, $post_id, $target_type ) ) {
 			// A stale id, someone else's proposal, or one already applied/submitted. Do
 			// not quietly generate a duplicate instead — say what happened.
-			$failed[] = [ 'post_id' => $post_id, 'code' => 'not_replaceable', 'message' => __( 'That suggestion can no longer be replaced.', 'ai-command-center' ) ];
+			$failed[] = [ 'post_id' => $post_id, 'code' => 'not_replaceable', 'message' => __( 'That suggestion can no longer be replaced.', 'action-steward' ) ];
 			return $this->envelope( $kind, $batch_id, $provider->id(), '', $created, $skipped, $failed );
 		}
 		if ( $this->has_open_proposal( $post_id, $target_type, $replacing ) ) {

@@ -100,7 +100,7 @@ final class OpenCodeIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Do not run “opencode mcp auth” for this connection. That command starts an OAuth sign-in, which this site does not use — your access token in the Authorization header is the whole of the authentication. If OpenCode says the server “needs authentication”, the header is missing rather than the token being wrong.', 'ai-command-center' ),
+			__( 'Do not run “opencode mcp auth” for this connection. That command starts an OAuth sign-in, which this site does not use — your access token in the Authorization header is the whole of the authentication. If OpenCode says the server “needs authentication”, the header is missing rather than the token being wrong.', 'action-steward' ),
 		];
 	}
 }

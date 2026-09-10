@@ -1,8 +1,8 @@
 <?php
 /**
- * WP Command Center PHP SDK
+ * Action Steward PHP SDK
  *
- * Lightweight REST client for the WP Command Center API.
+ * Lightweight REST client for the Action Steward API.
  *
  * @example
  * ```php

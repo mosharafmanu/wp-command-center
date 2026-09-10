@@ -84,7 +84,7 @@ final class SettingsRuntimeManager {
 			if(!isset($p[$pkey])){continue;}
 			$value=$p[$pkey];
 			if('admin_email'===$opt&&!is_email((string)$value)){
-				return $this->err('wpcc_invalid_email',__('Invalid email.','ai-command-center'));
+				return $this->err('wpcc_invalid_email',__('Invalid email.','action-steward'));
 			}
 			update_option($opt,in_array($opt,self::INT_OPTIONS,true)?(int)$value:sanitize_text_field((string)$value));
 			$applied[]=$pkey;
@@ -114,7 +114,7 @@ final class SettingsRuntimeManager {
 			$accepted=array_values($this->option_field_map($action));
 			return $this->err('wpcc_no_settings_supplied',sprintf(
 				/* translators: 1: action name, 2: comma-separated list of accepted field names */
-				__('No settings were supplied for "%1$s", so nothing was changed. Provide at least one of: %2$s.','ai-command-center'),
+				__('No settings were supplied for "%1$s", so nothing was changed. Provide at least one of: %2$s.','action-steward'),
 				$action,
 				implode(', ',$accepted)
 			));
@@ -137,13 +137,13 @@ final class SettingsRuntimeManager {
 	private function analyze(array $p):array{$issues=[];if(!get_option('blog_public'))$issues[]=['type'=>'seo','severity'=>'high','setting'=>'blog_public','message'=>'Search engines discouraged (site not public)'];if(empty(get_option('permalink_structure')))$issues[]=['type'=>'seo','severity'=>'medium','setting'=>'permalink_structure','message'=>'Plain permalinks — SEO unfriendly'];if(!get_option('wp_page_for_privacy_policy'))$issues[]=['type'=>'privacy','severity'=>'high','setting'=>'privacy_page','message'=>'No privacy policy page assigned'];if('open'!==get_option('default_comment_status'))$issues[]=['type'=>'discussion','severity'=>'low','setting'=>'comments','message'=>'Comments disabled by default'];if(!get_option('comment_moderation'))$issues[]=['type'=>'spam','severity'=>'low','setting'=>'comment_moderation','message'=>'No comment moderation — spam risk'];return['issue_count'=>count($issues),'issues'=>$issues];}
 	public function rollback(array $p,array $cx=[]):array{
 		$rid=(string)($p['rollback_id']??'');
-		if(''===$rid)return $this->err('wpcc_missing_rb',__('Rollback ID required.','ai-command-center'));
+		if(''===$rid)return $this->err('wpcc_missing_rb',__('Rollback ID required.','action-steward'));
 		// PROGRAM-4B — resolve via the shared RollbackStore (consistent storage API).
 		$store=new OptionListRollbackStore('wpcc_settings_rollbacks',200);
 		$resolved=$store->resolve($rid);
-		if(!$resolved)return $this->err('wpcc_rb_nf',__('Not found.','ai-command-center'));
+		if(!$resolved)return $this->err('wpcc_rb_nf',__('Not found.','action-steward'));
 		$rec=$resolved['record'];
-		if(!empty($rec['rollback_applied']))return $this->err('wpcc_rb_done',__('Already applied.','ai-command-center'));
+		if(!empty($rec['rollback_applied']))return $this->err('wpcc_rb_done',__('Already applied.','action-steward'));
 
 		// PROGRAM-4 / P4.1 — v2 field-scoped, drift-aware delta restore via the RollbackDelta
 		// core. Only complete is terminal (idempotency); partial/conflict stay retryable.

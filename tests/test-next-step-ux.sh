@@ -90,7 +90,7 @@ has "…and is gated on a PROVEN connection"         'wpcc_o_proven'            
 has "…proven means a real health state, not 'I just pressed test'" \
                                                    "\\\$wpcc_o_proven = in_array\( \\\$wpcc_o_health\['state'\], \[ 'healthy', 'slow' \], true \)" "$SETUP"
 has "way 1: built-in AI"                           "'Built-in AI'"                          "$SETUP"
-has "way 2: the WPCC AI row action"                'WPCC AI on your posts and pages'        "$SETUP"
+has "way 2: the Action Steward AI row action"                'Action Steward AI on your posts and pages'        "$SETUP"
 has "way 3: external assistants"                   'Claude, ChatGPT and other assistants'   "$SETUP"
 # Way 2 is the undiscoverable one, and it is CONDITIONAL: AiActionRegistry only
 # adds the row action when the tool behind it is on. Promising the menu on a site

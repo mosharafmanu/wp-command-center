@@ -60,10 +60,10 @@ final class AiAssistRowActions {
 	/**
 	 * The AI Assist anchor. `data-wpcc-action="assist"` + `data-actions` (the applicable
 	 * ids) drive the panel chooser; the `href` is the no-JS fallback (first applicable
-	 * action's Builder). Visible label is the short WPCC brand "✨ WPCC AI" (the sparkle
+	 * action's Builder). The visible label is "✨ Action Steward AI" (the sparkle
 	 * is decorative, `aria-hidden`); the `aria-label` gives screen-reader users the full
-	 * "WP Command Center" attribution + purpose, and `aria-haspopup="dialog"` signals the
-	 * chooser. Branded so it is unmistakably WPCC and not a generic competitor "magic wand".
+	 * "Action Steward" attribution + purpose, and `aria-haspopup="dialog"` signals the
+	 * chooser. Branded so it is unmistakably Action Steward and not a generic competitor "magic wand".
 	 *
 	 * @param string[] $ids
 	 */
@@ -81,9 +81,9 @@ final class AiAssistRowActions {
 			. ' data-type="' . esc_attr( $post->post_type ) . '"'
 			. ' data-actions="' . esc_attr( implode( ',', $ids ) ) . '"'
 			. ' aria-haspopup="' . $popup . '"' . $expanded
-			. ' aria-label="' . esc_attr__( 'WP Command Center — AI actions', 'ai-command-center' ) . '">'
+			. ' aria-label="' . esc_attr__( 'Action Steward — AI actions', 'action-steward' ) . '">'
 			. '<span aria-hidden="true">✨ </span>'
-			. esc_html__( 'WPCC AI', 'ai-command-center' )
+			. esc_html__( 'Action Steward AI', 'action-steward' )
 			. '</a>';
 	}
 }

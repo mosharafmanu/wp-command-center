@@ -47,13 +47,13 @@ final class ProposalSync {
 	public function sync( array|string $proposal ): array|\WP_Error {
 		$proposal_id = is_array( $proposal ) ? (string) ( $proposal['proposal_id'] ?? '' ) : (string) $proposal;
 		if ( '' === $proposal_id ) {
-			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'action-steward' ) );
 		}
 
 		// Always work from the fresh row (the swept list may be slightly stale).
 		$row = $this->store->get( $proposal_id );
 		if ( ! $row ) {
-			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_proposal_not_found', __( 'Proposal not found.', 'action-steward' ) );
 		}
 
 		// Sync only resolves pending_approval; everything else is a no-op.
@@ -142,7 +142,7 @@ final class ProposalSync {
 			if ( '' === $change_id ) {
 				return $this->store->mark_failed( $proposal_id, [
 					'code'    => 'wpcc_change_id_unresolved',
-					'message' => __( 'Request executed but no change record was found to attribute it.', 'ai-command-center' ),
+					'message' => __( 'Request executed but no change record was found to attribute it.', 'action-steward' ),
 				] );
 			}
 			return $this->store->mark_applied( $proposal_id, $change_id );
@@ -206,7 +206,7 @@ final class ProposalSync {
 		if ( ! empty( $error['code'] ) && 'wpcc_apply_failed' !== $error['code'] ) {
 			return $error;
 		}
-		return [ 'code' => $fallback_code, 'message' => __( 'The approved request failed during execution.', 'ai-command-center' ) ];
+		return [ 'code' => $fallback_code, 'message' => __( 'The approved request failed during execution.', 'action-steward' ) ];
 	}
 
 	/**

@@ -144,7 +144,7 @@ final class McpServerRuntime {
 	public static function timeout_response( $id = null ): array {
 		$message = sprintf(
 			/* translators: %d: seconds */
-			__( 'Operation exceeded the %ds synchronous execution budget. Queue long-running work instead of calling it synchronously.', 'ai-command-center' ),
+			__( 'Operation exceeded the %ds synchronous execution budget. Queue long-running work instead of calling it synchronously.', 'action-steward' ),
 			self::time_budget()
 		);
 		return [
@@ -205,7 +205,7 @@ final class McpServerRuntime {
 			 * very first impression of this server was an error message, which is a poor
 			 * trade for a method whose honest answer is "none".
 			 *
-			 * WPCC's resources are fixed URIs (wpcc://…) with no URI templates among
+			 * Action Steward's resources are fixed URIs (wpcc://…) with no URI templates among
 			 * them, so the correct response is an empty list — not an error. A client
 			 * asking what templates exist is entitled to be told "no templates" rather
 			 * than "no such question".
@@ -243,10 +243,10 @@ final class McpServerRuntime {
 					'prompts'   => new \stdClass(),
 				],
 				'serverInfo'      => [
-					'name'    => 'WP Command Center',
+					'name'    => 'Action Steward',
 					'version' => WPCC_VERSION,
 				],
-				'instructions'    => 'WP Command Center provides WordPress site management tools for AI agents. Use tools/list to discover available operations (plugin management, content creation, database inspection, etc.) and resources/list to browse site intelligence data. All operations respect WordPress capability enforcement and approval gates.',
+				'instructions'    => 'Action Steward provides WordPress site management tools for AI agents. Use tools/list to discover available operations (plugin management, content creation, database inspection, etc.) and resources/list to browse site intelligence data. All operations respect WordPress capability enforcement and approval gates.',
 			],
 		];
 	}
@@ -545,7 +545,7 @@ final class McpServerRuntime {
 			$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'insufficient_scope' ], $context );
 			return $this->tool_error(
 				'wpcc_token_read_only',
-				__( 'This token is read-only. It can inspect site information and supported read actions, but cannot change data, create approval requests, approve changes, or execute mutations.', 'ai-command-center' )
+				__( 'This token is read-only. It can inspect site information and supported read actions, but cannot change data, create approval requests, approve changes, or execute mutations.', 'action-steward' )
 			);
 		}
 
@@ -557,7 +557,7 @@ final class McpServerRuntime {
 				$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'missing_capability', 'required' => $validation['required_capability'] ], $context );
 				return $this->tool_error( 'wpcc_capability_denied', sprintf(
 					/* translators: %s: capability name */
-					__( 'Operation denied: missing capability %s', 'ai-command-center' ),
+					__( 'Operation denied: missing capability %s', 'action-steward' ),
 					(string) $validation['required_capability']
 				) );
 			}
@@ -578,7 +578,7 @@ final class McpServerRuntime {
 			}
 			if ( 'in_progress' === $claim['claim'] ) {
 				$this->audit( 'mcp.idempotent.in_progress', [ 'tool' => $tool_name ], $context );
-				return $this->tool_error( 'wpcc_idempotent_in_progress', __( 'This request is already being processed (same idempotency key). It was not run again — check History for the outcome.', 'ai-command-center' ) );
+				return $this->tool_error( 'wpcc_idempotent_in_progress', __( 'This request is already being processed (same idempotency key). It was not run again — check History for the outcome.', 'action-steward' ) );
 			}
 		}
 

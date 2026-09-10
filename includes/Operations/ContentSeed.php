@@ -43,7 +43,7 @@ final class ContentSeed {
 		if ( ! isset( $params['type'] ) || '' === trim( (string) $params['type'] ) ) {
 			return new \WP_Error(
 				'wpcc_missing_seed_type',
-				__( 'type is required. Supported: post, page.', 'ai-command-center' )
+				__( 'type is required. Supported: post, page.', 'action-steward' )
 			);
 		}
 
@@ -54,11 +54,11 @@ final class ContentSeed {
 		$content_template = wp_kses_post( $params['content_template'] ?? 'Sample content' );
 
 		if ( ! in_array( $type, self::ALLOWED_TYPES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_post_type', __( 'Invalid post type. Supported: post, page.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_post_type', __( 'Invalid post type. Supported: post, page.', 'action-steward' ) );
 		}
 
 		if ( ! in_array( $status, self::ALLOWED_STATUSES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_post_status', __( 'Invalid post status. Supported: draft, publish.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_post_status', __( 'Invalid post status. Supported: draft, publish.', 'action-steward' ) );
 		}
 
 		$created_ids = [];
@@ -78,7 +78,7 @@ final class ContentSeed {
 			}
 
 			if ( 0 === $post_id ) {
-				return new \WP_Error( 'wpcc_content_seed_failed', __( 'Failed to create post.', 'ai-command-center' ) );
+				return new \WP_Error( 'wpcc_content_seed_failed', __( 'Failed to create post.', 'action-steward' ) );
 			}
 
 			$created_ids[] = $post_id;

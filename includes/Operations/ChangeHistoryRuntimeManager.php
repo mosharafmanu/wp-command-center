@@ -78,7 +78,7 @@ final class ChangeHistoryRuntimeManager {
 	private function operation_status( array $p ): array {
 		$key = sanitize_text_field( (string) ( $p['idempotency_key'] ?? '' ) );
 		if ( '' === $key ) {
-			return $this->err( 'wpcc_missing_idempotency_key', __( 'idempotency_key is required for operation_status.', 'ai-command-center' ) );
+			return $this->err( 'wpcc_missing_idempotency_key', __( 'idempotency_key is required for operation_status.', 'action-steward' ) );
 		}
 
 		$entry  = ( new \WPCommandCenter\Mcp\IdempotencyStore() )->lookup( $key );
@@ -131,7 +131,7 @@ final class ChangeHistoryRuntimeManager {
 
 		$change_id = sanitize_text_field( (string) ( $p['change_id'] ?? '' ) );
 		if ( '' === $change_id ) {
-			return $this->err( 'wpcc_missing_change_id', __( 'change_id is required for history_get.', 'ai-command-center' ) );
+			return $this->err( 'wpcc_missing_change_id', __( 'change_id is required for history_get.', 'action-steward' ) );
 		}
 
 		$cols = implode( ', ', self::COLUMNS );
@@ -143,7 +143,7 @@ final class ChangeHistoryRuntimeManager {
 		if ( ! is_array( $row ) ) {
 			return $this->err( 'wpcc_change_not_found', sprintf(
 				/* translators: %s: change id */
-				__( 'No change found for change_id %s.', 'ai-command-center' ),
+				__( 'No change found for change_id %s.', 'action-steward' ),
 				$change_id
 			) );
 		}
@@ -238,7 +238,7 @@ final class ChangeHistoryRuntimeManager {
 		}
 
 		if ( ! $has_selector ) {
-			return $this->err( 'wpcc_missing_rollback_selector', __( 'rollback_discover requires one of: target, change_set_id, or change_id.', 'ai-command-center' ) );
+			return $this->err( 'wpcc_missing_rollback_selector', __( 'rollback_discover requires one of: target, change_set_id, or change_id.', 'action-steward' ) );
 		}
 
 		[ $limit, $offset ] = $this->paging( $p );
@@ -274,7 +274,7 @@ final class ChangeHistoryRuntimeManager {
 		// Write-scope enforcement (the operation is read-only-scope so the
 		// transport scope gate passes for read_only tokens — deny here).
 		if ( AuthTokens::SCOPE_READ_ONLY === (string) ( $cx['token_scope'] ?? '' ) ) {
-			return $this->err( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform rollback_target.', 'ai-command-center' ) );
+			return $this->err( 'wpcc_token_read_only', __( 'This API token is read-only and cannot perform rollback_target.', 'action-steward' ) );
 		}
 
 		global $wpdb;
@@ -303,14 +303,14 @@ final class ChangeHistoryRuntimeManager {
 			if ( '' === $change_id ) {
 				return $this->err( 'wpcc_rollback_id_not_found', sprintf(
 					/* translators: %s: rollback id */
-					__( 'No recorded change carries rollback_id %s. It may belong to a patch — reverse those with patch_manage — or the change may predate change recording.', 'ai-command-center' ),
+					__( 'No recorded change carries rollback_id %s. It may belong to a patch — reverse those with patch_manage — or the change may predate change recording.', 'action-steward' ),
 					$rollback_id
 				) );
 			}
 		}
 
 		if ( '' === $change_id ) {
-			return $this->err( 'wpcc_missing_change_id', __( 'Pass change_id, or rollback_id as returned by the write you want to undo.', 'ai-command-center' ) );
+			return $this->err( 'wpcc_missing_change_id', __( 'Pass change_id, or rollback_id as returned by the write you want to undo.', 'action-steward' ) );
 		}
 
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT {$cols} FROM {$table} WHERE change_id = %s LIMIT 1", $change_id ), ARRAY_A );
@@ -318,13 +318,13 @@ final class ChangeHistoryRuntimeManager {
 		if ( ! is_array( $row ) ) {
 			return $this->err( 'wpcc_change_not_found', sprintf(
 				/* translators: %s: change id */
-				__( 'No change found for change_id %s.', 'ai-command-center' ),
+				__( 'No change found for change_id %s.', 'action-steward' ),
 				$change_id
 			) );
 		}
 
 		if ( 'rolled_back' === (string) $row['status'] ) {
-			return $this->err( 'wpcc_already_rolled_back', __( 'This change has already been rolled back.', 'ai-command-center' ) );
+			return $this->err( 'wpcc_already_rolled_back', __( 'This change has already been rolled back.', 'action-steward' ) );
 		}
 
 		$kind        = (string) ( $row['rollback_kind'] ?? 'none' );
@@ -332,7 +332,7 @@ final class ChangeHistoryRuntimeManager {
 		$rollback_id = (string) ( $row['rollback_id'] ?? '' );
 
 		if ( 1 !== $reversible || 'none' === $kind ) {
-			return $this->err( 'wpcc_not_reversible', __( 'This change is not reversible.', 'ai-command-center' ) );
+			return $this->err( 'wpcc_not_reversible', __( 'This change is not reversible.', 'action-steward' ) );
 		}
 
 		$actor      = is_array( $cx['actor'] ?? null ) ? $cx['actor'] : [];
@@ -341,7 +341,7 @@ final class ChangeHistoryRuntimeManager {
 		if ( 'patch' === $kind ) {
 			$patch_id = '' !== $rollback_id ? $rollback_id : (string) ( $row['change_set_id'] ?? '' );
 			if ( '' === $patch_id ) {
-				return $this->err( 'wpcc_missing_rollback_id', __( 'No patch id is linked to this change.', 'ai-command-center' ) );
+				return $this->err( 'wpcc_missing_rollback_id', __( 'No patch id is linked to this change.', 'action-steward' ) );
 			}
 			$res = ( new PatchApproval() )->rollback( $patch_id, $actor );
 			if ( is_wp_error( $res ) ) {
@@ -350,20 +350,20 @@ final class ChangeHistoryRuntimeManager {
 			$engine_res = $res;
 		} elseif ( 'runtime_option' === $kind ) {
 			if ( '' === $rollback_id ) {
-				return $this->err( 'wpcc_missing_rollback_id', __( 'No rollback id is linked to this change.', 'ai-command-center' ) );
+				return $this->err( 'wpcc_missing_rollback_id', __( 'No rollback id is linked to this change.', 'action-steward' ) );
 			}
 			$res = ( new OperationExecutor() )->rollback( (string) $row['operation_id'], [ 'rollback_id' => $rollback_id ], $cx );
 			if ( empty( $res['success'] ) ) {
 				return $this->err(
 					(string) ( $res['code'] ?? 'wpcc_rollback_failed' ),
-					(string) ( $res['message'] ?? __( 'Rollback failed.', 'ai-command-center' ) )
+					(string) ( $res['message'] ?? __( 'Rollback failed.', 'action-steward' ) )
 				);
 			}
 			$engine_res = $res;
 		} else {
 			return $this->err( 'wpcc_unsupported_rollback_kind', sprintf(
 				/* translators: %s: rollback kind */
-				__( 'Unsupported rollback kind: %s.', 'ai-command-center' ),
+				__( 'Unsupported rollback kind: %s.', 'action-steward' ),
 				$kind
 			) );
 		}

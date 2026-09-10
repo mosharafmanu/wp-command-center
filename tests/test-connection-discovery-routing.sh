@@ -43,7 +43,7 @@ echo "== 6. Routing clarity (Issue 2) — explicit reason, no faked support =="
 has "intro explains runtime honestly (default connection)" "the one connection you set as the default" "$V"
 has "intro: no auto-selection promise" "Nothing is selected automatically" "$V"
 has "ineligible connections collected" "wpcc_ineligible_conns" "$V"
-has "ineligible shown as disabled with reason" "healthy, but WP Command Center can" "$V"
+has "ineligible shown as disabled with reason" "healthy, but Action Steward can" "$V"
 has "explicit note: nothing hidden or faked" "Nothing is hidden or faked" "$V"
 
 echo "== 6b. Copy guidance (setup→discovery, no-discovery, discovery-unavailable) =="

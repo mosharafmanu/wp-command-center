@@ -1,7 +1,7 @@
 /**
- * WP Command Center JavaScript SDK
+ * Action Steward JavaScript SDK
  *
- * Lightweight REST client for the WP Command Center API.
+ * Lightweight REST client for the Action Steward API.
  *
  * @example
  * ```js
@@ -28,7 +28,7 @@
 export class WPCCClient {
   /**
    * @param {string} baseUrl - REST API base URL (e.g. https://example.com/wp-json/wp-command-center/v1)
-   * @param {string} token   - WP Command Center API bearer token
+   * @param {string} token   - Action Steward API bearer token
    */
   constructor(baseUrl, token) {
     this.baseUrl = baseUrl.replace(/\/$/, '');

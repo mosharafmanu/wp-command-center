@@ -21,7 +21,7 @@ token is displayed once at creation and never again.
 
 **Header handling.** Several server configurations (commonly Apache with CGI/FastCGI) never
 populate `$_SERVER['HTTP_AUTHORIZATION']`, so WordPress's own header lookup returns
-nothing even when a valid token was sent. WPCC checks the same alternative sources core
+nothing even when a valid token was sent. Action Steward checks the same alternative sources core
 and the wider ecosystem use. This changes no authorization policy — whatever is found is
 still validated exactly as before. It only stops a correct token being discarded before it
 is ever checked.
@@ -119,7 +119,7 @@ targets are blocked.
 
 ## 9. What leaves your site
 
-Nothing, unless you configure an AI provider key. WPCC makes no outbound request of its
+Nothing, unless you configure an AI provider key. Action Steward makes no outbound request of its
 own — no telemetry, no phone-home, no licence check. When you do configure a provider, the
 only outbound calls are to that provider, for the feature you invoked.
 

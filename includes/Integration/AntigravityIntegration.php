@@ -63,9 +63,9 @@ final class AntigravityIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'This is Antigravity CLI (agy), not Gemini CLI (gemini) or an IDE setup. agy stores the bearer token in ~/.gemini/config/mcp_config.json. Do not commit or share this file, paste the command into shared chats, or save the token in a shell profile. Revoke the token in WPCC to remove access.', 'ai-command-center' ),
-			__( 'Exit any running agy session, then run agy again. Use /mcp to verify wp-command-center is connected and lists 42 tools; ask for system_info and report_manage with action report_site_health. agy mcp list confirms registration only. The WPCC browser test checks the endpoint, not whether agy connected.', 'ai-command-center' ),
-			__( 'Antigravity asks your permission the first time it uses a WP Command Center tool. That prompt is Antigravity’s own safety check and is separate from this site’s approval rules — approving it lets the assistant ask, it does not bypass this site’s protection mode or any required human approval.', 'ai-command-center' ),
+			__( 'This is Antigravity CLI (agy), not Gemini CLI (gemini) or an IDE setup. agy stores the bearer token in ~/.gemini/config/mcp_config.json. Do not commit or share this file, paste the command into shared chats, or save the token in a shell profile. Revoke the token in Action Steward to remove access.', 'action-steward' ),
+			__( 'Exit any running agy session, then run agy again. Use /mcp to verify wp-command-center is connected and lists 42 tools; ask for system_info and report_manage with action report_site_health. agy mcp list confirms registration only. The Action Steward browser test checks the endpoint, not whether agy connected.', 'action-steward' ),
+			__( 'Antigravity asks your permission the first time it uses a Action Steward tool. That prompt is Antigravity’s own safety check and is separate from this site’s approval rules — approving it lets the assistant ask, it does not bypass this site’s protection mode or any required human approval.', 'action-steward' ),
 		];
 	}
 }

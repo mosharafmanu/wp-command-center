@@ -6,7 +6,7 @@
 #   1. WordPress's own, in the admin bar, on every screen. It filters by loose
 #      subsequence — a query matches if its characters appear in order ANYWHERE in
 #      a label — and it does not rank: matches come back in registration order.
-#      WP Command Center registered nothing with it, so it had no answer of ours
+#      Action Steward registered nothing with it, so it had no answer of ours
 #      to return and filled the list with whatever the subsequence caught:
 #      "token" → Go to: Marketing · Marketing > Coupons · Rank Math SEO > …
 #      "protection" → nothing at all.
@@ -137,7 +137,7 @@ assert_eq "undo — an alias, not a visible name" "Changes" "$(r undo)"
 echo ""
 echo "== 2. Nothing irrelevant, and nothing scattered =="
 # The exact failures the finding reports, from the other palette. Whatever else
-# these words do, they must not return a WP Command Center screen here.
+# these words do, they must not return a Action Steward screen here.
 assert_eq "marketing returns nothing"  "0" "$(n marketing)"
 assert_eq "rank math returns nothing"  "0" "$(n 'rank math')"
 assert_eq "coupons returns nothing"    "0" "$(n coupons)"
@@ -217,7 +217,7 @@ assert_eq "one command per navigable destination" "true" \
 assert_eq "command names are unique"              "true" \
 	"$(echo "$REG" | jq -r '(.names | unique | length) == .count')"
 assert_eq "every command name is namespaced"      "true" \
-	"$(echo "$REG" | jq -r 'all(.names[]; startswith("ai-command-center/"))')"
+	"$(echo "$REG" | jq -r 'all(.names[]; startswith("action-steward/"))')"
 assert_eq "labels are the screen name, not the breadcrumb" "true" \
 	"$(echo "$REG" | jq -r 'all(.labels[]; contains("›") | not)')"
 assert_eq "Access tokens is registered"           "true" \

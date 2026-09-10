@@ -98,7 +98,7 @@ final class RollbackOperation {
 					'wpcc_not_a_patch_rollback',
 					sprintf(
 						/* translators: 1: the rollback kind recorded for this change, 2: the identifier supplied */
-						__( 'This is a %1$s change, not a file patch, so rollback_manage cannot undo it — and this was refused before asking anyone to approve it. Undo it with change_history {action: "rollback_target", rollback_id: "%2$s"}, which routes each change to the engine that made it.', 'ai-command-center' ),
+						__( 'This is a %1$s change, not a file patch, so rollback_manage cannot undo it — and this was refused before asking anyone to approve it. Undo it with change_history {action: "rollback_target", rollback_id: "%2$s"}, which routes each change to the engine that made it.', 'action-steward' ),
 						$kind,
 						$patch_id
 					)
@@ -173,11 +173,11 @@ final class RollbackOperation {
 		if ( '' !== $offered ) {
 			return new \WP_Error(
 				'wpcc_not_a_patch_rollback',
-				__( 'rollback_manage undoes patches only, and takes patch_id. A rollback_id returned by another operation (ACF, SEO, WooCommerce, settings, media) is undone with change_history {action: "rollback_target", change_id: "..."} — use change_history {action: "rollback_discover"} to find the change_id.', 'ai-command-center' )
+				__( 'rollback_manage undoes patches only, and takes patch_id. A rollback_id returned by another operation (ACF, SEO, WooCommerce, settings, media) is undone with change_history {action: "rollback_target", change_id: "..."} — use change_history {action: "rollback_discover"} to find the change_id.', 'action-steward' )
 			);
 		}
 
-		return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required. rollback_manage undoes patches only; to undo any other change use change_history {action: "rollback_target"}.', 'ai-command-center' ) );
+		return new \WP_Error( 'wpcc_missing_patch_id', __( 'patch_id is required. rollback_manage undoes patches only; to undo any other change use change_history {action: "rollback_target"}.', 'action-steward' ) );
 	}
 
 	private function get( array $params ): array|\WP_Error {
@@ -251,7 +251,7 @@ final class RollbackOperation {
 		}
 
 		if ( empty( $patch['snapshot_ids'] ) ) {
-			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'action-steward' ) );
 		}
 
 		$snapshots = new SnapshotManager();

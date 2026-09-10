@@ -96,7 +96,7 @@ done
 
 echo "== 6. Claude Gold — Discovery Validation (Bronze) =="
 MCP_INIT=$(mcp '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}')
-assert_contains "cert: MCP init works" "$MCP_INIT" "WP Command Center"
+assert_contains "cert: MCP init works" "$MCP_INIT" "Action Steward"
 
 MCP_RESOURCES=$(mcp '{"jsonrpc":"2.0","method":"resources/list","id":2}')
 assert_true "cert: resources listed" "$(echo "$MCP_RESOURCES" | jq -r 'if .result.resources then "true" else "false" end')"

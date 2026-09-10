@@ -20,13 +20,13 @@ final class Capabilities {
 	/** Ordered capability keys → human label. */
 	public static function keys(): array {
 		return [
-			'streaming'   => __( 'Streaming', 'ai-command-center' ),
-			'tools'       => __( 'Tool calling', 'ai-command-center' ),
-			'json'        => __( 'JSON / structured output', 'ai-command-center' ),
-			'vision'      => __( 'Vision (images)', 'ai-command-center' ),
-			'reasoning'   => __( 'Reasoning', 'ai-command-center' ),
-			'embeddings'  => __( 'Embeddings', 'ai-command-center' ),
-			'audio'       => __( 'Audio', 'ai-command-center' ),
+			'streaming'   => __( 'Streaming', 'action-steward' ),
+			'tools'       => __( 'Tool calling', 'action-steward' ),
+			'json'        => __( 'JSON / structured output', 'action-steward' ),
+			'vision'      => __( 'Vision (images)', 'action-steward' ),
+			'reasoning'   => __( 'Reasoning', 'action-steward' ),
+			'embeddings'  => __( 'Embeddings', 'action-steward' ),
+			'audio'       => __( 'Audio', 'action-steward' ),
 		];
 	}
 
@@ -59,10 +59,10 @@ final class Capabilities {
 	/** A short human label for a capability value. */
 	public static function value_label( string $v ): string {
 		switch ( $v ) {
-			case 'yes':   return __( 'Yes', 'ai-command-center' );
-			case 'no':    return __( 'No', 'ai-command-center' );
-			case 'sep':   return __( 'Separate models', 'ai-command-center' );
-			case 'model': return __( 'Model-dependent', 'ai-command-center' );
+			case 'yes':   return __( 'Yes', 'action-steward' );
+			case 'no':    return __( 'No', 'action-steward' );
+			case 'sep':   return __( 'Separate models', 'action-steward' );
+			case 'model': return __( 'Model-dependent', 'action-steward' );
 			default:      return $v;
 		}
 	}

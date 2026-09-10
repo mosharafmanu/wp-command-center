@@ -1,20 +1,20 @@
 <?php
 /**
- * Plugin Name:       WP Command Center
- * Description:       Connect an AI assistant to your WordPress site. Changes that matter wait for your approval, everything is recorded, and supported changes can be undone.
- * Version:           1.0.1
+ * Plugin Name:       Action Steward
+ * Description:       Safe AI operations for WordPress. Scope access, assess risk, require approval, and keep an audit trail with rollback for supported changes.
+ * Version:           1.0.2
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Mosharaf Hossain
  * Author URI:        https://mosharafmanu.com
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       ai-command-center
+ * Text Domain:       action-steward
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPCC_VERSION', '1.0.1' );
+define( 'WPCC_VERSION', '1.0.2' );
 define( 'WPCC_PLUGIN_FILE', __FILE__ );
 define( 'WPCC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPCC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

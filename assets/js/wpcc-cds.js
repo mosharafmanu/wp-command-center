@@ -1,5 +1,5 @@
 /**
- * WP Command Center — Command Design System (CDS) runtime.
+ * Action Steward — Command Design System (CDS) runtime.
  *
  * The behavioral layer for the Experience Layer shell, built on window.WPCC:
  *   - Builder / Engineer mode (disclosure + density), persisted per-browser in

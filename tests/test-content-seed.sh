@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Content Seeder Operation test suite for WP Command Center (Step 16).
+# Content Seeder Operation test suite for Action Steward (Step 16).
 #
 # Verifies:
 #   - create posts

@@ -2,7 +2,7 @@
 /**
  * V1 refinement — the developer-tools disclosure gate.
  *
- * Some WP Command Center surfaces are genuinely developer tools: a file browser,
+ * Some Action Steward surfaces are genuinely developer tools: a file browser,
  * the patch review/apply UI, and the search-and-replace runner. They are real,
  * they work, and they stay — but they are the wrong first impression for a site
  * owner who installed this to connect Claude to their blog, and a file manager

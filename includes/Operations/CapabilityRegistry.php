@@ -254,10 +254,10 @@ final class CapabilityRegistry {
 
 	public function assign( string $subject, string $subject_id, string $capability ): ?\WP_Error {
 		if ( ! in_array( $capability, self::ALL_CAPABILITIES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'action-steward' ) );
 		}
 		if ( self::CAP_SYSTEM_ADMIN === $capability ) {
-			return new \WP_Error( 'wpcc_cannot_assign_admin', __( 'system.admin can only be assigned via direct configuration.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_cannot_assign_admin', __( 'system.admin can only be assigned via direct configuration.', 'action-steward' ) );
 		}
 		$all = $this->get_assignments();
 		$key = $subject . ':' . $subject_id;
@@ -273,12 +273,12 @@ final class CapabilityRegistry {
 
 	public function remove( string $subject, string $subject_id, string $capability ): ?\WP_Error {
 		if ( ! in_array( $capability, self::ALL_CAPABILITIES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_invalid_capability', __( 'Unknown capability.', 'action-steward' ) );
 		}
 		$all = $this->get_assignments();
 		$key = $subject . ':' . $subject_id;
 		if ( ! isset( $all[ $key ] ) ) {
-			return new \WP_Error( 'wpcc_capability_not_assigned', __( 'No capabilities assigned to this subject.', 'ai-command-center' ) );
+			return new \WP_Error( 'wpcc_capability_not_assigned', __( 'No capabilities assigned to this subject.', 'action-steward' ) );
 		}
 		$all[ $key ] = array_values( array_filter( $all[ $key ], static fn( $c ) => $c !== $capability ) );
 		if ( empty( $all[ $key ] ) ) {
