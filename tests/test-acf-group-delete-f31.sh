@@ -35,14 +35,34 @@ wpe() { wp eval "$1" --path="$WP_PATH" 2>/dev/null; }
 GIDS=""
 SAVE_DIR=$(wpe '$s=acf_get_setting("save_json"); echo is_string($s)?untrailingslashit($s):"";')
 cleanup() {
+  local test_status=$?
+  local cleanup_failed=0
   for g in $GIDS; do
-    wpe '$x=acf_get_field_group("'"$g"'"); if($x && !empty($x["ID"])) wp_delete_post($x["ID"],true);'
-    [ -n "$SAVE_DIR" ] && rm -f "$SAVE_DIR/$g.json"
+    # Resolve the stored post directly. A key lookup may legitimately return the
+    # local-JSON copy with ID 0, which is the deletion bug this suite exercises.
+    local cleanup_result
+    local group_post_id
+    wpe '$k="'"$g"'";$fg=acf_get_field_group($k);$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";if(is_file($f))@unlink($f);if($fg)acf_flush_field_group_cache($fg);acf_remove_local_field_group($k);' >/dev/null 2>&1
+    group_post_id="$(wpe 'global $wpdb;$k="'"$g"'";echo (int)$wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->posts} WHERE post_type=%s AND post_name=%s LIMIT 1","acf-field-group",$k));')"
+    [ -n "$group_post_id" ] && [ "$group_post_id" -gt 0 ] && wp --path="$WP_PATH" post delete "$group_post_id" --force >/dev/null 2>&1
+    wpe '$k="'"$g"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";if(is_file($f))@unlink($f);' >/dev/null 2>&1
+    cleanup_result="$(wpe 'global $wpdb;$k="'"$g"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";$left=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type=%s AND post_name=%s","acf-field-group",$k));echo (!$left&&!is_file($f))?"WPCC_ACF_CLEANUP_OK":"WPCC_ACF_CLEANUP_FAILED";' 2>/dev/null)" || cleanup_result="WPCC_ACF_CLEANUP_FAILED"
+    if [[ "$cleanup_result" != *WPCC_ACF_CLEANUP_OK ]] && [ "$group_post_id" -gt 0 ]; then
+      wp --path="$WP_PATH" post delete "$group_post_id" --force >/dev/null 2>&1
+      wpe '$k="'"$g"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";if(is_file($f))@unlink($f);' >/dev/null 2>&1
+      cleanup_result="$(wpe 'global $wpdb;$k="'"$g"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";$left=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type=%s AND post_name=%s","acf-field-group",$k));echo (!$left&&!is_file($f))?"WPCC_ACF_CLEANUP_OK":"WPCC_ACF_CLEANUP_FAILED";' 2>/dev/null)" || cleanup_result="WPCC_ACF_CLEANUP_FAILED"
+    fi
+    [[ "$cleanup_result" = *WPCC_ACF_CLEANUP_OK ]] || cleanup_failed=1
   done
   wpe 'acf_remove_local_field_group("group_f31_local");'
-  # Safety net: if Test 3 left the acf-json dir, remove it to keep sync OFF.
-  [ -n "$SAVE_DIR" ] && rm -f "$SAVE_DIR"/group_*.json 2>/dev/null && rmdir "$SAVE_DIR" 2>/dev/null
-  true
+  # Test 3 removes its own exact JSON file in the same PHP process. Never glob the
+  # owner's acf-json directory: unrelated group_*.json files are production data.
+  [ -n "$SAVE_DIR" ] && rmdir "$SAVE_DIR" 2>/dev/null || true
+  if [ "$cleanup_failed" -ne 0 ]; then
+    echo "  FAIL: teardown did not remove every exact F31 ACF fixture" >&2
+    exit 1
+  fi
+  exit "$test_status"
 }
 trap cleanup EXIT
 

@@ -299,7 +299,11 @@ echo "  INFO: $TL_COUNT timeline events validated"
 echo "= 10. AI CLIENTS (all 11 certified) ="
 # ═══════════════════════════════════════════════════════════════════
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
-assert_eq "ai: 11 total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
+# Structural, not a magic number: the count must match the roster, whatever size the
+# roster currently is. A literal records how many clients existed the day it was
+# written and fails just as loudly for a correct change (Windsurf deferred from v1,
+# Antigravity and Muse Code added) as for a real regression.
+assert_eq "ai: client count matches the roster" "$(echo "$CLIENTS" | jq -r '.clients | length')" "$(echo "$CLIENTS" | jq -r '.counts.total')"
 # Was: at least one client must be Gold. Certification is now awarded only from
 # an executed end-to-end run, and unearned Gold markers were withdrawn — so this
 # asserted a claim the product had deliberately stopped making. What must stay

@@ -53,9 +53,10 @@ lacks "model adds no REST route"         "register_rest_route" "$SET"
 
 echo
 echo "== 3. AppShell consults the option (constants/filters still win) =="
-has "flag() consults enabled_by_option"  "BuiltinAiSettings::enabled_by_option" "$SHELL_PHP"
-has "defined constant wins (on or off)"  "if \( defined\( \\\$const \) \)" "$SHELL_PHP"
-has "filter opt-in honored"              "apply_filters\( \\\$filter, false \)" "$SHELL_PHP"
+has "AppShell delegates to the shared enablement policy" "BuiltinAiSettings::flag" "$SHELL_PHP"
+has "shared policy consults enabled_by_option" "self::enabled_by_option\( \\\$const \)" "$SET"
+has "defined constant wins (on or off)"  "if \( defined\( \\\$const \) \)" "$SET"
+has "filter opt-in honored"              "apply_filters\( \\\$filter, false \)" "$SET"
 
 echo
 echo "== 4. Enablement UI — CDS, governed, honest, escaped =="
@@ -137,7 +138,7 @@ else
 	# Invariants unchanged (no schema / capability / MCP / catalogue drift).
 	INV="$(wpe '$i=(new WPCommandCenter\Admin\DashboardAdminQuery())->overview()["invariants"]; echo $i["operation_map"].",".$i["capabilities"].",".$i["catalogue"].",".$i["mcp_tools"].",".$i["db_version"];')"
 	assert_eq "OPERATION_MAP 34" "34" "$(echo "$INV"|cut -d, -f1)"
-	assert_eq "CAPABILITIES 23"  "23" "$(echo "$INV"|cut -d, -f2)"
+	assert_eq "CAPABILITIES 24"  "24" "$(echo "$INV"|cut -d, -f2)"
 	assert_eq "catalogue 42"     "42" "$(echo "$INV"|cut -d, -f3)"
 	assert_eq "MCP tools 42"     "42" "$(echo "$INV"|cut -d, -f4)"
 	assert_eq "DB_VERSION 2.6.0 (no schema change)" "2.6.0" "$(echo "$INV"|cut -d, -f5)"

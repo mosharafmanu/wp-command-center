@@ -20,6 +20,7 @@ use WPCommandCenter\Operations\ThemeRegistry;
 use WPCommandCenter\Operations\SnapshotRegistry;
 use WPCommandCenter\Operations\ContentRegistry;
 use WPCommandCenter\Operations\DatabaseRegistry;
+use WPCommandCenter\Operations\SecurityModeManager;
 use WPCommandCenter\Security\AuditLog;
 
 defined( 'ABSPATH' ) || exit;
@@ -170,13 +171,36 @@ final class ClaudeIntegration {
 	}
 
 	/**
+	 * Return only Claude Desktop's keyed server entry for the recommended merge path.
+	 *
+	 * Claude opens a shared JSON file that may already contain other servers. Making a
+	 * whole-file example the primary copy action invited replacement or a hand-built,
+	 * error-prone merge. The full empty-file example remains available under Advanced.
+	 */
+	public static function primary_config( string $token = '' ): string {
+		$config = self::generate_mcp_config();
+		$entry  = $config['mcpServers']['wp-command-center'] ?? [];
+		$json   = sprintf(
+			'"wp-command-center": %s',
+			(string) wp_json_encode( $entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+		);
+
+		if ( '' !== $token ) {
+			$json = str_replace( AIClientRegistry::TOKEN_PLACEHOLDER, $token, $json );
+		}
+
+		return $json;
+	}
+
+	/**
 	 * Return Claude-specific MCP discovery metadata.
 	 */
 	public static function get_discovery_metadata(): array {
-		$ops        = ( new OperationRegistry() )->get_operations();
+		$ops        = array_map( [ self::class, 'with_effective_approval' ], ( new OperationRegistry() )->get_operations() );
 		$mcp_url    = rest_url( McpServerRuntime::NAMESPACE . '/mcp' );
 		$bridge     = new WpCliBridge();
 		$cap_reg    = new CapabilityRegistry();
+		$policy     = SecurityModeManager::approval_policy();
 
 		$resources = [
 			[ 'uri' => 'wpcc://manifest', 'name' => 'Agent Manifest', 'mimeType' => 'application/json', 'description' => 'Full agent manifest with capabilities, endpoints, and error catalog.' ],
@@ -222,9 +246,15 @@ final class ClaudeIntegration {
 				'operation_map' => CapabilityRegistry::OPERATION_MAP,
 			],
 			'approval'      => [
-				'enforcement'     => (bool) get_option( 'wpcc_enforce_approval', false ),
-				'required_for'    => array_values( array_filter( $ops, static fn( $op ) => $op['requires_approval'] ) ),
-				'not_required_for' => array_column( array_filter( $ops, static fn( $op ) => ! $op['requires_approval'] ), 'id' ),
+				// Backward-compatible boolean: true means one or more recognised
+				// risk tiers are gated, not that every operation waits.
+				'enforcement'              => $policy['enforcement'],
+				'security_mode'            => $policy['mode'],
+				'requires_approval_by_risk' => $policy['requires_approval_by_risk'],
+				'required_risk_tiers'       => $policy['required_risk_tiers'],
+				'requires_human_approver'   => $policy['requires_human_approver'],
+				'required_for'              => array_values( array_filter( $ops, static fn( $op ) => $op['requires_approval'] ) ),
+				'not_required_for'          => array_column( array_filter( $ops, static fn( $op ) => ! $op['requires_approval'] ), 'id' ),
 			],
 			'wp_cli'        => [
 				'available'      => $bridge->is_available(),
@@ -256,6 +286,21 @@ final class ClaudeIntegration {
 	}
 
 	/**
+	 * Apply the active mode to an operation's worst-case declared risk tier.
+	 * Action-specific discovery remains available through the operation catalogue;
+	 * this legacy Claude summary has always represented one boolean per operation.
+	 *
+	 * @param array<string,mixed> $operation
+	 * @return array<string,mixed>
+	 */
+	private static function with_effective_approval( array $operation ): array {
+		$risk = (string) ( $operation['risk_level'] ?? SecurityModeManager::RISK_HIGH );
+		$operation['requires_approval'] = SecurityModeManager::requires_approval( $risk );
+
+		return $operation;
+	}
+
+	/**
 	 * Return tool groups with full metadata (label, description, tools).
 	 */
 	public static function get_tool_groups(): array {
@@ -270,7 +315,7 @@ final class ClaudeIntegration {
 			$tools_in_group = [];
 			foreach ( $group['tools'] as $tool_id ) {
 				if ( isset( $op_map[ $tool_id ] ) ) {
-					$op = $op_map[ $tool_id ];
+					$op = self::with_effective_approval( $op_map[ $tool_id ] );
 					$cap = CapabilityRegistry::OPERATION_MAP[ $tool_id ] ?? null;
 					$tools_in_group[] = [
 						'id'                  => $op['id'],

@@ -369,7 +369,9 @@ final class ChangeHistoryRuntimeManager {
 		}
 
 		// Verified success — record the reversal + stamp the original.
-		$new_change_id = ( new ChangeRecorder() )->record_rollback( $row, $cx, $row['result_ref'] ?? null );
+		// This reversal belongs to the current undo execution, never the original
+		// write. Internal direct calls have no durable operation result to link.
+		$new_change_id = ( new ChangeRecorder() )->record_rollback( $row, $cx, $cx['execution_result_id'] ?? null );
 
 		return [
 			'action'              => 'rollback_target',

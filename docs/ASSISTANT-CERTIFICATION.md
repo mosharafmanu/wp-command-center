@@ -6,12 +6,41 @@ Claude prepares setup, configuration and the verification checklist.
 The owner executes each checklist in their own authenticated accounts.
 Claude records the results and assigns the final status.
 
-> **One assistant is Officially Certified: Claude Code, 12/12, executed 2026-08-04**
-> against a live HTTPS site — see §7. Every other status below is either
-> `Server-verified` (proven against the MCP server, which every client shares),
-> `Config-prepared` (configuration corrected and ready to execute), or `Not supported`.
-> Certification is awarded only from executed checklist results, never inferred from the
-> shared endpoint working.
+> **Final v1 closeout — 2026-09-06:** Claude Code remains the only **CERT_GOLD** client.
+> Retained later actual-client runs also establish the **CERT_PASS** statuses listed
+> below. A pass is not Gold and does not imply that the formal 12-step lifecycle was run.
+> Sections 1–9 preserve the original August certification sprint record and must be read
+> as historical evidence where this final closeout table supplies a newer status.
+
+## 0. Final v1 client-certification matrix
+
+| Client/surface | Final status | Basis / limitation |
+|---|---|---|
+| Codex in ChatGPT Desktop | **CERT_PASS** | Actual Codex surface in the ChatGPT desktop app discovered 42 tools and completed `system_info`. Normal ChatGPT chats do not use the local connection; not Gold. |
+| Codex CLI 0.153.4 | **CERT_PASS** | Actual owner retest passed using the approval-aware launch: native registration, 42 tools, 7 resources and `system_info`, without changing WPCC governance. |
+| Claude Code | **CERT_GOLD** | Actual client completed the formal 12-step lifecycle. |
+| Claude Desktop | **CERT_PASS** | Actual desktop client loaded 42 tools and completed `system_info`; no Gold/full-lifecycle claim. |
+| Gemini CLI 0.46.0 | **BLOCKED — EXTERNAL ACCOUNT/PROVIDER** | Setup structurally verified; Google rejects this individual Gemini Code Assist client/account and directs the owner to Antigravity. External to WPCC. |
+| Antigravity CLI (`agy`) 1.1.27 | **CERT_PASS** | Actual client: auth/init, 42 tools, 7 resources, benign reads, Read-only write denial and reconnect. |
+| Cursor | **CERT_PASS** | Retained actual client: auth/init, 42 tools, 7 resources, `system_info` and reload/reconnect. A later High Load/model-account limitation is external to WPCC. Not Gold. |
+| Continue for VS Code | **CERT_PASS** | Actual extension client executed `system_info` and discovered 42 tools; no Gold/full-lifecycle claim. |
+| OpenCode | **CERT_PASS** | Actual native remote-HTTP client executed `system_info`; exact client-side discovery counts were not retained. |
+| Command Code 1.51.0 | **CERT_PASS** | Owner manual test: actual Command Code connected and completed read-only `system_info`; no governed write/full lifecycle was run. |
+| GitHub Copilot in VS Code | **CERT_PASS** | Fresh VS Code 1.136.2 / built-in Copilot 0.64.1 trace reproduced missing/invalid input → WPCC JSON 401 → automatic OAuth/DCR. The same supported config with the correct fresh token exposed 42 tools/6 prompts, completed `system_info` exactly once without OAuth/DCR, and reconnected. No governed write was attempted. |
+| Muse Code 1.0.3 | **CERT_PASS** | Owner manual test after Meta authentication and plan activation: actual `muse` completed read-only `system_info` and returned credible site/environment data. Experimental positioning remains; not Gold. |
+
+[Gemini Spark custom Connected Apps](https://support.google.com/gemini/answer/17209137)
+are a real hosted MCP surface, but they are excluded from v1: the current Google flow is
+eligibility/account-linking gated, provides no documented arbitrary static Bearer-header
+contract, and cannot reach a localhost WPCC endpoint. Adding it would require approved
+public-HTTPS/OAuth product infrastructure, outside this closeout. Gemini CLI remains a
+distinct supported host with its existing external account limitation.
+
+Muse Code remains the standalone experimental host; Muse Spark is its model/API, not
+another client card.
+
+Windsurf is removed and is not a supported current surface. Structural/configuration
+verification alone never grants CERT_PASS.
 
 ---
 

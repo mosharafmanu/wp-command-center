@@ -216,7 +216,7 @@ echo
 echo "== 13. Duplicate install check =="
 # This plugin is, by definition, already installed. Derive its slug from the directory
 # rather than hardcoding it, so the assertion survives a slug rename.
-WPCC_OWN_SLUG=$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)")
+WPCC_OWN_SLUG=$(basename "$PLUGIN_DIR")
 DUP_INSTALL=$(api POST /operations/plugin_manage/run "{\"action\":\"plugin_install\",\"slug\":\"$WPCC_OWN_SLUG\"}")
 assert_eq "duplicate install: rejected" "wpcc_plugin_already_installed" "$(echo "$DUP_INSTALL" | jq -r '.code // "none"')"
 

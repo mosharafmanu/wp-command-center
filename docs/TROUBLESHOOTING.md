@@ -125,7 +125,7 @@ current values) so you can decide what to do about each.
 
 ## Network activation is refused
 
-Intentional. WPCC 1.0.0 is single-site: tokens, protection mode, approvals and history are
+Intentional. WPCC 1.0.1 is single-site: tokens, protection mode, approvals and history are
 per-site. Activate it on individual sites within the network instead. See
 [ARCHITECTURE.md](ARCHITECTURE.md#multisite).
 

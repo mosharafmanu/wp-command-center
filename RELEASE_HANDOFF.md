@@ -1,5 +1,101 @@
 # RELEASE HANDOFF — WP Command Center
 
+> **Final fresh-user onboarding closeout M22/M23/M25 — 2026-09-09:** Continue's first-MCP
+> path now supplies the missing top-level `mcpServers:` structure or a separate correctly
+> indented entry-only merge. Muse explicitly prepares `~/.config/muse/settings.json`
+> without overwriting an existing file and offers new-file versus existing-file payloads.
+> All raw-token-dependent setup actions are now gated until a one-time or manually supplied
+> saved token exists in the browser; no executable-looking `${WPCC_TOKEN}` setup can be
+> copied early. Env-var and VS Code prompt contracts remain available because their setup
+> payloads are secret-free. Fresh owner evidence promotes Command Code 1.51.0 and Muse Code
+> 1.0.3 to **CERT_PASS** after actual read-only `system_info`; neither is Gold. Gemini CLI
+> remains **Account unavailable** due Google's individual-account/client eligibility response.
+> No runtime/auth/governance change, commit or package.
+
+> **Final MCP client matrix closeout — 2026-09-09:** Fresh traced VS Code 1.136.2 /
+> built-in Copilot 0.64.1 testing supersedes the incomplete prior M16 explanation. A
+> missing/invalid secure-input value makes VS Code send an unusable Bearer header; WPCC's
+> normal JSON 401 has no `WWW-Authenticate`, but VS Code automatically performs OAuth
+> discovery and reaches DCR, while cached 42-tool/6-prompt counts remain visible. With a
+> correct fresh Read-only token, the unchanged documented `headers.Authorization` config
+> authenticated, exposed **42 tools / 6 prompts**, completed `system_info` exactly once,
+> and reconnected without OAuth/DCR. The narrow UX fix copies the one-time token again in
+> the final start action after the JSON copy has overwritten the clipboard. Gemini Spark
+> is a real hosted MCP host but is excluded from v1 because its current eligible/account-
+> linked custom-app contract does not document arbitrary static Bearer headers and cannot
+> reach localhost; no OAuth/public-host runtime was added. Gemini CLI stays in Google.
+> The earlier Command Code and Muse account limitations in this checkpoint were superseded
+> by the later owner-driven passes above. Temporary credentials/config/install state were removed and the prior
+> VS Code config restored. No runtime/auth/governance change, T2, commit or package.
+
+> **Final onboarding retest remediation M13–M16 — 2026-09-08:** The Connections flow now
+> visibly and accessibly continues from app selection to Create access exactly once. The
+> Codex CLI primary flow is four concise actions; its verified
+> `codex --ask-for-approval on-request` launch remains copy-ready because the installed
+> CLI cannot set/merge a server-specific approval default through `codex mcp add`.
+> Technical rationale and the supported annotation-aware TOML alternative are collapsed.
+> VS Code/Copilot's OAuth/DCR detour was not caused by WPCC OAuth metadata: logs show the
+> valid Authorization-header config sent a stale value from the fixed secure-input id,
+> received `wpcc_invalid_token`/401, then VS Code applied its generic OAuth fallback.
+> WPCC now emits a token-record-scoped password-input id so each new token triggers a
+> fresh secure prompt. Actual VS Code 1.136.1 Copilot Agent verification passed with no
+> OAuth/DCR: **42 tools / 6 prompts**, one `system_info`, credible WP/PHP/MySQL data, and
+> successful restart/reconnect. Posts, operation requests, queue and change history did
+> not change. The temporary read-only token was revoked and the clipboard cleared.
+> Claude Desktop remains CERT_PASS; entry-only merge is now primary and full-file JSON is
+> Advanced. No shared MCP auth/runtime or governance code changed, so T2 was not required.
+> Focused onboarding/client suites are green. The broad local T0/T1 gates are non-green
+> because the retained test credential is invalid: all 82 targeted-T1 failures are the
+> three shared token-dependent core suites returning `wpcc_invalid_token`; all five
+> onboarding suites selected by that gate pass. Fresh process-only coverage also passes
+> Claude **104/0** and the client layer **145/0**, and the token was revoked.
+> No commit, package, tag or deployment. **READY FOR FINAL OWNER ACCEPTANCE.**
+
+> **Connections / Assistants onboarding remediation — 2026-09-08:** The customer flow is
+> now app-first and uses one Recommended path followed by an actual in-client
+> `system_info` check; manual JSON/YAML and transport detail are collapsed under
+> Advanced. Product families and surface names are explicit, Cursor uses its supported
+> reviewed install link, Continue for VS Code gets an exact one-entry YAML merge flow,
+> OpenCode keeps its native command, and Muse is retained only under Other / Experimental
+> as Not tested. Codex M2 is addressed with standard tool annotations plus the official
+> `codex --ask-for-approval on-request` invocation; no WPCC scope, capability, risk or
+> human-approval policy was weakened. Focused final-source coverage passed **1,062/0**;
+> actual logged-in browser QA passed at desktop and a narrow effective viewport. Serial
+> T2 covered 210 suites (**10,237/15**). Three failures were test-contract/harness issues
+> corrected and rerun **88/0**; 12 independently reproducible ACF/option/Site Builder
+> assertions are outside this Connections change and keep the general release gate
+> non-green. Owner retests remain for Codex CLI permission behavior and Copilot Agent
+> mode. No commit, package, tag or deployment was performed. See
+> [the focused report](docs/reports/validation/WPCC-CONNECTIONS-UX-REMEDIATION.md).
+> **READY FOR FINAL OWNER ONBOARDING RETEST.**
+
+> **Final certification metadata reconciliation — 2026-09-06:** The final release blocker
+> was stale certification metadata, not runtime behavior. The registry, current integration
+> guide and authoritative certification summary now agree: Claude Code **CERT_GOLD**;
+> ChatGPT Desktop, Codex CLI, Antigravity CLI, Cursor, Continue and OpenCode **CERT_PASS**;
+> Gemini CLI and Command Code **BLOCKED — EXTERNAL ACCOUNT/PROVIDER**; Claude Desktop
+> **NOT TESTABLE — COMPUTER-USE RESTRICTION**; Muse Code **NOT TESTABLE — NOT INSTALLED**;
+> GitHub Copilot / VS Code **FAIL** until a post-fix actual-client `system_info` call is
+> retained. Windsurf remains absent. The backward-compatible registry enum is preserved:
+> `active` represents a certification pass and the narrower `compatible` value carries
+> the exact blocked/not-testable/fail verdict in validation notes. No runtime, security,
+> transport, setup, credential or WordPress state changed. Remaining non-blockers are the
+> external/provider and test-availability limits above, the Copilot checkpoint,
+> intentionally unmigrated historical reversal metadata, test-runner accounting, and the
+> deferred term/cache REST compatibility finding. Focused metadata/docs checks replace no
+> prior regression evidence; T2 was deliberately not rerun for a metadata-only correction.
+> **READY FOR RELEASE FREEZE.** The next authorized phase is commit/build/package
+> verification; no client re-certification is implied.
+
+> **Claude discovery governance metadata remediation — 2026-09-06:** A final customer-visible contradiction is closed: `/claude/discovery` previously sourced `approval.enforcement` from the retired `wpcc_enforce_approval` option and could report `false` in Standard mode while execution, MCP manifest and security reporting required approval for medium/high/critical risk. All reporting surfaces now share `SecurityModeManager::approval_policy()`; the legacy boolean means “one or more recognized risk tiers require approval,” with additive mode, tier matrix, required-tier and human-approver detail. Focused/relevant suites passed **1,102/0**. A temporary read-only credential proved HTTP 200 and matching Standard policy across Claude discovery, MCP manifest and security report with no content, approval, queue or change-history mutation, then was revoked. T0 **3,457/1**, T1 **7,922/1**, full T2 **10,058/1**: each sole unrelated, environment-sensitive failure passed immediately alone, so T2 is honestly not green but no Claude-attributable regression was observed. See [the focused report](docs/reports/validation/WPCC-CLAUDE-DISCOVERY-GOVERNANCE-REMEDIATION.md). The owner has classified currently local credentials as temporary and their rotation/removal as final-release cleanup; this supersedes the older credential-blocker wording below for this remediation. The working candidate and audit history remain preserved; no commit, package, tag or deployment was performed. **Ready for final client-certification closeout, not release packaging.**
+
+> **Read-only + Antigravity CLI D/E/F remediation — 2026-09-06:** Read-only authorization now checks audited actions across all 42 operations; native `agy` 1.1.27 Read-only certification passed (42 tools, 7 resources, system_info, site-health read, denied write, reconnect). Antigravity CLI is classified as CLI and uses native setup; Gemini CLI remains separate. Focused D 2,259/0 and E/F 24/0. Full T2 **11,462 passed / 55 failed** over 205 suites, **not green**; every failure reproduces on the preserved starting candidate (9,178/56, 203 suites), zero attributable net-new failures. Six attribution reruns pass 232/0 on each candidate. Source and prior certification history preserved; no commit/package. **Do not resume certification until the owner rotates credentials exposed by the environment-file tool-transcript inspection.** See [the full D/E/F report](docs/reports/validation/WPCC-READONLY-ANTIGRAVITY-REMEDIATION.md). This checkpoint supersedes older readiness statements below without deleting their history.
+
+> **Codex onboarding remediation — 2026-09-06:** macOS Codex CLI now uses shell-local export and same-terminal startup; ChatGPT Desktop retains independent launchctl bootstrap. Token reveal/navigation and browser-test claims corrected. Focused + relevant regressions: **756 passed / 0 failed**. Actual codex-cli 0.153.4 MCP engine verified native registration → authentication/initialize → **42 tools / 7 resources** → system_info; fresh shell without export loads zero tools. Temporary credentials revoked; existing candidate/history preserved. No T2 rerun, commit or packaging. See [the remediation report](docs/reports/validation/WPCC-CODEX-ONBOARDING-REMEDIATION.md), including interactive/visual verification limits. **Ready to resume client certification.**
+
+
+> **Current checkpoint — 2026-09-06:** The preserved real-client candidate now includes verified fixes for manifest approval semantics, customer approval copy and reversal result references. Full T2 completed on unchanged source: 202 suites, audited 9,200 passed/37 failed, zero attributable net-new regressions after baseline/environment investigation. See [the consolidated A/B/C report](docs/reports/validation/WPCC-CERTIFICATION-ABC-REMEDIATION.md) for evidence, legacy-record treatment and cleanup. Resume manual MCP certification; preserve its existing audit history. No commit or release packaging was performed. This checkpoint supersedes older current-state claims below.
+
 **The single authoritative engineering document for this repository.**
 Every other handoff, roadmap, submission note and certification has been superseded and
 moved under [`docs/archive/`](docs/archive/). If something here disagrees with a document
@@ -46,8 +142,10 @@ by the owner. No further code, UX or release-engineering work is planned before 
 | `v0.104.0` – `v0.109.0` | Jun 2026 | Step-numbered development series: media, SEO, ACF, WooCommerce, Elementor, workflow and reporting runtimes. |
 | `checkpoint/pre-v1-finalization` | Jul 2026 | Marker taken before the v1 finalization arc. |
 | **`v1.0.0`** | **2026-08-08** | First public release. Tagged at `81f7d6a`, merged to `main`, and **deployed to production**. |
+| **`v1.0.1`** | **2026-09-10** | Certified security, compatibility, rollback, and release-gate hardening candidate. Tagged from `release/v1-security-recut`; deliberately not merged to deployment-triggering `main`. |
 | *(security re-cut)* | 2026-08-10 | Not tagged. Fixes an uploads exposure and one Plugin Check error found in the pre-submission audit. **This is the code to submit.** See §2. |
 | *(client compatibility remediation)* | 2026-08-11/12 | **Uncommitted working-tree change.** Ten findings from real manual client testing, incl. two functional defects (a Codex/ChatGPT credential key that could never authenticate; eight tool schemas that failed GitHub Copilot's validator and blocked all 42 tools). Windsurf removed; Antigravity and Muse Code added. Held uncommitted while manual certification is pending. |
+| *(branding regression fix)* | 2026-08-12 | **Uncommitted working-tree change.** Presentation only. `Brand::picture()` selected artwork by `prefers-color-scheme` — the viewer's OS theme — on two permanently light admin surfaces, so dark-OS admins were served near-white artwork at 1.09:1 contrast. `AppShell.php` and `views/command-home.php` now load the light-surface artwork unconditionally; `tests/test-branding-assets.sh` asserts that invariant instead of the old mechanism. Held uncommitted alongside the remediation. See `PROJECT_STATUS.md` § *PAUSED — RESUME HERE*. |
 
 > **`v1.0.0` was never published to WordPress.org.** It is what production runs, which is
 > why the tag has deliberately not been moved — see §9 and §14.
@@ -57,9 +155,8 @@ by the owner. No further code, UX or release-engineering work is planned before 
 > | | |
 > |---|---|
 > | On `main` / `origin/main` / **running in production** | `81f7d6a`, tagged `v1.0.0` |
-> | The **security re-cut** | branch `release/v1-security-recut` — **unmerged, untagged, undeployed**. It is *not* released. |
-> | The **compatibility remediation** | working tree only — **uncommitted** at the time of the pause, then checkpointed as documentation-only. Runtime changes remain uncommitted. |
-> | The **submission candidate** | the re-cut package in §2 — **not** the `v1.0.0` tag, which it supersedes. |
+> | The **security re-cut and compatibility remediation** | branch `release/v1-security-recut`, committed and tagged as `v1.0.1`; unmerged and undeployed. |
+> | The **submission candidate** | the verified v1.0.1 package in §2 — never the historical `v1.0.0` tag. |
 >
 > Whether the package in §2 still represents the code to submit depends on whether the
 > compatibility remediation is intended to ship with it. It was built **before** that work
@@ -69,18 +166,15 @@ by the owner. No further code, UX or release-engineering work is planned before 
 
 ## 2. Package identity
 
-The artifact to submit. Built 2026-08-10 from the security re-cut.
+The artifact prepared for submission. Built and independently verified 2026-09-10 from the complete v1.0.1 candidate.
 
 ```
-File        build/ai-command-center-1.0.0.zip
-Size        1,101,893 bytes
-Entries     334  (299 files + 35 directory entries)
-Files       299   (281 PHP, all passing php -l)
-SHA256      e9e00d9de4ac573c84f0ff55ac14407e98f86094fbecaf9ef39dad2bb6460c27
-MD5         7824a4bc76dcaeb697616cff29591752
-Content-ID  1010c8c78212886453541ad09ada28e9a6c6db11ec7c34bceb71f9dcd9aa362c
-Runtime     c733244190e4a7faa74e3714684d33f93791e17a   (branch release/v1-security-recut)
-Version     1.0.0  ·  DB schema 2.6.0
+File        ai-command-center-1.0.1.zip
+Size        1,151,368 bytes
+Files       302   (284 PHP, all passing php -l)
+SHA256      4b39c78aa5e042351b59c3468c93c7412e198f75a8e3dc9e0591106bdad20c2e
+Content-ID  41c15676a416495e4f907b9add7a9e3ea8ecde6e825dc6635b0d2c455c08a26e
+Version     1.0.1  ·  DB schema 2.6.0
 ```
 
 **Content-ID** is the SHA256 of the sorted per-file SHA256 manifest of the extracted
@@ -88,7 +182,7 @@ package. Unlike the archive checksum it does not change between builds, so it is
 prove two builds are the same product:
 
 ```bash
-unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
+unzip -q ai-command-center-1.0.1.zip -d /tmp/pkg
 ( cd /tmp/pkg && find . -type f -print0 | sort -z | xargs -0 shasum -a 256 ) | shasum -a 256
 ```
 
@@ -106,10 +200,10 @@ the artifact it describes.
 
 | Check | Result |
 |---|---|
-| Packaged vs working tree | 299 identical, 0 differing, 0 not-in-source |
-| Rebuild reproduces the same contents | Content-ID identical after rebuilding at the documentation commit |
-| `php -l` across the package | 281 files, 0 failures |
-| **Plugin Check** (extracted ZIP, isolated WordPress 7.0.3) | **0 errors**, 824 warnings |
+| Packaged vs working tree | 302 identical, 0 differing, 0 not-in-source |
+| `php -l` across the package | 284 files, 0 failures |
+| JavaScript/MJS syntax | 6 files, 0 failures |
+| **Plugin Check** (extracted ZIP, isolated WordPress 7.1) | **0 errors**, 828 deliberately classified warnings |
 | Credential patterns in the package | 0 matches across six patterns |
 | `.md` / `tests/` / `scripts/` / `sdk/php/` in the package | 0 |
 | MCP `tools/list` against the patched build | 42 tools |
@@ -132,7 +226,7 @@ Read from the running plugin on 2026-08-10, not recalled.
 
 | | |
 |---|---|
-| Plugin version | 1.0.0 |
+| Plugin version | 1.0.1 |
 | DB schema version | 2.6.0 |
 | REST namespace | `wp-command-center/v1` — **a public contract; do not rename** |
 | MCP tools exposed | **42** |
@@ -143,7 +237,7 @@ Read from the running plugin on 2026-08-10, not recalled.
 | Private stores | 6 |
 | AI providers in catalogue | 16 |
 | Custom tables | 15 installed by `Schema` + `wpcc_telemetry` created lazily |
-| Requires | WordPress 6.4+, PHP 8.0+ (tested to WP 7.0) |
+| Requires | WordPress 6.4+, PHP 8.0+ (tested to WP 7.1) |
 
 ### Protection modes
 
@@ -330,7 +424,7 @@ build/                       Build output — gitignored
 ## 7. How to build
 
 ```bash
-bash scripts/build-release.sh          # → build/ai-command-center-1.0.0.zip
+bash scripts/build-release.sh          # → build/ai-command-center-1.0.1.zip
 ```
 
 The script is an **allowlist**, not an exclude list: it copies `ai-command-center.php`,
@@ -611,18 +705,11 @@ Engineering cannot do these. Ordered by urgency.
    `git filter-repo` would invalidate `v1.0.0` and every branch SHA, and production deploys
    by `git reset --hard origin/main`, so it would need a forced re-pull.
    **Nothing in this list ships** — the package was re-scanned and is clean.
-2. **Decide the tag.** The security re-cut is committed on `release/v1-security-recut` and
-   is deliberately **not** tagged and **not** merged. Either move `v1.0.0` (defensible only
-   because it was never published — but it is what production runs, so the old code would
-   lose its only marker) or tag `v1.0.1`. **Recommended: `v1.0.1`.**
+2. **Submit the verified v1.0.1 ZIP to WordPress.org** only after explicit owner authorization.
 3. **Reply to the WordPress.org slug email immediately** when it arrives, requesting
    `ai-command-center` (§12.2). Permanent after approval.
-4. **Submit** `build/ai-command-center-1.0.0.zip` — the artifact in §2, not the tagged one.
-5. **Manual MCP certification** — the next phase, and the reason this handoff exists.
-   `docs/ASSISTANT-CERTIFICATION.md` holds the twelve-step checklist. The one thing no
-   local environment can prove is that a real MCP client accepts the configuration this
-   plugin generates and the relay connects.
-6. **Optional: reconcile the production plugin directory** (§10). Not required before
+4. **After approval, publish the verified tree to WordPress.org SVN trunk/tag/assets** under separate authorization.
+5. **Optional: reconcile the production plugin directory** (§10). Not required before
    submission; the safe sequence is in `docs/archive/RELEASE_HANDOFF-v1.0.0-evidence.md` §7.3.
 
 ---

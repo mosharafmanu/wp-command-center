@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP Command Center
  * Description:       Connect an AI assistant to your WordPress site. Changes that matter wait for your approval, everything is recorded, and supported changes can be undone.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Mosharaf Hossain
@@ -14,7 +14,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPCC_VERSION', '1.0.0' );
+define( 'WPCC_VERSION', '1.0.1' );
 define( 'WPCC_PLUGIN_FILE', __FILE__ );
 define( 'WPCC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPCC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

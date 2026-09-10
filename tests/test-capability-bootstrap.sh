@@ -117,7 +117,7 @@ read -r TOKEN_D ID_D <<< "$(create_token 'S-79 Read Only D' 'SCOPE_READ_ONLY')"
 assert_true "D: read-only token created" "$( [ -n "$TOKEN_D" ] && [ -n "$ID_D" ] && echo true || echo false )"
 
 CAPS_D=$(caps_for_token "$ID_D")
-assert_eq "D: read_only profile has exactly 3 capabilities" "3" "$(echo "$CAPS_D" | jq -r 'length')"
+assert_eq "D: read_only profile has exactly 4 read capabilities" "4" "$(echo "$CAPS_D" | jq -r 'length')"
 assert_true "D: read_only profile includes database.inspect" "$(echo "$CAPS_D" | jq -r 'index("database.inspect") != null')"
 assert_true "D: read_only profile includes search.manage" "$(echo "$CAPS_D" | jq -r 'index("search.manage") != null')"
 assert_true "D: read_only profile includes history.read (104.2)" "$(echo "$CAPS_D" | jq -r 'index("history.read") != null')"
@@ -125,7 +125,7 @@ assert_true "D: read_only profile includes history.read (104.2)" "$(echo "$CAPS_
 RESP=$(mcp "$TOKEN_D" '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"database_inspect","arguments":{"action":"db_table_list"}},"id":4}')
 assert_true "D: database_inspect succeeds for read-only token" "$(echo "$RESP" | jq -r 'if .result then "true" else "false" end')"
 
-RESP=$(mcp "$TOKEN_D" '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_list"}},"id":5}')
+RESP=$(mcp "$TOKEN_D" '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"plugin_manage","arguments":{"action":"plugin_activate"}},"id":5}')
 # STEP 89: denials are isError tool results with a structured code.
 assert_eq "D: plugin_manage blocked for read-only token (wpcc_token_read_only)" "wpcc_token_read_only" "$(echo "$RESP" | jq -r '.result.content[0].text | fromjson | .code // empty')"
 assert_true "D: denial message mentions read-only" "$(echo "$RESP" | jq -r '(.result.content[0].text | fromjson | .message // "") | test("read-only"; "i")')"

@@ -129,8 +129,8 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 				<label class="wpcc-tokdlg__choice">
 					<input type="radio" name="wpcc-new-scope" value="read_only" checked />
 					<span>
-						<strong><?php esc_html_e( 'Read-only — a few basics, no changes', 'ai-command-center' ); ?></strong>
-						<em><?php esc_html_e( 'Can read a small set of site details. It can never request a change of any kind. Most ordinary questions will be refused.', 'ai-command-center' ); ?></em>
+						<strong><?php esc_html_e( 'Read-only — inspect the site, no changes', 'ai-command-center' ); ?></strong>
+						<em><?php esc_html_e( 'Can read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'ai-command-center' ); ?></em>
 					</span>
 				</label>
 
@@ -176,7 +176,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 					echo esc_html(
 						sprintf(
 							/* translators: %s: the site's protection mode, e.g. "Standard protection". */
-							__( 'Full access lets this token ask to change anything on the site. This site is on %s, so nothing is actually changed until you approve it in Approvals.', 'ai-command-center' ),
+							__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'ai-command-center' ),
 							$wpcc_tok_mode
 						)
 					);
@@ -335,6 +335,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		adminNote:   <?php echo wp_json_encode( __( 'This token has system.admin (full access). It can run every operation regardless of individual capabilities.', 'ai-command-center' ) ); ?>,
 		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted (system.admin)', 'ai-command-center' ) ); ?>,
 		reasonAdmin: <?php echo wp_json_encode( __( 'system.admin', 'ai-command-center' ) ); ?>,
+		reasonRead: <?php echo wp_json_encode( __( 'supported read actions only', 'ai-command-center' ) ); ?>,
 		reasonScope: <?php echo wp_json_encode( __( 'blocked by read-only scope', 'ai-command-center' ) ); ?>,
 		reasonMiss:  <?php echo wp_json_encode( __( 'missing capability', 'ai-command-center' ) ); ?>,
 		reasonHas:   <?php echo wp_json_encode( __( 'capability assigned', 'ai-command-center' ) ); ?>,
@@ -418,6 +419,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 	}
 	function reasonText( reason ) {
 		if ( reason === 'system_admin' )        { return i18n.reasonAdmin; }
+		if ( reason === 'read_actions_only' )    { return i18n.reasonRead; }
 		if ( reason === 'scope_blocked' )        { return i18n.reasonScope; }
 		if ( reason === 'missing_capability' )   { return i18n.reasonMiss; }
 		if ( reason === 'capability_assigned' )  { return i18n.reasonHas; }

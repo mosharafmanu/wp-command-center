@@ -153,11 +153,13 @@ final class RestApi {
 	/**
 	 * Security posture for GET /agent/manifest "security".
 	 * `human_approval_required` reflects the active Security Mode (Step 80A).
-	 * True in Client and Enterprise modes; false in Developer mode (default).
+	 * True in Client and Enterprise modes; false in Developer mode.
 	 */
 	private static function get_agent_security(): array {
+		$policy = \WPCommandCenter\Operations\SecurityModeManager::approval_policy();
+
 		return [
-			'human_approval_required' => \WPCommandCenter\Operations\SecurityModeManager::requires_human_approver(),
+			'human_approval_required' => $policy['requires_human_approver'],
 			'patch_auto_apply'        => false,
 			'rollback_supported'      => true,
 			'secret_redaction'        => true,
@@ -860,13 +862,13 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/content_seed/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_content_seed' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/acf_seed/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_acf_seed' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/cf7_seed/run', [
@@ -878,56 +880,56 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/woo_product_seed/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_woo_product_seed' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/safe_search_replace/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_safe_search_replace' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/media_import/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_media_import' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/safe_updates/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_safe_updates' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/wp_cli_bridge/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_wp_cli_bridge' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/option_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_option_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/capability_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_capability_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/database_inspect/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_database_inspect' ],
-			'permission_callback' => [ $this, 'require_read' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		// STEP 98 — Reporting runtime (read-only).
 		register_rest_route( self::NAMESPACE, '/operations/report_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_report_manage' ],
-			'permission_callback' => [ $this, 'require_read' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		// STEP 100.3/100.4 read diagnostics + STEP 100.5 reversible regeneration.
@@ -936,7 +938,7 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/media_enhance/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_media_enhance' ],
-			'permission_callback' => [ $this, 'require_media_enhance' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		// STEP 100.5 — reverse a thumbnail regeneration (snapshot restore).
@@ -951,7 +953,7 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/change_history/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_change_history' ],
-			'permission_callback' => [ $this, 'require_change_history' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/changes', [
@@ -981,25 +983,25 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/content_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_content_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/snapshot_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_snapshot_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/theme_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_theme_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/plugin_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_plugin_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		// STEP 87 — File / Patch bridge: same shared services as MCP, via the
@@ -1008,39 +1010,39 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/file_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_file_manage' ],
-			'permission_callback' => [ $this, 'require_read' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/code_search/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_code_search' ],
-			'permission_callback' => [ $this, 'require_read' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/patch_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_patch_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/rollback_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_rollback_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		// STEP 91 — SEO runtime.
 		register_rest_route( self::NAMESPACE, '/operations/seo_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_seo_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		// STEP 95 — Site Builder runtime.
 		register_rest_route( self::NAMESPACE, '/operations/site_builder_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_site_builder_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/site_builder_manage/rollback', [
 			'methods'             => \WP_REST_Server::CREATABLE,
@@ -1052,7 +1054,7 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/elementor_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_elementor_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/elementor_manage/rollback', [
 			'methods'             => \WP_REST_Server::CREATABLE,
@@ -1063,7 +1065,7 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/user_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_user_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/user_manage/rollback', [
@@ -1075,7 +1077,7 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/media_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_media_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/media_manage/rollback', [
@@ -1086,7 +1088,7 @@ final class RestApi {
 		register_rest_route( self::NAMESPACE, '/operations/woocommerce_manage/run', [
 			'methods'             => \WP_REST_Server::CREATABLE,
 			'callback'            => [ $this, 'run_woocommerce_manage' ],
-			'permission_callback' => [ $this, 'require_write' ],
+			'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/woocommerce_manage/rollback', [
 			'methods'             => \WP_REST_Server::CREATABLE,
@@ -1094,62 +1096,68 @@ final class RestApi {
 			'permission_callback' => [ $this, 'require_write' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/acf_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_acf_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_acf_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/acf_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_acf_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
 		] );
+		register_rest_route( self::NAMESPACE, '/operations/term_manage/run', [
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_term_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
+		] );
+		register_rest_route( self::NAMESPACE, '/operations/cache_manage/run', [
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_cache_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
+		] );
 		register_rest_route( self::NAMESPACE, '/operations/forms_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_forms_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_forms_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/forms_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_forms_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/menu_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_menu_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_menu_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/menu_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_menu_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/settings_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_settings_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_settings_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/settings_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_settings_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/search_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_search_manage' ], 'permission_callback' => [ $this, 'require_read' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_search_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/bulk_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_bulk_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_bulk_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/bulk_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_bulk_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/workflow_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_workflow_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_workflow_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/comments_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_comments_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_comments_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/comments_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_comments_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/widgets_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_widgets_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_widgets_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/widgets_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_widgets_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
 		] );
 
 		register_rest_route( self::NAMESPACE, '/operations/cpt_manage/run', [
-			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_cpt_manage' ], 'permission_callback' => [ $this, 'require_write' ],
+			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_cpt_manage' ], 'permission_callback' => [ $this, 'require_operation_scope' ],
 		] );
 		register_rest_route( self::NAMESPACE, '/operations/cpt_manage/rollback', [
 			'methods' => \WP_REST_Server::CREATABLE, 'callback' => [ $this, 'run_cpt_rollback' ], 'permission_callback' => [ $this, 'require_write' ],
@@ -1320,6 +1328,16 @@ final class RestApi {
 		return $this->require_read( $request );
 	}
 
+	/** Shared fail-closed scope contract for operation POST routes. */
+	public function require_operation_scope( \WP_REST_Request $request ): bool|\WP_Error {
+		if ( ! preg_match( '#/operations/([a-z_]+)/run$#', $request->get_route(), $match ) ) {
+			return $this->require_write( $request );
+		}
+		$registry = new \WPCommandCenter\Operations\CapabilityRegistry();
+		return $registry->requires_full_scope( $match[1], $request->get_params() )
+			? $this->require_write( $request ) : $this->require_read( $request );
+	}
+
 	private function check_token( \WP_REST_Request $request, string $required_scope ): bool|\WP_Error {
 		// Resolve across servers that never expose Authorization to WordPress.
 		$raw = AuthTokens::bearer_from_request( $request );
@@ -1351,6 +1369,7 @@ final class RestApi {
 			);
 		}
 
+		( new \WPCommandCenter\Operations\CapabilityRegistry() )->ensure_token_capabilities( $record['id'], $record['scope'] );
 		return true;
 	}
 
@@ -4381,6 +4400,12 @@ final class RestApi {
 			return $this->with_status( new \WP_Error( $error['code'], $error['message'] ) );
 		}
 		return new \WP_REST_Response( $result['result'] );
+	}
+	public function run_term_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'term_manage', $request );
+	}
+	public function run_cache_manage( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
+		return $this->run_bridge_operation( 'cache_manage', $request );
 	}
 	public function run_woocommerce_rollback( \WP_REST_Request $request ): \WP_REST_Response|\WP_Error {
 		$params  = $request->get_params();

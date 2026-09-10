@@ -17,17 +17,18 @@ $wpcc_tokens      = new AuthTokens();
 $wpcc_all_tokens   = $wpcc_tokens->list();
 $wpcc_clients      = AIClientRegistry::get_clients();
 $wpcc_active_clients = AIClientRegistry::get_active_clients();
+$wpcc_client_groups = AIClientRegistry::get_client_groups();
 $wpcc_counts       = AIClientRegistry::get_counts();
 $wpcc_matrix       = AIClientRegistry::get_compatibility_matrix();
 $wpcc_ops          = ( new OperationRegistry() )->get_operations();
 $wpcc_tool_count   = count( $wpcc_ops );
 
 // Selected client for config tab
-$wpcc_selected_client = sanitize_key( (string) ( $_GET['client'] ?? 'claude' ) );
+$wpcc_selected_client = sanitize_key( (string) ( $_GET['client'] ?? 'chatgpt' ) );
 $wpcc_current_client  = AIClientRegistry::get_client( $wpcc_selected_client );
 if ( ! $wpcc_current_client || \WPCommandCenter\Integration\AIClientRegistry::CERT_PLANNED === ( $wpcc_current_client['certification_level'] ?? '' ) ) {
-	$wpcc_selected_client = 'claude';
-	$wpcc_current_client  = AIClientRegistry::get_client( 'claude' );
+	$wpcc_selected_client = 'chatgpt';
+	$wpcc_current_client  = AIClientRegistry::get_client( 'chatgpt' );
 }
 
 $wpcc_config      = AIClientRegistry::generate_config( $wpcc_selected_client );
@@ -42,6 +43,23 @@ $wpcc_config_json = $wpcc_config ? AIClientRegistry::render_config( $wpcc_config
  * describing one transport while testing the other.
  */
 $wpcc_sel_http = 'http' === AIClientRegistry::transport_for( $wpcc_selected_client );
+
+/*
+ * How this client takes its credential, and whether it can be set up with one command.
+ *
+ * Resolved once here for the same reason as the transport above: the setup steps, the
+ * warning text, the copy box and the "what do I paste?" label all depend on it, and a
+ * screen that answers that question in more than one place will eventually answer it two
+ * different ways.
+ *
+ * 'env_var' is the case this whole block exists for. Codex and ChatGPT Desktop take the
+ * NAME of an environment variable, not the token — a real token pasted into their
+ * "Bearer token env var" field produces a 401 from a perfectly healthy server, which is
+ * indistinguishable from a broken install. See BaseClientIntegration::credential_mode().
+ */
+$wpcc_sel_cred_mode = AIClientRegistry::credential_mode_for( $wpcc_selected_client );
+$wpcc_sel_env_var   = AIClientRegistry::credential_env_var_for( $wpcc_selected_client );
+$wpcc_sel_uses_env  = 'env_var' === $wpcc_sel_cred_mode;
 
 // All AI client activity from audit log
 $wpcc_audit         = new \WPCommandCenter\Security\AuditLog();
@@ -300,17 +318,46 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	 * this decides how loudly each one speaks, not what any of them say.
 	 * ──────────────────────────────────────────────────────────────────────── */
 
-	/* An even grid rather than flex-wrap. Flex sized each card to its own label, so
-	   eleven cards came out eleven different widths with a ragged right edge — the
-	   single strongest "unfinished" signal on the screen. Equal columns also mean the
-	   badge rows line up across cards, so the page can be scanned down a column. */
-	.wpcc-ai-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; margin-top: 4px; }
+	/* Families share the available row before their cards do. This keeps the small
+	   two-client families compact instead of making auto-fill reserve two empty card
+	   columns beside them. Container queries follow the actual wp-admin content width,
+	   including the admin menu, rather than assuming a particular browser width. */
+	.wpcc-ai-family-layout { container-type:inline-size; }
+	.wpcc-ai-family-grid { display:grid;grid-template-columns:minmax(0,1fr);gap:18px 20px;margin-top:16px; }
+	.wpcc-ai-family { min-width:0;margin:0; }
+	.wpcc-ai-family--compact { display:flex;flex-direction:column; }
+	.wpcc-ai-picks { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:11px;margin-top:5px; }
+	.wpcc-ai-family--compact .wpcc-ai-picks { flex:1; }
+	.wpcc-ai-family--wide,
+	.wpcc-ai-family--other { grid-column:1 / -1; }
+	.wpcc-ai-family--wide .wpcc-ai-picks { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+	.wpcc-ai-family__name { margin:0 0 9px;font-size:12px;line-height:1.3;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#646970; }
+	.wpcc-ai-family--other { border-top:1px solid #eef0f4;padding-top:14px; }
+	.wpcc-ai-family--other > summary { cursor:pointer;font-weight:600;color:#50575e; }
+	.wpcc-ai-family--other .wpcc-ai-picks { grid-template-columns:repeat(auto-fit,minmax(220px,280px)); }
+	@container (min-width: 760px) {
+		.wpcc-ai-family-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+		.wpcc-ai-family--compact-last { grid-column:1 / -1; }
+		.wpcc-ai-family--compact-last .wpcc-ai-picks { grid-template-columns:repeat(2,minmax(0,280px)); }
+	}
+	@container (min-width: 900px) {
+		.wpcc-ai-family-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+		.wpcc-ai-family--compact-last { grid-column:auto; }
+		.wpcc-ai-family--compact-last .wpcc-ai-picks { grid-template-columns:repeat(2,minmax(0,1fr)); }
+	}
+	@container (max-width: 559px) {
+		.wpcc-ai-picks,
+		.wpcc-ai-family--wide .wpcc-ai-picks,
+		.wpcc-ai-family--other .wpcc-ai-picks { grid-template-columns:minmax(0,1fr); }
+	}
 
-	.wpcc-ai-pick { position: relative; height: auto !important; display: flex !important; flex-direction: column;
-		align-items: flex-start !important; gap: 9px; padding: 13px 15px 14px !important; line-height: 1.45 !important;
+	.wpcc-ai-pick { position: relative; height: 100% !important; min-height:104px;display:flex !important;flex-direction:column;
+		align-items:flex-start !important;gap:8px;padding:14px 15px 15px !important;line-height:1.4 !important;
 		border: 1px solid #e3e5ec !important; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.03);
-		text-decoration: none; transition: border-color .13s ease, box-shadow .13s ease, transform .13s ease, background-color .13s ease; }
-	.wpcc-ai-pick__name { font-size: 13.5px; font-weight: 600; color: #1d2327; letter-spacing: -.01em; }
+		min-width:0;white-space:normal !important;overflow-wrap:anywhere;text-decoration:none;
+		transition: border-color .13s ease, box-shadow .13s ease, transform .13s ease, background-color .13s ease; }
+	.wpcc-ai-pick__name { max-width:100%;font-size:13.5px;line-height:1.3;font-weight:600;color:#1d2327;letter-spacing:-.01em; }
+	.wpcc-ai-pick__surface { max-width:100%;font-size:11.5px;line-height:1.35;color:#646970;margin-top:-4px; }
 
 	.wpcc-ai-pick:hover { border-color: #c8ccd4 !important; background: #fff; transform: translateY(-1px);
 		box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(16,24,40,.06); }
@@ -321,7 +368,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	   inset accent rule, a slightly stronger border and real elevation — the same way
 	   an enterprise settings list marks the active row. The old treatment flooded the
 	   card with #f0f6fc, which shouted louder than the assistant's own name. */
-	.wpcc-ai-pick.is-selected { border-color: #c4c9d2 !important; background: #fff; padding-left: 18px !important;
+	.wpcc-ai-pick.is-selected { border-color:#aeb4bd !important;background:#fff;padding-left:19px !important;
 		box-shadow: 0 0 0 1px #c4c9d2, 0 2px 4px rgba(16,24,40,.05), 0 10px 24px rgba(16,24,40,.08); }
 	/* One accent, and it is the only colour on the card. An earlier pass drew this rule
 	   in the same blue as the selected border, so a 3px sliver sat against a blue edge
@@ -363,6 +410,15 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		background: #c3c4c7; margin-right: 5px; flex: 0 0 auto; }
 
 	.wpcc-ai-pick .wpcc-ai-badges { pointer-events: none; }
+	.wpcc-ai-pick .wpcc-ai-badge { margin-top:auto;font-size:10px; }
+	.wpcc-selected-client-note { display:flex;align-items:flex-start;gap:7px;margin:12px 0 14px;padding:8px 11px;
+		border-left:3px solid #72aee6;border-radius:0 6px 6px 0;background:#f6f9fc;color:#50575e;font-size:12.5px;line-height:1.45; }
+	.wpcc-selected-client-note strong { flex:0 0 auto;color:#1d2327; }
+	.wpcc-create-access__lead { margin:0; }
+	#wpcc-create-access .wpcc-selected-client-note { margin:var(--wpcc-space-3,12px) 0 0; }
+	.wpcc-create-access__form { margin-top:var(--wpcc-space-4,16px); }
+	.wpcc-create-access__state { margin:var(--wpcc-space-3,12px) 0 0;color:#646970; }
+	#wpcc-create-access-title:focus { outline:2px solid #2271b1;outline-offset:3px;border-radius:3px; }
 
 	/* Transport legend under the picker — defines the two badges once, in place. */
 	.wpcc-ai-legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 12px 0 0; padding: 0; list-style: none; }
@@ -401,6 +457,51 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-ai-url { display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f6f7f9;border:1px solid #e3e5ec;border-radius:9px;padding:8px 10px 8px 14px; }
 	.wpcc-ai-url__text { flex:1;min-width:200px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;color:#1d2327;word-break:break-all;background:none; }
 	.wpcc-ai-setup__actions { display:flex;gap:10px;flex-wrap:wrap;margin-top:6px; }
+	.wpcc-connect-system__intro { display:flex;align-items:center;gap:8px;margin:0 0 var(--wpcc-space-5,20px);font-size:13px;color:#646970; }
+	.wpcc-connect-system__intro strong { display:inline-flex;padding:2px 9px;border:1px solid #cbdcef;border-radius:999px;background:#f6f9fc;color:#1d5b96;font-size:11px;font-weight:650; }
+	.wpcc-connect-credential { display:flex;align-items:flex-start;gap:10px;max-width:720px;margin:0 0 var(--wpcc-space-5,20px);padding:11px 13px;border:1px solid #dfe5ec;border-radius:8px;background:#f8fafc;color:#3c434a; }
+	.wpcc-connect-credential > .dashicons { flex:0 0 auto;width:18px;height:18px;font-size:18px;color:#2271b1; }
+	.wpcc-connect-credential__content { flex:1;min-width:0; }
+	.wpcc-connect-credential strong,.wpcc-connect-credential label { display:block;margin:0 0 3px;font-size:13px;font-weight:650;color:#1d2327; }
+	.wpcc-connect-credential p { margin:0;font-size:12px;line-height:1.5;color:#646970; }
+	.wpcc-connect-credential input { width:100%;max-width:520px;margin:3px 0 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+	.wpcc-connect-steps { max-width:820px; }
+	.wpcc-connect-step { position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:14px;padding:0 0 var(--wpcc-space-6,24px);margin:0; }
+	.wpcc-connect-step:last-child { padding-bottom:0; }
+	.wpcc-connect-step::after { content:"";position:absolute;left:16px;top:36px;bottom:4px;width:1px;background:#dfe3e8; }
+	.wpcc-connect-step:last-child::after { display:none; }
+	.wpcc-connect-step__number { position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid #b8d0e7;border-radius:50%;background:#eef5fb;color:#135e96;font-size:13px;font-weight:700; }
+	.wpcc-connect-step__body { min-width:0;padding-top:1px; }
+	.wpcc-connect-step__title { margin:0 0 4px;font-size:14px;line-height:1.4;font-weight:650;color:#1d2327; }
+	.wpcc-connect-step__description { margin:0 0 10px;max-width:76ch;font-size:13px;line-height:1.55;color:#50575e; }
+	.wpcc-connect-step__actions { display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 8px; }
+	.wpcc-connect-step__actions--os .button { min-width:150px; }
+	.wpcc-connect-note { max-width:72ch;margin:8px 0 10px;padding:8px 10px;border-left:3px solid #72aee6;border-radius:0 6px 6px 0;background:#f6f9fc;color:#50575e;font-size:12px;line-height:1.5; }
+	.wpcc-token-needed { margin:0 0 var(--wpcc-space-5,20px); }
+	.wpcc-setup-choice-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:760px; }
+	.wpcc-setup-choice { min-width:0;padding:12px 13px;border:1px solid #e3e5ec;border-radius:8px;background:#fbfcfd; }
+	.wpcc-setup-choice > strong { display:block;margin:0 0 4px;font-size:13px;color:#1d2327; }
+	.wpcc-setup-choice > p { margin:0 0 10px;font-size:12px;line-height:1.5;color:#50575e; }
+	.wpcc-setup-choice .wpcc-connect-step__actions { margin-bottom:0; }
+	[data-wpcc-requires-token-control][disabled] { cursor:not-allowed;opacity:.55; }
+	.wpcc-action-preview,.wpcc-connect-why,.wpcc-connect-help { max-width:760px;margin:8px 0 0;border:1px solid #e3e5ec;border-radius:8px;background:#fff; }
+	.wpcc-action-preview > summary,.wpcc-connect-why > summary,.wpcc-connect-help > summary { cursor:pointer;padding:9px 12px;color:#50575e;font-size:12px;font-weight:600; }
+	.wpcc-action-preview__body,.wpcc-connect-why > div,.wpcc-connect-help > div { padding:0 12px 12px; }
+	.wpcc-action-preview__body .wpcc-ai-config,.wpcc-connect-why .wpcc-ai-config { max-height:210px;margin:4px 0 10px;border-radius:7px;overflow:auto; }
+	.wpcc-action-preview__label { display:block;margin:8px 0 3px;font-size:11px;color:#646970; }
+	.wpcc-connect-why p,.wpcc-connect-help p { margin:5px 0;font-size:12px;line-height:1.55;color:#50575e; }
+	.wpcc-connect-help { margin:var(--wpcc-space-5,20px) 0 0; }
+	.wpcc-primary-config { max-height:230px;border-radius:9px;margin:9px 0; }
+	.wpcc-verify-system { max-width:820px; }
+	.wpcc-verify-system__lead { margin:0 0 12px;font-size:13px;line-height:1.55;color:#3c434a; }
+	.wpcc-verify-system__instruction { margin:0 0 7px;font-size:12px;font-weight:650;color:#50575e; }
+	.wpcc-verify-prompt { background:#f6f7f9;border:1px solid #e3e5ec;border-radius:9px;padding:12px 14px;margin:0;display:flex;gap:12px;align-items:center; }
+	.wpcc-verify-prompt code { flex:1;white-space:pre-wrap;color:#1d2327;background:transparent;line-height:1.55; }
+	.wpcc-verify-success { margin:14px 0 0;padding:11px 13px;border-left:3px solid #00a32a;border-radius:0 7px 7px 0;background:#f4f9f5;color:#3c434a; }
+	.wpcc-verify-success > strong { display:block;margin-bottom:5px;font-size:12px;color:#1d2327; }
+	.wpcc-verify-success ul { display:flex;flex-wrap:wrap;gap:5px 18px;margin:0;padding:0;list-style:none;font-size:12px; }
+	.wpcc-verify-success li::before { content:"\2713";margin-right:6px;color:#008a20;font-weight:700; }
+	.wpcc-inline-warning { padding:10px 12px;border-left:3px solid #dba617;background:#fcf9e8;color:#5f4b00;margin:10px 0;border-radius:0 6px 6px 0; }
 	.wpcc-ai-steps { margin:0;padding:0;list-style:none;counter-reset:wpcc-step; }
 	.wpcc-ai-steps li { counter-increment:wpcc-step;position:relative;padding:8px 0 8px 38px;font-size:14px;color:#3c434a;border-top:1px solid #f0f1f4; }
 	.wpcc-ai-steps li:first-child { border-top:none; }
@@ -416,6 +517,25 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-ai-advanced[open] > summary::after { transform:rotate(90deg); }
 	.wpcc-ai-advanced__body { padding:6px 20px 20px; }
 	.wpcc-ai-advanced__body .wpcc-ai-panel,.wpcc-ai-advanced__body .wpcc-ai-grid { margin-bottom:18px; }
+	.wpcc-token-list { margin-top:16px;border-top:1px solid #eef0f4;padding-top:12px; }
+	.wpcc-token-list > summary { cursor:pointer;font-weight:600;color:#50575e; }
+	/* WordPress keeps its admin sidebar until a wider breakpoint. Collapse the picker
+	   before the content column becomes narrower than two usable cards, not only at phone width. */
+	@media (max-width: 960px) {
+		.wpcc-ai-picks { grid-template-columns:1fr; }
+	}
+	@media (max-width: 600px) {
+		.wpcc-ai-pick { min-height:0; }
+		.wpcc-connect-step { grid-template-columns:30px minmax(0,1fr);column-gap:11px; }
+		.wpcc-connect-step__number { width:28px;height:28px; }
+		.wpcc-connect-step::after { left:14px;top:32px; }
+		.wpcc-connect-step__actions .button { width:100%;text-align:center; }
+		.wpcc-verify-prompt { align-items:flex-start;flex-direction:column; }
+		.wpcc-verify-prompt .button { width:100%;text-align:center; }
+		.wpcc-verify-success ul { display:block; }
+		.wpcc-verify-success li + li { margin-top:5px; }
+		.wpcc-setup-choice-grid { grid-template-columns:1fr; }
+	}
 
 	/* Configuration tab — safety note */
 	.wpcc-ai-safe-note { display:flex;gap:14px;align-items:flex-start;max-width:1020px;background:#f4f8f4;border:1px solid #cfe6d4;border-left:4px solid #00a32a;border-radius:12px;padding:16px 20px;margin:6px 0 20px; }
@@ -593,7 +713,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					echo esc_html(
 						sprintf(
 							/* translators: 1: token name chosen by the customer, 2: access level, e.g. "Full access". */
-							__( '“%1$s” is ready — %2$s', 'ai-command-center' ),
+							__( 'Token “%1$s” created — %2$s', 'ai-command-center' ),
 							(string) $wpcc_new_record['label'],
 							AuthTokens::scope_label( (string) $wpcc_new_record['scope'] )
 						)
@@ -619,8 +739,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<li class="is-now"><span class="n" aria-hidden="true">3</span><?php
 					echo '' !== $wpcc_reveal_client
 						/* translators: %s: the assistant being connected, e.g. "Claude Desktop". */
-						? esc_html( sprintf( __( 'Paste into %s', 'ai-command-center' ), $wpcc_reveal_client ) )
-						: esc_html__( 'Paste into your assistant', 'ai-command-center' );
+						? esc_html( sprintf( __( 'Set up %s', 'ai-command-center' ), $wpcc_reveal_client ) )
+						: esc_html__( 'Set up your assistant', 'ai-command-center' );
 				?></li>
 			</ol>
 			<div class="wpcc-ai-code wpcc-token-reveal__code">
@@ -628,7 +748,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<button type="button" class="button button-primary wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_new_token ); ?>"><?php esc_html_e( 'Copy', 'ai-command-center' ); ?></button>
 			</div>
 			<p class="wpcc-token-reveal__note">
-				<?php esc_html_e( 'This is the only time it will be shown, so save it somewhere safe. Your configuration is ready below with this token already in it.', 'ai-command-center' ); ?>
+				<?php esc_html_e( 'Copy and save this token now — it will not be shown again. Your setup steps below already use it where needed. Keep it out of screenshots and shared chats.', 'ai-command-center' ); ?>
 			</p>
 			<?php
 			/*
@@ -637,7 +757,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			 * Rendered only when the destination exists on this response — the
 			 * configuration section is gated on a usable token (it is, we just made
 			 * one) but a client with no generated config renders the manual panel
-			 * instead. Either way `#wpcc-config-panel` is the thing to scroll to, so
+			 * instead. The guided steps are the destination when available; otherwise use the config panel, so
 			 * the button is offered whenever the configuration tab is what rendered.
 			 * Without JS it is still a real in-page link to that section, so nothing
 			 * here depends on a script having loaded.
@@ -645,12 +765,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			?>
 			<?php if ( 'configuration' === $wpcc_tab ) : ?>
 				<p class="wpcc-token-reveal__next">
-					<a class="button button-primary" href="#wpcc-config-panel" id="wpcc-token-next">
+					<a class="button button-primary" href="#wpcc-guided-setup" id="wpcc-token-next">
 						<?php
 						echo '' !== $wpcc_reveal_client
 							/* translators: %s: the assistant being connected, e.g. "Claude Desktop". */
-							? esc_html( sprintf( __( 'Next: get your %s configuration', 'ai-command-center' ), $wpcc_reveal_client ) )
-							: esc_html__( 'Next: get your configuration', 'ai-command-center' );
+							? esc_html( sprintf( __( 'Next: set up %s', 'ai-command-center' ), $wpcc_reveal_client ) )
+							: esc_html__( 'Next: open setup', 'ai-command-center' );
 						?> &rarr;
 					</a>
 				</p>
@@ -689,53 +809,61 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<!-- ===== CONFIGURATION TAB ===== -->
 
 		<!-- Assistant selector -->
-		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Choose your assistant', 'ai-command-center' ); ?></div>
-			<div class="wpcc-ai-panel__body">
-				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'Pick the assistant you’re connecting — the configuration below updates to match.', 'ai-command-center' ); ?></p>
-				<div class="wpcc-ai-picks">
-					<?php foreach ( $wpcc_active_clients as $id => $client ) : ?>
-						<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id ], admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) ); ?>"
-						   class="button wpcc-ai-pick<?php echo $id === $wpcc_selected_client ? ' is-selected' : ''; ?>"
-					   <?php echo $id === $wpcc_selected_client ? 'aria-current="true"' : ''; ?>>
-							<span class="wpcc-ai-pick__name"><?php echo esc_html( $client['name'] ); ?></span>
-							<?php
-							/*
-							 * The picker used to show eleven identical-looking names, so a
-							 * customer could not tell a widely-used, config-confirmed client
-							 * from a niche unverified one, nor which choices need Node.js
-							 * installed. Both facts now travel with the name, ranked so the
-							 * recommendation leads and the repeated status recedes.
-							 */
-							$wpcc_pick_badges = AIClientRegistry::ui_badges( $id );
-							if ( $wpcc_pick_badges ) :
-								?>
-								<span class="wpcc-ai-badges">
-									<?php foreach ( $wpcc_pick_badges as $wpcc_b ) : ?>
-										<span class="wpcc-ai-badge wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['rank'] ); ?> wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['tone'] ); ?>" title="<?php echo esc_attr( $wpcc_b['title'] ); ?>"><?php echo esc_html( $wpcc_b['label'] ); ?></span>
-									<?php endforeach; ?>
-								</span>
-							<?php endif; ?>
-						</a>
+			<div class="wpcc-ai-panel" id="wpcc-choose-app">
+			<?php
+			/*
+			 * "Choose your AI client", not "Choose your assistant".
+			 *
+			 * The grid does not contain assistants; it contains the APPLICATIONS an
+			 * assistant runs in. "ChatGPT" is an assistant and it appears on this screen
+			 * twice — once as the desktop app and once as Codex CLI, which are two
+			 * programs sharing one configuration file. Someone who says "I use Codex"
+			 * may mean either, and asking them to pick an assistant gives them no way to
+			 * tell which card is theirs. Asking which app they are connecting does.
+			 */
+			?>
+				<div class="wpcc-ai-panel__header"><?php esc_html_e( '1. Choose your app', 'ai-command-center' ); ?></div>
+				<div class="wpcc-ai-panel__body">
+					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'Pick the app you already use. Desktop apps, terminal apps, and editor extensions have different setup steps.', 'ai-command-center' ); ?></p>
+					<?php
+					// Mark the final small family so a two-column layout has no empty grid cell.
+					$wpcc_last_compact_family = '';
+					foreach ( array_keys( $wpcc_client_groups ) as $wpcc_group_name ) {
+						if ( 'Editors & coding assistants' !== $wpcc_group_name && 'Other / Experimental' !== $wpcc_group_name ) {
+							$wpcc_last_compact_family = $wpcc_group_name;
+						}
+					}
+					?>
+					<div class="wpcc-ai-family-layout">
+					<div class="wpcc-ai-family-grid">
+					<?php foreach ( $wpcc_client_groups as $wpcc_family => $wpcc_family_clients ) : ?>
+						<?php $wpcc_is_other = 'Other / Experimental' === $wpcc_family; ?>
+						<?php $wpcc_is_wide = 'Editors & coding assistants' === $wpcc_family; ?>
+						<?php if ( $wpcc_is_other ) : ?>
+						<details class="wpcc-ai-family wpcc-ai-family--other"<?php echo isset( $wpcc_family_clients[ $wpcc_selected_client ] ) ? ' open' : ''; ?>>
+							<summary><?php esc_html_e( 'Other / Experimental', 'ai-command-center' ); ?></summary>
+						<?php else : ?>
+						<section class="wpcc-ai-family <?php echo $wpcc_is_wide ? 'wpcc-ai-family--wide' : 'wpcc-ai-family--compact'; ?><?php echo $wpcc_family === $wpcc_last_compact_family ? ' wpcc-ai-family--compact-last' : ''; ?>" aria-labelledby="wpcc-family-<?php echo esc_attr( sanitize_key( $wpcc_family ) ); ?>">
+							<h3 class="wpcc-ai-family__name" id="wpcc-family-<?php echo esc_attr( sanitize_key( $wpcc_family ) ); ?>"><?php echo esc_html( $wpcc_family ); ?></h3>
+						<?php endif; ?>
+						<div class="wpcc-ai-picks">
+						<?php foreach ( $wpcc_family_clients as $id => $client ) : ?>
+							<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id, 'wpcc_next' => 'access' ], admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) ); ?>"
+							   class="button wpcc-ai-pick<?php echo $id === $wpcc_selected_client ? ' is-selected' : ''; ?>"
+						   <?php echo $id === $wpcc_selected_client ? 'aria-current="page"' : ''; ?>>
+								<span class="wpcc-ai-pick__name"><?php echo esc_html( $client['name'] ); ?></span>
+								<span class="wpcc-ai-pick__surface"><?php echo esc_html( $client['surface'] ?? '' ); ?></span>
+								<?php $wpcc_pick_badge = AIClientRegistry::selector_badge_for( $id ); ?>
+								<?php if ( $wpcc_pick_badge ) : ?>
+									<span class="wpcc-ai-badge wpcc-ai-badge--secondary wpcc-ai-badge--<?php echo esc_attr( $wpcc_pick_badge['tone'] ); ?>"><?php echo esc_html( $wpcc_pick_badge['label'] ); ?></span>
+								<?php endif; ?>
+							</a>
+						<?php endforeach; ?>
+						</div>
+						<?php echo $wpcc_is_other ? '</details>' : '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed local tags. ?>
 					<?php endforeach; ?>
-				</div>
-				<?php
-				/*
-				 * Transport legend.
-				 *
-				 * The badges answer "how does this one connect?" — but only for someone who
-				 * already knows what the two words mean. On a fresh install the panel that
-				 * explains them does not exist yet: it renders only once a token has been
-				 * created, so the first-time reader meets "Direct HTTP" and "Relay" with no
-				 * definition anywhere on the screen, and the practical question behind them
-				 * (do I have to install Node.js?) goes unanswered at the exact moment they
-				 * are choosing. Two lines, stated once, below the grid.
-				 */
-				?>
-				<ul class="wpcc-ai-legend">
-					<li><span class="wpcc-ai-badge wpcc-ai-badge--secondary wpcc-ai-badge--info"><?php esc_html_e( 'Direct HTTP', 'ai-command-center' ); ?></span> <?php esc_html_e( 'Connects straight to this site. Nothing to install.', 'ai-command-center' ); ?></li>
-					<li><span class="wpcc-ai-badge wpcc-ai-badge--secondary"><?php esc_html_e( 'Relay', 'ai-command-center' ); ?></span> <?php esc_html_e( 'Runs a small connector on your computer. Needs Node.js.', 'ai-command-center' ); ?></li>
-				</ul>
+					</div>
+					</div>
 			</div>
 		</div>
 
@@ -767,30 +895,27 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		// the config, test it.
 		?>
 		<!-- Access tokens -->
-		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Access tokens', 'ai-command-center' ); ?></div>
-			<div class="wpcc-ai-panel__body">
-				<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php
-					echo esc_html(
-						SecurityModeManager::is_protected()
-							? __( 'A token is your assistant’s key to this site. A standard token lets your assistant answer questions about the site and propose changes — it can never change anything on its own, because every change waits for your approval first.', 'ai-command-center' )
-							: __( 'A token is your assistant’s key to this site. A standard token lets your assistant answer questions about the site and change it. This site is in Development mode, so those changes apply immediately without asking you.', 'ai-command-center' )
-					);
-				?></p>
+		<div class="wpcc-ai-panel" id="wpcc-create-access">
+			<div class="wpcc-ai-panel__header" id="wpcc-create-access-title" tabindex="-1">
 				<?php
-				// Read-only is NOT the recommended starting point here, and that is a
-				// deliberate, unchanged decision: the read-only SCOPE allowlist
-				// (CapabilityRegistry::READ_ONLY_SCOPE_OPERATIONS) covers six
-				// operations, so the ordinary first question — "what plugins are
-				// installed?", "what pages do I have?" — is refused. A customer who
-				// follows that advice connects successfully and then cannot do
-				// anything, which reads as a broken product rather than as a safety
-				// boundary.
-				//
-				// The allowlist is fail-closed and is NOT changed here. What changed
-				// is that the choice is now a CHOICE: both levels are shown, each says
-				// what it means, Standard is pre-selected as the recommendation, and
-				// nothing is created until the customer submits the dialog.
+				printf(
+					/* translators: %s: selected assistant application name. */
+					esc_html__( '2. Create access for %s', 'ai-command-center' ),
+					esc_html( $wpcc_current_client['name'] )
+				);
+				?>
+			</div>
+			<div class="wpcc-ai-panel__body">
+				<p class="wpcc-ai-field__hint wpcc-create-access__lead"><?php esc_html_e( 'This token lets this app talk to this WordPress site. Read-only can inspect the site; Full access can also request or make changes under your protection settings.', 'ai-command-center' ); ?></p>
+				<?php if ( in_array( $wpcc_selected_client, [ 'chatgpt', 'codex' ], true ) && ! empty( $wpcc_current_client['surface_note'] ) ) : ?>
+					<p class="wpcc-selected-client-note">
+						<strong><?php esc_html_e( 'Important', 'ai-command-center' ); ?></strong>
+						<span><?php echo esc_html( $wpcc_current_client['surface_note'] ); ?></span>
+					</p>
+				<?php endif; ?>
+				<?php
+				// Read-only is the safe default. The shared action policy admits site
+				// inspection while refusing mutations and approval submissions.
 				$wpcc_protected  = SecurityModeManager::is_protected();
 				$wpcc_mode_label = SecurityModeManager::label();
 				// Suggest the assistant being connected as the name — the thing the
@@ -798,7 +923,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				// required, still editable: a suggestion, not an auto-generated label.
 				$wpcc_label_hint = (string) ( $wpcc_current_client['name'] ?? '' );
 				?>
-				<form method="post" class="wpcc-tokenmake" id="wpcc-tokenmake">
+				<form method="post" class="wpcc-tokenmake wpcc-create-access__form" id="wpcc-tokenmake">
 					<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
 
 					<?php // Shown only once JS has turned the panel below into a dialog. ?>
@@ -835,16 +960,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							 * never preselected anywhere in the product, and is reached only
 							 * by the customer choosing it.
 							 *
-							 * This screen previously defaulted to full access, on the
-							 * argument that a restricted token refuses most ordinary
-							 * questions and so reads as a broken product. That trade-off is
-							 * the owner's to make, and it has been made the other way: the
-							 * safe default wins, and the narrowness of read-only is stated
-							 * plainly in the option itself rather than discovered later.
-							 *
-							 * The read-only allowlist (CapabilityRegistry::
-							 * READ_ONLY_SCOPE_OPERATIONS) is deliberately NOT widened here —
-							 * see the note recorded for owner review.
+							 * The owner-selected Read-only default now supports ordinary site
+							 * questions through the audited action-level scope contract.
 							 */
 							?>
 							<fieldset class="wpcc-tokenmake__field wpcc-tokenmake__scopes">
@@ -854,7 +971,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 									<input type="radio" name="wpcc_token_scope" value="read_only" checked />
 									<span>
 										<strong><?php esc_html_e( 'Read-only', 'ai-command-center' ); ?></strong>
-										<em><?php esc_html_e( 'Inspect the site without requesting changes. This covers a small set of site details, so many ordinary questions will be refused.', 'ai-command-center' ); ?></em>
+										<em><?php esc_html_e( 'Read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'ai-command-center' ); ?></em>
 									</span>
 								</label>
 
@@ -899,8 +1016,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							 *    notice that is always on screen is wallpaper by the second
 							 *    time it is seen.
 							 *  - It has to be TRUE rather than reassuring. On Standard and
-							 *    Strict protection a full-access token genuinely cannot
-							 *    alter the site without a human approval. In Developer mode
+							 *    Strict protection a full-access token cannot bypass
+							 *    required human approval; Standard still allows low-risk work. In Developer mode
 							 *    it can, immediately — so that is the one case that gets a
 							 *    warning instead of comfort.
 							 */
@@ -924,7 +1041,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 									echo esc_html(
 										sprintf(
 											/* translators: %s: the site's protection mode, e.g. "Standard protection". */
-											__( 'Full access lets this token ask to change anything on the site. This site is on %s, so nothing is actually changed until you approve it in Approvals.', 'ai-command-center' ),
+											__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'ai-command-center' ),
 											$wpcc_mode_label
 										)
 									);
@@ -970,7 +1087,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				// count must never be able to disagree about what a usable token is.
 				?>
 				<?php if ( ! empty( $wpcc_usable_tokens ) ) : ?>
-					<h2 style="margin: 18px 0 10px; font-size: 13px; font-weight: 600;"><?php esc_html_e( 'Your tokens', 'ai-command-center' ); ?></h2>
+					<details class="wpcc-token-list">
+						<summary>
+							<?php
+							/* translators: %d: number of usable access tokens. */
+							printf( esc_html( _n( 'Use or manage %d existing token', 'Use or manage %d existing tokens', count( $wpcc_usable_tokens ), 'ai-command-center' ) ), count( $wpcc_usable_tokens ) );
+							?>
+						</summary>
 					<table class="wpcc-ai-token-table">
 						<thead><tr><th><?php esc_html_e( 'Label', 'ai-command-center' ); ?></th><th><?php esc_html_e( 'Scope', 'ai-command-center' ); ?></th><th><?php esc_html_e( 'Status', 'ai-command-center' ); ?></th><th></th></tr></thead>
 						<tbody>
@@ -994,8 +1117,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						</tbody>
 					</table>
 					<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'A token is shown in full only once, when you create it. Manage or revoke tokens anytime in Settings → Connections.', 'ai-command-center' ); ?></p>
+					</details>
 				<?php else : ?>
-					<p style="color:#646970;margin-top:12px;"><?php esc_html_e( 'No active tokens yet. Create one above to finish your configuration.', 'ai-command-center' ); ?></p>
+					<p class="wpcc-create-access__state"><?php esc_html_e( 'No active tokens yet.', 'ai-command-center' ); ?></p>
 				<?php endif; ?>
 			</div>
 		</div>
@@ -1016,15 +1140,124 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		 * two things: choose your assistant, create a token.
 		 */
 		?>
+		<?php
+		/*
+		 * ── Guided setup, for clients that offer something better than a text file ──
+		 *
+		 * This panel exists because of a real failure. WPCC generated a valid-looking
+		 * Codex/ChatGPT configuration, the user followed it exactly, and the connection
+		 * returned 401 from a server that was in perfect health — 42 tools, valid token,
+		 * everything. Two separate causes, both invisible from the screen:
+		 *
+		 *   1. The generated TOML said `bearer_token = "${WPCC_TOKEN}"`. TOML has no
+		 *      string interpolation and Codex performs none, so the literal characters
+		 *      `${WPCC_TOKEN}` were sent as the bearer token. (Fixed in
+		 *      CodexIntegration; the config now names an environment variable.)
+		 *
+		 *   2. The client's own field is labelled "Bearer token env var" and wants the
+		 *      NAME of an environment variable. Pasting the token there — the obvious
+		 *      reading — makes the client look up a variable named `wpcc_jkSf...`, find
+		 *      nothing, and send no credential at all.
+		 *
+		 * Neither is discoverable by staring at a config blob, so for these clients the
+		 * blob is no longer the primary instruction. The steps are, in the order they
+		 * have to happen, with the native one-command registration first because it
+		 * cannot be pasted into the wrong file and cannot be malformed.
+		 */
+		$wpcc_setup_template = AIClientRegistry::setup_command_for( $wpcc_selected_client );
+		// Command Code's inline credential is rendered server-side only on the creation
+		// response that owns the raw token. On reload the executable command stays hidden
+		// until the customer supplies a saved token in the browser-only field.
+		$wpcc_setup_cmd = 'command_code' === $wpcc_selected_client && $wpcc_new_token
+			? AIClientRegistry::setup_command_for( $wpcc_selected_client, $wpcc_new_token )
+			: $wpcc_setup_template;
+		// Only this creation response owns the raw token. Generate escaped commands
+		// here; never rely on browser placeholder replacement for credentials.
+		$wpcc_cred_cmds   = $wpcc_new_token
+			? AIClientRegistry::credential_commands_for( $wpcc_selected_client, $wpcc_new_token )
+			: [];
+		$wpcc_setup_kind  = (string) ( $wpcc_current_client['setup_kind'] ?? 'file' );
+		$wpcc_setup_credential_class = AIClientRegistry::setup_credential_class_for( $wpcc_selected_client );
+		$wpcc_setup_requires_token   = 'raw_token' === $wpcc_setup_credential_class;
+		$wpcc_token_ready            = is_string( $wpcc_new_token ) && '' !== $wpcc_new_token;
+		$wpcc_prepare_config_cmd      = AIClientRegistry::prepare_config_command_for( $wpcc_selected_client );
+		// Prompt-based clients cache secrets by input id. Tie that id to the selected
+		// token record so replacing/revoking a token cannot silently reuse an old value.
+		$wpcc_credential_id = is_array( $wpcc_new_record )
+			? (string) ( $wpcc_new_record['id'] ?? '' )
+			: (string) ( $wpcc_selected_token['id'] ?? '' );
+		$wpcc_primary_config = AIClientRegistry::primary_config_for( $wpcc_selected_client, (string) $wpcc_new_token, $wpcc_credential_id );
+		if ( '' === $wpcc_primary_config && in_array( $wpcc_setup_kind, [ 'file', 'vscode_config' ], true ) ) {
+			$wpcc_primary_config = AIClientRegistry::render_config( $wpcc_config, (string) $wpcc_new_token );
+		}
+		if ( 'vscode' === $wpcc_selected_client && '' !== $wpcc_primary_config ) {
+			// Keep Recommended and Advanced on the same token-scoped input id.
+			$wpcc_config_json = $wpcc_primary_config;
+		}
+		// Every supported client now has one recommended path; raw/manual alternatives
+		// are presented separately under Advanced.
+		$wpcc_has_guided  = true;
+		$wpcc_command_code_manual = 'command_code' === $wpcc_selected_client;
+		$wpcc_os_labels   = [
+			'macos'   => __( 'macOS', 'ai-command-center' ),
+			'windows' => __( 'Windows', 'ai-command-center' ),
+			'linux'   => __( 'Linux', 'ai-command-center' ),
+		];
+		?>
+		<?php if ( $wpcc_cfg_tok_count > 0 && $wpcc_has_guided ) : ?>
+			<div class="wpcc-ai-panel" id="wpcc-guided-setup">
+				<div class="wpcc-ai-panel__header">
+					<?php printf( /* translators: %s: client name */ esc_html__( '3. Connect %s', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?>
+				</div>
+				<div class="wpcc-ai-panel__body">
+					<?php require __DIR__ . '/partials/assistant-connect.php'; ?>
+				</div>
+			</div>
+
+			<div class="wpcc-ai-panel" id="wpcc-verify-client">
+				<div class="wpcc-ai-panel__header"><?php esc_html_e( '4. Test your connection', 'ai-command-center' ); ?></div>
+				<div class="wpcc-ai-panel__body">
+					<?php require __DIR__ . '/partials/assistant-verify.php'; ?>
+				</div>
+			</div>
+		<?php endif; ?>
+
 		<!-- Setup card: your configuration. Whole section waits for a token. -->
 		<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 		<?php if ( $wpcc_config ) : ?>
 			<?php // Named target for the reveal card's "Next" control, and for #wpcc-config-panel deep links. ?>
-			<div class="wpcc-ai-panel" id="wpcc-config-panel">
+			<details class="wpcc-ai-advanced" id="wpcc-config-panel">
+				<summary>
+					<?php
+					/* translators: %s: selected assistant or coding client name. */
+					printf( esc_html__( 'Advanced: manual configuration for %s', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) );
+					?>
+				</summary>
+				<div class="wpcc-ai-panel" style="margin:0;border:0;border-top:1px solid #eef0f4;border-radius:0;box-shadow:none;">
 				<div class="wpcc-ai-panel__header">
-					<?php printf( /* translators: %s: value */ esc_html__( 'Your %s configuration', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) ); ?>
-					<button type="button" class="button wpcc-copy-btn" id="wpcc-copy-config" data-copy-target="wpcc-config-block">
-						<?php esc_html_e( 'Copy configuration', 'ai-command-center' ); ?>
+					<?php
+					/*
+					 * Demoted, not hidden, when a native command exists.
+					 *
+					 * A hand-edited file is the slowest and most error-prone way to
+					 * configure any client that will register itself in one command, and
+					 * leading with it is what sent people to the wrong field in the first
+					 * place. It stays available — some people would rather see the file,
+					 * and some environments make running a command awkward — but it no
+					 * longer presents itself as the way to do this.
+					 */
+					if ( $wpcc_has_guided ) {
+						printf( /* translators: %s: client name */ esc_html__( 'Manual setup for %s (advanced)', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) );
+					} else {
+						printf( /* translators: %s: value */ esc_html__( 'Your %s configuration', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) );
+					}
+					?>
+					<button type="button" class="button wpcc-copy-btn" id="wpcc-copy-config" data-copy-target="wpcc-config-block"<?php $wpcc_token_gate_control( $wpcc_setup_requires_token, $wpcc_token_ready ); ?>>
+						<?php
+						echo 'gemini' === $wpcc_selected_client || $wpcc_command_code_manual
+							? esc_html__( 'Copy empty-file example', 'ai-command-center' )
+							: esc_html__( 'Copy configuration', 'ai-command-center' );
+						?>
 					</button>
 					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'ai-command-center' ); ?></span>
 				</div>
@@ -1067,11 +1300,35 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						 * wpcc_YOUR_TOKEN_HERE" while the line below it said the token
 						 * was already filled in. Right after creating a token the second
 						 * one is true. Say whichever is actually the case.
+						 *
+						 * Third case, and the one that was actively wrong: an env_var
+						 * client's configuration contains NO token and must not. Telling
+						 * that user to "put your access token in place of ${WPCC_TOKEN}"
+						 * describes the exact edit that produces a 401 — the client would
+						 * then treat the token as the name of an environment variable.
 						 */
-						echo $wpcc_new_token
-							? sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s. It is complete — your connection address and your access token are both in it.', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) )
-							/* translators: 1: assistant name, 2: the literal token placeholder shown in the configuration */
-							: sprintf( esc_html__( 'Copy this and paste it into %1$s to connect it to this site. It includes your connection address — put your access token in place of %2$s, or paste it in the field below and it will be filled in for you.', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ), esc_html( AIClientRegistry::TOKEN_PLACEHOLDER ) );
+						if ( $wpcc_sel_uses_env ) {
+							printf(
+								/* translators: 1: client name, 2: environment variable name */
+								esc_html__( 'This is the file %1$s reads. There is deliberately no token in it — it names the %2$s environment variable instead, and the token goes there. Setting it up with the command above does all of this for you.', 'ai-command-center' ),
+								esc_html( $wpcc_current_client['name'] ),
+								esc_html( $wpcc_sel_env_var )
+							);
+						} elseif ( 'prompt' === $wpcc_sel_cred_mode ) {
+							printf(
+								/* translators: %s: client name */
+								esc_html__( 'Copy this into %s. It is complete as it stands — there is no token in it, and none needs to be added: it asks for your token the first time it connects and keeps it in its own secure storage. That also makes this file safe to commit to a repository.', 'ai-command-center' ),
+								esc_html( $wpcc_current_client['name'] )
+							);
+						} elseif ( 'gemini' === $wpcc_selected_client ) {
+							esc_html_e( 'This is the advanced fallback. The native gemini mcp add command above is recommended because it preserves your existing Gemini settings. If you continue manually, fill in the token and follow the merge instructions below — do not replace settings.json.', 'ai-command-center' );
+						} elseif ( $wpcc_command_code_manual ) {
+							esc_html_e( 'This is the advanced fallback. The native cmd mcp add command above is recommended. If you deliberately edit ~/.commandcode/mcp.json instead, fill in the token and merge only the WPCC server entry without replacing the file or its existing servers.', 'ai-command-center' );
+						} else {
+							echo $wpcc_new_token
+								? sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s. It is complete — your connection address and your access token are both in it.', 'ai-command-center' ), esc_html( $wpcc_current_client['name'] ) )
+								: esc_html__( 'Paste your saved token in the browser-only field below to unlock a complete configuration. If you did not save it, create a new access token. WPCC never reconstructs a stored token.', 'ai-command-center' );
+						}
 					?></p>
 					<?php if ( ! empty( $wpcc_selected_token ) ) : ?>
 						<div class="notice inline notice-info" style="margin:0 0 12px;padding:10px 12px;">
@@ -1097,11 +1354,34 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<?php endif; ?>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding:0;">
+					<?php
+					/*
+					 * Only one #wpcc-token-fill may exist. When the guided panel above is
+					 * showing, it owns the field; duplicating the id here would leave the
+					 * fill script bound to whichever the DOM happened to return first.
+					 *
+						 * 'prompt' clients get no field at all. VS Code's configuration
+						 * references a token-scoped `${input:...}` value and VS Code asks
+					 * itself, so there is no placeholder to substitute — offering a box
+					 * labelled "paste your token to complete the configuration" would be
+					 * asking for something the configuration does not want and cannot use.
+					 */
+					if ( ! $wpcc_has_guided && 'prompt' !== $wpcc_sel_cred_mode ) :
+						?>
 					<div class="wpcc-ai-field" style="padding:14px 22px 0;margin:0;">
 							<label class="wpcc-ai-field__label" for="wpcc-token-fill"><?php
-								echo $wpcc_new_token
-									? esc_html__( 'Access token (already filled in below)', 'ai-command-center' )
-									: esc_html__( 'Paste your access token to complete the configuration', 'ai-command-center' );
+								if ( $wpcc_sel_uses_env ) {
+									// For an env_var client this field completes the setup
+									// COMMANDS above, not the configuration below — the
+									// configuration has no token slot to complete.
+									echo $wpcc_new_token
+										? esc_html__( 'Access token (already filled into the setup steps above)', 'ai-command-center' )
+										: esc_html__( 'Paste your access token to complete the setup steps above', 'ai-command-center' );
+								} else {
+									echo $wpcc_new_token
+										? esc_html__( 'Access token (already filled in below)', 'ai-command-center' )
+										: esc_html__( 'Paste your access token to complete the configuration', 'ai-command-center' );
+								}
 							?></label>
 							<input type="text" id="wpcc-token-fill" class="regular-text" placeholder="wpcc_..." autocomplete="off" spellcheck="false" style="width:100%;max-width:520px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;" value="<?php echo esc_attr( $wpcc_new_token ); ?>">
 							<p class="wpcc-ai-field__hint" style="margin:6px 0 0;"><?php
@@ -1110,7 +1390,40 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 									: esc_html__( 'Your token is inserted into the configuration below right here in your browser — it is never sent back to the server or stored. Then click “Copy configuration” to copy the complete, ready-to-use config.', 'ai-command-center' );
 							?></p>
 						</div>
-						<pre class="wpcc-ai-config" id="wpcc-config-block"><?php echo esc_html( $wpcc_config_json ); ?></pre>
+						<?php endif; // guided panel owns the token field ?>
+						<?php if ( $wpcc_sel_uses_env ) : ?>
+							<p class="wpcc-ai-field__hint"><?php esc_html_e( 'Manual setup replaces only Step 2. Complete Step 1 above, add this block to ~/.codex/config.toml without replacing existing settings, then follow Step 3 for your selected client. Keep bearer_token_env_var = "WPCC_TOKEN": WPCC_TOKEN is the variable name, never replace it with your token.', 'ai-command-center' ); ?></p>
+						<?php endif; ?>
+						<?php
+						$wpcc_vscode_input_snippet = '';
+						if ( 'vscode' === $wpcc_selected_client ) {
+							$wpcc_vscode_config = json_decode( $wpcc_primary_config, true );
+							$wpcc_vscode_server = is_array( $wpcc_vscode_config ) ? ( $wpcc_vscode_config['servers']['wp-command-center'] ?? null ) : null;
+							$wpcc_vscode_input  = is_array( $wpcc_vscode_config ) ? ( $wpcc_vscode_config['inputs'][0] ?? null ) : null;
+							$wpcc_entry_snippet = is_array( $wpcc_vscode_server )
+								? '"wp-command-center": ' . (string) wp_json_encode( $wpcc_vscode_server, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+								: '';
+							$wpcc_vscode_input_snippet = is_array( $wpcc_vscode_input )
+								? (string) wp_json_encode( $wpcc_vscode_input, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+								: '';
+						} else {
+							$wpcc_entry_snippet = AIClientRegistry::config_file_is_shared( $wpcc_selected_client )
+								? AIClientRegistry::render_entry_config( $wpcc_selected_client )
+								: '';
+						}
+						$wpcc_gemini_manual = 'gemini' === $wpcc_selected_client && '' !== $wpcc_entry_snippet;
+						?>
+						<?php if ( $wpcc_gemini_manual ) : ?>
+							<div class="notice inline notice-warning" style="margin:0 22px 14px;padding:10px 12px;">
+								<p style="margin:0 0 6px;"><strong><?php esc_html_e( 'Merge this server into your existing Gemini settings. Do not replace the whole settings.json file.', 'ai-command-center' ); ?></strong></p>
+								<p style="margin:0;"><?php esc_html_e( 'Add only the “wp-command-center” entry inside the existing “mcpServers” object. Keep every other server and every unrelated top-level setting, including any IDE, security, UI or account settings. If “mcpServers” does not exist, add that object without removing the other settings.', 'ai-command-center' ); ?></p>
+							</div>
+							<span class="wpcc-ai-field__label" style="display:block;padding:0 22px;"><?php esc_html_e( 'Empty-file example', 'ai-command-center' ); ?></span>
+						<?php elseif ( $wpcc_command_code_manual ) : ?>
+							<span class="wpcc-ai-field__label" style="display:block;padding:0 22px;"><?php esc_html_e( 'Empty-file example for ~/.commandcode/mcp.json', 'ai-command-center' ); ?></span>
+						<?php endif; ?>
+						<p class="wpcc-ai-field__hint" data-wpcc-token-needed<?php echo $wpcc_token_ready || ! $wpcc_setup_requires_token ? ' hidden' : ''; ?>><?php esc_html_e( 'Create an access token first, or paste a saved token above, before copying this setup.', 'ai-command-center' ); ?></p>
+						<pre class="wpcc-ai-config" id="wpcc-config-block"<?php echo $wpcc_setup_requires_token ? ' data-wpcc-token-slot data-wpcc-requires-token-payload' : ''; ?><?php echo $wpcc_setup_requires_token && ! $wpcc_token_ready ? ' hidden' : ''; ?>><?php echo esc_html( $wpcc_config_json ); ?></pre>
 						<?php
 						// This config asks the user's machine to fetch a small relay
 						// script from THIS site and run it under Node. That is a
@@ -1130,13 +1443,86 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						?>
 						<p class="wpcc-ai-field__hint" style="padding:0 22px 14px;margin:8px 0 0;">
 							<?php
-							if ( $wpcc_sel_http ) {
+							if ( 'gemini' === $wpcc_selected_client ) {
+								esc_html_e( 'What this does: Gemini CLI connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Gemini setting.', 'ai-command-center' );
+							} elseif ( $wpcc_command_code_manual ) {
+								esc_html_e( 'What this does: Command Code connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Command Code MCP server.', 'ai-command-center' );
+							} elseif ( $wpcc_sel_http ) {
 								esc_html_e( 'What this does: your assistant connects straight to this site over the web using the address and token above. Nothing is installed or run on your computer, and no other service is involved. Remove the configuration and the connection is gone.', 'ai-command-center' );
 							} else {
 								esc_html_e( 'What this does: your assistant runs a small connector script on your computer, downloaded from this site, which passes requests to WordPress. It runs locally under your own account, sends nothing anywhere except to this site, and can be removed by deleting the configuration. The connector is part of this plugin and is served from your own domain.', 'ai-command-center' );
 							}
 							?>
 						</p>
+						<?php
+						/*
+						 * MERGE, do not replace — stated as two concrete cases.
+						 *
+						 * These configuration files are not WPCC's to own. A Gemini CLI
+						 * settings.json holds authentication, IDE and UI preferences; a
+						 * Cursor mcp.json holds every other MCP server the developer uses.
+						 * "Paste this into <file>" is ambiguous between adding to it and
+						 * replacing it, and one of those readings silently destroys the
+						 * user's existing setup. In real testing (REAL_TEST_FINDINGS.md
+						 * #4) a tester's ~/.cursor/mcp.json already contained another
+						 * server, and hand-merging this block produced a JSON syntax error
+						 * before it produced a working file.
+						 *
+						 * So the ambiguity is removed rather than warned about: the block
+						 * above is for an empty file, and the fragment below is for a file
+						 * that already has servers in it. The second one needs no merging
+						 * reasoning at all — it IS the thing that goes inside mcpServers.
+						 *
+						 * Shown for hand-configured clients and for any advanced fallback that
+						 * still edits a shared file despite having a safer native command.
+						 */
+						?>
+						<?php if ( '' !== $wpcc_entry_snippet && ! $wpcc_gemini_manual ) : ?>
+							<div class="notice inline notice-warning" style="margin:0 22px 14px;padding:10px 12px;">
+								<p style="margin:0 0 6px;">
+									<strong><?php esc_html_e( 'If this file already exists, do not replace it.', 'ai-command-center' ); ?></strong>
+								</p>
+								<p style="margin:0;">
+									<?php echo 'vscode' === $wpcc_selected_client
+										? esc_html__( 'The block above is only for an empty file. In an existing VS Code user mcp.json, add the server entry inside “servers” and add the token-input item inside “inputs”. Keep every other server and input.', 'ai-command-center' )
+										: esc_html__( 'The block above is the whole file, and is only right when you are creating it for the first time. If you already have this file — for example because you use other MCP servers — it will contain settings that replacing it would delete. Add just this entry inside the “mcpServers” braces you already have, alongside anything else in there:', 'ai-command-center' ); ?>
+								</p>
+							</div>
+						<?php endif; ?>
+						<?php if ( '' !== $wpcc_entry_snippet ) : ?>
+							<div class="wpcc-ai-field" style="padding:0 22px 14px;margin:0;">
+								<span class="wpcc-ai-field__label"><?php
+									echo 'vscode' === $wpcc_selected_client
+										? esc_html__( 'Add inside servers', 'ai-command-center' )
+										: ( $wpcc_gemini_manual
+										? esc_html__( 'Entry to merge into mcpServers', 'ai-command-center' )
+										: esc_html__( 'Add to an existing file', 'ai-command-center' ) );
+								?></span>
+								<pre class="wpcc-ai-config" id="wpcc-entry-block" data-wpcc-token-slot<?php echo $wpcc_setup_requires_token ? ' data-wpcc-requires-token-payload' : ''; ?><?php echo $wpcc_setup_requires_token && ! $wpcc_token_ready ? ' hidden' : ''; ?>><?php echo esc_html( $wpcc_entry_snippet ); ?></pre>
+								<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-entry-block"<?php $wpcc_token_gate_control( $wpcc_setup_requires_token, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy this entry only', 'ai-command-center' ); ?></button>
+								<p class="wpcc-ai-field__hint" style="margin:8px 0 0;"><?php esc_html_e( 'Remember the comma: entries inside the braces are separated by commas, and a missing or trailing one is the usual reason the file stops working.', 'ai-command-center' ); ?></p>
+							</div>
+						<?php endif; ?>
+						<?php if ( '' !== $wpcc_vscode_input_snippet ) : ?>
+							<div class="wpcc-ai-field" style="padding:0 22px 14px;margin:0;">
+								<span class="wpcc-ai-field__label"><?php esc_html_e( 'Add as an item inside inputs', 'ai-command-center' ); ?></span>
+								<pre class="wpcc-ai-config" id="wpcc-vscode-input-block"><?php echo esc_html( $wpcc_vscode_input_snippet ); ?></pre>
+								<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-vscode-input-block"><?php esc_html_e( 'Copy secure input item', 'ai-command-center' ); ?></button>
+								<p class="wpcc-ai-field__hint" style="margin:8px 0 0;"><?php esc_html_e( 'Items in inputs are separated by commas. The id here must match the ${input:…} reference in the server entry above.', 'ai-command-center' ); ?></p>
+							</div>
+						<?php endif; ?>
+						<?php
+						// Client quirks belong with the guided steps when there are any;
+						// for a file-configured client this panel IS the setup, so they
+						// render here instead. Never both — see the guided panel above.
+						if ( ! $wpcc_has_guided ) :
+							foreach ( AIClientRegistry::post_setup_notes_for( $wpcc_selected_client ) as $wpcc_note ) :
+								?>
+								<p class="wpcc-ai-field__hint" style="padding:0 22px 14px;margin:0;"><?php echo esc_html( $wpcc_note ); ?></p>
+								<?php
+							endforeach;
+						endif;
+						?>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding-top:14px;">
 					<details class="wpcc-ai-advanced" style="margin:0;">
@@ -1162,7 +1548,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						</div>
 					</details>
 				</div>
-			</div>
+				</div>
+			</details>
 		<?php else : ?>
 			<?php // Same target id on the manual fallback: the "Next" control must land somewhere for every assistant. ?>
 			<div class="wpcc-ai-panel" id="wpcc-config-panel">
@@ -1193,10 +1580,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		?>
 		<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 		<!-- Test the connection safely -->
-		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Test the connection safely', 'ai-command-center' ); ?></div>
+		<details class="wpcc-ai-advanced">
+			<summary><?php esc_html_e( 'Advanced: test the site endpoint in this browser', 'ai-command-center' ); ?></summary>
+		<div class="wpcc-ai-panel" style="margin:0;border:0;border-top:1px solid #eef0f4;border-radius:0;box-shadow:none;">
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Browser-only endpoint test', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Run a quick read-only test to confirm your assistant can connect. This only reads — it never changes anything on your site.', 'ai-command-center' ); ?></p>
+				<p><?php esc_html_e( 'Test WPCC endpoints and token authentication from this browser, including the MCP handshake, tools and resources. This does not test whether your assistant loaded the server. Confirm that inside your selected client. No content is changed; authentication activity may be recorded.', 'ai-command-center' ); ?></p>
 				<div style="margin-bottom: 12px;">
 					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'Access token', 'ai-command-center' ); ?></label>
 					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="wpcc_..." style="width: 100%; max-width: 500px; font-family: monospace;"
@@ -1218,6 +1607,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<div class="wpcc-ai-verify-result" id="wpcc-verify-result"></div>
 			</div>
 		</div>
+		</details>
 
 		<?php endif; ?>
 
@@ -1228,7 +1618,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<strong><?php esc_html_e( 'Connecting an assistant is safe by design.', 'ai-command-center' ); ?></strong>
 				<ul>
 					<li><?php echo esc_html( SecurityModeManager::is_protected()
-						? __( 'Any change your assistant makes waits for your approval first.', 'ai-command-center' )
+						? SecurityModeManager::approval_step()
 						: __( 'This site is in Development mode, so your assistant’s changes apply immediately — no approval step.', 'ai-command-center' ) ); ?></li>
 					<li><?php esc_html_e( 'Every action is recorded under Changes.', 'ai-command-center' ); ?></li>
 					<li><?php esc_html_e( 'Reversible changes can be undone from the Changes screen.', 'ai-command-center' ); ?></li>
@@ -1266,7 +1656,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<div class="wpcc-ai-panel">
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'How assistant access is controlled', 'ai-command-center' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Every assistant connects through the same endpoint and is held to the same rules. No assistant gets extra privileges, and none can skip approval, recording or the limits on its access token.', 'ai-command-center' ); ?></p>
+				<p><?php esc_html_e( 'Every assistant connects through the same endpoint and is held to the same rules. No assistant gets extra privileges, and none can bypass required human approval, recording or the limits on its access token.', 'ai-command-center' ); ?></p>
 				<ul class="wpcc-ai-security-list">
 					<li>
 						<strong><?php esc_html_e( 'Capabilities', 'ai-command-center' ); ?></strong>
@@ -1307,6 +1697,32 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 <script>
 (function() {
+	/*
+	 * A deliberate app selection continues to Step 2 exactly once.
+	 *
+	 * The query marker exists only on app-card links, never on the page's initial URL.
+	 * Remove it before moving so reload/back navigation cannot steal the user's position.
+	 * Focus announces the new step to keyboard/screen-reader users; the token is never
+	 * created until the separate Create button is pressed and its form is submitted.
+	 */
+	var accessTitle = document.getElementById('wpcc-create-access-title');
+	function moveToAccess() {
+		if (!accessTitle) { return; }
+		accessTitle.focus({ preventScroll: true });
+		var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		accessTitle.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+	}
+	try {
+		var selectionUrl = new URL(window.location.href);
+		if (selectionUrl.searchParams.get('wpcc_next') === 'access') {
+			selectionUrl.searchParams.delete('wpcc_next');
+			window.history.replaceState({}, '', selectionUrl.toString());
+			window.requestAnimationFrame(function() { window.requestAnimationFrame(moveToAccess); });
+		}
+	} catch (e) {
+		// Without URL support, Step 2 still follows the selector in document order.
+	}
+
 	/*
 	 * Token creation dialog.
 	 *
@@ -1432,7 +1848,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	}
 
 	/*
-	 * "Next: get your <assistant> configuration" — the one control that ends the
+	 * "Next: set up <assistant>" — the one control that ends the
 	 * token flow.
 	 *
 	 * The anchor already works with JS off; this upgrades the jump into something
@@ -1447,11 +1863,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	var nextBtn = document.getElementById('wpcc-token-next');
 	if (nextBtn) {
 		nextBtn.addEventListener('click', function (e) {
-			var panel = document.getElementById('wpcc-config-panel');
+			var panel = document.querySelector(nextBtn.getAttribute('href'));
 			if (!panel) { return; } // no destination: fall through to the plain anchor.
 			e.preventDefault();
 
-			var copyBtn = document.getElementById('wpcc-copy-config');
+			var copyBtn = panel.querySelector('.wpcc-copy-btn');
 			if (copyBtn) {
 				copyBtn.focus({ preventScroll: true });
 			} else {
@@ -1493,16 +1909,38 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	// displayed configuration so "Copy configuration" copies a complete, ready
 	// config. The token is substituted in the DOM only — it is never sent back to
 	// the server or persisted (the server stores only a salted hash of tokens).
-	var tokenFill  = document.getElementById('wpcc-token-fill');
+	var tokenFill = document.getElementById('wpcc-token-fill');
+	// Inline-client setup fields retain their existing browser fill behavior.
+	// One-time environment credential commands are server-rendered and excluded.
+	var tokenSlots = [].slice.call(document.querySelectorAll('[data-wpcc-token-slot]'));
+	var tokenControls = [].slice.call(document.querySelectorAll('[data-wpcc-requires-token-control]'));
+	var tokenPreviews = [].slice.call(document.querySelectorAll('[data-wpcc-requires-token-preview]'));
+	var tokenPayloads = [].slice.call(document.querySelectorAll('[data-wpcc-requires-token-payload]'));
+	var tokenMessages = [].slice.call(document.querySelectorAll('[data-wpcc-token-needed]'));
 	var configBlock = document.getElementById('wpcc-config-block');
-	if (tokenFill && configBlock) {
-		var configTemplate = configBlock.textContent;
+	if (configBlock && tokenSlots.indexOf(configBlock) === -1) { tokenSlots.push(configBlock); }
+	if (tokenFill && tokenSlots.length) {
 		// The same constant the generators emit and the note above names, so this
 		// field can never again search for a string the configuration does not have.
 		var PLACEHOLDER = <?php echo wp_json_encode( AIClientRegistry::TOKEN_PLACEHOLDER ); ?>;
+		var slotTemplates = tokenSlots.map(function (el) {
+			return el.hasAttribute('data-wpcc-token-template')
+				? el.getAttribute('data-wpcc-token-template')
+				: el.textContent;
+		});
 		var applyToken = function() {
 			var v = tokenFill.value.trim();
-			configBlock.textContent = v ? configTemplate.split(PLACEHOLDER).join(v) : configTemplate;
+			tokenSlots.forEach(function (el, i) {
+				el.textContent = v ? slotTemplates[i].split(PLACEHOLDER).join(v) : slotTemplates[i];
+			});
+			var ready = !!v;
+			tokenControls.forEach(function(control) {
+				control.disabled = !ready;
+				control.setAttribute('aria-disabled', ready ? 'false' : 'true');
+			});
+			tokenPreviews.forEach(function(preview) { preview.hidden = !ready; });
+			tokenPayloads.forEach(function(payload) { payload.hidden = !ready; });
+			tokenMessages.forEach(function(message) { message.hidden = ready; });
 		};
 		tokenFill.addEventListener('input', applyToken);
 		applyToken(); // apply any pre-filled (just-created) token on load
@@ -1510,6 +1948,31 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		if (window.location.hash === '#wpcc-token-fill' && !tokenFill.value) {
 			tokenFill.focus();
 		}
+	}
+
+	/*
+	 * Cursor's official install link is created only when the customer presses the
+	 * button. It uses the local cursor:// protocol and is never requested from, or
+	 * sent through, cursor.com. Keeping it out of href also prevents link previews,
+	 * crawlers and browser prefetch from seeing a token-bearing URI.
+	 */
+	var cursorInstall = document.getElementById('wpcc-cursor-install');
+	if (cursorInstall) {
+		cursorInstall.addEventListener('click', function() {
+			var fill = document.getElementById('wpcc-token-fill');
+			var token = fill ? fill.value.trim() : '';
+			if (!token) {
+				cursorInstall.textContent = <?php echo wp_json_encode( __( 'Paste your token first', 'ai-command-center' ) ); ?>;
+				if (fill) { fill.focus(); }
+				return;
+			}
+			var config = JSON.stringify({
+				url: cursorInstall.getAttribute('data-mcp-url'),
+				headers: { Authorization: 'Bearer ' + token }
+			});
+			var link = 'cursor://anysphere.cursor-deeplink/mcp/install?name=wp-command-center&config=' + encodeURIComponent(window.btoa(config));
+			window.location.assign(link);
+		});
 	}
 
 	/*
@@ -1544,7 +2007,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	 * real boolean instead of a maybe. Every press ends in a definite answer, and
 	 * the answer is the truth rather than an optimistic guess.
 	 */
-	document.querySelectorAll('.wpcc-copy-btn').forEach(function(btn) {
+		document.querySelectorAll('.wpcc-copy-btn').forEach(function(btn) {
 		var COPIED = <?php echo wp_json_encode( __( 'Copied', 'ai-command-center' ) ); ?>;
 		var FAILED = <?php echo wp_json_encode( __( 'Press Ctrl/Cmd+C', 'ai-command-center' ) ); ?>;
 
@@ -1593,9 +2056,24 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		}
 
 		btn.addEventListener('click', function() {
-			var targetId = this.getAttribute('data-copy-target');
-			var target   = targetId ? document.getElementById(targetId) : null;
-			var text     = targetId ? ( target ? target.textContent : '' ) : this.getAttribute('data-copy');
+			if (this.disabled || this.getAttribute('aria-disabled') === 'true') { return; }
+			var text;
+			if (this.hasAttribute('data-copy-target-el')) {
+				/*
+				 * Copy the code element sitting beside this button.
+				 *
+				 * The per-OS credential commands are a repeated row, so an id-based
+				 * target would need a unique id minted per row purely to let a button
+				 * find the thing next to it. Reading the sibling keeps the markup flat
+				 * and copies the complete server-rendered credential command verbatim.
+				 */
+				var el = this.parentNode.querySelector('[data-wpcc-token-slot], code');
+				text = el ? el.textContent : '';
+			} else {
+				var targetId = this.getAttribute('data-copy-target');
+				var target   = targetId ? document.getElementById(targetId) : null;
+				text = targetId ? ( target ? target.textContent : '' ) : this.getAttribute('data-copy');
+			}
 			if (!text) return;
 			copyText(text, confirmOn);
 		});
@@ -1710,7 +2188,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 					var allPass = checks.every(function(c) { return c.pass; });
 					resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--' + (allPass ? 'success' : 'fail');
-					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; <?php esc_html_e( 'All checks passed!', 'ai-command-center' ); ?></h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; <?php esc_html_e( 'Some checks failed.', 'ai-command-center' ); ?></h3>';
+					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; <?php esc_html_e( 'WPCC can authenticate this token. Server checks passed; verify the connection inside your client.', 'ai-command-center' ); ?></h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; <?php esc_html_e( 'Some checks failed.', 'ai-command-center' ); ?></h3>';
 					html += '<table style="border-collapse:collapse;width:100%;">';
 					checks.forEach(function(c) {
 						html += '<tr><td style="padding:4px 8px;">' + (c.pass ? '&#10003;' : '&#10007;') + '</td><td style="padding:4px 8px;font-weight:600;">' + c.name + '</td>';

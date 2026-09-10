@@ -31,8 +31,8 @@ echo "PROGRAM-4 / P4.2 — Field-scoped, drift-aware Media metadata delta rollba
 echo
 echo "== 1. Source: MediaFieldAccessor + field-scoped capture + v2 delta + shared restore =="
 has  "MediaFieldAccessor implements FieldAccessor" "class MediaFieldAccessor implements FieldAccessor" "$MFA"
-has  "accessor dispatches post columns"           "wp_update_post( [ 'ID' => (int) \$entity_id, \$key => \$value ] )" "$MFA"
-has  "accessor meta path"                          "update_post_meta( (int) \$entity_id, \$key, \$value )" "$MFA"
+has  "accessor dispatches post columns with slash fidelity" "wp_update_post( wp_slash( [ 'ID' => (int) \$entity_id, \$key => \$value ] ) )" "$MFA"
+has  "accessor meta path with slash fidelity"      "update_post_meta( (int) \$entity_id, \$key, wp_slash( \$value ) )" "$MFA"
 has  "accessor existence for alt (meta)"           "metadata_exists( 'post', (int) \$entity_id, \$key )" "$MFA"
 has  "update captures touched fields via core"     "RollbackDelta::capture( \$accessor, \$media_id, \$touched )" "$SRC"
 has  "store builds v2 record via core"             "RollbackDelta::build_record( \$touched, \$prior, \$after, \$context," "$SRC"

@@ -11,7 +11,7 @@
 #   - Home shows a recommendations signal only on real open findings
 #   - Activity › Approvals points to Recommendations only on real pending plans
 #   - Runtime (dashboard.php) retired in 2B; the new homes are the sole owners
-#   - No redirect loops; invariants 34/23/42/42/2.6.0; no new route/capability in new views
+#   - No redirect loops; invariants 34/24/42/42/2.6.0; no new route/capability in new views
 #
 # Requires: php, rg; wp-cli optional (functional + invariant checks).
 # Usage: bash tests/test-phase-2a.sh
@@ -47,7 +47,7 @@ echo
 echo "== 2. New Settings tabs registered (additive) =="
 # Search & Replace moved from a top-level Settings tab into the Advanced hub
 # with the other developer tools.
-has "Search & Replace in the Advanced hub" "'view' => 'tools-search-replace'" "$ROOT/includes/Admin/views/settings-advanced.php"
+has "Search & Replace in the Advanced hub" "'view'     => 'tools-search-replace'" "$SHELL_PHP"
 # Phase 2B: Recommendations is now a pane inside the Diagnostics hub (not a flat tab);
 # Runtime is removed.
 has "Recommendations hosted in Diagnostics hub"  "'view' => 'recommendations'" "$ROOT/includes/Admin/views/settings-diagnostics.php"
@@ -127,7 +127,7 @@ else
 
 	INV="$(wpe '$i=(new WPCommandCenter\Admin\DashboardAdminQuery())->overview()["invariants"]; echo $i["operation_map"].",".$i["capabilities"].",".$i["catalogue"].",".$i["mcp_tools"].",".$i["db_version"];')"
 	assert_eq "OPERATION_MAP 34" "34" "$(echo "$INV"|cut -d, -f1)"
-	assert_eq "CAPABILITIES 23"  "23" "$(echo "$INV"|cut -d, -f2)"
+	assert_eq "CAPABILITIES 24"  "24" "$(echo "$INV"|cut -d, -f2)"
 	assert_eq "catalogue 42"     "42" "$(echo "$INV"|cut -d, -f3)"
 	assert_eq "MCP tools 42"     "42" "$(echo "$INV"|cut -d, -f4)"
 	assert_eq "DB_VERSION 2.6.0" "2.6.0" "$(echo "$INV"|cut -d, -f5)"

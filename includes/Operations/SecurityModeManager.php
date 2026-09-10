@@ -110,6 +110,37 @@ final class SecurityModeManager {
 	}
 
 	/**
+	 * Summarise the effective approval policy used by the execution gate.
+	 *
+	 * Metadata surfaces must call this instead of consulting the retired binary
+	 * `wpcc_enforce_approval` option or maintaining their own copy of the risk
+	 * matrix. `enforcement` means at least one recognised risk tier requires
+	 * approval; it does not mean every operation requires approval.
+	 *
+	 * @return array{
+	 *     mode: string,
+	 *     enforcement: bool,
+	 *     requires_approval_by_risk: array<string,bool>,
+	 *     required_risk_tiers: array<int,string>,
+	 *     requires_human_approver: bool
+	 * }
+	 */
+	public static function approval_policy(): array {
+		$by_risk = [];
+		foreach ( self::RISK_LEVELS as $risk ) {
+			$by_risk[ $risk ] = self::requires_approval( $risk );
+		}
+
+		return [
+			'mode'                      => self::current(),
+			'enforcement'               => in_array( true, $by_risk, true ),
+			'requires_approval_by_risk' => $by_risk,
+			'required_risk_tiers'       => array_keys( array_filter( $by_risk ) ),
+			'requires_human_approver'   => self::requires_human_approver(),
+		];
+	}
+
+	/**
 	 * Whether approvals must be granted by a human WordPress administrator.
 	 *
 	 * In Client and Enterprise modes, API-token actors cannot self-approve,
@@ -144,7 +175,7 @@ final class SecurityModeManager {
 	/** One-sentence description of what a mode does, in the user's terms. */
 	public static function describe( string $mode ): string {
 		return match ( $mode ) {
-			self::MODE_CLIENT     => __( 'Safe read-only requests run straight away. Anything that changes the site waits for you to approve it.', 'ai-command-center' ),
+			self::MODE_CLIENT     => __( 'Read-only and low-risk requests run straight away. Higher-impact changes wait for your approval.', 'ai-command-center' ),
 			self::MODE_ENTERPRISE => __( 'Only read-only requests run straight away. Every change of any size waits for you to approve it.', 'ai-command-center' ),
 			default               => __( 'Changes run immediately with no approval step. For your own development or staging site only.', 'ai-command-center' ),
 		};
@@ -191,7 +222,7 @@ final class SecurityModeManager {
 		 */
 		return match ( self::current() ) {
 			self::MODE_ENTERPRISE => __( 'Every change waits for your approval, including low-risk ones, and everything is recorded and can be undone.', 'ai-command-center' ),
-			self::MODE_CLIENT     => __( 'Anything that could affect your visitors waits for your approval, low-risk edits go straight through, and everything is recorded and can be undone.', 'ai-command-center' ),
+			self::MODE_CLIENT     => __( 'Higher-impact changes wait for your approval, low-risk edits go straight through, and everything is recorded and can be undone.', 'ai-command-center' ),
 			default               => __( 'This site is in Development mode, so changes run immediately without approval. Everything is still recorded and can be undone.', 'ai-command-center' ),
 		};
 	}
@@ -233,7 +264,7 @@ final class SecurityModeManager {
 		// cannot claim that everything waits.
 		return match ( self::current() ) {
 			self::MODE_ENTERPRISE => __( 'Every change waits for your yes, including low-risk ones.', 'ai-command-center' ),
-			self::MODE_CLIENT     => __( 'Anything that could affect your visitors waits for your yes.', 'ai-command-center' ),
+			self::MODE_CLIENT     => __( 'Higher-impact changes wait for your approval. Low-risk operations run straight away.', 'ai-command-center' ),
 			default               => __( 'Development mode is on, so changes run immediately without waiting for you.', 'ai-command-center' ),
 		};
 	}
@@ -248,7 +279,7 @@ final class SecurityModeManager {
 	 */
 	public static function approvals_desc(): string {
 		return self::is_protected()
-			? __( 'Changes waiting for your decision. Nothing runs until you approve it.', 'ai-command-center' )
+			? __( 'Changes waiting for your decision. These requests do not run until you approve them.', 'ai-command-center' )
 			: __( 'Development mode is on, so new changes run immediately. Anything queued before you switched still waits for your decision here.', 'ai-command-center' );
 	}
 
@@ -257,8 +288,8 @@ final class SecurityModeManager {
 	 */
 	public static function approvals_empty_detail(): string {
 		return self::is_protected()
-			? __( 'When your assistant asks to change something, it appears here for your decision. Nothing runs until you approve it.', 'ai-command-center' )
-			: __( 'Development mode is on, so your assistant’s changes apply immediately instead of waiting here. Switch to Standard protection if you want to approve them first.', 'ai-command-center' );
+			? __( 'Requests that need approval appear here for your decision. They do not run until you approve them.', 'ai-command-center' )
+			: __( 'Development mode is on, so your assistant’s changes apply immediately instead of waiting here. Switch to Standard protection to review higher-impact changes first.', 'ai-command-center' );
 	}
 
 	/**

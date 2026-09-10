@@ -36,7 +36,38 @@ if [ "$(wpe 'echo function_exists("acf")?"yes":"no";')" != "yes" ]; then
 fi
 
 GROUP=""
-cleanup() { [ -n "$GROUP" ] && acfm "$(jq -n --arg g "$GROUP" '{action:"acf_group_delete",group_id:$g}')" >/dev/null 2>&1; }
+cleanup() {
+  local test_status=$?
+  [ -n "$GROUP" ] || exit "$test_status"
+  # Teardown must not depend on the current protection mode or on a key lookup
+  # that can resolve to local JSON (ID 0). Remove the suite-owned JSON first,
+  # then delete the stored post in a fresh WP process with no shadowing cache.
+  local cleanup_result
+  local cleanup_rc
+  local group_post_id
+  # Prefer the same verified runtime deletion path exercised by F3.1. The
+  # following exact-key WP-CLI cleanup remains a fail-safe for interrupted HTTP.
+  acfm "$(jq -n --arg g "$GROUP" '{action:"acf_group_delete",group_id:$g}')" >/dev/null 2>&1
+  wpe '$k="'"$GROUP"'";$g=acf_get_field_group($k);$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";if(is_file($f))@unlink($f);if($g)acf_flush_field_group_cache($g);acf_remove_local_field_group($k);' >/dev/null 2>&1
+  group_post_id="$(wpe 'global $wpdb;$k="'"$GROUP"'";echo (int)$wpdb->get_var($wpdb->prepare("SELECT ID FROM {$wpdb->posts} WHERE post_type=%s AND post_name=%s LIMIT 1","acf-field-group",$k));')"
+  [ -n "$group_post_id" ] && [ "$group_post_id" -gt 0 ] && wp --path="$WP_PATH" post delete "$group_post_id" --force >/dev/null 2>&1
+  wpe '$k="'"$GROUP"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";if(is_file($f))@unlink($f);' >/dev/null 2>&1
+  cleanup_result="$(wpe 'global $wpdb;$k="'"$GROUP"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";$left=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type=%s AND post_name=%s","acf-field-group",$k));echo (!$left&&!is_file($f))?"WPCC_ACF_CLEANUP_OK":"WPCC_ACF_CLEANUP_FAILED";' 2>/dev/null)"
+  cleanup_rc=$?
+  # A persistent ACF object-cache entry can make the first core delete a no-op.
+  # The verification bootstrap clears that stale view; retry only this exact ID.
+  if [[ "$cleanup_result" != *WPCC_ACF_CLEANUP_OK ]] && [ "$group_post_id" -gt 0 ]; then
+    wp --path="$WP_PATH" post delete "$group_post_id" --force >/dev/null 2>&1
+    wpe '$k="'"$GROUP"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";if(is_file($f))@unlink($f);' >/dev/null 2>&1
+    cleanup_result="$(wpe 'global $wpdb;$k="'"$GROUP"'";$s=acf_get_setting("save_json");$f=untrailingslashit((string)$s)."/".$k.".json";$left=(int)$wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_type=%s AND post_name=%s","acf-field-group",$k));echo (!$left&&!is_file($f))?"WPCC_ACF_CLEANUP_OK":"WPCC_ACF_CLEANUP_FAILED";' 2>/dev/null)"
+    cleanup_rc=$?
+  fi
+  if [ "$cleanup_rc" -ne 0 ] || [[ "$cleanup_result" != *WPCC_ACF_CLEANUP_OK ]]; then
+    echo "  FAIL: teardown did not remove the exact Step 92 ACF fixture (key=$GROUP post_id=$group_post_id rc=$cleanup_rc result=$cleanup_result)" >&2
+    exit 1
+  fi
+  exit "$test_status"
+}
 trap cleanup EXIT
 
 echo "== 1. Create field group attached to a CPT (post_type) =="

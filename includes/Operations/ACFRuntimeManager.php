@@ -147,14 +147,30 @@ final class ACFRuntimeManager {
 		// writable save path so acf-json sync cannot silently re-register the group
 		// on the next request (the production false-success cause). Read-only
 		// theme/plugin load paths are intentionally left untouched.
-		acf_delete_field_group( $id );
+		// A key lookup above can prime ACF's store with the local-JSON copy (ID 0).
+		// Passing the key back to acf_delete_field_group() then reuses that cached
+		// object and silently deletes nothing. Resolve the database identity before
+		// deleting, exactly as the field deletion path already does.
+		$stored_id = AcfLocalJson::group_post_id( $key );
+		$acf_filters = function_exists( 'acf_get_filters' ) ? acf_get_filters() : null;
 		$this->purge_owned_local_json( $key );
+		if ( function_exists( 'acf_flush_field_group_cache' ) ) {
+			acf_flush_field_group_cache( $g );
+		}
+		acf_delete_field_group( $stored_id > 0 ? $stored_id : $id );
+		if ( is_array( $acf_filters ) && function_exists( 'acf_set_filters' ) ) {
+			acf_set_filters( $acf_filters );
+		}
+		if ( $stored_id > 0 && AcfLocalJson::group_post_id( $key ) > 0 ) {
+			$this->delete_stored_group_post( $stored_id );
+		}
 
 		// F3.1 — NEVER report success unless the group is actually gone. It persists
 		// when it is resolvable in-memory (a purely-local group with no DB post) or
 		// a JSON definition remains in a load path that would resurrect it next
 		// request. Previously this handler returned success unconditionally.
-		if ( $this->group_will_persist( $key, $id ) ) {
+		if ( $this->group_will_persist( $key, $id, 0 === $stored_id ) ) {
+			$this->delete_rollback_record( $rollback_id );
 			return $this->error(
 				'wpcc_acf_group_delete_failed',
 				__( 'Field group still exists after delete — it is defined in a read-only local JSON/PHP source (e.g. theme acf-json) and was not removed.', 'ai-command-center' )
@@ -176,10 +192,37 @@ final class ACFRuntimeManager {
 		}
 	}
 
+	/** Last-resort deletion of an exact database-backed group when ACF's local cache shadows it. */
+	private function delete_stored_group_post( int $post_id ): bool {
+		if ( $post_id <= 0 ) return false;
+		global $wpdb;
+		$ids = [ $post_id ];
+		for ( $i = 0; $i < count( $ids ); $i++ ) {
+			$children = $wpdb->get_col( $wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_parent = %d AND post_type = %s",
+				$ids[ $i ],
+				'acf-field'
+			) );
+			$ids = array_merge( $ids, array_map( 'intval', $children ?: [] ) );
+		}
+		foreach ( array_reverse( array_unique( $ids ) ) as $id ) {
+			clean_post_cache( $id );
+			wp_delete_post( $id, true );
+		}
+		clean_post_cache( $post_id );
+		return null === get_post( $post_id );
+	}
+
 	/** True when the group would survive the delete (in-memory local def, or JSON in any load path). */
-	private function group_will_persist( string $key, string $id ): bool {
-		if ( acf_get_field_group( $id ) ) return true;
-		if ( '' !== $key && acf_get_field_group( $key ) ) return true;
+	private function group_will_persist( string $key, string $id, bool $check_php_local = true ): bool {
+		if ( '' !== $key && AcfLocalJson::group_post_id( $key ) > 0 ) return true;
+		// A PHP-local group has no database post to delete and survives by definition.
+		if ( $check_php_local && '' !== $key && function_exists( 'acf_get_local_field_group' ) ) {
+			$local = acf_get_local_field_group( $key );
+			if ( is_array( $local ) && 'php' === (string) ( $local['local'] ?? '' ) ) return true;
+		}
+		if ( $check_php_local && acf_get_field_group( $id ) ) return true;
+		if ( $check_php_local && '' !== $key && acf_get_field_group( $key ) ) return true;
 		if ( '' !== $key && function_exists( 'acf_get_setting' ) ) {
 			foreach ( (array) acf_get_setting( 'load_json' ) as $path ) {
 				$file = untrailingslashit( wp_normalize_path( (string) $path ) ) . '/' . $key . '.json';
@@ -1583,8 +1626,43 @@ final class ACFRuntimeManager {
 		unset( $before['__after_fp'] ); // never feed the guard marker into acf_update_*
 
 		if ( in_array( $act, [ 'group_create', 'field_create' ] ) ) {
-			if ( str_starts_with( $act, 'group' ) ) acf_delete_field_group( $eid );
-			elseif ( str_starts_with( $act, 'field' ) ) acf_delete_field( $eid );
+			if ( str_starts_with( $act, 'group' ) ) {
+				$group = acf_get_field_group( $eid );
+				$key = is_array( $group ) ? (string) ( $group['key'] ?? $eid ) : (string) $eid;
+				$stored_id = AcfLocalJson::group_post_id( $key );
+				$acf_filters = function_exists( 'acf_get_filters' ) ? acf_get_filters() : null;
+				$this->purge_owned_local_json( $key );
+				if ( is_array( $group ) && function_exists( 'acf_flush_field_group_cache' ) ) {
+					acf_flush_field_group_cache( $group );
+				}
+				$deleted = acf_delete_field_group( $stored_id > 0 ? $stored_id : $eid );
+				if ( is_array( $acf_filters ) && function_exists( 'acf_set_filters' ) ) {
+					acf_set_filters( $acf_filters );
+				}
+				if ( $stored_id > 0 && AcfLocalJson::group_post_id( $key ) > 0 ) {
+					$deleted = $this->delete_stored_group_post( $stored_id );
+				}
+				if ( ! $deleted || $this->group_will_persist( $key, (string) $eid, 0 === $stored_id ) ) {
+					return $this->error( 'wpcc_acf_group_delete_failed', __( 'Field group still exists after rollback.', 'ai-command-center' ) );
+				}
+			} elseif ( str_starts_with( $act, 'field' ) ) {
+				$owning_group = $this->group_key_for_field( (string) $eid );
+				$stored = get_posts( [
+					'post_type'        => 'acf-field',
+					'name'             => (string) $eid,
+					'post_status'      => 'any',
+					'numberposts'      => 1,
+					'fields'           => 'ids',
+					'suppress_filters' => false,
+				] );
+				$deleted = acf_delete_field( ! empty( $stored ) ? (int) $stored[0] : $eid );
+				if ( '' !== $owning_group ) {
+					AcfLocalJson::sync_for_group( $owning_group, 'acf_field_create_rollback' );
+				}
+				if ( ! $deleted ) {
+					return $this->error( 'wpcc_acf_field_delete_failed', __( 'Field still exists after rollback.', 'ai-command-center' ) );
+				}
+			}
 		} elseif ( 'group_delete' === $act ) {
 			if ( ! empty( $before ) ) { $before['active'] = true; acf_update_field_group( $before ); }
 		} elseif ( 'field_delete' === $act ) {
@@ -1637,6 +1715,13 @@ final class ACFRuntimeManager {
 		if ( count( $rollbacks ) > 200 ) $rollbacks = array_slice( $rollbacks, -200 );
 		update_option( 'wpcc_acf_rollbacks', $rollbacks );
 		return $rid;
+	}
+
+	/** Remove a rollback record created for a mutation that did not actually apply. */
+	private function delete_rollback_record( string $rid ): void {
+		$rollbacks = get_option( 'wpcc_acf_rollbacks', [] );
+		$rollbacks = array_values( array_filter( (array) $rollbacks, static fn( $record ) => ( $record['id'] ?? '' ) !== $rid ) );
+		update_option( 'wpcc_acf_rollbacks', $rollbacks );
 	}
 
 	// ── PROGRAM-4.9 — value-delta rollback + definition drift guard ──────────────

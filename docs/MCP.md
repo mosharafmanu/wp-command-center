@@ -22,7 +22,7 @@ curl -s -X POST https://example.com/wp-json/wp-command-center/v1/mcp \
 ```json
 {"jsonrpc":"2.0","id":1,"result":{
   "protocolVersion":"2024-11-05",
-  "serverInfo":{"name":"WP Command Center","version":"1.0.0"}}}
+  "serverInfo":{"name":"WP Command Center","version":"1.0.1"}}}
 ```
 
 ## Methods

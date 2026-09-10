@@ -42,17 +42,35 @@ final class ClaudeCodeIntegration extends BaseClientIntegration {
 	 * `--transport http` is placed before the name so it reads as that documented
 	 * example rather than as something invented here.
 	 */
-	public static function generate_mcp_config(): array {
-		$ep = self::http_endpoint();
+	/**
+	 * Promoted to a first-class setup command, 2026-08-11.
+	 *
+	 * This command already existed, but it was delivered as the client's "configuration"
+	 * — a shell one-liner in the copy box under a heading saying "Your Claude Code
+	 * configuration". Every other one-command client (Codex, Gemini CLI, OpenCode,
+	 * Command Code) now presents its command in the guided setup panel with a "Copy setup
+	 * command" button, so Claude Code was the odd one out: the same mechanism, described
+	 * differently, on the one client that actually holds full certification.
+	 *
+	 * Declaring it here puts it in the same place as the others. generate_mcp_config()
+	 * still returns it too, so nothing that reads the configuration changes.
+	 */
+	public static function setup_command( string $token = '' ): string {
+		$ep    = self::http_endpoint();
+		$value = '' !== $token ? $token : AIClientRegistry::TOKEN_PLACEHOLDER;
 
+		return sprintf(
+			"claude mcp add --transport http %s %s \\\n  --header %s",
+			escapeshellarg( self::server_key() ),
+			escapeshellarg( $ep['url'] ),
+			escapeshellarg( 'Authorization: Bearer ' . $value )
+		);
+	}
+
+	public static function generate_mcp_config(): array {
 		return [
 			'__format' => 'shell',
-			'__raw'    => sprintf(
-				"claude mcp add --transport http %s %s \\\n  --header \"Authorization: Bearer %s\"\n",
-				self::server_key(),
-				$ep['url'],
-				'${WPCC_TOKEN}'
-			),
+			'__raw'    => self::setup_command() . "\n",
 		];
 	}
 }

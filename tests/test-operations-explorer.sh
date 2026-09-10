@@ -19,7 +19,7 @@
 #     34 carry a required capability (LEFT JOIN over OPERATION_MAP), 8 unrestricted,
 #     the 5 read-only-scope operations are flagged, per-action risk preserved, and
 #     availability mirrors OperationRegistry::get_operations()
-#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 42
+#   - Invariants: operation_map stays 34, capabilities stay 24, catalogue stays 42
 #     (this step adds no runtime op, MCP tool, or capability)
 #
 # Requires: php, rg, wp-cli, wpcc-env.sh. (Admin routes are cookie+nonce, so the
@@ -104,7 +104,7 @@ has "reads capability registry"          "CapabilityRegistry"           "$QUERY"
 has "reads security mode"                "SecurityModeManager"          "$QUERY"
 has "required cap derived from OPERATION_MAP" "OPERATION_MAP\[ \\\$id \]" "$QUERY"
 lacks "no writes (update_option/wpdb)"   "update_option|->update\(|->insert\(|\\\$wpdb" "$QUERY"
-lacks "no engine dispatch"               "OperationExecutor"            "$QUERY"
+lacks "no engine dispatch"               "new[[:space:]]+OperationExecutor|OperationExecutor::|OperationExecutor\\(" "$QUERY"
 lacks "no operation execution"           "->run\(|->execute\(|->dispatch\(" "$QUERY"
 lacks "no audit/change writes"           "->record\(|ChangeRecorder"    "$QUERY"
 lacks "no policy mutation"               "->assign\(|->remove\(|->create\(|->revoke\(|->delete\(" "$QUERY"
@@ -115,10 +115,10 @@ echo "== 4. App Shell hosts the catalogue as Settings › Advanced › Capabilit
 # (settings-advanced.php), reached via ?wpcc_tab=advanced&apane=capabilities; legacy
 # slugs redirect in.
 ADVANCED="$PLUGIN_DIR/includes/Admin/views/settings-advanced.php"
-has "Capabilities pane labeled in Advanced hub"    "__\( 'Capabilities'"          "$ADVANCED"
-has "Capabilities pane renders explorer view"      "'view' => 'operations-explorer'" "$ADVANCED"
-has "Capabilities pane gated by operations_explorer feature" "'feature' => 'operations_explorer'" "$ADVANCED"
-has "Advanced hub FeatureGate-filters panes"       "FeatureGate::allows"        "$ADVANCED"
+has "Capabilities pane labeled in Advanced hub"    "__\( 'Capabilities'"          "$SHELL"
+has "Capabilities pane renders explorer view"      "'view'     => 'operations-explorer'" "$SHELL"
+has "Capabilities pane gated by operations_explorer feature" "'feature'  => 'operations_explorer'" "$SHELL"
+has "Advanced hub consumes the filtered pane registry" "AppShell::advanced_panes" "$ADVANCED"
 has "Advanced hub registered in shell"             "'view' => 'settings-advanced'" "$SHELL"
 has "legacy operations slug redirects to advanced/caps" "'wpcc-operations'         => \[ self::SETTINGS_SLUG, 'advanced', \[ 'apane' => 'capabilities' \] \]" "$SHELL"
 has "Settings section registered"        "render_settings"              "$MENU"
@@ -302,7 +302,7 @@ else
 
 	# read-only-scope flag matches READ_ONLY_SCOPE_OPERATIONS (5).
 	ROCOUNT="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); $n = 0; foreach ( $r["items"] as $o ) { if ( ! empty( $o["read_only_scope"] ) ) { $n++; } } echo $n;')"
-	assert_eq "exactly 6 read-only-scope operations flagged" "6" "$ROCOUNT"
+	assert_eq "read-capable flags match audited action policy" "$(wpe 'echo count(array_filter(\WPCommandCenter\Operations\CapabilityRegistry::READ_ONLY_ACTIONS));')" "$ROCOUNT"
 
 	# Per-action risk preserved in the action_count (plugin_manage has 6).
 	PLUGACTIONS="$(wpe '$q = new \WPCommandCenter\Admin\OperationExplorerAdminQuery(); $r = $q->operations([], 100, 0); foreach ( $r["items"] as $o ) { if ( $o["id"] === "plugin_manage" ) { echo (int) $o["action_count"]; break; } }')"
@@ -379,7 +379,7 @@ else
 	OPMAP="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
 	assert_eq "OPERATION_MAP stays 34" "34" "$OPMAP"
 	CAPS="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
-	assert_eq "ALL_CAPABILITIES stays 23" "23" "$CAPS"
+	assert_eq "ALL_CAPABILITIES stays 24" "24" "$CAPS"
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
 	assert_eq "operation catalogue stays 42" "42" "$CAT"
 

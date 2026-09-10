@@ -1,6 +1,6 @@
 # WP Command Center — Documentation
 
-Documentation for **version 1.0.0**. Every document here describes the shipped product and
+Documentation for **version 1.0.1**. Every document here describes the shipped product and
 is verified against it; where a number appears (42 tools, 23 capabilities, 3 protection
 modes) it was read from the running plugin, not from memory.
 
@@ -41,7 +41,7 @@ modes) it was read from the running plugin, not from memory.
 The V1 and release-candidate certifications, the WordPress.org compliance report and the
 2026-08-02 certifications have moved to [`archive/certifications/`](archive/certifications/).
 They certify artifacts that the 2026-08-10 security re-cut superseded, and each carries a
-banner saying so. The authoritative Plugin Check result — **0 errors, 824 warnings against
+banner saying so. The authoritative Plugin Check result — **0 errors, 828 classified warnings against
 the extracted package** — is in [../RELEASE_HANDOFF.md](../RELEASE_HANDOFF.md) §2.
 
 ## Archive

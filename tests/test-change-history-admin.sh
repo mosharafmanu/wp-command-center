@@ -16,7 +16,7 @@
 #   - Functional aggregation via wp-cli: ChangeHistoryAdminQuery session counts
 #     match the table exactly, and session-less rows are excluded from Sessions
 #     while remaining visible to the flat history list (Timeline)
-#   - Invariants: operation_map stays 34, capabilities stay 23 (this step adds
+#   - Invariants: operation_map stays 34, capabilities stay 24 (this step adds
 #     no runtime op, MCP tool, or capability)
 #
 # Requires: curl, jq, wp-cli, php, rg, wpcc-env.sh (full-scope $WPCC_TOKEN).
@@ -176,7 +176,7 @@ echo
 echo "== 9. Invariants: no runtime/MCP/capability additions =="
 MANIFEST=$(api GET /agent/manifest)
 assert_eq "operation_map stays 34" "34" "$(pj "$MANIFEST" '.capability_management.operation_map | keys | length')"
-assert_eq "capabilities stay 23"   "23" "$(pj "$MANIFEST" '.capability_management.capabilities | length')"
+assert_eq "capabilities stay 24"   "24" "$(pj "$MANIFEST" '.capability_management.capabilities | length')"
 
 echo
 echo "== 10. STEP 105.2: shared DiffRenderer (one renderer, no fork) =="

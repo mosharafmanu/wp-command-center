@@ -35,7 +35,7 @@ final class AgentExplainer {
 			],
 			[
 				'q' => __( 'What talks to what?', 'ai-command-center' ),
-				'a' => __( 'Your AI assistant (on your computer) talks to WP Command Center (on this site) using the access token. WP Command Center then makes the change on WordPress — after your approval, with a full record — and supported changes can be undone. You bring your own AI key for the assistant; this site never sends your content anywhere except the AI provider you chose.', 'ai-command-center' ),
+				'a' => __( 'Your AI assistant (on your computer) talks to WP Command Center (on this site) using the access token. WP Command Center then makes the change on WordPress — with approval when your protection mode requires it and a full record — and supported changes can be undone. You bring your own AI key for the assistant; this site never sends your content anywhere except the AI provider you chose.', 'ai-command-center' ),
 			],
 		];
 	}
@@ -44,6 +44,6 @@ final class AgentExplainer {
 	 * A one-line "picture" of the flow, jargon-free.
 	 */
 	public static function flow_line(): string {
-		return __( 'Your AI assistant  →  (access token)  →  WP Command Center  →  your approval  →  WordPress  →  recorded & undoable', 'ai-command-center' );
+		return __( 'Your AI assistant  →  (access token)  →  WP Command Center  →  approval when required  →  WordPress  →  recorded & undoable', 'ai-command-center' );
 	}
 }

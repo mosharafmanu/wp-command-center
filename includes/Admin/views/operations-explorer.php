@@ -149,7 +149,7 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		dAdminUnlock:  <?php echo wp_json_encode( __( 'system.admin override', 'ai-command-center' ) ); ?>,
 		adminUnlocks:  <?php echo wp_json_encode( __( 'A token with system.admin can run this operation regardless of individual capabilities.', 'ai-command-center' ) ); ?>,
 		unrestrictedNote: <?php echo wp_json_encode( __( 'This operation requires no capability assignment — it is unrestricted (read-only or low-risk).', 'ai-command-center' ) ); ?>,
-		readOnlyYes:   <?php echo wp_json_encode( __( 'A read-only-scope token may call this operation.', 'ai-command-center' ) ); ?>,
+		readOnlyYes:   <?php echo wp_json_encode( __( 'Only the supported read actions are allowed with Read-only scope; write actions remain denied.', 'ai-command-center' ) ); ?>,
 		readOnlyNo:    <?php echo wp_json_encode( __( 'Requires a full-scope token (read-only tokens cannot call it).', 'ai-command-center' ) ); ?>,
 		/* translators: %s: security mode label */
 		approvalGated: <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation requires administrator approval before it runs.', 'ai-command-center' ) ); ?>,

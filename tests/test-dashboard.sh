@@ -23,7 +23,7 @@
 #     posture, the invariants (op map 34 / caps 23 / catalogue 42 / mcp 42 /
 #     db 2.4.0), and each subsystem summary, and the numbers match the surfaces
 #     that own them (no drift, no new source of truth)
-#   - Invariants: operation_map stays 34, capabilities stay 23, catalogue stays 42,
+#   - Invariants: operation_map stays 34, capabilities stay 24, catalogue stays 42,
 #     MCP tools stay 42, DB_VERSION stays 2.4.0 (this step adds no runtime op, MCP
 #     tool, capability, or schema)
 #
@@ -131,7 +131,7 @@ else
 	INV_OPMAP="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["operation_map"];')"
 	assert_eq "invariants.operation_map = 34" "34" "$INV_OPMAP"
 	INV_CAPS="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["capabilities"];')"
-	assert_eq "invariants.capabilities = 23" "23" "$INV_CAPS"
+	assert_eq "invariants.capabilities = 24" "24" "$INV_CAPS"
 	INV_CAT="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["catalogue"];')"
 	assert_eq "invariants.catalogue = 42" "42" "$INV_CAT"
 	INV_MCP="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["invariants"]["mcp_tools"];')"
@@ -172,11 +172,11 @@ else
 	APMATCH="$(wpe '$ap = ( new \WPCommandCenter\Admin\ApprovalAdminQuery() )->summary(); $q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo ( (int) $r["approvals"]["pending"] === (int) $ap["pending"] ) ? "match" : "drift";')"
 	assert_eq "approvals card mirrors Approval Center" "match" "$APMATCH"
 	TKMATCH="$(wpe '$caps = ( new \WPCommandCenter\Admin\TokenCapabilityAdminQuery() )->capabilities(); $q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo ( (int) $r["tokens"]["capabilities"] === (int) $caps["total"] ) ? "match" : "drift";')"
-	assert_eq "tokens card mirrors capability catalogue (23)" "match" "$TKMATCH"
+	assert_eq "tokens card mirrors capability catalogue (24)" "match" "$TKMATCH"
 
-	# capabilities catalogue total equals the invariant (23).
+	# capabilities catalogue total equals the invariant (24).
 	CAPTOTAL="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $r = $q->overview(); echo (int) $r["tokens"]["capabilities"];')"
-	assert_eq "tokens.capabilities = 23" "23" "$CAPTOTAL"
+	assert_eq "tokens.capabilities = 24" "24" "$CAPTOTAL"
 
 	# Read does not mutate state: a second call yields the same catalogue count.
 	STABLE="$(wpe '$q = new \WPCommandCenter\Admin\DashboardAdminQuery(); $q->overview(); $r = $q->overview(); echo (int) $r["invariants"]["catalogue"];')"
@@ -237,7 +237,7 @@ else
 	OPMAP="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
 	assert_eq "OPERATION_MAP stays 34" "34" "$OPMAP"
 	CAPS="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
-	assert_eq "ALL_CAPABILITIES stays 23" "23" "$CAPS"
+	assert_eq "ALL_CAPABILITIES stays 24" "24" "$CAPS"
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
 	assert_eq "operation catalogue stays 42" "42" "$CAT"
 	MCP="$(wpe '$r = ( new \WPCommandCenter\Mcp\McpServerRuntime() )->handle( [ "jsonrpc" => "2.0", "id" => 1, "method" => "tools/list" ], [] ); echo isset( $r["result"]["tools"] ) ? count( $r["result"]["tools"] ) : -1;')"

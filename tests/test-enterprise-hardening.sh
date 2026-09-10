@@ -137,7 +137,11 @@ assert_true "bwcompat: /ai-clients works" "$(api "$WPCC_BASE/ai-clients" | jq -r
 # ===================================================================
 echo "== 12. AI Client Registry — Completeness =="
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
-assert_eq "ai: 11 clients total" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
+# Structural, not a magic number: the count must match the roster, whatever size the
+# roster currently is. A literal records how many clients existed the day it was
+# written and fails just as loudly for a correct change (Windsurf deferred from v1,
+# Antigravity and Muse Code added) as for a real regression.
+assert_eq "ai: client count matches the roster" "$(echo "$CLIENTS" | jq -r '.clients | length')" "$(echo "$CLIENTS" | jq -r '.counts.total')"
 # `active` counts clients certified at Active or above. It was 2 while Claude
 # Desktop and Cursor carried unearned Gold; both markers were withdrawn, so 0 is
 # the honest answer and pinning 2 required the product to keep overstating.
@@ -209,10 +213,10 @@ assert_contains "cap: content.manage in all caps" "$ALL_CAPS" "content.manage"
 # ===================================================================
 echo "== 22. Manifest — ai_clients block =="
 assert_true "manifest: ai_clients block" "$(echo "$MANIFEST" | jq -r 'if .ai_clients then "true" else "false" end')"
-assert_eq "manifest: 11 clients" "11" "$(echo "$MANIFEST" | jq -r '.ai_clients.clients | length')"
+assert_eq "manifest: client array matches the roster" "$(echo "$CLIENTS" | jq -r '.clients | length')" "$(echo "$MANIFEST" | jq -r '.ai_clients.clients | length')"
 
 # ===================================================================
-echo "== 23. Capability enforce default unified =="
+echo "== 24. Capability enforce default unified =="
 # Both MCP and REST executor paths should be consistent
 # Verify ClaudeIntegration reports enforcement correctly
 CLAUDE_ENFORCEMENT=$(echo "$DISC" | jq -r '.capabilities.enforcement')

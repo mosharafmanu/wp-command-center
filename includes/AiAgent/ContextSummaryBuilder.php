@@ -7,6 +7,7 @@
 namespace WPCommandCenter\AiAgent;
 
 use WPCommandCenter\Operations\OperationRegistry;
+use WPCommandCenter\Operations\SecurityModeManager;
 use WPCommandCenter\Recommendations\RecommendationEngine;
 
 defined( 'ABSPATH' ) || exit;
@@ -50,13 +51,18 @@ final class ContextSummaryBuilder {
 		$operations = ( new OperationRegistry() )->get_operations();
 		$risk_counts = [];
 		$approvals   = 0;
+		$policy      = SecurityModeManager::approval_policy();
 
 		foreach ( $operations as $operation ) {
 			$risk = (string) ( $operation['risk_level'] ?? 'unknown' );
 			$risk_counts[ $risk ] = ( $risk_counts[ $risk ] ?? 0 ) + 1;
-			$approvals += empty( $operation['requires_approval'] ) ? 0 : 1;
+			$approvals += SecurityModeManager::requires_approval( $risk ) ? 1 : 0;
 		}
 
+		// Describe the same action-risk policy used by OperationExecutor. The
+		// legacy option no longer controls the gate. Keep approval_enforcement
+		// boolean for existing clients: true means at least one recognised risk
+		// tier requires approval, not that every operation waits for approval.
 		return [
 			'context_mode' => 'compact',
 			'plugin'       => [
@@ -65,7 +71,13 @@ final class ContextSummaryBuilder {
 			],
 			'security'     => [
 				'capability_enforcement' => (bool) get_option( 'wpcc_enforce_capabilities', true ),
-				'approval_enforcement'   => (bool) get_option( 'wpcc_enforce_approval', false ),
+				'approval_enforcement'   => $policy['enforcement'],
+				'security_mode'          => $policy['mode'],
+				'approval_policy'        => [
+					'requires_approval_by_risk' => $policy['requires_approval_by_risk'],
+					'required_risk_tiers'       => $policy['required_risk_tiers'],
+					'requires_human_approver'   => $policy['requires_human_approver'],
+				],
 				'rollback_supported'      => true,
 			],
 			'operations'   => [

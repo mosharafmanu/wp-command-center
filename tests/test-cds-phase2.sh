@@ -118,7 +118,7 @@ if ! command -v wp >/dev/null 2>&1; then
 	echo "  SKIP: wp-cli not available."
 else
 	assert_eq "OPERATION_MAP stays 34" "34" "$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
-	assert_eq "ALL_CAPABILITIES stays 23" "23" "$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
+	assert_eq "ALL_CAPABILITIES stays 24" "24" "$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
 	assert_eq "catalogue stays 42" "42" "$(wpe '$r = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $r->get_operations() );')"
 	assert_eq "MCP tools stay 42" "42" "$(wpe '$r = ( new \WPCommandCenter\Mcp\McpServerRuntime() )->handle( [ "jsonrpc" => "2.0", "id" => 1, "method" => "tools/list" ], [] ); echo isset( $r["result"]["tools"] ) ? count( $r["result"]["tools"] ) : -1;')"
 	assert_eq "DB_VERSION stays 2.6.0" "2.6.0" "$(wpe 'echo get_option("wpcc_db_version");')"

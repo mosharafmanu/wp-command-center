@@ -40,6 +40,23 @@ has()  { local d="$1" p="$2" f="$3"; if grep -qE "$p" "$f"; then pass "$d"; else
 mcp()  { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp"; }
 mcpj() { mcp "$1" | jq -r '.result.content[0].text' 2>/dev/null; }
 
+# This suite proves Standard/client approval semantics even when a wider runner
+# intentionally establishes a developer-mode baseline for unrelated tests.
+# Preserve the option byte-for-byte and restore it on every exit path.
+WPCC_UNDO_MODE_SNAPSHOT=$(wp eval '
+$name="wpcc_security_mode";
+echo base64_encode( serialize( [ "exists" => false !== get_option( $name, false ), "value" => get_option( $name, null ) ] ) );
+' --path="$WP_PATH" 2>/dev/null)
+export WPCC_UNDO_MODE_SNAPSHOT
+restore_mode() {
+	wp eval '
+	$s=unserialize(base64_decode((string)getenv("WPCC_UNDO_MODE_SNAPSHOT")),["allowed_classes"=>false]);
+	if(!empty($s["exists"])){update_option("wpcc_security_mode",$s["value"]);}else{delete_option("wpcc_security_mode");}
+	' --path="$WP_PATH" >/dev/null 2>&1
+}
+trap restore_mode EXIT
+wp option update wpcc_security_mode client --path="$WP_PATH" >/dev/null
+
 echo "Undo approval risk consistency (Finding C) — $(date)"
 echo ""
 

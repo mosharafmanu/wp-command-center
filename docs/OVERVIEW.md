@@ -4,7 +4,7 @@ WP Command Center (WPCC) connects an AI assistant to a WordPress site through th
 Model Context Protocol (MCP), and puts a governance layer between the assistant and
 the database.
 
-**Version:** 1.0.0 · **Requires:** WordPress 6.4+, PHP 8.0+ · **Tested to:** WordPress 7.0
+**Version:** 1.0.1 · **Requires:** WordPress 6.4+, PHP 8.0+ · **Tested to:** WordPress 7.1
 
 ---
 
@@ -32,7 +32,7 @@ What makes it different from handing an assistant your admin password:
   It never initiates work.
 - Not a hosted service. Everything runs on your site; no data is sent anywhere except to
   the AI provider you configure, and only if you configure one.
-- Not multisite-capable in 1.0.0. Network activation is refused with an explanation
+- Not multisite-capable in 1.0.1. Network activation is refused with an explanation
   rather than half-working. See [ARCHITECTURE.md](ARCHITECTURE.md#multisite).
 
 ## The shape of a change

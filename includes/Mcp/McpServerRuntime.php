@@ -14,6 +14,7 @@ use WPCommandCenter\Operations\OperationRegistry;
 use WPCommandCenter\Operations\OperationExecutor;
 use WPCommandCenter\Operations\OperationQueue;
 use WPCommandCenter\Operations\OperationResults;
+use WPCommandCenter\Operations\SecurityModeManager;
 use WPCommandCenter\Security\AuditLog;
 use WPCommandCenter\Security\AuthTokens;
 use WPCommandCenter\Security\Redactor;
@@ -192,10 +193,34 @@ final class McpServerRuntime {
 		$result = match ( $method ) {
 			'initialize'          => $this->initialize( $params ),
 			'resources/list'      => $this->resources_list( $params ),
+			/*
+			 * Declaring the `resources` capability makes this method part of the contract,
+			 * whether or not the server has any templates.
+			 *
+			 * Observed in real testing (REAL_TEST_FINDINGS.md #5): Continue calls
+			 * resources/templates/list during MCP initialisation and got
+			 * `-32601 Method not found`, which it reported to the user as
+			 * "Error loading resource templates for MCP Server wp-command-center".
+			 * Tool execution still worked, so the connection was fine — but the client's
+			 * very first impression of this server was an error message, which is a poor
+			 * trade for a method whose honest answer is "none".
+			 *
+			 * WPCC's resources are fixed URIs (wpcc://…) with no URI templates among
+			 * them, so the correct response is an empty list — not an error. A client
+			 * asking what templates exist is entitled to be told "no templates" rather
+			 * than "no such question".
+			 */
+			'resources/templates/list' => $this->resources_templates_list(),
 			'resources/read'      => $this->resources_read( $params ),
 			'tools/list'          => $this->tools_list( $params ),
 			'tools/call'          => $this->tools_call( $params, $context ),
 			'prompts/list'        => $this->prompts_list(),
+			/*
+			 * `ping` is a no-op liveness check in the MCP spec that any client may send at
+			 * any time. Answering -32601 to it invites a client to treat a healthy server
+			 * as unreachable. An empty result is the whole of a correct response.
+			 */
+			'ping'                => [ 'result' => new \stdClass() ],
 			default               => $this->error( -32601, 'Method not found', $id ),
 		};
 
@@ -227,6 +252,21 @@ final class McpServerRuntime {
 	}
 
 	// ── Resources ──
+
+	/**
+	 * URI templates this server exposes: none.
+	 *
+	 * Every WPCC resource is a fixed `wpcc://…` URI enumerated by resources/list; none of
+	 * them takes a parameter, so there is genuinely nothing to template. The empty array
+	 * is the accurate answer, and it is deliberately NOT an error — see the dispatch note
+	 * above for what answering -32601 here looked like to a real client.
+	 *
+	 * If parameterised resources are ever added, this is where they are declared; the
+	 * method existing already means no client has to change to discover them.
+	 */
+	private function resources_templates_list(): array {
+		return [ 'result' => [ 'resourceTemplates' => [] ] ];
+	}
 
 	private function resources_list( array $params = [] ): array {
 		$mode = ContextModeOptimizer::normalize( $params['context_mode'] ?? null );
@@ -345,6 +385,34 @@ final class McpServerRuntime {
 				// the contract is machine-readable, not just descriptive text.
 				if ( isset( $p['items'] ) && is_array( $p['items'] ) ) {
 					$props[ $p['name'] ]['items'] = $p['items'];
+				} elseif ( 'array' === $props[ $p['name'] ]['type'] ) {
+					/*
+					 * An array schema MUST carry `items`. This is not pedantry — it is a
+					 * hard validation rule in the stricter MCP clients, and failing it
+					 * takes the whole server down rather than the one tool.
+					 *
+					 * Observed against GitHub Copilot in VS Code
+					 * (REAL_TEST_FINDINGS.md #8): the connection reached Running and all
+					 * 42 tools were discovered, then every request failed with
+					 *
+					 *     Failed to validate tool mcp_wp_command_ce_bulk_manage:
+					 *     Error: tool parameters array type must have items.
+					 *
+					 * A scan of tools/list found EIGHT such properties across six tools,
+					 * not the one the client happened to name first — and because Copilot
+					 * refuses to proceed when any tool fails validation, a request for
+					 * `system_info` was blocked by a defect in `bulk_manage`.
+					 *
+					 * The accurate item schemas are declared on the parameters themselves
+					 * (OperationRegistry). This branch is the guarantee behind them: an
+					 * array parameter added later without a declared item type still
+					 * emits a VALID schema rather than silently breaking every strict
+					 * client again. `{}` is the empty JSON Schema — it accepts anything,
+					 * so it never contradicts the parameter's real contract; it just
+					 * refuses to omit the key. stdClass so json_encode renders `{}` and
+					 * not `[]`.
+					 */
+					$props[ $p['name'] ]['items'] = new \stdClass();
 				}
 				if ( isset( $p['examples'] ) && ContextModeOptimizer::COMPACT !== $mode ) {
 					$props[ $p['name'] ]['examples'] = $p['examples'];
@@ -385,6 +453,20 @@ final class McpServerRuntime {
 					'type'       => 'object',
 					'properties' => $props,
 					'required'   => array_values( array_map( static fn( $p ) => $p['name'], array_filter( $op['parameters'], static fn( $p ) => ! empty( $p['required'] ) ) ) ),
+				],
+				/*
+				 * MCP clients such as Codex use these standard hints to decide whether a
+				 * tool needs their own local approval. Without them even system_info is
+				 * treated as destructive/open-world; a Codex session whose approval policy
+				 * is `never` then refuses the call before WPCC ever receives it. Only tools
+				 * whose worst-case registry risk is diagnostic are marked read-only. Mixed
+				 * tools remain conservative, and WPCC scope/capability/approval enforcement
+				 * is unchanged.
+				 */
+				'annotations' => [
+					'readOnlyHint'    => SecurityModeManager::RISK_DIAGNOSTIC === ( $op['risk_level'] ?? '' ),
+					'destructiveHint' => SecurityModeManager::RISK_DIAGNOSTIC !== ( $op['risk_level'] ?? '' ),
+					'idempotentHint'  => SecurityModeManager::RISK_DIAGNOSTIC === ( $op['risk_level'] ?? '' ),
 				],
 			];
 		}
@@ -459,27 +541,18 @@ final class McpServerRuntime {
 		// Mirrors RestApi::require_write() so MCP cannot grant more access than REST.
 		$cap_reg = new CapabilityRegistry();
 		$token_scope = $context['token_scope'] ?? '';
-		if ( AuthTokens::SCOPE_READ_ONLY === $token_scope && $cap_reg->requires_full_scope( $tool_name ) ) {
+		if ( AuthTokens::SCOPE_READ_ONLY === $token_scope && $cap_reg->requires_full_scope( $tool_name, $args ) ) {
 			$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'insufficient_scope' ], $context );
-			// Message only — the scope decision above is unchanged. The old wording
-			// named the rule but not the fix, so an assistant relaying it left the
-			// customer with a dead end. This states the boundary AND the next step.
-			//
-			// It says "read-only" because that is what the scope is called everywhere
-			// the customer can see it: AuthTokens::scope_label() renders it "Read-only"
-			// in the Connections screen and in every token listing. The message
-			// previously said "restricted", so an assistant relaying it named a scope
-			// the customer could not find in their own UI.
 			return $this->tool_error(
 				'wpcc_token_read_only',
-				__( 'This token is read-only and cannot perform this action. A read-only token is limited to search, file and history lookups. To let the assistant do more, create a full access token in WP Command Center → Settings → Connections; changes will still wait for your approval.', 'ai-command-center' )
+				__( 'This token is read-only. It can inspect site information and supported read actions, but cannot change data, create approval requests, approve changes, or execute mutations.', 'ai-command-center' )
 			);
 		}
 
 		// Capability check
 		$token_id = $context['token_id'] ?? '';
 		if ( '' !== $token_id && get_option( 'wpcc_enforce_capabilities', true ) ) {
-			$validation = $cap_reg->validate( $tool_name, 'token', $token_id );
+			$validation = $cap_reg->validate( $tool_name, 'token', $token_id, $args, $token_scope );
 			if ( ! $validation['allowed'] ) {
 				$this->audit( 'mcp.denied', [ 'tool' => $tool_name, 'reason' => 'missing_capability', 'required' => $validation['required_capability'] ], $context );
 				return $this->tool_error( 'wpcc_capability_denied', sprintf(

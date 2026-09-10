@@ -140,7 +140,7 @@ $wpcc_steps = [
 	[
 		'done'   => ConnectionStatus::ever_connected(),
 		'title'  => __( 'Ask your assistant to do something', 'ai-command-center' ),
-		'body'   => __( 'Questions are answered straight away. Anything that would change the site comes back here for your approval first.', 'ai-command-center' ),
+		'body'   => __( 'Questions are answered straight away.', 'ai-command-center' ) . ' ' . \WPCommandCenter\Operations\SecurityModeManager::approval_step(),
 		// A step with no action and no completion signal is a dead end. This one
 		// gives the customer the exact words to type, and says plainly how it
 		// finishes — which is by evidence, not by them ticking a box.
@@ -192,22 +192,32 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		 * shell header's decorative mark) because on this screen the lockup IS the
 		 * product's first statement of who it is; the headline below is a promise, not
 		 * a name.
+		 *
+		 * ── LIGHT-SURFACE ARTWORK, UNCONDITIONALLY. Do not use Brand::picture() here.
+		 *
+		 * This lockup sits on the onboarding card — white, on the WordPress admin's
+		 * #f0f0f1 content background. Every core admin colour scheme restyles the sidebar
+		 * and accents but never the content area, so this surface is permanently light.
+		 *
+		 * Brand::picture() picks its variant from `(prefers-color-scheme: dark)`, which
+		 * describes the viewer's OPERATING SYSTEM / browser theme rather than the surface
+		 * the artwork lands on. Using it here served the dark-surface lockup — near-white
+		 * #F8FAFC — onto this light card for every admin running an OS dark theme: 1.09:1
+		 * contrast, invisible. It is the FIRST thing a new user sees, so the product
+		 * appeared to have no logo at all on the one screen that introduces it.
+		 *
+		 * picture() and the *-dark assets are correct and stay available for genuinely
+		 * dark surfaces (the admin sidebar, for instance). This is not one of them.
 		 */
-		echo wp_kses(
-			Brand::picture(
-				Brand::logo(),
-				Brand::logo_dark(),
-				esc_attr__( 'WP Command Center', 'ai-command-center' ),
-				'wpcc-setup__logo',
-				244,
-				32
-			),
-			Brand::allowed_html()
+		printf(
+			'<img src="%1$s" alt="%2$s" class="wpcc-setup__logo" width="244" height="32" decoding="async" />',
+			esc_url( Brand::logo() ),
+			esc_attr__( 'WP Command Center', 'ai-command-center' )
 		);
 		?>
 		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Let an AI assistant work on this site — safely', 'ai-command-center' ); ?></h2>
 		<p class="wpcc-setup__lede">
-			<?php esc_html_e( 'You work in your AI assistant — Claude, Cursor or ChatGPT — and ask for changes to this site in your own words and your own language. Anything that matters waits here for your approval, every change is recorded, and supported changes can be undone.', 'ai-command-center' ); ?>
+			<?php esc_html_e( 'You work in your AI assistant — Claude, Cursor or ChatGPT — and ask for changes to this site in your own words and your own language. Your selected protection mode controls which changes wait for approval, every change is recorded, and supported changes can be undone.', 'ai-command-center' ); ?>
 		</p>
 
 		<?php
@@ -222,7 +232,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 				// Mode-aware: on a Development site this line used to reassure the
 				// customer about a protection they did not have.
 				echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::is_protected()
-					? __( 'Already protected — changes will wait for your approval.', 'ai-command-center' )
+					? \WPCommandCenter\Operations\SecurityModeManager::approval_step()
 					: __( 'Development mode — AI changes apply immediately, with no approval step.', 'ai-command-center' ) );
 			} else {
 				esc_html_e( 'Approvals are off — AI changes will apply immediately.', 'ai-command-center' );

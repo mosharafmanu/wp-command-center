@@ -112,7 +112,7 @@ assert_contains "operation_requests keeps payload column" \
 
 # ── 8. Platform invariants (only DB_VERSION may move) ───────────────────────
 assert_eq "invariant: OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
-assert_eq "invariant: capabilities == 23" "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
+assert_eq "invariant: capabilities == 24" "24" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
 assert_eq "invariant: catalogue == 42" "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
 
 # ─────────────────────────────────────────────────────────────────────────────

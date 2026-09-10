@@ -80,7 +80,7 @@ Output: `build/ai-command-center-<version>.zip`.
 Verify no development files leaked:
 
 ```bash
-unzip -l build/ai-command-center-1.0.0.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
+unzip -l build/ai-command-center-1.0.1.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
 ```
 
 Expect no matches. `docs/` and `tests/` do not ship.
@@ -106,7 +106,7 @@ Plugin Check must be run against the **built artifact**, not the checkout — th
 contains `build/`, `tests/`, `.git` and `.DS_Store`, none of which ship:
 
 ```bash
-unzip -q build/ai-command-center-1.0.0.zip -d /tmp/pkg
+unzip -q build/ai-command-center-1.0.1.zip -d /tmp/pkg
 wp plugin check /tmp/pkg/ai-command-center --format=csv --fields=type,code,file,line
 ```
 

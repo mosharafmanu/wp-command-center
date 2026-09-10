@@ -161,7 +161,8 @@ final class ReportingRuntimeManager {
 	// ── Security ─────────────────────────────────────────────────
 
 	private function security(): array {
-		$mode   = class_exists( SecurityModeManager::class ) ? SecurityModeManager::current() : 'developer';
+		$policy = SecurityModeManager::approval_policy();
+		$mode   = $policy['mode'];
 		$tokens = [];
 		try { $tokens = ( new AuthTokens() )->list(); } catch ( \Throwable $e ) { $tokens = []; }
 		$by_scope = [];
@@ -187,7 +188,12 @@ final class ReportingRuntimeManager {
 
 		return [ 'security' => [
 			'security_mode'          => $mode,
-			'approval_enforced'      => 'developer' !== $mode,
+			'approval_enforced'      => $policy['enforcement'],
+			'approval_policy'        => [
+				'requires_approval_by_risk' => $policy['requires_approval_by_risk'],
+				'required_risk_tiers'       => $policy['required_risk_tiers'],
+				'requires_human_approver'   => $policy['requires_human_approver'],
+			],
 			'capability_enforcement' => (bool) get_option( 'wpcc_enforce_capabilities', true ),
 			'tokens'                 => [ 'total' => count( $tokens ), 'by_scope' => $by_scope ],
 			'pending_approvals'      => $pending,

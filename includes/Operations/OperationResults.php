@@ -31,12 +31,16 @@ final class OperationResults {
 	 *     queue_id?: string,
 	 *     request_id?: string
 	 * }
+	 * @param string|null $execution_result_id UUID reserved by OperationExecutor,
+	 *                                        never read from a request payload.
 	 * @return string Result ID (UUID).
 	 */
-	public function create( array $data ): string {
+	public function create( array $data, ?string $execution_result_id = null ): string {
 		global $wpdb;
 
-		$result_id = wp_generate_uuid4();
+		// The executor reserves an identity before dispatch so a reversal recorded
+		// by the handler can reference this execution. Other callers still mint one.
+		$result_id = $execution_result_id ?? wp_generate_uuid4();
 		$now       = time();
 
 		$wpdb->insert(

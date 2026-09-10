@@ -600,7 +600,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 							<span>
 								<?php
 								if ( \WPCommandCenter\Admin\ConnectionStatus::STATE_NO_TOKEN === $wpcc_assistant['state'] ) {
-									esc_html_e( 'Let an assistant work on this site directly. It needs its own access token, not this provider key. Nothing it asks for is applied on its own — changes wait for your approval.', 'ai-command-center' );
+									esc_html_e( 'Let an assistant work on this site directly. It needs its own access token, not this provider key. Changes follow your selected protection mode, including any required human approval.', 'ai-command-center' );
 								} elseif ( \WPCommandCenter\Admin\ConnectionStatus::STATE_UNUSED === $wpcc_assistant['state'] ) {
 									echo esc_html(
 										sprintf(
@@ -618,7 +618,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 									echo esc_html(
 										sprintf(
 											/* translators: %s: sentence about the last assistant request, e.g. "Last request 2 hours ago." */
-											__( 'An assistant is already connected. %s Changes it asks for still wait for your approval.', 'ai-command-center' ),
+											__( 'An assistant is already connected. %s Changes it asks for follow your selected protection mode.', 'ai-command-center' ),
 											(string) $wpcc_assistant['detail']
 										)
 									);

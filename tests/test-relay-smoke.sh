@@ -13,4 +13,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # fatal here. Run scripts/relay-smoke.sh directly (SMOKE_AUDIT=strict, default)
 # after deploy to prove all runtimes conform.
 export SMOKE_AUDIT="${SMOKE_AUDIT:-report}"
-exec bash "$ROOT/scripts/relay-smoke.sh"
+bash "$ROOT/scripts/relay-smoke.sh"
+relay_rc=$?
+if [ "$relay_rc" -eq 0 ]; then
+	echo "Relay smoke: 1 passed, 0 failed"
+	exit 0
+fi
+echo "Relay smoke: 0 passed, 1 failed"
+exit "$relay_rc"

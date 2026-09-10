@@ -18,7 +18,7 @@
 #   - Functional (wp-cli): attribution is stamped forward-only (admin -> wp_user,
 #     token -> token, no actor -> NULL/"unavailable"); ApprovalAdminQuery history
 #     + summary read those rows back correctly
-#   - Invariants: operation_map stays 34, capabilities stay 23 (no runtime op,
+#   - Invariants: operation_map stays 34, capabilities stay 24 (no runtime op,
 #     MCP tool, or capability added)
 #
 # Requires: curl, jq, wp-cli, php, rg, wpcc-env.sh (full-scope $WPCC_TOKEN).
@@ -209,7 +209,7 @@ echo
 echo "== 8. Invariants: no runtime/MCP/capability additions =="
 MANIFEST=$(api GET /agent/manifest)
 assert_eq "operation_map stays 34" "34" "$(pj "$MANIFEST" '.capability_management.operation_map | keys | length')"
-assert_eq "capabilities stay 23"   "23" "$(pj "$MANIFEST" '.capability_management.capabilities | length')"
+assert_eq "capabilities stay 24"   "24" "$(pj "$MANIFEST" '.capability_management.capabilities | length')"
 
 echo
 echo "== 9. Functional: forward-only attribution + admin-query read-back =="

@@ -156,7 +156,7 @@ else
 	OPMAP="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP );')"
 	assert_eq "OPERATION_MAP stays 34" "34" "$OPMAP"
 	CAPS="$(wpe 'echo count( \WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES );')"
-	assert_eq "ALL_CAPABILITIES stays 23" "23" "$CAPS"
+	assert_eq "ALL_CAPABILITIES stays 24" "24" "$CAPS"
 	CAT="$(wpe '$reg = new \WPCommandCenter\Operations\OperationRegistry(); echo count( $reg->get_operations() );')"
 	assert_eq "operation catalogue stays 42" "42" "$CAT"
 	DBV="$(wpe 'echo get_option("wpcc_db_version");')"

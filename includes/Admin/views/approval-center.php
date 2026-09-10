@@ -403,7 +403,7 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 		reqFailed:   <?php echo wp_json_encode( __( 'Could not reach your site, so this decision may not have been saved. Reload the page to see where the request stands before deciding again.', 'ai-command-center' ) ); ?>,
 		destructive: <?php echo wp_json_encode( __( 'DESTRUCTIVE — this permanently deletes data and cannot be undone.', 'ai-command-center' ) ); ?>,
 		auditNote:   <?php echo wp_json_encode( __( 'This action will be logged in the audit trail.', 'ai-command-center' ) ); ?>,
-		noPending:   <?php echo wp_json_encode( __( 'Nothing is waiting for you. When your assistant asks to change something, it appears here for your decision.', 'ai-command-center' ) ); ?>,
+		noPending:   <?php echo wp_json_encode( __( 'Nothing is waiting for you. Requests that need approval appear here for your decision.', 'ai-command-center' ) ); ?>,
 		clearTitle:  <?php echo wp_json_encode( __( 'Nothing is waiting for you', 'ai-command-center' ) ); ?>,
 		<?php // Mode-aware: on a Development site nothing will ever appear here to approve. ?>
 		clearDetail: <?php echo wp_json_encode( \WPCommandCenter\Operations\SecurityModeManager::approvals_empty_detail() ); ?>,

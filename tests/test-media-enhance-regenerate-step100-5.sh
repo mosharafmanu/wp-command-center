@@ -33,26 +33,46 @@ mrb() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type:
 memcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp" | jq -r '.result.content[0].text // empty'; }
 wpe() { wp eval "$1" --path="$WP_PATH" 2>/dev/null; }
 
-BIG=""; SMALL=""; PAGE=""; MUDIR="$WP_PATH/wp-content/mu-plugins"; MU_SIZE="$MUDIR/wpcc-105-sizes.php"; MU_NOEDIT="$MUDIR/wpcc-105-noeditor.php"
+BIG=""; SMALL=""; PAGE=""; MUDIR="$WP_PATH/wp-content/mu-plugins"; MU_ISOLATION="$MUDIR/wpcc-105-isolation.php"; MU_SIZE="$MUDIR/wpcc-105-sizes.php"; MU_NOEDIT="$MUDIR/wpcc-105-noeditor.php"
+WPCC_MEDIA_FIXTURE_SUFFIX="$(date +%s)-$$-$RANDOM"
+export WPCC_MEDIA_FIXTURE_SUFFIX
 cleanup() {
   [ -n "$BIG" ]   && wpe 'wp_delete_attachment('"$BIG"',true);'
   [ -n "$SMALL" ] && wpe 'wp_delete_attachment('"$SMALL"',true);'
   [ -n "$PAGE" ]  && wpe 'wp_delete_post('"$PAGE"',true);'
+  [ -f "$MU_ISOLATION" ] && rm -f "$MU_ISOLATION"
   [ -f "$MU_SIZE" ]   && rm -f "$MU_SIZE"
   [ -f "$MU_NOEDIT" ] && rm -f "$MU_NOEDIT"
   wpe '$s=get_option("wpcc_media_file_snapshots",[]); foreach($s as $r){ (new \WPCommandCenter\Operations\MediaSnapshot())->delete($r["id"]); }'
 }
 trap cleanup EXIT
 
-echo "== 0. Seed a 1200x900 image and a 250x200 image (editors on, no test sizes) =="
+echo "== 0. Isolate registered sizes, then seed a 1200x900 and a 250x200 image =="
+mkdir -p "$MUDIR"
+cat > "$MU_ISOLATION" <<'PHP'
+<?php
+$wpcc_105_sizes = static function ( array $sizes ): array {
+	$core = [ 'thumbnail', 'medium' ];
+	return array_values( array_filter( $sizes, static fn( $name ) => in_array( $name, $core, true ) || 0 === strpos( $name, 'wpcc_' ) ) );
+};
+add_filter( 'intermediate_image_sizes', $wpcc_105_sizes, PHP_INT_MAX );
+$wpcc_105_original_sizes = [];
+add_filter( 'intermediate_image_sizes_advanced', static function ( array $sizes ) use ( &$wpcc_105_original_sizes ): array {
+	$wpcc_105_original_sizes = $sizes;
+	return $sizes;
+}, -999 );
+add_filter( 'intermediate_image_sizes_advanced', static function ( array $sizes ) use ( &$wpcc_105_original_sizes, $wpcc_105_sizes ): array {
+	return array_intersect_key( $wpcc_105_original_sizes, array_flip( $wpcc_105_sizes( array_keys( $wpcc_105_original_sizes ) ) ) );
+}, PHP_INT_MAX );
+PHP
 BIG=$(wpe '
-$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-105-big.jpg";
+$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-105-big-".sanitize_file_name((string)getenv("WPCC_MEDIA_FIXTURE_SUFFIX")).".jpg";
 $im=imagecreatetruecolor(1200,900); imagefill($im,0,0,imagecolorallocate($im,20,120,90)); imagejpeg($im,$s,85); imagedestroy($im);
 $a=wp_insert_attachment(["post_mime_type"=>"image/jpeg","post_title"=>"105big","post_status"=>"inherit"],$s);
 require_once ABSPATH."wp-admin/includes/image.php"; wp_update_attachment_metadata($a, wp_generate_attachment_metadata($a,$s));
 echo $a;')
 SMALL=$(wpe '
-$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-105-small.jpg";
+$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-105-small-".sanitize_file_name((string)getenv("WPCC_MEDIA_FIXTURE_SUFFIX")).".jpg";
 $im=imagecreatetruecolor(250,200); imagefill($im,0,0,imagecolorallocate($im,150,40,40)); imagejpeg($im,$s,85); imagedestroy($im);
 $a=wp_insert_attachment(["post_mime_type"=>"image/jpeg","post_title"=>"105small","post_status"=>"inherit"],$s);
 require_once ABSPATH."wp-admin/includes/image.php"; wp_update_attachment_metadata($a, wp_generate_attachment_metadata($a,$s));
@@ -66,7 +86,6 @@ assert_eq "no_action true" "true" "$(echo "$N" | jq -r '.thumbnail_regenerate.no
 assert_eq "nothing regenerated" "0" "$(echo "$N" | jq -r '.thumbnail_regenerate.regenerated | length')"
 
 echo "== 2. Register sizes post-upload (mu-plugin): wpcc_acc_size applicable, wpcc_big_size not =="
-mkdir -p "$MUDIR"
 cat > "$MU_SIZE" <<'PHP'
 <?php
 add_action( 'init', function () {

@@ -32,6 +32,16 @@ final class CredentialStore {
 		if ( $this->is_legacy_option_backed( $conn ) ) {
 			return true;
 		}
+
+		/*
+		 * An empty or partial record is a valid read state while no default provider
+		 * has been selected. It cannot identify a stored credential or establish
+		 * that a provider permits keyless access, so it is not configured.
+		 */
+		if ( ! isset( $conn['id'], $conn['provider'] ) || '' === (string) $conn['id'] || '' === (string) $conn['provider'] ) {
+			return false;
+		}
+
 		$store = $this->raw();
 		if ( isset( $store[ $conn['id'] ] ) && '' !== (string) $store[ $conn['id'] ] ) {
 			return true;

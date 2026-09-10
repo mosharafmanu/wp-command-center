@@ -29,7 +29,13 @@ pm(){ curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: a
 
 # A harmless append edit (preview/create never write to disk).
 DANGER_FILE="themes/hello-elementor/functions.php"
-SAFE_FILE="plugins/ai-command-center/readme.txt"
+# Patch a disposable sibling fixture so the release candidate stays byte-for-byte
+# unchanged during validation, including between apply and rollback.
+FIXTURE_DIR="$(mktemp -d "$WP_ROOT/wp-content/plugins/wpcc-ergonomics-XXXXXX")"
+printf 'WPCC patch regression fixture\n' > "$FIXTURE_DIR/fixture.txt"
+cleanup_fixture() { rm -f "$FIXTURE_DIR/fixture.txt"; rmdir "$FIXTURE_DIR"; }
+trap cleanup_fixture EXIT
+SAFE_FILE="plugins/$(basename "$FIXTURE_DIR")/fixture.txt"
 APPEND='\n// wpcc 105.6 ergonomics probe (never applied)\n'
 
 echo "== 1. patch_preview on a HIGH-RISK file exposes the confirmation contract =="
@@ -61,7 +67,7 @@ SPID=$(pj "$SC" '.patch_id')
 AP=$(pm "$(jq -nc --arg id "$SPID" '{action:"patch_apply",patch_id:$id}')")
 assert_eq "apply: change_set applied" "applied" "$(pj "$AP" '.change_set_status')"
 assert_eq "apply: verification_summary.code surfaced" "ok" "$(pj "$AP" '.verification_summary.code')"
-# Method is surfaced (readme.txt is non-PHP → 'none'; a PHP target → 'php -l'/'tokenizer').
+# Method is surfaced (fixture.txt is non-PHP → 'none'; a PHP target → 'php -l'/'tokenizer').
 APM=$(pj "$AP" '.verification_summary.method')
 case "$APM" in
 	none|"php -l"|tokenizer|mixed) pass "apply: verification method surfaced ($APM)";;

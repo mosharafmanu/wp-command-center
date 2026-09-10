@@ -63,7 +63,7 @@ final class MenuRuntimeManager {
 		if ( '' === $name ) return $this->err( 'wpcc_missing_name', __( 'Menu name is required.', 'ai-command-center' ) );
 		$id = wp_create_nav_menu( $name );
 		if ( is_wp_error( $id ) ) return $this->err( 'wpcc_menu_create_failed', $id->get_error_message() );
-		$loc = sanitize_key( (string) ( $p['location'] ?? '' ) );
+		$loc = $this->location_key( (string) ( $p['location'] ?? '' ) );
 		if ( '' !== $loc ) { $locs = get_theme_mod( 'nav_menu_locations' ) ?: []; $locs[ $loc ] = $id; set_theme_mod( 'nav_menu_locations', $locs ); }
 		$this->store_rollback( (string) $id, 'menu_create', [], $cx );
 		$this->audit->record( 'menu.created', [ 'menu_id' => $id, 'name' => $name ] );
@@ -207,7 +207,7 @@ final class MenuRuntimeManager {
 	}
 
 	private function location_assign( array $p, array $cx ): array {
-		$menu_id = (int) ( $p['menu_id'] ?? 0 ); $loc = sanitize_key( (string) ( $p['location'] ?? '' ) );
+		$menu_id = (int) ( $p['menu_id'] ?? 0 ); $loc = $this->location_key( (string) ( $p['location'] ?? '' ) );
 		$locs = get_theme_mod( 'nav_menu_locations' ) ?: [];
 		$before = $locs[ $loc ] ?? null;
 		$locs[ $loc ] = $menu_id;
@@ -218,7 +218,7 @@ final class MenuRuntimeManager {
 	}
 
 	private function location_remove( array $p, array $cx ): array {
-		$loc = sanitize_key( (string) ( $p['location'] ?? '' ) );
+		$loc = $this->location_key( (string) ( $p['location'] ?? '' ) );
 		$locs = get_theme_mod( 'nav_menu_locations' ) ?: [];
 		$before = $locs[ $loc ] ?? null;
 		unset( $locs[ $loc ] );
@@ -231,6 +231,18 @@ final class MenuRuntimeManager {
 		$registered = get_registered_nav_menus(); $assigned = get_theme_mod( 'nav_menu_locations' ) ?: [];
 		$unassigned = array_diff_key( $registered, $assigned );
 		return [ 'action' => 'menu_location_sync', 'registered' => count( $registered ), 'assigned' => count( $assigned ), 'unassigned' => count( $unassigned ) ];
+	}
+
+	/** Preserve a theme's registered location key, including intentional casing. */
+	private function location_key( string $location ): string {
+		$location = sanitize_text_field( $location );
+		$registered = get_registered_nav_menus();
+		if ( isset( $registered[ $location ] ) ) return $location;
+		$sanitized = sanitize_key( $location );
+		foreach ( array_keys( $registered ) as $key ) {
+			if ( sanitize_key( (string) $key ) === $sanitized ) return (string) $key;
+		}
+		return $sanitized;
 	}
 
 	private function tree_get( array $p ): array {

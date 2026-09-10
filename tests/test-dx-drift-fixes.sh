@@ -25,12 +25,16 @@ op(){ curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: a
 echo "== ISSUE 9: invalid-action error lists valid actions =="
 R=$(op acf_manage '{"action":"totally_bogus"}')
 pj "$R" '.message // .error.message // empty' | grep -qi "valid actions" && pass "acf invalid-action names valid actions" || fail "should list valid actions"
-[ "$(pj "$R" '.valid_actions | length // 0')" -gt 0 ] && pass "acf error carries valid_actions array" || fail "valid_actions array missing"
+D=$(op acf_manage '{"action":"acf_describe"}')
+M=$(pj "$R" '.message // .error.message // empty')
+MISSING=$(printf '%s' "$D" | jq -r '.actions[]?.action' | while IFS= read -r action; do
+	printf '%s' "$M" | grep -qF "$action" || printf '%s\n' "$action"
+done)
+[ -z "$MISSING" ] && pass "acf error lists every registry-described action" || fail "acf error omits described actions: $MISSING"
 W=$(op woocommerce_manage '{"action":"totally_bogus"}')
 pj "$W" '.message // .error.message // empty' | grep -qi "valid actions" && pass "woo invalid-action names valid actions" || fail "woo should list valid actions"
 
 echo "== ISSUE 9: describe actions =="
-D=$(op acf_manage '{"action":"acf_describe"}')
 [ "$(pj "$D" '.runtime // empty')" = "acf_manage" ] && pass "acf_describe returns action catalogue" || fail "acf_describe missing"
 printf '%s' "$D" | jq -e '.actions[] | select(.action=="acf_value_set")' >/dev/null 2>&1 && pass "acf_describe lists acf_value_set" || fail "describe should list acf_value_set"
 

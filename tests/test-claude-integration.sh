@@ -2,7 +2,13 @@
 # Step 47 — Claude Desktop Integration test suite
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../wpcc-env.sh"
+if [[ -n "${WPCC_ONBOARDING_TOKEN_OVERRIDE:-}" ]]; then
+	WPCC_TOKEN="$WPCC_ONBOARDING_TOKEN_OVERRIDE"
+	WP_ROOT="${WPCC_TEST_WP_PATH:-$(cd "$SCRIPT_DIR/../../../.." && pwd)}"
+	WPCC_BASE="$(wp --path="$WP_ROOT" eval 'echo untrailingslashit( rest_url( WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE ) );' 2>/dev/null)"
+else
+	source "$SCRIPT_DIR/../wpcc-env.sh"
+fi
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }

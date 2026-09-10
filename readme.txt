@@ -2,9 +2,9 @@
 Contributors: mosharafmanu
 Tags: ai, mcp, claude, automation, approvals
 Requires at least: 6.4
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,14 +16,14 @@ WP Command Center lets you connect an AI assistant — Claude, Cursor, Codex, Ch
 
 The point of the plugin is not the AI. It is the control around it:
 
-* **You approve.** On the default Standard protection, anything that could affect your visitors waits for your explicit approval before it runs; low-risk edits go straight through. Choose Strict approval and every single change waits, including low-risk ones. Reading and diagnostics are never gated in any mode.
+* **You approve.** On the default Standard protection, higher-impact changes wait for your explicit approval before they run; low-risk edits go straight through. Choose Strict approval and every single change waits, including low-risk ones. Reading and diagnostics are never gated in any mode.
 * **Everything is recorded.** Every change is written to an audit trail with who made it, when, what it did, and whether it can be undone. Before you approve anything, the request spells out exactly what it will change.
 * **Supported changes can be undone.** Posts and pages, SEO details, media metadata, settings, comments, users, categories and several other areas record a reversible change you can restore. An undo runs through the same approval as any other change.
 * **Access is scoped.** An assistant connects with an access token you create and can revoke at any time. Tokens are limited to what you allow, and can be read-only.
 
 = How it works =
 
-1. Install and activate. The site starts in **Standard protection** — changes need your approval.
+1. Install and activate. The site starts in **Standard protection** — higher-impact changes need your approval; low-risk operations run immediately.
 2. Go to **WP Command Center → Settings → Connections**, pick your assistant, and create an access token.
 3. Copy the generated setup into your assistant.
 4. Ask your assistant to do something on the site.
@@ -109,16 +109,16 @@ No. Connecting an AI assistant over MCP uses your assistant's own AI. A provider
 
 = Which assistants work with it? =
 
-Any MCP-compatible client. Ready-made setup is provided for Claude Desktop, Claude Code, GitHub Copilot / VS Code, Cursor, Codex CLI, ChatGPT, Gemini CLI, Continue, OpenCode, Windsurf and Command Code, plus a generic option.
+Any MCP-compatible client. Ready-made setup is provided for Codex in ChatGPT Desktop, Codex CLI, Claude Desktop, Claude Code, Antigravity CLI, Gemini CLI, Cursor, Continue for VS Code, GitHub Copilot in VS Code, OpenCode and Command Code. Meta's standalone Muse Code CLI remains documentation-only under Other / Experimental because it has not been installed or live-tested; Muse Spark is a model/API, not another client.
 
 There are two ways an assistant can connect, and the setup screen tells you which one yours uses:
 
-* **Direct HTTP** — the assistant talks straight to your site. Nothing is installed or run on your computer. Used by GitHub Copilot / VS Code, Claude Code, Codex CLI, ChatGPT and Gemini CLI. Your site needs to be reachable over HTTPS from the computer running the assistant.
-* **Connector** — the assistant runs a small connector script (shipped inside the plugin and served from your own site — nothing is downloaded from npm). **This path needs Node.js on the computer running your assistant**, not on your web host. Used by Claude Desktop, Cursor, Continue, OpenCode, Windsurf and Command Code. If one of these connects but shows no tools, a missing Node is the usual cause.
+* **Direct HTTP** — the assistant talks straight to your site. Nothing is installed or run on your computer. Used by GitHub Copilot in VS Code, Claude Code, Codex CLI, Codex in ChatGPT Desktop, Gemini CLI, Antigravity CLI, Cursor, OpenCode and Command Code. Your site needs to be reachable over HTTPS from the computer running the assistant.
+* **Connector** — the assistant runs a small connector script (shipped inside the plugin and served from your own site — nothing is downloaded from npm). **This path needs Node.js on the computer running your assistant**, not on your web host. Used by Claude Desktop and Continue for VS Code. If one of these connects but shows no tools, a missing Node is the usual cause.
 
 = Can the AI change my site without asking? =
 
-Not in the default setting. On a fresh install the site runs in Standard protection, where anything that could affect your visitors waits for your approval — low-risk edits still go straight through. Strict approval gates every change without exception. There is also a Development setting that removes the approval step for local and staging sites; it warns you before you switch to it, and it is never the default — including when the setting is missing or corrupt.
+It depends on your protection mode. On a fresh install the site runs in Standard protection, where higher-impact changes wait for your approval — low-risk edits still go straight through. Strict approval gates every change without exception. There is also a Development setting that removes the approval step for local and staging sites; it warns you before you switch to it, and it is never the default — including when the setting is missing or corrupt.
 
 = Can I undo a change? =
 
@@ -182,11 +182,17 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 
 == Changelog ==
 
+= 1.0.1 =
+* Harden private runtime storage and release-gate state restoration.
+* Improve supported assistant and coding-client setup guidance and compatibility.
+* Correct governed rollback behavior for ACF, options, and menu assignments.
+* Fix the Built-in AI empty state on a fresh installation.
+
 = 1.0.0 =
 * First public release.
 * Connect any MCP-compatible AI assistant to a single WordPress site.
-* Ready-made setup for eleven assistants, each in its own configuration format, over either a direct HTTPS connection (nothing installed) or a small local connector.
-* Approval workflow with Standard protection and Strict approval settings; safe default that cannot fall back to unapproved execution.
+* Ready-made setup for supported AI assistants and coding clients, each in its own configuration format, over either a direct HTTPS connection (nothing installed) or a small local connector.
+* Approval workflow with Standard protection and Strict approval settings; safe default that preserves approval for higher-impact changes.
 * Scoped, revocable, hashed access tokens.
 * Full change history with undo for supported changes.
 * Plain-language approval and history — no operation identifiers required to make a decision.
@@ -194,6 +200,9 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 * Documented uninstall behaviour: data is retained unless you opt in to deletion.
 
 == Upgrade Notice ==
+
+= 1.0.1 =
+Security, compatibility, and rollback-reliability update. Existing settings and history are preserved.
 
 = 1.0.0 =
 First public release.

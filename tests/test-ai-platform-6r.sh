@@ -93,6 +93,18 @@ $ok(C::test_supported('ollama')===true,'ollama testable (dialect)');
 $ok(count(C::all())>=12,'catalogue has many providers via 3 dialects');
 
 $s=new S();
+$warnings=[];
+set_error_handler(function($severity,$message)use(&$warnings){
+	if(E_WARNING===$severity || E_NOTICE===$severity){$warnings[]=$message;return true;}
+	return false;
+});
+$cred=$s->credentials();
+$ok($cred->has_secret([])===false,'empty credential state is not configured');
+$ok($cred->has_secret(['id'=>'conn_partial'])===false,'partial historical credential state is not configured');
+$ok($cred->has_secret(['provider'=>'openai'])===false,'provider-only credential state is not configured');
+$ok($warnings===[],'empty and partial credential states emit no PHP warnings or notices');
+restore_error_handler();
+$ok(get_option('wpcc_ai_credentials','__none__')==='__none__','empty credential checks do not fabricate credential state');
 // create an openai-compatible local connection (no key needed) with opaque id
 $id=$s->create('ollama',['name'=>'Office Ollama','endpoint'=>'http://localhost:11434/v1','model'=>'llama3']);
 $ok(strpos($id,'conn_')===0,'opaque connection id generated');
@@ -111,6 +123,7 @@ $ok($id2!==$id3 && $s->exists($id2) && $s->exists($id3),'multiple connections of
 // secrets isolated, never in the connection record
 $s->credentials()->set_secret($id2,'testkeyaaaa');
 $ok($s->credentials()->secret($s->get($id2))==='testkeyaaaa','secret retrievable for tester');
+$ok($s->credentials()->has_secret(['id'=>$id2,'provider'=>'openai'])===true,'configured credential works without optional connection fields');
 $conn_raw=json_encode(get_option('wpcc_ai_connections'));
 $ok(strpos($conn_raw,'testkey')===false,'no secret in connection record option');
 $cred_raw=get_option('wpcc_ai_credentials');

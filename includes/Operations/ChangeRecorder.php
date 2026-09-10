@@ -65,6 +65,13 @@ final class ChangeRecorder {
 		$result_ref   = (string) ( $args['result_ref'] ?? '' );
 		$counts       = is_array( $args['counts'] ?? null ) ? $args['counts'] : [ 0, 0, 0, 0 ];
 
+		// An audited Read-only invocation is not a site change, including a failed
+		// lookup. Keep execution/audit bookkeeping, but never invent change history.
+		if ( \WPCommandCenter\Security\AuthTokens::SCOPE_READ_ONLY === ( $context['token_scope'] ?? '' )
+			&& ! ( new CapabilityRegistry() )->requires_full_scope( $operation_id, $payload ) ) {
+			return;
+		}
+
 		if ( '' === $operation_id ) {
 			return;
 		}

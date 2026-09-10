@@ -205,7 +205,11 @@ assert_true "security: MCP no token blocked (4xx/5xx)" "$( [ "$HTTP_MCP_NO_TOKEN
 # ===================================================================
 echo "== 14. AI Client Registry Validation =="
 CLIENTS=$(api "$WPCC_BASE/ai-clients")
-assert_eq "ai: total clients" "11" "$(echo "$CLIENTS" | jq -r '.counts.total')"
+# Structural, not a magic number: the count must match the roster, whatever size the
+# roster currently is. A literal records how many clients existed the day it was
+# written and fails just as loudly for a correct change (Windsurf deferred from v1,
+# Antigravity and Muse Code added) as for a real regression.
+assert_eq "ai: client count matches the roster" "$(echo "$CLIENTS" | jq -r '.clients | length')" "$(echo "$CLIENTS" | jq -r '.counts.total')"
 # `active` counts clients certified at Active or above. It was 2 while Claude
 # Desktop and Cursor carried unearned Gold; both markers were withdrawn, so 0 is
 # the honest answer and pinning 2 required the product to keep overstating.

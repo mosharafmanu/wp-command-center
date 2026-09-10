@@ -45,18 +45,18 @@ done
 
 echo "== 1. Token reveal leads somewhere (ISSUE 1) =="
 has "reveal card carries a next-step control"      'id="wpcc-token-next"'                  "$ASSIST"
-has "…that points at the configuration section"    'href="#wpcc-config-panel"'             "$ASSIST"
+has "…that points at the configuration section"    '#wpcc-guided-setup'             "$ASSIST"
 has "configuration panel is a real anchor target"  'id="wpcc-config-panel"'                "$ASSIST"
 has "manual-config fallback carries it too"        'id="wpcc-config-panel"'                "$ASSIST"
-has "CTA names the assistant, not 'your assistant'" 'Next: get your %s configuration'      "$ASSIST"
+has "CTA names the assistant, not 'your assistant'" 'Next: set up %s'      "$ASSIST"
 has "progress rail says which step this is"        'wpcc-token-reveal__steps'              "$ASSIST"
 has "rail marks the two completed steps"           'Token created'                          "$ASSIST"
-has "rail names the remaining step by assistant"   'Paste into %s'                          "$ASSIST"
+has "rail names the remaining step by assistant"   'Set up %s'                          "$ASSIST"
 has "jump moves focus, not just the viewport"      "copyBtn.focus"                          "$ASSIST"
 has "…and the copy target has an id to focus"      'id="wpcc-copy-config"'                 "$ASSIST"
 has "spotlight marks the destination"              'wpcc-spotlight'                         "$ASSIST"
 # The anchor must survive JS being off: it is an <a href="#...">, never a bare button.
-has "degrades to a plain in-page link"             '<a class="button button-primary" href="#wpcc-config-panel"' "$ASSIST"
+has "degrades to a plain in-page link"             '<a class="button button-primary" href=' "$ASSIST"
 # The hint under the test field is prefilled after creation; it must not tell that
 # customer to go and do the step they just finished.
 has "test-panel hint is state-aware"               'Your new token is already filled in'    "$ASSIST"

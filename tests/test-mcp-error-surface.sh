@@ -18,10 +18,17 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-# shellcheck source=/dev/null
-source "$PLUGIN_DIR/wpcc-env.sh"
-WP_PATH="$SCRIPT_DIR/../../../.."
-WP_ROOT="$WP_PATH"
+if [[ -n "${WPCC_ONBOARDING_TOKEN_OVERRIDE:-}" ]]; then
+	WPCC_TOKEN="$WPCC_ONBOARDING_TOKEN_OVERRIDE"
+	WP_ROOT="${WPCC_TEST_WP_PATH:-$(cd "$SCRIPT_DIR/../../../.." && pwd)}"
+	WP_PATH="$WP_ROOT"
+	WPCC_BASE="$(wp --path="$WP_ROOT" eval 'echo untrailingslashit( rest_url( WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE ) );' 2>/dev/null)"
+else
+	# shellcheck source=/dev/null
+	source "$PLUGIN_DIR/wpcc-env.sh"
+	WP_PATH="$SCRIPT_DIR/../../../.."
+	WP_ROOT="$WP_PATH"
+fi
 
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -73,7 +80,7 @@ CODE=$(err_code "$R")
 echo "== 5. Permission-denied patch (read-only token) → isError wpcc_token_read_only =="
 RO_TOKEN=$(wp eval '$a=new \WPCommandCenter\Security\AuthTokens(); $r=$a->create("STEP89 RO", \WPCommandCenter\Security\AuthTokens::SCOPE_READ_ONLY, null, 1); echo is_wp_error($r)?"":$r["token"];' --path="$WP_PATH" 2>/dev/null)
 [ -n "$RO_TOKEN" ] && pass "setup: read-only token created" || fail "setup: read-only token"
-R=$(mcp '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"patch_manage","arguments":{"action":"patch_status","patch_id":"x"}}}' "$RO_TOKEN")
+R=$(mcp '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"patch_manage","arguments":{"action":"patch_apply","patch_id":"x"}}}' "$RO_TOKEN")
 assert_eq "perm-denied: result.isError true" "true" "$(is_error "$R")"
 assert_eq "perm-denied: code" "wpcc_token_read_only" "$(err_code "$R")"
 echo "$(err_msg "$R")" | grep -qi "read-only" && pass "perm-denied: message mentions read-only" || fail "perm-denied: message"

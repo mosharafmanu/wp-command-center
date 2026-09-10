@@ -150,7 +150,7 @@ assert_eq "no provider blocked today (forward-looking guard)" "1" "$(c none_clos
 echo
 echo "== 6. Invariants unchanged =="
 assert_eq "OPERATION_MAP == 34" "34" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP);')"
-assert_eq "capabilities == 23"  "23" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
+assert_eq "capabilities == 24"  "24" "$(wpe 'echo count(\WPCommandCenter\Operations\CapabilityRegistry::ALL_CAPABILITIES);')"
 assert_eq "catalogue == 42"     "42" "$(wpe 'echo count((new \WPCommandCenter\Operations\OperationRegistry())->get_operations());')"
 assert_eq "DB_VERSION 2.6.0"    "2.6.0" "$(wpe 'echo \WPCommandCenter\Core\Schema::DB_VERSION;')"
 

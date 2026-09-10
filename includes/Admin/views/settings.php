@@ -102,7 +102,7 @@ $wpcc_mode_cards = [
 		'badge_kind' => 'good',
 		'points'     => [
 			__( 'Questions and checks run instantly', 'ai-command-center' ),
-			__( 'Anything that could affect visitors waits for your approval', 'ai-command-center' ),
+			__( 'Higher-impact changes wait for approval; low-risk operations run instantly', 'ai-command-center' ),
 			__( 'Every action recorded — supported changes can be undone', 'ai-command-center' ),
 		],
 		'footnote'   => __( 'Recommended for live websites.', 'ai-command-center' ),

@@ -48,6 +48,7 @@ final class CapabilityRegistry {
 	const CAP_CPT_MANAGE       = 'cpt.manage';
 	// STEP 104.2 — read-only Change History runtime capability.
 	const CAP_HISTORY_READ     = 'history.read';
+	const CAP_SITE_READ        = 'site.read';
 
 	const OPERATION_MAP = [
 		// Content
@@ -108,17 +109,67 @@ final class CapabilityRegistry {
 		'media_enhance'       => self::CAP_MEDIA_MANAGE,
 		// STEP 104.2 — read-only Change History runtime.
 		'change_history'      => self::CAP_HISTORY_READ,
-		// Seed operations are unrestricted (read-only/low-risk):
+		// Seed operations are unmapped here but ALWAYS require full scope:
 		// 'content_seed', 'acf_seed', 'cf7_seed', 'woo_product_seed'
 		// They do not require explicit capability assignment.
 	];
 
 	/**
-	 * Operations a `read_only` token is permitted to call (read-only in effect,
-	 * regardless of CapabilityRegistry::OPERATION_MAP mapping). Every other
-	 * operation requires a `full`-scope token, mirroring RestApi::require_write().
+	 * Legacy operation-only classification retained for idempotency callers.
+	 * Authorization uses READ_ONLY_ACTIONS and must supply the action payload.
 	 */
 	const READ_ONLY_SCOPE_OPERATIONS = [ 'database_inspect', 'search_manage', 'file_manage', 'code_search', 'change_history', 'term_manage' ];
+
+	/**
+	 * Audited read effects, independent of approval risk. Unknown operations/actions
+	 * fail closed. In particular approval_manage's diagnostic risk does NOT make
+	 * request_create/approve/queue_run reads. See WPCC-READONLY-42-AUDIT.md.
+	 * The empty action is permitted only on the actionless system_info tool.
+	 */
+	const READ_ONLY_ACTIONS = [
+		'system_info' => [ '' ],
+		'content_seed' => [  ],
+		'acf_seed' => [  ],
+		'cf7_seed' => [  ],
+		'woo_product_seed' => [  ],
+		'safe_search_replace' => [  ],
+		'media_import' => [  ],
+		'safe_updates' => [  ],
+		'capability_manage' => [ 'capability_list', 'capability_get', 'capability_validate' ],
+		'database_inspect' => [ 'db_table_list', 'db_table_stats', 'db_table_size', 'db_row_counts', 'db_autoload_analysis', 'db_options_health', 'db_index_analysis', 'db_orphan_detection', 'db_health_summary' ],
+		'content_manage' => [ 'content_list', 'content_get' ],
+		'snapshot_manage' => [ 'snapshot_list', 'snapshot_details', 'snapshot_verify' ],
+		'theme_manage' => [ 'theme_list' ],
+		'plugin_manage' => [ 'plugin_list' ],
+		'option_manage' => [ 'option_get' ],
+		'wp_cli_bridge' => [  ],
+		'user_manage' => [ 'user_list', 'user_get', 'user_search' ],
+		'media_manage' => [ 'media_list', 'media_get', 'media_search', 'media_replace_verify', 'media_snapshot_verify', 'media_snapshot_list' ],
+		'woocommerce_manage' => [ 'woo_describe', 'product_list', 'product_get', 'stock_get', 'price_get', 'product_category_list', 'product_attribute_list', 'variation_list', 'variation_get', 'order_list', 'order_get', 'order_search', 'customer_get', 'customer_search', 'coupon_list', 'product_search', 'coupon_get' ],
+		'acf_manage' => [ 'acf_group_list', 'acf_group_get', 'acf_field_list', 'acf_field_get', 'acf_location_list', 'acf_describe', 'acf_value_get', 'acf_inventory', 'acf_json_export', 'acf_json_diff', 'acf_layout_usage', 'acf_json_status' ],
+		'term_manage' => [ 'term_list', 'term_get', 'term_search', 'term_describe' ],
+		'cache_manage' => [ 'cache_status', 'cache_describe' ],
+		'forms_manage' => [ 'form_list', 'form_get', 'form_search', 'entry_list', 'entry_get', 'entry_search', 'notification_get', 'submission_stats', 'form_analyze', 'entry_export' ],
+		'menu_manage' => [ 'menu_list', 'menu_get', 'menu_item_list', 'menu_item_get', 'menu_location_list', 'menu_analyze', 'menu_inventory', 'menu_tree_validate', 'menu_tree_get', 'menu_export' ],
+		'settings_manage' => [ 'settings_general_get', 'settings_reading_get', 'settings_discussion_get', 'settings_media_get', 'settings_permalink_get', 'settings_privacy_get', 'settings_inventory', 'settings_analyze' ],
+		'approval_manage' => [ 'request_list', 'request_get', 'queue_list', 'queue_get', 'results_list', 'results_get' ],
+		'search_manage' => [ 'search_all', 'search_content', 'search_media', 'search_users', 'search_woocommerce', 'search_forms', 'search_acf', 'search_menus', 'report_orphans', 'report_unused_media', 'report_content_inventory', 'report_woo_inventory', 'report_site_summary' ],
+		'bulk_manage' => [  ],
+		'workflow_manage' => [ 'workflow_list', 'workflow_get', 'workflow_history', 'workflow_export' ],
+		'comments_manage' => [ 'comment_list', 'comment_get' ],
+		'widgets_manage' => [ 'widget_list', 'widget_get' ],
+		'cpt_manage' => [ 'cpt_list', 'cpt_get', 'taxonomy_list' ],
+		'file_manage' => [ 'file_read', 'file_tree', 'file_metadata' ],
+		'code_search' => [ 'search_text', 'search_symbol', 'search_file' ],
+		'patch_manage' => [ 'patch_preview', 'patch_status', 'patch_verify' ],
+		'rollback_manage' => [ 'rollback_list', 'rollback_get', 'rollback_verify' ],
+		'seo_manage' => [ 'seo_get', 'seo_validate', 'seo_analyze' ],
+		'site_builder_manage' => [ 'page_list', 'page_get', 'template_list', 'pattern_list' ],
+		'elementor_manage' => [ 'elementor_get_page', 'elementor_export_structure', 'elementor_list_widgets' ],
+		'report_manage' => [ 'report_list', 'report_site_health', 'report_plugin_health', 'report_security', 'report_content', 'report_woocommerce', 'report_agent_activity', 'report_approval_activity', 'report_patch_activity' ],
+		'media_enhance' => [ 'media_enhance_capabilities', 'image_sizes_list', 'image_size_usage_audit', 'image_size_recommendations', 'image_size_verify', 'srcset_verify', 'responsive_image_audit', 'missing_sizes_audit', 'image_size_context_audit', 'thumbnail_verify', 'webp_audit', 'webp_verify', 'image_optimize_audit', 'image_optimize_verify', 'media_usage_scan', 'media_usage_report', 'unused_media_find', 'orphaned_media_find' ],
+		'change_history' => [ 'history_list', 'history_get', 'history_timeline', 'rollback_discover', 'operation_status' ],
+	];
 
 	/**
 	 * Step 79 — Capability profiles. Single source of truth for the
@@ -132,7 +183,7 @@ final class CapabilityRegistry {
 		// Covers the read-only-scope operations: database.inspect (database_inspect),
 		// search.manage (search_manage + file_manage + code_search), and STEP 104.2
 		// history.read (change_history).
-		self::PROFILE_READ_ONLY    => [ self::CAP_DATABASE_INSPECT, self::CAP_SEARCH_MANAGE, self::CAP_HISTORY_READ ],
+		self::PROFILE_READ_ONLY    => [ self::CAP_DATABASE_INSPECT, self::CAP_SEARCH_MANAGE, self::CAP_HISTORY_READ, self::CAP_SITE_READ ],
 		// system.admin's $has_admin shortcut == unrestricted; required so
 		// approval_manage (the escape hatch when wpcc_enforce_approval=1)
 		// is always reachable by a full-scope token.
@@ -164,6 +215,7 @@ final class CapabilityRegistry {
 		self::CAP_WIDGETS_MANAGE,
 		self::CAP_CPT_MANAGE,
 		self::CAP_HISTORY_READ,
+		self::CAP_SITE_READ,
 	];
 
 	public function action_risk( string $action ): string {
@@ -175,13 +227,17 @@ final class CapabilityRegistry {
 	}
 
 	/**
-	 * Whether an operation requires a `full`-scope token. True for every
-	 * operation except those in READ_ONLY_SCOPE_OPERATIONS — including
-	 * operations absent from OPERATION_MAP (e.g. the seed operations),
-	 * which would otherwise be fail-open for a `read_only` token.
+	 * Whether an invocation requires full scope. Explicit audited actions alone
+	 * are reads; unmapped/unknown operations and actions fail closed.
 	 */
-	public function requires_full_scope( string $operation_id ): bool {
-		return ! in_array( $operation_id, self::READ_ONLY_SCOPE_OPERATIONS, true );
+	public function requires_full_scope( string $operation_id, ?array $payload = null ): bool {
+		// Preserve the legacy operation-only API for discovery/idempotency callers.
+		// Authorization callers MUST supply the payload, including an empty array.
+		if ( null === $payload ) {
+			return ! in_array( $operation_id, self::READ_ONLY_SCOPE_OPERATIONS, true );
+		}
+		$action = $payload['action'] ?? '';
+		return ! is_string( $action ) || ! in_array( $action, self::READ_ONLY_ACTIONS[ $operation_id ] ?? [], true );
 	}
 
 	public function get_storage_key(): string {
@@ -305,6 +361,13 @@ final class CapabilityRegistry {
 
 		$existing = $this->get_for_subject( 'token', $token_id );
 
+		$legacy = [ self::CAP_DATABASE_INSPECT, self::CAP_SEARCH_MANAGE, self::CAP_HISTORY_READ ];
+		$sorted = $existing;
+		sort( $sorted );
+		sort( $legacy );
+		if ( AuthTokens::SCOPE_READ_ONLY === $scope && $sorted === $legacy ) {
+			return $this->bootstrap_token( $token_id, $scope, 'read_profile_upgrade' );
+		}
 		if ( ! empty( $existing ) ) {
 			return $existing;
 		}
@@ -312,8 +375,16 @@ final class CapabilityRegistry {
 		return $this->bootstrap_token( $token_id, $scope, 'self_healed' );
 	}
 
-	public function validate( string $operation_id, string $subject = 'token', string $subject_id = '' ): array {
+	public function validate( string $operation_id, string $subject = 'token', string $subject_id = '', ?array $payload = null, string $scope = '' ): array {
 		$required = $this->get_required_capability( $operation_id );
+		// A read capability is never a management capability. Only the authenticated
+		// Read-only scope and an explicitly audited read action use this mapping.
+		// Full-access/custom management assignments retain their existing behavior.
+		if ( AuthTokens::SCOPE_READ_ONLY === $scope && null !== $payload
+			&& ! $this->requires_full_scope( $operation_id, $payload )
+			&& ! in_array( $operation_id, self::READ_ONLY_SCOPE_OPERATIONS, true ) ) {
+			$required = self::CAP_SITE_READ;
+		}
 		// Unmapped operations are allowed (read-only or seed operations).
 		if ( null === $required ) {
 			return [ 'allowed' => true, 'required_capability' => null, 'reason' => 'unrestricted' ];

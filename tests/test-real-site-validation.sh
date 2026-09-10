@@ -6,7 +6,7 @@ set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$DIR/.." && pwd)"
 WP_CONTENT="$(cd "$ROOT/../.." && pwd)"
-EVIDENCE_DIR="$ROOT/artifacts/step-36-validation"
+EVIDENCE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/wpcc-step36-evidence.XXXXXX")"
 source "$ROOT/wpcc-env.sh"
 
 P=0; F=0; CREATED_POST_ID=""; FIXTURE_DIR="$WP_CONTENT/mu-plugins/wpcc-step36"; FIXTURE_REL="mu-plugins/wpcc-step36/fixture.txt"
@@ -15,7 +15,12 @@ fail(){ F=$((F+1)); echo "  FAIL: $1"; }
 eq(){ if [ "$2" = "$3" ]; then pass "$1"; else fail "$1 (expected '$2', got '$3')"; fi; }
 ok(){ if [ "$2" = true ]; then pass "$1"; else fail "$1"; fi; }
 api(){ local m="$1" p="$2" b="${3:-}"; if [ -n "$b" ]; then curl -sS -X "$m" -H "Authorization: Bearer $WPCC_TOKEN" -H 'Content-Type: application/json' -d "$b" "$WPCC_BASE$p"; else curl -sS -X "$m" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE$p"; fi; }
-cleanup(){ if [ -n "$CREATED_POST_ID" ]; then wp eval "wp_delete_post((int)$CREATED_POST_ID,true);" >/dev/null 2>&1 || true; fi; rm -rf "$FIXTURE_DIR"; }
+cleanup(){
+	if [ -n "$CREATED_POST_ID" ]; then wp eval "wp_delete_post((int)$CREATED_POST_ID,true);" >/dev/null 2>&1 || true; fi
+	rm -rf "$FIXTURE_DIR"
+	rm -f "$EVIDENCE_DIR/validation-evidence.json"
+	rmdir "$EVIDENCE_DIR" 2>/dev/null || true
+}
 trap cleanup EXIT
 
 mkdir -p "$FIXTURE_DIR" "$EVIDENCE_DIR"

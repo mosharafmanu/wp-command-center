@@ -41,6 +41,100 @@ final class RollbackOperation {
 		};
 	}
 
+	/**
+	 * Refuse a rollback this operation could never perform, BEFORE a human is asked to
+	 * approve it. See OperationExecutor::preflight() for the general contract.
+	 *
+	 * WHY (REAL_TEST_FINDINGS.md #2, observed against a live client): a site tagline was
+	 * changed through MCP, approved, applied and recorded as reversible. A rollback was
+	 * then requested for it — reasonably, since the tool is called `rollback_manage` and
+	 * has an action called `rollback_apply`. That request was queued, marked high risk,
+	 * approved by an administrator, and only then refused, because `rollback_manage`
+	 * reverses file patches and nothing else. The refusal itself was correct and the site
+	 * stayed intact; what was wrong is that it arrived after the approval instead of
+	 * before it.
+	 *
+	 * The decision here is made from the ACTUAL change type, not from the example that
+	 * exposed it. The identifier is resolved against the change log and the row's own
+	 * `rollback_kind` decides: `patch` belongs here, anything else belongs to
+	 * `change_history {action: "rollback_target"}`, which already routes every kind to
+	 * its owning engine. No new restore path is introduced and no rollback is silently
+	 * re-routed — silently executing a different operation than the one an administrator
+	 * approved would trade this bug for a much worse one.
+	 *
+	 * @param array<string,mixed> $params
+	 * @param array<string,mixed> $context
+	 */
+	public function preflight( array $params, array $context = [] ): ?\WP_Error {
+		$action = sanitize_key( $params['action'] ?? '' );
+
+		// Only the write path can waste an approval; reads are never gated.
+		if ( 'rollback_apply' !== $action ) {
+			return null;
+		}
+
+		$patch_id = sanitize_text_field( (string) ( $params['patch_id'] ?? '' ) );
+
+		if ( '' === $patch_id ) {
+			// Wrong-shaped call: no patch_id at all, possibly a rollback_id instead.
+			// missing_patch_id() already names the correct route for both cases.
+			return self::missing_patch_id( $params );
+		}
+
+		$patch = ( new PatchManager() )->get( $patch_id );
+
+		if ( is_wp_error( $patch ) ) {
+			/*
+			 * The id did not resolve as a patch. Before rejecting it outright, ask the
+			 * change log what it actually is — an id that names a real, reversible,
+			 * non-patch change deserves an error that points at the operation which CAN
+			 * undo it, rather than a bare "patch not found" that leaves the caller with
+			 * a valid handle and nowhere to take it.
+			 */
+			$kind = self::change_log_rollback_kind( $patch_id );
+
+			if ( null !== $kind && 'patch' !== $kind ) {
+				return new \WP_Error(
+					'wpcc_not_a_patch_rollback',
+					sprintf(
+						/* translators: 1: the rollback kind recorded for this change, 2: the identifier supplied */
+						__( 'This is a %1$s change, not a file patch, so rollback_manage cannot undo it — and this was refused before asking anyone to approve it. Undo it with change_history {action: "rollback_target", rollback_id: "%2$s"}, which routes each change to the engine that made it.', 'ai-command-center' ),
+						$kind,
+						$patch_id
+					)
+				);
+			}
+
+			return $patch;
+		}
+
+		return null;
+	}
+
+	/**
+	 * The `rollback_kind` the change log recorded for an identifier, or null when the
+	 * identifier is unknown to it.
+	 *
+	 * Accepts either handle because callers hold either: `rollback_id` is what a
+	 * reversible write returns, `change_id` is what the recorder mints afterwards.
+	 * Read-only, and tolerant of the table being absent so preflight can never become a
+	 * reason an operation fails to start.
+	 */
+	private static function change_log_rollback_kind( string $identifier ): ?string {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'wpcc_change_log';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery -- single indexed lookup on a plugin table, no cache layer exists for it.
+		$kind = $wpdb->get_var( $wpdb->prepare(
+			"SELECT rollback_kind FROM {$table} WHERE rollback_id = %s OR change_id = %s ORDER BY id DESC LIMIT 1",
+			$identifier,
+			$identifier
+		) );
+
+		return ( null === $kind || '' === $kind ) ? null : (string) $kind;
+	}
+
 	private function list(): array {
 		$rollbackable = [];
 

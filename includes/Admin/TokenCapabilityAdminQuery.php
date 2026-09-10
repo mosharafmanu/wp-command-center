@@ -252,7 +252,8 @@ final class TokenCapabilityAdminQuery {
 			$operations[] = [
 				'operation'           => $operation,
 				'required_capability' => $capability,
-				'read_only_scope'     => in_array( $operation, CapabilityRegistry::READ_ONLY_SCOPE_OPERATIONS, true ),
+				'read_only_scope'     => ! empty( CapabilityRegistry::READ_ONLY_ACTIONS[ $operation ] ),
+				'read_only_actions'   => CapabilityRegistry::READ_ONLY_ACTIONS[ $operation ] ?? [],
 			];
 		}
 
@@ -262,7 +263,7 @@ final class TokenCapabilityAdminQuery {
 			'action'                      => 'operations_map',
 			'operations'                  => $operations,
 			'total'                       => count( $operations ),
-			'read_only_scope_operations'  => array_values( CapabilityRegistry::READ_ONLY_SCOPE_OPERATIONS ),
+			'read_only_scope_operations'  => array_keys( array_filter( CapabilityRegistry::READ_ONLY_ACTIONS ) ),
 		];
 	}
 
@@ -337,13 +338,17 @@ final class TokenCapabilityAdminQuery {
 		$matrix       = [];
 
 		foreach ( CapabilityRegistry::OPERATION_MAP as $operation => $required ) {
-			if ( $is_admin ) {
-				$matrix[] = $this->matrix_entry( $operation, $required, true, 'system_admin' );
+			if ( $is_read_only ) {
+				$actions = CapabilityRegistry::READ_ONLY_ACTIONS[ $operation ] ?? [];
+				$read_cap = in_array( $operation, CapabilityRegistry::READ_ONLY_SCOPE_OPERATIONS, true ) ? $required : CapabilityRegistry::CAP_SITE_READ;
+				$allowed = [] !== $actions && ( $is_admin || in_array( $read_cap, $assigned, true ) );
+				$entry = $this->matrix_entry( $operation, $read_cap, $allowed, [] === $actions ? 'scope_blocked' : ( $allowed ? 'read_actions_only' : 'missing_capability' ) );
+				$entry['read_only_actions'] = $actions;
+				$matrix[] = $entry;
 				continue;
 			}
-
-			if ( $is_read_only && $this->caps->requires_full_scope( $operation ) ) {
-				$matrix[] = $this->matrix_entry( $operation, $required, false, 'scope_blocked' );
+			if ( $is_admin ) {
+				$matrix[] = $this->matrix_entry( $operation, $required, true, 'system_admin' );
 				continue;
 			}
 

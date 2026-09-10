@@ -123,7 +123,7 @@ lint_changed() {
   return $lint_fail
 }
 
-# ── Governance-state isolation ───────────────────────────────────
+# ── Governance + credential state isolation ─────────────────────
 # Around twenty suites change the site's protection mode or capability enforcement to
 # exercise gating, and most do it without a trap — so any early exit leaves the wrong
 # mode behind and the NEXT suite fails for reasons that have nothing to do with it.
@@ -133,67 +133,97 @@ lint_changed() {
 # Restoring here, after every suite, makes the full run deterministic regardless of any
 # individual suite's hygiene. It is the runner's job: a suite cannot be trusted to clean
 # up after a failure it did not expect.
-GOV_SNAPSHOT() {
-  wp --path="$WP_ROOT" eval '
-    echo wp_json_encode( [
-      "mode" => get_option( "wpcc_security_mode" ),
-      "caps" => get_option( "wpcc_enforce_capabilities" ),
-      // Which Built-in AI tools are switched on is governance state too, now that it
-      // gates the row actions as well as the tabs. A suite that flips it and dies
-      // before restoring leaves every later suite testing a different product: the
-      // ✨ WPCC AI action simply is not there. That is exactly how test-ai-assist,
-      // test-alt-text-ui and test-contextual-entry came to fail in a full run while
-      // passing alone.
-      "tools" => get_option( "wpcc_builtin_ai_tools" ),
-    ] );' 2>/dev/null
-}
-GOV_RESTORE() {
-  local snap="$1"
-  [ -z "$snap" ] && return 0
-  wp --path="$WP_ROOT" eval '
-    $s = json_decode( $argv[0], true );
-    if ( ! is_array( $s ) ) { return; }
-    if ( null !== $s["mode"] && get_option( "wpcc_security_mode" ) !== $s["mode"] ) {
-      update_option( "wpcc_security_mode", $s["mode"] );
-    }
-    if ( null !== $s["caps"] && get_option( "wpcc_enforce_capabilities" ) != $s["caps"] ) {
-      update_option( "wpcc_enforce_capabilities", $s["caps"] );
-    }
-    if ( array_key_exists( "tools", $s ) && get_option( "wpcc_builtin_ai_tools" ) != $s["tools"] ) {
-      update_option( "wpcc_builtin_ai_tools", $s["tools"] );
-    }' "$snap" >/dev/null 2>&1
-}
-export -f GOV_SNAPSHOT GOV_RESTORE
+# shellcheck source=lib/runner-state.sh
+source "$ROOT/tests/lib/runner-state.sh"
+source "$ROOT/tests/lib/source-integrity.sh"
+source "$ROOT/tests/lib/gate-liveness.sh"
 export WP_ROOT
+
+# Every suite shares one WordPress database and one credential store. Parallel
+# snapshot/suite/restore cycles race by construction: one suite can snapshot another
+# suite's temporary state and restore it later. Keep the advertised flag compatible,
+# but serialize execution whenever state isolation is active.
+if [ "$JOBS" -gt 1 ]; then
+  echo "run.sh: state-isolated suites are serialized; ignoring -j $JOBS" >&2
+  JOBS=1
+fi
+
+parse_counts() {
+  local out="$1" p f
+  p="$(printf '%s\n' "$out" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+' || true)"
+  f="$(printf '%s\n' "$out" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+' || true)"
+  if [ -n "$p" ] && [ -n "$f" ]; then
+    printf '%s\t%s\t1\n' "$p" "$f"
+    return 0
+  fi
+
+  p="$(printf '%s\n' "$out" | grep -oE 'PASS[=:][[:space:]]*[0-9]+' | tail -1 | grep -oE '[0-9]+' || true)"
+  f="$(printf '%s\n' "$out" | grep -oE 'FAIL[=:][[:space:]]*[0-9]+' | tail -1 | grep -oE '[0-9]+' || true)"
+  if [ -n "$p" ] && [ -n "$f" ]; then
+    printf '%s\t%s\t1\n' "$p" "$f"
+    return 0
+  fi
+
+  p="$(printf '%s\n' "$out" | grep -cE '^[[:space:]]*PASS:' || true)"
+  f="$(printf '%s\n' "$out" | grep -cE '^[[:space:]]*FAIL:' || true)"
+  if [ "$p" -gt 0 ] || [ "$f" -gt 0 ]; then
+    printf '%s\t%s\t1\n' "$p" "$f"
+  else
+    printf '0\t0\t0\n'
+  fi
+}
 
 # ── Run a single suite (network suites retry once) ───────────────
 run_one() {
-  local suite="$1" out p f gov
-  gov="$(GOV_SNAPSHOT)"
-  out="$(bash "tests/$suite" 2>&1)"
-  p="$(echo "$out" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+')"; p="${p:-0}"
-  f="$(echo "$out" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+')"; f="${f:-0}"
-  if [ "$f" -gt 0 ] && is_network "$suite"; then
-    out="$(bash "tests/$suite" 2>&1)"
-    p="$(echo "$out" | grep -oE '[0-9]+ passed' | tail -1 | grep -oE '[0-9]+')"; p="${p:-0}"
-    f="$(echo "$out" | grep -oE '[0-9]+ failed' | tail -1 | grep -oE '[0-9]+')"; f="${f:-0}"
+  local suite="$1" out p f parsed state suite_rc restore_rc issue counts
+  state="$(RUNNER_STATE_SNAPSHOT)"
+  if [ $? -ne 0 ] || [ -z "$state" ]; then
+    printf '%s\t0\t1\t1\t1\tstate_snapshot_failed\n' "$suite"
+    return 0
   fi
-  GOV_RESTORE "$gov"
-  printf '%s\t%s\t%s\n' "$suite" "$p" "$f"
+  out="$(bash "tests/$suite" 2>&1)"
+  suite_rc=$?
+  counts="$(parse_counts "$out")"
+  IFS=$'\t' read -r p f parsed <<< "$counts"
+  if { [ "$suite_rc" -ne 0 ] || [ "$f" -gt 0 ] || [ "$parsed" -ne 1 ]; } && is_network "$suite"; then
+    out="$(bash "tests/$suite" 2>&1)"
+    suite_rc=$?
+    counts="$(parse_counts "$out")"
+    IFS=$'\t' read -r p f parsed <<< "$counts"
+  fi
+  restore_rc=0
+  RUNNER_STATE_RESTORE "$state" || restore_rc=1
+  issue=""
+  if [ "$parsed" -ne 1 ]; then
+    issue="summary_missing"
+    f=$((f+1))
+  elif [ "$suite_rc" -ne 0 ] && [ "$f" -eq 0 ]; then
+    issue="suite_exit_${suite_rc}_without_failure_count"
+    f=$((f+1))
+  fi
+  if [ "$restore_rc" -ne 0 ]; then
+    issue="${issue:+${issue},}state_restore_failed"
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$suite" "$p" "$f" "$suite_rc" "$restore_rc" "$issue"
 }
-export -f run_one is_network
+export -f run_one is_network parse_counts
 export ROOT
 
 baseline_for() { awk -F'\t' -v s="$1" '$1==s{print $2}' "$BASE" 2>/dev/null | head -1; }
 
 # ── Execute ──────────────────────────────────────────────────────
-START=$(date +%s)
+START_MONOTONIC_NS="$(WPCC_GATE_MONOTONIC_NS)"
 LINT_RC=0
 if [ "$TIER" != "T2" ]; then lint_changed || LINT_RC=1; fi
 
 [ -z "$LIST_SUITES" ] && { echo "== $TIER: no suites selected (no matching runtime in the change signal) =="; [ "$LINT_RC" = 0 ] && exit 0 || exit 1; }
 
 echo "== $TIER: $(echo "$LIST_SUITES" | grep -c .) suites =="
+
+if [ "$TIER" = "T2" ]; then
+  WPCC_GATE_CLOCK_INIT || { echo "run.sh: unable to initialize monotonic gate clock" >&2; exit 1; }
+  WPCC_GATE_AUTH_PREFLIGHT || exit $?
+fi
 
 # ── Establish the governance baseline (T2) ───────────────────────
 #
@@ -213,44 +243,116 @@ echo "== $TIER: $(echo "$LIST_SUITES" | grep -c .) suites =="
 # T2 therefore SETS the baseline rather than inheriting it, and puts the operator's
 # own mode back at the end. T0/T1 are left alone: they are quick, targeted runs
 # where surprising the operator's site is worse than a mode-sensitive result.
-RUN_GOV=""
+RUN_STATE=""
 if [ "$TIER" = "T2" ]; then
-  RUN_GOV="$(GOV_SNAPSHOT)"
-  wp --path="$WP_ROOT" eval '
+  RUN_STATE="$(RUNNER_STATE_SNAPSHOT)"
+  if [ $? -ne 0 ] || [ -z "$RUN_STATE" ]; then
+    echo "run.sh: unable to snapshot initial state" >&2
+    exit 1
+  fi
+  if ! wp --path="$WP_ROOT" eval '
     update_option( "wpcc_security_mode", \WPCommandCenter\Operations\SecurityModeManager::MODE_DEVELOPER );
     update_option( "wpcc_enforce_capabilities", true );
     // All three Built-in AI tools on, so the suites that assert the ✨ WPCC AI row
     // action exists start from a known answer rather than whatever the operator left.
-    update_option( "wpcc_builtin_ai_tools", [ "seo" => true, "alt_text" => true, "content" => true ] );' >/dev/null 2>&1
+    update_option( "wpcc_builtin_ai_tools", [ "seo" => true, "alt_text" => true, "content" => true ] );' >/dev/null 2>&1; then
+    echo "run.sh: unable to establish the T2 governance baseline" >&2
+    RUNNER_STATE_RESTORE "$RUN_STATE" >/dev/null 2>&1 || true
+    exit 1
+  fi
   echo "   governance baseline: developer + capabilities + built-in AI tools on (restored at end)"
 fi
-restore_run_gov() { [ -n "$RUN_GOV" ] && GOV_RESTORE "$RUN_GOV"; }
-trap restore_run_gov EXIT
+restore_run_state() {
+  local rc=$?
+  trap - EXIT
+  if [ -n "$RUN_STATE" ] && ! RUNNER_STATE_RESTORE "$RUN_STATE"; then
+    echo "run.sh: fatal: final state restoration failed" >&2
+    rc=1
+  fi
+  rm -f "${SOURCE_MANIFEST_BEFORE:-}" "${SOURCE_MANIFEST_AFTER:-}"
+  exit "$rc"
+}
+trap restore_run_state EXIT
 
-RESULTS="$(mktemp)"
-if [ "$JOBS" -gt 1 ] && command -v xargs >/dev/null; then
-  echo "$LIST_SUITES" | xargs -P "$JOBS" -I{} bash -c 'cd "$ROOT"; run_one "{}"' > "$RESULTS"
-else
-  while IFS= read -r s; do [ -z "$s" ] && continue; run_one "$s"; done <<< "$LIST_SUITES" > "$RESULTS"
+# Freeze the complete candidate tree after the runner has finished selecting
+# suites but before any suite runs. A release gate is invalid if tests alter a
+# tracked file or leave a new non-ignored path behind, even when all assertions
+# themselves pass.
+SOURCE_MANIFEST_BEFORE="$(mktemp "${TMPDIR:-/tmp}/wpcc-run-source-before.XXXXXX")"
+SOURCE_MANIFEST_AFTER="$(mktemp "${TMPDIR:-/tmp}/wpcc-run-source-after.XXXXXX")"
+if ! WPCC_SOURCE_MANIFEST "$SOURCE_MANIFEST_BEFORE" "$ROOT"; then
+  echo "run.sh: unable to fingerprint candidate source" >&2
+  exit 1
 fi
 
-TP=0; TF=0; NETNEW=0; FAILLINES=""
-while IFS=$'\t' read -r suite p f; do
+RESULTS="$(mktemp)"
+: > "$RESULTS"
+GATE_ABORT=0; GATE_ABORT_REASON=""; EXECUTED_SUITES=0
+while IFS= read -r s; do
+  [ -z "$s" ] && continue
+  if [ "$TIER" = "T2" ]; then
+    WPCC_GATE_CHECKPOINT
+    checkpoint_rc=$?
+    if [ "$checkpoint_rc" -ne 0 ]; then GATE_ABORT=1; GATE_ABORT_REASON="checkpoint_before_$s:$checkpoint_rc"; break; fi
+  fi
+  run_one "$s" >> "$RESULTS"
+  EXECUTED_SUITES=$((EXECUTED_SUITES+1))
+  if [ "$TIER" = "T2" ]; then
+    WPCC_GATE_CHECKPOINT
+    checkpoint_rc=$?
+    if [ "$checkpoint_rc" -ne 0 ]; then GATE_ABORT=1; GATE_ABORT_REASON="checkpoint_after_$s:$checkpoint_rc"; break; fi
+  fi
+done <<< "$LIST_SUITES"
+
+TP=0; TF=0; NETNEW=0; HARNESS_FAIL="$GATE_ABORT"; FAILLINES=""
+while IFS=$'\t' read -r suite p f suite_rc restore_rc issue; do
   [ -z "$suite" ] && continue
   TP=$((TP+p)); TF=$((TF+f))
+  if [ "$restore_rc" -ne 0 ] || [ -n "$issue" ]; then
+    HARNESS_FAIL=1
+  fi
   if [ "$f" -gt 0 ]; then
     bl="$(baseline_for "$suite")"; bl="${bl:-0}"
     nn=$((f-bl)); [ "$nn" -lt 0 ] && nn=0
     NETNEW=$((NETNEW+nn))
     FAILLINES="$FAILLINES  $suite: $f (baseline $bl, net-new $nn)"$'\n'
   fi
+  [ -n "$issue" ] && FAILLINES="$FAILLINES    runner: $issue"$'\n'
 done < <(sort "$RESULTS")
 rm -f "$RESULTS"
-END=$(date +%s)
+
+RUN_RESTORE_RC=0
+if [ -n "$RUN_STATE" ]; then
+  if RUNNER_STATE_RESTORE "$RUN_STATE"; then
+    RUN_STATE=""
+  else
+    RUN_RESTORE_RC=1
+    HARNESS_FAIL=1
+  fi
+fi
+
+SOURCE_DRIFT_RC=0
+if ! WPCC_SOURCE_MANIFEST "$SOURCE_MANIFEST_AFTER" "$ROOT" || ! WPCC_SOURCE_ASSERT_IDENTICAL "$SOURCE_MANIFEST_BEFORE" "$SOURCE_MANIFEST_AFTER"; then
+  SOURCE_DRIFT_RC=1
+  HARNESS_FAIL=1
+fi
+END_MONOTONIC_NS="$(WPCC_GATE_MONOTONIC_NS)"
+DURATION_MS="$(WPCC_GATE_MONOTONIC_DURATION_MS "$START_MONOTONIC_NS" "$END_MONOTONIC_NS")"
+DURATION_SECONDS=$((DURATION_MS/1000)); DURATION_REMAINDER=$((DURATION_MS%1000))
+DURATION_FORMATTED="$(printf '%s.%03ds' "$DURATION_SECONDS" "$DURATION_REMAINDER")"
 
 echo "------------------------------------------------"
-echo "$TIER result: $TP passed, $TF failed  |  net-new: $NETNEW  |  $((END-START))s"
+echo "$TIER result: $TP passed, $TF failed  |  net-new: $NETNEW  |  monotonic: $DURATION_FORMATTED"
+echo "suites executed: $EXECUTED_SUITES / $(echo "$LIST_SUITES" | grep -c .)"
+[ "$GATE_ABORT" -eq 0 ] || echo "gate abort: $GATE_ABORT_REASON"
+[ "$RUN_RESTORE_RC" -eq 0 ] && echo "state restoration: verified" || echo "state restoration: FAILED"
+[ "$SOURCE_DRIFT_RC" -eq 0 ] && echo "source restoration: verified" || echo "source restoration: FAILED"
 [ -n "$FAILLINES" ] && { echo "failing suites:"; printf '%s' "$FAILLINES"; }
 [ "$LINT_RC" = 0 ] || echo "LINT FAILED"
-# Exit non-zero only on net-new failures or lint failure (chronic baseline is OK).
-{ [ "$NETNEW" -eq 0 ] && [ "$LINT_RC" -eq 0 ]; }
+# T2 is a release gate: any failure is fatal. T0/T1 retain baseline comparison for
+# development use, but runner/restoration failures are fatal at every tier.
+if [ "$TIER" = "T2" ]; then
+  [ "$TF" -eq 0 ] && [ "$LINT_RC" -eq 0 ] && [ "$HARNESS_FAIL" -eq 0 ]
+else
+  [ "$NETNEW" -eq 0 ] && [ "$LINT_RC" -eq 0 ] && [ "$HARNESS_FAIL" -eq 0 ]
+fi

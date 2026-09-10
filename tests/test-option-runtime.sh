@@ -21,9 +21,37 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+WP_ROOT="$(cd "$PLUGIN_DIR/../../.." && pwd)"
 
 # shellcheck source=/dev/null
 source "$PLUGIN_DIR/wpcc-env.sh"
+
+# This suite exercises real WordPress options. Preserve exact existence, value and type
+# so a failed assertion or interrupted run cannot leave the owner site configured like
+# the fixture. The snapshot is transported through the environment because `wp eval`
+# does not accept arbitrary positional arguments.
+OPTION_STATE="$(wp --path="$WP_ROOT" eval '
+	$names=["blogname","start_of_week","posts_per_page","show_on_front","default_comment_status","timezone_string","wpcc_option_rollbacks"];
+	$out=[];
+	foreach($names as $name){$sentinel=new stdClass();$value=get_option($name,$sentinel);$out[$name]=["exists"=>$value!==$sentinel,"value"=>$value!==$sentinel?$value:null];}
+	echo wp_json_encode($out);' 2>/dev/null)"
+if [ -z "$OPTION_STATE" ]; then
+	echo "Option fixture snapshot failed." >&2
+	exit 1
+fi
+restore_option_state() {
+	local rc=$? output
+	trap - EXIT
+	output="$(env WPCC_OPTION_TEST_STATE="$OPTION_STATE" wp --path="$WP_ROOT" eval '
+		$state=json_decode((string)getenv("WPCC_OPTION_TEST_STATE"),true);
+		if(!is_array($state)){WP_CLI::error("Invalid option test snapshot.");}
+		foreach($state as $name=>$entry){if(!empty($entry["exists"])){update_option($name,$entry["value"]??null,false);}else{delete_option($name);}}
+		foreach($state as $name=>$entry){$sentinel=new stdClass();$actual=get_option($name,$sentinel);if(!empty($entry["exists"])){if($actual===$sentinel||maybe_serialize($actual)!==maybe_serialize($entry["value"]??null)){WP_CLI::error("Option fixture restoration failed.");}}elseif($actual!==$sentinel){WP_CLI::error("Option fixture cleanup failed.");}}
+		echo "WPCC_OPTION_TEST_RESTORE_OK";' 2>/dev/null)" || rc=1
+	[ "$output" = "WPCC_OPTION_TEST_RESTORE_OK" ] || rc=1
+	exit "$rc"
+}
+trap restore_option_state EXIT
 
 PASS=0
 FAIL=0
@@ -122,11 +150,15 @@ echo "== 8. Valid Updates — Low Risk =="
 # site_title — string
 SITE_TITLE_OLD=$(api POST /operations/option_manage/run '{"action":"option_get","option_id":"site_title"}')
 OLD_TITLE=$(echo "$SITE_TITLE_OLD" | jq -r '.current_value')
-UPDATE_TITLE=$(api POST /operations/option_manage/run "{\"action\":\"option_update\",\"option_id\":\"site_title\",\"value\":\"Test Site Name\"}")
+TEMP_TITLE="WPCC rollback fixture $(date +%s)-$$-${RANDOM:-0}"
+if [ "$TEMP_TITLE" = "$OLD_TITLE" ]; then
+	TEMP_TITLE="$TEMP_TITLE-different"
+fi
+UPDATE_TITLE=$(api POST /operations/option_manage/run "$(jq -n --arg value "$TEMP_TITLE" '{action:"option_update",option_id:"site_title",value:$value}')")
 assert_eq "update: site_title success" "option_update" "$(echo "$UPDATE_TITLE" | jq -r '.action // "none"')"
 assert_true "update: site_title has rollback_id" "$(echo "$UPDATE_TITLE" | jq -r 'if .rollback_id then "true" else "false" end')"
 SITE_TITLE_NEW=$(api POST /operations/option_manage/run '{"action":"option_get","option_id":"site_title"}')
-assert_eq "update: site_title value changed" "Test Site Name" "$(echo "$SITE_TITLE_NEW" | jq -r '.current_value')"
+assert_eq "update: site_title value changed" "$TEMP_TITLE" "$(echo "$SITE_TITLE_NEW" | jq -r '.current_value')"
 
 # start_of_week — integer
 UPDATE_SOW=$(api POST /operations/option_manage/run '{"action":"option_update","option_id":"start_of_week","value":3}')

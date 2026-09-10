@@ -44,8 +44,23 @@ hasnt "Connect screen H1 drops the old jargon term" "esc_html_e\( 'AI Clients'" 
 # The screen still names assistants in plain words, but the naming is now the
 # registry-driven picker rather than a hardcoded sentence, so assert the live
 # thing: the picker exists and asks the customer to choose one.
-has "Connect screen offers a plain-words assistant picker" "Choose your assistant" "$CONNECT"
-has "Connect screen tells the customer to pick one"        "Pick the assistant you" "$CONNECT"
+# Scoped to translatable STRINGS, not raw file content. The previous form matched
+# anywhere in the file, so it passed on the comment that EXPLAINS why the old wording was
+# replaced — a test that cannot tell a rendered label from a note about itself.
+#
+# Copy updated for the final Connections remediation: the grid holds applications,
+# not protocols or abstract assistants, so it asks which app the customer already uses.
+CONNECT_STRINGS="$(grep -oE "esc_html_e\( '[^']+'" "$CONNECT" || true)"
+if [[ "$CONNECT_STRINGS" == *"Choose your app"* ]]; then
+	pass "Connect screen offers an app-first picker"
+else
+	fail "Connect screen offers an app-first picker"
+fi
+if [[ "$CONNECT_STRINGS" == *"Pick the app you"* ]]; then
+	pass "Connect screen tells the customer to pick one"
+else
+	fail "Connect screen tells the customer to pick one"
+fi
 hasnt "Connect screen no longer leads with MCP-protocol jargon" "via the MCP protocol. All clients share" "$CONNECT"
 
 echo "== 3. First success — no-setup quick win (Phase D) =="

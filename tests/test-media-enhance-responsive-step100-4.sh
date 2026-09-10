@@ -33,6 +33,8 @@ memcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Typ
 wpe() { wp eval "$1" --path="$WP_PATH" 2>/dev/null; }
 
 BIG=""; SMALL=""; PAGE=""; MUDIR="$WP_PATH/wp-content/mu-plugins"; MU1="$MUDIR/wpcc-104-threshold.php"; MU2="$MUDIR/wpcc-104-size.php"
+WPCC_MEDIA_FIXTURE_SUFFIX="$(date +%s)-$$-$RANDOM"
+export WPCC_MEDIA_FIXTURE_SUFFIX
 cleanup() {
   [ -n "$BIG" ]   && wpe 'wp_delete_attachment('"$BIG"',true);'
   [ -n "$SMALL" ] && wpe 'wp_delete_attachment('"$SMALL"',true);'
@@ -47,25 +49,40 @@ mkdir -p "$MUDIR"
 cat > "$MU1" <<'PHP'
 <?php
 add_filter( 'big_image_size_threshold', '__return_false' );
+$wpcc_104_sizes = static function ( array $sizes ): array {
+	$core = [ 'thumbnail', 'medium' ];
+	return array_values( array_filter( $sizes, static fn( $name ) => in_array( $name, $core, true ) || 0 === strpos( $name, 'wpcc_' ) ) );
+};
+add_filter( 'intermediate_image_sizes', $wpcc_104_sizes, PHP_INT_MAX );
+$wpcc_104_original_sizes = [];
+add_filter( 'intermediate_image_sizes_advanced', static function ( array $sizes ) use ( &$wpcc_104_original_sizes ): array {
+	$wpcc_104_original_sizes = $sizes;
+	return $sizes;
+}, -999 );
+add_filter( 'intermediate_image_sizes_advanced', static function ( array $sizes ) use ( &$wpcc_104_original_sizes, $wpcc_104_sizes ): array {
+	return array_intersect_key( $wpcc_104_original_sizes, array_flip( $wpcc_104_sizes( array_keys( $wpcc_104_original_sizes ) ) ) );
+}, PHP_INT_MAX );
 PHP
 assert_eq "threshold mu-plugin written" "yes" "$([ -f "$MU1" ] && echo yes || echo no)"
+echo "  fixture sizes: $(wpe 'echo implode(",",array_keys(wp_get_registered_image_subsizes()));')"
 
-echo "== 1. Seed a 6144x1200 (oversized) image and a 250x200 (undersized) image =="
+echo "== 1. Seed a 1200x900 (oversized for the isolated display sizes) and a 250x200 image =="
 BIG=$(wpe '
-$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-104-big.jpg";
-$im=imagecreatetruecolor(6144,1200); imagefill($im,0,0,imagecolorallocate($im,10,80,140)); imagejpeg($im,$s,82); imagedestroy($im);
+$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-104-big-".sanitize_file_name((string)getenv("WPCC_MEDIA_FIXTURE_SUFFIX")).".jpg";
+$im=imagecreatetruecolor(1200,900); imagefill($im,0,0,imagecolorallocate($im,10,80,140)); imagejpeg($im,$s,82); imagedestroy($im);
 $a=wp_insert_attachment(["post_mime_type"=>"image/jpeg","post_title"=>"104big","post_status"=>"inherit"],$s);
 require_once ABSPATH."wp-admin/includes/image.php"; wp_update_attachment_metadata($a, wp_generate_attachment_metadata($a,$s));
 echo $a;')
 SMALL=$(wpe '
-$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-104-small.jpg";
+$up=wp_upload_dir(); $s=$up["basedir"]."/wpcc-104-small-".sanitize_file_name((string)getenv("WPCC_MEDIA_FIXTURE_SUFFIX")).".jpg";
 $im=imagecreatetruecolor(250,200); imagefill($im,0,0,imagecolorallocate($im,150,40,40)); imagejpeg($im,$s,82); imagedestroy($im);
 $a=wp_insert_attachment(["post_mime_type"=>"image/jpeg","post_title"=>"104small","post_status"=>"inherit"],$s);
 require_once ABSPATH."wp-admin/includes/image.php"; wp_update_attachment_metadata($a, wp_generate_attachment_metadata($a,$s));
 echo $a;')
 assert_nonempty "big attachment seeded" "$BIG"
 assert_nonempty "small attachment seeded" "$SMALL"
-assert_eq "threshold disabled → original kept above 2560px" "true" "$(me "$(jq -n --argjson a "$BIG" '{action:"image_size_context_audit",media_id:$a}')" | jq -r '.image_size_context_audit.original.width > 2560')"
+echo "  BIG file/sizes: $(wpe '$m=wp_get_attachment_metadata('"$BIG"'); echo ($m["file"]??"?")." | ".implode(",",array_keys((array)($m["sizes"]??[])));')"
+assert_eq "fixture original kept at 1200px" "1200" "$(me "$(jq -n --argjson a "$BIG" '{action:"image_size_context_audit",media_id:$a}')" | jq -r '.image_size_context_audit.original.width')"
 
 echo "== 2. srcset_verify — multi-size image has a responsive srcset (REST) =="
 SV=$(me "$(jq -n --argjson a "$BIG" '{action:"srcset_verify",media_id:$a}')")

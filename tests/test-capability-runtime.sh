@@ -2,7 +2,13 @@
 # Step 44 — Capability Runtime test suite (100+ assertions)
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../wpcc-env.sh"
+if [[ -n "${WPCC_ONBOARDING_TOKEN_OVERRIDE:-}" ]]; then
+	WPCC_TOKEN="$WPCC_ONBOARDING_TOKEN_OVERRIDE"
+	WP_ROOT="${WPCC_TEST_WP_PATH:-$(cd "$SCRIPT_DIR/../../../.." && pwd)}"
+	WPCC_BASE="$(wp --path="$WP_ROOT" eval 'echo untrailingslashit( rest_url( WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE ) );' 2>/dev/null)"
+else
+	source "$SCRIPT_DIR/../wpcc-env.sh"
+fi
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -90,9 +96,9 @@ assert_contains "map: snapshot.manage" "$MAP" "snapshot.manage"
 assert_contains "map: wpcli.execute" "$MAP" "wpcli.execute"
 assert_contains "map: option.manage" "$MAP" "option.manage"
 
-echo "== 16. All 23 capabilities listed =="
+echo "== 16. All 24 capabilities listed =="
 CAPS=$(echo "$MANIFEST" | jq -r '.capability_management.capabilities | length')
-assert_eq "caps: 23 capabilities (incl. 104.2 history.read)" "23" "$CAPS"
+assert_eq "caps: 24 capabilities (including site.read)" "24" "$CAPS"
 
 echo "== 17. Risk model =="
 assert_eq "risk: list low" "low" "$(echo "$MANIFEST" | jq -r '.capability_management.risk_model.capability_list')"

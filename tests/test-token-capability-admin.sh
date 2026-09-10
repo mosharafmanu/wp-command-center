@@ -15,7 +15,7 @@
 #   - Menu: "Tokens & Capabilities" submenu added, FeatureGate-gated
 #   - View: three URL-driven tabs, token detail, NO write controls (read-only),
 #     output rendered exclusively through an HTML-escaper (XSS discipline)
-#   - Functional (wp-cli, real bootstrap path): capability catalogue = 23,
+#   - Functional (wp-cli, real bootstrap path): capability catalogue = 24,
 #     operation map = 34, a read_only token resolves to EXACTLY the 5 read-only-
 #     scope operations, a full token resolves to system.admin / all 34 allowed,
 #     and no token secret (token_hash) is ever surfaced
@@ -32,7 +32,7 @@
 #     secret once and never the hash, recording admin.token.* audit; the token UI
 #     is fully migrated off settings.php (no AuthTokens calls remain there) with a
 #     legacy redirect to the new manager
-#   - Invariants: operation_map stays 34, capabilities stay 23 (this step adds
+#   - Invariants: operation_map stays 34, capabilities stay 24 (this step adds
 #     no runtime op, MCP tool, or capability)
 #
 # Requires: php, rg, wp-cli, wpcc-env.sh. (Admin routes are cookie+nonce, so the
@@ -217,7 +217,7 @@ has "opener is not a submit"          "aria-haspopup=\"dialog\"" "$VIEW"
 has "label field required by client"  "labelReq"                 "$VIEW"
 has "read-only is the default scope"  "value=\"read_only\" checked" "$VIEW"
 has "full access is an explicit pick" "value=\"full\""           "$VIEW"
-has "scope choices are explained"     "never request a change"   "$VIEW"
+has "scope choices are explained"     "Cannot change data, submit changes for approval"   "$VIEW"
 has "expiry offered"                  "wpcc-new-expires"         "$VIEW"
 has "full-access warning present"     "wpcc-tokdlg-warn"         "$VIEW"
 has "warning names the real mode"     "SecurityModeManager::label" "$VIEW"
@@ -320,8 +320,8 @@ has "manager: warning hidden until full is picked"    "dlg.warn.hidden = ! isFul
 has "assistants: warning hidden until full is picked" "mkNote.hidden = ! isFull;"     "$ASSIST"
 
 # (f) The approved scope explanations survive.
-has "manager: read-only explained"     "never request a change" "$VIEW"
-has "assistants: read-only explained"  "Inspect the site without requesting changes" "$ASSIST"
+has "manager: read-only explained"     "Cannot change data, submit changes for approval" "$VIEW"
+has "assistants: read-only explained"  "Read site information, diagnostics, and supported list/get actions" "$ASSIST"
 has "assistants: full access explained" "according to the active protection mode" "$ASSIST"
 
 # (g) Functional: the engine refuses a token with no scope and with a bogus
@@ -472,10 +472,10 @@ RES="$(wpe '
 
 getj() { printf '%s' "$RES" | php -r '$d=json_decode(stream_get_contents(STDIN),true); echo $d["'"$1"'"] ?? "";' 2>/dev/null; }
 
-assert_eq "capability catalogue = 23"             "23" "$(getj caps_total)"
+assert_eq "capability catalogue = 24"             "24" "$(getj caps_total)"
 assert_eq "operation map = 34"                    "34" "$(getj ops_total)"
 assert_eq "read_only token: matrix size = 34"     "34" "$(getj ro_total)"
-assert_eq "read_only token: exactly 5 ops allowed" "5" "$(getj ro_allowed)"
+assert_eq "read_only token: access matches named-read policy" "$(wpe 'echo count(array_filter(array_intersect_key(\WPCommandCenter\Operations\CapabilityRegistry::READ_ONLY_ACTIONS, \WPCommandCenter\Operations\CapabilityRegistry::OPERATION_MAP)));')" "$(getj ro_allowed)"
 assert_eq "read_only token: not admin"            "0"  "$(getj ro_admin)"
 assert_eq "full token: all 34 ops allowed"        "34" "$(getj full_allowed)"
 assert_eq "full token: is system.admin"           "1"  "$(getj full_admin)"
@@ -533,9 +533,8 @@ WRES="$(wpe '
 	// Audit recorded + matrix now allows content_manage.
 	$d = $q->token( $id );
 	$out["audit_assigned"] = count( array_filter( $d["audit_trail"], fn( $e ) => "capability.assigned" === ( $e["action"] ?? "" ) && "content.manage" === ( $e["capability"] ?? "" ) ) ) > 0 ? 1 : 0;
-	// Honesty: content_manage requires full scope, so a read_only-scope token
-	// stays DENIED with reason=scope_blocked even WITH content.manage assigned —
-	// scope gates before capability (mirrors RestApi::require_write()).
+	// Read-only access means named reads only; management assignment never
+	// bypasses the action-level scope gate. Execution denial is tested separately.
 	$cm = null; foreach ( $d["access_matrix"] as $m ) { if ( "content_manage" === $m["operation"] ) { $cm = $m; break; } }
 	$out["matrix_allow"]   = ( $cm && $cm["allowed"] ) ? 1 : 0;
 	$out["matrix_reason"]  = $cm ? (string) $cm["reason"] : "";
@@ -569,8 +568,8 @@ assert_eq "assign succeeded (engine-routed)"      "1"   "$(getw assign_success)"
 assert_eq "capability actually assigned"          "1"   "$(getw has_content)"
 assert_eq "assign recorded in audit trail"        "1"   "$(getw audit_assigned)"
 # Honest scope-first behaviour: read_only scope still gates content_manage.
-assert_eq "matrix honestly keeps content_manage denied" "0" "$(getw matrix_allow)"
-assert_eq "denial reason = scope_blocked"         "scope_blocked" "$(getw matrix_reason)"
+assert_eq "matrix exposes only supported content reads" "1" "$(getw matrix_allow)"
+assert_eq "access reason = read_actions_only"       "read_actions_only" "$(getw matrix_reason)"
 assert_eq "remove succeeded (engine-routed)"      "1"   "$(getw remove_success)"
 assert_eq "capability actually removed"           "1"   "$(getw removed)"
 assert_eq "system.admin refused by engine guard"  "1"   "$(getw admin_refused)"
@@ -710,7 +709,7 @@ echo "== 7. Invariants unchanged (no op_map / capability change) =="
 OPN=$(awk '/const OPERATION_MAP = \[/,/^\t\];/' "$REGISTRY" | grep -cE "^\s*'[a-z_]+'\s*=>")
 CAPN=$(awk '/const ALL_CAPABILITIES = \[/,/\];/' "$REGISTRY" | grep -c 'self::CAP_')
 assert_eq "operation_map stays 34" "34" "$OPN"
-assert_eq "capabilities stay 23"   "23" "$CAPN"
+assert_eq "capabilities stay 24"   "24" "$CAPN"
 
 echo
 echo "== SUMMARY: $PASS passed, $FAIL failed =="

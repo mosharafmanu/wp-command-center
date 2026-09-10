@@ -72,7 +72,7 @@ echo "== 2. Dry Run Updates =="
 
 # Dry-run against THIS plugin: it is guaranteed installed and guaranteed up to date.
 # Derived from the directory rather than named, so a slug rename cannot break it.
-WPCC_OWN_SLUG=$(basename "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)")
+WPCC_OWN_SLUG=$(basename "$PLUGIN_DIR")
 DRY_PL=$(api POST /operations/safe_updates/run "{\"type\":\"plugin\",\"slug\":\"$WPCC_OWN_SLUG\",\"dry_run\":true}")
 
 # If there's no update available, we expect wpcc_no_update_available.

@@ -73,12 +73,32 @@ final class OperationExecutor {
 			return $this->fail( $operation_id, 'operation_not_found', __( 'Operation not found in registry.', 'ai-command-center' ) );
 		}
 
+		// Scope is an unconditional restriction, before approval, queue/idempotency
+		// claims or handler effects. Resolve stored scope for REST callers that pass
+		// only the authenticated actor; a payload/context flag cannot upgrade it.
+		$cap_registry = new CapabilityRegistry();
+		$token_id = $context['token_id'] ?? ( $actor['token_id'] ?? ( $actor['id'] ?? '' ) );
+		$token_scope = $context['token_scope'] ?? '';
+		if ( '' !== $token_id ) {
+			foreach ( ( new \WPCommandCenter\Security\AuthTokens() )->list() as $token ) {
+				if ( $token['id'] === $token_id ) {
+					$token_scope = $token['scope'];
+					$context['token_scope'] = $token_scope;
+					break;
+				}
+			}
+		}
+		$is_read_token = \WPCommandCenter\Security\AuthTokens::SCOPE_READ_ONLY === $token_scope;
+		if ( $is_read_token && $cap_registry->requires_full_scope( $operation_id, $payload ) ) {
+			return $this->fail( $operation_id, 'wpcc_token_read_only', __( 'This token is read-only. Mutations and approval requests are not allowed.', 'ai-command-center' ) );
+		}
+
 		// 1b. Capability enforcement (enabled by default).
 		if ( get_option( 'wpcc_enforce_capabilities', true ) ) {
 			$cap_registry = new CapabilityRegistry();
-			$token_id     = $context['token_id'] ?? ( $actor['id'] ?? '' );
+
 			if ( '' !== $token_id ) {
-				$validation = $cap_registry->validate( $operation_id, 'token', $token_id );
+				$validation = $cap_registry->validate( $operation_id, 'token', $token_id, $payload, $token_scope );
 				if ( ! $validation['allowed'] ) {
 					$audit->record( 'capability.denied', [
 						'operation_id' => $operation_id,
@@ -372,6 +392,42 @@ final class OperationExecutor {
 			}
 		}
 
+		/*
+		 * 1c2. PRE-FLIGHT — refuse an impossible request before it costs a human decision.
+		 *
+		 * Discovered in live MCP testing (REAL_TEST_FINDINGS.md #2). A settings change was
+		 * made and correctly recorded as reversible, then a rollback was requested for it
+		 * through `rollback_manage`. That operation undoes FILE PATCHES only, so the
+		 * request could never have executed — but nothing checked that until after the
+		 * approval gate below had already created a request, marked it high risk, shown it
+		 * to an administrator and taken their approval. Execution then failed with
+		 * `wpcc_not_a_patch_rollback` and the site was never touched.
+		 *
+		 * The damage is not the failed call, which failed safely. It is that a human
+		 * approval — the scarcest and most trusted signal in this product — was spent
+		 * deciding about work the system already knew it would refuse. An approval queue
+		 * that contains impossible requests trains people to approve without reading.
+		 *
+		 * So validation that needs no side effects now runs BEFORE the gate. A handler
+		 * opts in by defining `preflight()`; everything else is unaffected. This is
+		 * deliberately narrow: it may only answer "this request cannot run as written",
+		 * never "this request is not allowed" (that is the capability gate's job, above)
+		 * and never "this request is risky" (that is the approval gate's job, below).
+		 */
+		if ( ! $is_queued && ! $is_requested ) {
+			$preflight = $this->preflight( $operation_id, $payload, $context );
+			if ( is_wp_error( $preflight ) ) {
+				$audit->record( 'operation.preflight.rejected', array_merge( $links, [
+					'operation_id' => $operation_id,
+					'action'       => (string) ( $payload['action'] ?? '' ),
+					'code'         => $preflight->get_error_code(),
+					'actor'        => $actor ? AuditLog::resolve_actor( $actor ) : null,
+				] ) );
+
+				return $this->fail( $operation_id, $preflight->get_error_code(), $preflight->get_error_message() );
+			}
+		}
+
 		// 1d. Step 80 — Security Mode approval gate.
 		// When a mode other than Developer requires approval for the operation's
 		// effective risk level, auto-create an approval request and return a
@@ -387,7 +443,7 @@ final class OperationExecutor {
 			$action         = (string) ( $payload['action'] ?? '' );
 			$effective_risk = SecurityModeManager::effective_risk( $operation, $action );
 
-			if ( SecurityModeManager::requires_approval( $effective_risk ) ) {
+			if ( ! $is_read_token && SecurityModeManager::requires_approval( $effective_risk ) ) {
 				$request_meta = [
 					'session_id' => $context['session_id'] ?? null,
 					'task_id'    => $context['task_id'] ?? null,
@@ -484,6 +540,13 @@ final class OperationExecutor {
 		RollbackContext::boot();
 		RollbackContext::reset();
 
+		// Reserve this execution's result identity only after the approval/claim
+		// gates. A rollback records its reversal inside the handler, before the
+		// completed result is persisted below. Never inherit an identity supplied
+		// by a caller (or by an enclosing execution).
+		$execution_result_id = wp_generate_uuid4();
+		$context['execution_result_id'] = $execution_result_id;
+
 		// PHASE 2 HARDENING (A2-1) — Throwable-safe handler execution. After the
 		// atomic claim set request.status to 'executing', an uncaught exception or
 		// Error from the handler would otherwise skip finalization and strand the
@@ -549,7 +612,7 @@ final class OperationExecutor {
 					'code'    => $error_code,
 					'message' => $result->get_error_message(),
 				] ),
-			] ) );
+			] ), $execution_result_id );
 
 			$audit->record( 'operation.result.failed', array_merge( $links, [
 				'result_id'    => $res_id,
@@ -603,7 +666,7 @@ final class OperationExecutor {
 				'status'      => 'failed',
 				'error_count' => 1,
 				'error_json'  => wp_json_encode( [ 'code' => $error_code, 'message' => $error_message ] ),
-			] ) );
+			] ), $execution_result_id );
 
 			$audit->record( "operation.{$operation_id}.{$change_status}", array_merge( $links, [
 				'error_code'    => $error_code,
@@ -674,7 +737,7 @@ final class OperationExecutor {
 				'message' => __( 'The change did not apply and was rolled back. The site is unchanged.', 'ai-command-center' ),
 			] ) : null,
 			'result_json'   => wp_json_encode( $storable ),
-		] ) );
+		] ), $execution_result_id );
 
 		$audit->record( $apply_failed ? 'operation.result.failed' : 'operation.result.completed', array_merge( $links, [
 			'result_id'    => $res_id,
@@ -788,6 +851,45 @@ final class OperationExecutor {
 			'success'      => $ok,
 		] );
 		return array_merge( [ 'success' => $ok, 'operation_id' => $operation_id ], is_array( $result ) ? $result : [] );
+	}
+
+	/**
+	 * Ask an operation whether this request can run at all, before the approval gate.
+	 *
+	 * Contract for a handler implementing `preflight( array $payload, array $context )`:
+	 *
+	 *   - Return a WP_Error ONLY when the request cannot execute as written, no matter
+	 *     who approves it — a wrong-shaped identifier, a target that does not exist, a
+	 *     rollback pointed at the wrong engine. The error should name the correct call.
+	 *   - Return anything else (null) to proceed.
+	 *   - MUST be free of side effects and cheap. It runs on every fresh call, including
+	 *     ones that will be refused by the approval gate a moment later.
+	 *   - MUST NOT be used for permission decisions. Capability enforcement happens above
+	 *     this point and stays there; a preflight that returned "denied" would be a
+	 *     second, weaker authorization path.
+	 *
+	 * A handler without the method is left exactly as it was.
+	 */
+	private function preflight( string $operation_id, array $payload, array $context ): ?\WP_Error {
+		$handler = $this->resolve_handler( $operation_id );
+
+		if ( ! $handler || ! method_exists( $handler, 'preflight' ) ) {
+			return null;
+		}
+
+		/*
+		 * A broken preflight must never be able to block an operation that would
+		 * otherwise have run. This check exists to save a human approval, which is a
+		 * convenience; failing open preserves the previous behaviour exactly (the
+		 * request proceeds to the approval gate and fails later, as it did before).
+		 */
+		try {
+			$result = $handler->preflight( $payload, $context );
+		} catch ( \Throwable $e ) {
+			return null;
+		}
+
+		return $result instanceof \WP_Error ? $result : null;
 	}
 
 	/**

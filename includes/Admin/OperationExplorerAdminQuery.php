@@ -171,6 +171,7 @@ final class OperationExplorerAdminQuery {
 			'authorization' => [
 				'required_capability' => $this->required_capability( $id ),
 				'read_only_scope'     => $this->is_read_only_scope( $id ),
+			'read_only_actions'   => CapabilityRegistry::READ_ONLY_ACTIONS[ $id ] ?? [],
 				'unlocked_by_admin'   => true,
 			],
 			'security'      => [
@@ -341,6 +342,7 @@ final class OperationExplorerAdminQuery {
 			'available'           => (bool) ( $op['available'] ?? false ),
 			'required_capability' => $this->required_capability( $id ),
 			'read_only_scope'     => $this->is_read_only_scope( $id ),
+			'read_only_actions'   => CapabilityRegistry::READ_ONLY_ACTIONS[ $id ] ?? [],
 			'action_count'        => count( $risks ),
 			'summary'             => $this->truncate( $description ),
 		];
@@ -357,7 +359,7 @@ final class OperationExplorerAdminQuery {
 
 	/** Whether a read-only-scope token may call this operation (registry truth). */
 	private function is_read_only_scope( string $id ): bool {
-		return in_array( $id, CapabilityRegistry::READ_ONLY_SCOPE_OPERATIONS, true );
+		return ! empty( CapabilityRegistry::READ_ONLY_ACTIONS[ $id ] );
 	}
 
 	/** Current security posture (mode key + human label) for the header. */

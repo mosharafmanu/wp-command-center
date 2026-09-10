@@ -52,7 +52,7 @@ fi
 echo "== ISSUE 2: operation_status action exists =="
 OS=$(op change_history '{"action":"operation_status","idempotency_key":"nonexistent-key"}')
 [ "$(pj "$OS" '.action // empty')" = "operation_status" ] && pass "operation_status action responds" || fail "operation_status action missing"
-[ "$(pj "$OS" '.found // empty')" = "false" ] && pass "unknown key reports found=false (safe to retry)" || fail "unknown key should report found=false"
+[ "$(pj "$OS" 'if has("found") then (.found | tostring) else "missing" end')" = "false" ] && pass "unknown key reports found=false (safe to retry)" || fail "unknown key should report found=false"
 
 echo "== ISSUE 3: acf_value_set object validation =="
 BAD=$(op acf_manage '{"action":"acf_value_set","object_type":"term","object_id":999999999,"fields":{"x":"y"}}')

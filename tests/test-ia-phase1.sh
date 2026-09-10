@@ -115,7 +115,7 @@ has "palette map is flat + keyworded" "'keywords'" "$SHELL_PHP"
 has "palette reaches connection panes" "cpane=" "$SHELL_PHP"
 has "palette reaches advanced panes"   "apane=" "$SHELL_PHP"
 has "undo/history reach Changes"       "undo rollback revert"  "$SHELL_PHP"
-has "security reaches Protection"      "security protection"   "$SHELL_PHP"
+has "security reaches Protection"      "protection security"   "$SHELL_PHP"
 has "palette dedupes by url"           "seen\[ item.url \]"    "$ROOT/assets/js/wpcc-cds.js"
 has "palette has an empty state"       "wpcc-cmdk__none"       "$ROOT/assets/js/wpcc-cds.js"
 has "palette keeps keyboard nav"       "ArrowDown"             "$ROOT/assets/js/wpcc-cds.js"
@@ -173,10 +173,9 @@ echo
 echo "== 5. Door terminology + honest API landing + first-run fork =="
 # Named for the door the customer sees in the tab bar, not the internal term.
 has "Assistants H1"           "esc_html_e\( 'Assistants'" "$CLIENTS_VIEW"
-# The hero now names the actual assistants instead of defining the category —
-# "Connect Claude, Cursor, Codex…" explains it faster than a definition does.
-# What still matters: no MCP jargon in the lead, and real product names.
-has "hero names real assistants"  "Connect Claude, Cursor, Codex" "$CLIENTS_VIEW"
+# The current one-screen flow asks for the app first; client identities themselves
+# come from the registry and are covered by the certification/metadata suite.
+has "connection flow starts with the user's app" "Pick the app you already use" "$CLIENTS_VIEW"
 lacks "hero assumes no MCP knowledge" "wpcc-ai-lead[^>]*>[^<]*MCP" "$CLIENTS_VIEW"
 # The Providers pane no longer prints its own H1: the Settings > Built-in AI hub
 # supplies the heading and the active pane tab names the pane.
@@ -214,7 +213,7 @@ if ! command -v wp >/dev/null 2>&1; then
 else
 	INV="$(wpe '$r = ( new \WPCommandCenter\Admin\DashboardAdminQuery() )->overview(); $i = $r["invariants"]; echo $i["operation_map"].",".$i["capabilities"].",".$i["catalogue"].",".$i["mcp_tools"].",".$i["db_version"];')"
 	assert_eq "OPERATION_MAP stays 34"       "34"    "$(echo "$INV" | cut -d, -f1)"
-	assert_eq "ALL_CAPABILITIES stays 23"    "23"    "$(echo "$INV" | cut -d, -f2)"
+	assert_eq "ALL_CAPABILITIES stays 24"    "24"    "$(echo "$INV" | cut -d, -f2)"
 	assert_eq "operation catalogue stays 42" "42"    "$(echo "$INV" | cut -d, -f3)"
 	assert_eq "MCP tools stay 42"            "42"    "$(echo "$INV" | cut -d, -f4)"
 	assert_eq "DB_VERSION stays 2.6.0"       "2.6.0" "$(echo "$INV" | cut -d, -f5)"

@@ -287,7 +287,7 @@ $sr_preview_js = $sr_preview ? [
 <div class="wpcc-tools-wrap">
 	<h1><?php esc_html_e( 'Tools', 'ai-command-center' ); ?></h1>
 	<p class="description" style="max-width:680px;">
-		<?php esc_html_e( 'Governed maintenance tools. Each runs through the same engine as everything else: changes are previewed, approved and audited. A database search and replace rewrites rows in place and cannot be undone.', 'ai-command-center' ); ?>
+		<?php esc_html_e( 'Governed maintenance tools. Each runs through the same engine as everything else: changes are previewed, approved when your protection mode requires it, and audited. A database search and replace rewrites rows in place and cannot be undone.', 'ai-command-center' ); ?>
 	</p>
 	<?php
 	/*

@@ -6,7 +6,7 @@ Assumes WordPress 6.4+ and PHP 8.0+ on a single site (not multisite).
 
 ## 1. Install and activate
 
-Upload `ai-command-center-1.0.0.zip` through **Plugins → Add New → Upload Plugin**, then
+Upload `ai-command-center-1.0.1.zip` through **Plugins → Add New → Upload Plugin**, then
 activate it.
 
 On activation the plugin creates its tables and sets protection to **Standard
@@ -39,7 +39,7 @@ configuration. It looks like this:
   "mcpServers": {
     "wp-command-center": {
       "command": "bash",
-      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/ai-command-center/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""],
+      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/ai-command-center/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.1'; node \"$RELAY\""],
       "env": {
         "WPCC_MCP_URL": "https://example.com/wp-json/wp-command-center/v1/mcp",
         "WPCC_SITE_URL": "https://example.com",
@@ -59,8 +59,8 @@ from your own site, not from npm, so nothing external needs to be trusted or ins
 beyond Node.
 
 **Requires Node.js on the machine running the assistant** — but only if your assistant
-uses the connector. GitHub Copilot / VS Code, Claude Code, Codex CLI, ChatGPT and Gemini
-CLI connect straight over HTTP and install nothing; the setup screen states which path
+uses the connector. GitHub Copilot in VS Code, Claude Code, Codex CLI, Codex in ChatGPT
+Desktop and Gemini CLI connect straight over HTTP and install nothing; the setup screen states which path
 yours uses. See [AI-INTEGRATIONS.md](AI-INTEGRATIONS.md) for each client's format.
 
 ## 4. Restart your client and check the connection

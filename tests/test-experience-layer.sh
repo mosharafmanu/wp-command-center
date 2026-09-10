@@ -228,7 +228,7 @@ else
 	# dashboard suite validates) to avoid coupling to internal namespaces.
 	INV="$(wpe '$r = ( new \WPCommandCenter\Admin\DashboardAdminQuery() )->overview(); $i = $r["invariants"]; echo $i["operation_map"].",".$i["capabilities"].",".$i["catalogue"].",".$i["mcp_tools"].",".$i["db_version"];')"
 	assert_eq "OPERATION_MAP stays 34"        "34"    "$(echo "$INV" | cut -d, -f1)"
-	assert_eq "ALL_CAPABILITIES stays 23"     "23"    "$(echo "$INV" | cut -d, -f2)"
+	assert_eq "ALL_CAPABILITIES stays 24"     "24"    "$(echo "$INV" | cut -d, -f2)"
 	assert_eq "operation catalogue stays 42"  "42"    "$(echo "$INV" | cut -d, -f3)"
 	assert_eq "MCP tools stay 42"             "42"    "$(echo "$INV" | cut -d, -f4)"
 	assert_eq "DB_VERSION stays 2.6.0"        "2.6.0" "$(echo "$INV" | cut -d, -f5)"

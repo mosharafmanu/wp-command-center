@@ -103,6 +103,92 @@ abstract class BaseClientIntegration {
 		return 'wp-command-center';
 	}
 
+	/**
+	 * How this client receives the access token. This is NOT cosmetic: it decides
+	 * whether the token belongs in the configuration text at all.
+	 *
+	 * 'inline'  — the token is written into the configuration itself, so
+	 *             AIClientRegistry::render_config() substitutes TOKEN_PLACEHOLDER and
+	 *             "Copy configuration" yields something complete.
+	 * 'env_var' — the configuration names an ENVIRONMENT VARIABLE and the token is
+	 *             never written into it. Substituting the placeholder here would
+	 *             produce a config that silently fails, because the client would look
+	 *             up an environment variable whose name is the token.
+	 *
+	 * Real-world origin: Codex and ChatGPT Desktop expose a field labelled
+	 * "Bearer token env var". During live testing a valid token pasted into that field
+	 * produced a 401 from a completely healthy server, because the client dutifully
+	 * looked for an environment variable named `wpcc_jkSf...`. The credential mode is
+	 * what lets the screen explain that difference instead of leaving the user to
+	 * discover it from a failed connection.
+	 */
+	public static function credential_mode(): string {
+		return 'inline';
+	}
+
+	/**
+	 * The environment variable a credential_mode() === 'env_var' client should read.
+	 * Deliberately the same name as the placeholder token so the two never diverge.
+	 */
+	public static function credential_env_var(): string {
+		return 'WPCC_TOKEN';
+	}
+
+	/**
+	 * A native, ready-to-run command that registers this server with the client, or ''
+	 * when the client has no such mechanism and the user must edit a file.
+	 *
+	 * Preferred over hand-edited configuration wherever a client provides it: it cannot
+	 * be pasted into the wrong file, cannot be malformed, and — for env_var clients —
+	 * never contains the token.
+	 *
+	 * @param string $token Real token, or '' to keep the placeholder.
+	 */
+	public static function setup_command( string $token = '' ): string {
+		return '';
+	}
+
+	/**
+	 * Optional app-native install link. Kept separate from setup_command() because a
+	 * custom-protocol URL must be opened, never pasted into Terminal.
+	 */
+	public static function setup_link( string $token = '' ): string {
+		return '';
+	}
+
+	/**
+	 * The smallest copyable fragment used by the recommended setup. Most clients use
+	 * render_entry_config(); YAML clients may override this with their native list item.
+	 */
+	public static function primary_config( string $token = '' ): string {
+		return '';
+	}
+
+	/**
+	 * Optional token-free helper that safely prepares a client's configuration file.
+	 * File-owning integrations provide this only when a missing file is a normal
+	 * first-run state and the command can preserve an existing file byte-for-byte.
+	 */
+	public static function prepare_config_command(): string {
+		return '';
+	}
+
+	/**
+	 * The command that puts the token where a credential_mode() === 'env_var' client
+	 * will find it, or '' when this client does not use an environment variable.
+	 *
+	 * Returned per-OS because the mechanism is genuinely different, and because a GUI
+	 * application launched from Finder or the Start menu does NOT inherit the shell
+	 * profile — `export` in .zshrc reaches a terminal and nothing else. That single
+	 * fact is why a correct-looking setup fails for desktop clients.
+	 *
+	 * @param string $token Real token, or '' to keep a safe placeholder.
+	 * @return array<string,string> OS key => command.
+	 */
+	public static function credential_commands( string $token = '' ): array {
+		return [];
+	}
+
 	public static function get_discovery_metadata(): array {
 		return ClaudeIntegration::get_discovery_metadata();
 	}

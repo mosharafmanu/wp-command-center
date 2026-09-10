@@ -36,7 +36,7 @@ REQ=$(jq -nc --arg p "$SAFE_FILE" --arg a "\n// $M1\n" --arg b "\n// $M2\n" \
 PV=$(pm "$REQ")
 
 # 1) The two same-path ops collapse into a single change-set entry.
-assert_eq "same-path ops collapse to one preview entry" "1" "$(pj "$PV" '.previews | length')"
+assert_eq "same-path ops collapse to one preview entry" "1" "$(pj "$PV" '.files | length')"
 
 # 2) BOTH edits are present (composition), not just the last one.
 HAS1=$(printf '%s' "$PV" | grep -c "$M1")

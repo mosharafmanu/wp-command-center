@@ -77,10 +77,27 @@ GLYPHS="$( grep -rn '&#9783;\|&#9781;\|&#9776;' includes/ assets/ 2>/dev/null | 
 assert_eq "no Unicode glyph stands in for the mark" "0" "$GLYPHS"
 
 # The shell header must load real artwork, not a filled container with a character in it.
+#
+# This asserted the MECHANISM (`exactly one Brand::picture(` call) rather than the
+# property it cared about, and so it defended a bug. picture() chooses its variant with
+# `(prefers-color-scheme: dark)`, which reports the viewer's OS theme and says nothing
+# about the surface. The shell header is permanently light — the WP admin content area
+# stays light in every core colour scheme — so every admin on an OS dark theme was served
+# the near-white dark-surface mark onto a light card: 1.09:1 contrast, invisible.
+#
+# What must actually hold is asserted instead: the header loads a real brand SVG, and it
+# does NOT scheme-switch on this light surface. Stated as two positive facts, so neither
+# a glyph placeholder nor a reintroduced picture() can pass.
 BRANDMARK_IMG="$( grep -c 'wpcc-shell__brand-mark' includes/Admin/AppShell.php 2>/dev/null | tr -d ' ' )"
-assert_eq "shell header renders the mark through Brand::picture()" "1" \
-  "$( grep -c 'Brand::picture(' includes/Admin/AppShell.php | tr -d ' ' )"
 [ "$BRANDMARK_IMG" -ge 1 ] && pass "shell header keeps the brand-mark hook" || fail "shell header lost the brand-mark hook"
+assert_eq "shell header loads the light-surface mark artwork" "1" \
+  "$( grep -c 'Brand::mark()' includes/Admin/AppShell.php | tr -d ' ' )"
+# Comments may DISCUSS picture(); only an actual call is a defect here, so match a call
+# site (`Brand::picture(` followed by a newline or argument) rather than any mention.
+assert_eq "shell header does not scheme-switch on a light surface" "0" \
+  "$( grep -cE '^[^*]*Brand::picture\(' includes/Admin/AppShell.php | tr -d ' ' )"
+assert_eq "onboarding hero does not scheme-switch on a light surface" "0" \
+  "$( grep -cE '^[^*]*Brand::picture\(' includes/Admin/views/command-home.php | tr -d ' ' )"
 
 echo
 echo "== 5. The admin menu icon is a data URI (WordPress's supported SVG path) =="

@@ -84,8 +84,13 @@ api POST "/agent/plans/$PLAN_ID/approve" > /dev/null
 pass "plan approved"
 
 # 7. Patch
-# We need a file to patch. Let's use readme.txt which always exists in the plugin.
-FILE_PATH="plugins/ai-command-center/readme.txt"
+# Patch a disposable sibling fixture so the release candidate stays byte-for-byte
+# unchanged during validation, including between apply and rollback.
+FIXTURE_DIR="$(mktemp -d "$WP_ROOT/wp-content/plugins/wpcc-timeline-XXXXXX")"
+printf 'WPCC patch regression fixture\n' > "$FIXTURE_DIR/fixture.txt"
+cleanup_fixture() { rm -f "$FIXTURE_DIR/fixture.txt"; rmdir "$FIXTURE_DIR"; }
+trap cleanup_fixture EXIT
+FILE_PATH="plugins/$(basename "$FIXTURE_DIR")/fixture.txt"
 # Read original content
 GET_FILE_RESP=$(api GET "/files/content?path=$FILE_PATH")
 ORIGINAL_CONTENT=$(echo "$GET_FILE_RESP" | jq -r '.contents // empty')

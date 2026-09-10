@@ -3,6 +3,9 @@
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../wpcc-env.sh"
+if [[ -n "${WPCC_ONBOARDING_TOKEN_OVERRIDE:-}" ]]; then
+	WPCC_TOKEN="$WPCC_ONBOARDING_TOKEN_OVERRIDE"
+fi
 PASS=0; FAIL=0
 pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -119,7 +122,12 @@ assert_eq "discovery: claude_desktop=true" "true" "$(echo "$DISC" | jq -r '.comp
 
 echo "== 16. Approval awareness in discovery =="
 assert_contains "discovery: database_inspect in not_required_for" "$(echo "$DISC" | jq -r '.approval.not_required_for | join(",")')" "database_inspect"
-assert_true "discovery: required_for has content_manage" "$(echo "$DISC" | jq -r 'any(.approval.required_for[]; .id == "content_manage")')"
+assert_true "discovery: operation approval lists match effective tool flags" "$(echo "$DISC" | jq -r '
+	([.approval.required_for[].id] | sort) == ([.tools[] | select(.requires_approval) | .name] | sort)
+	and ([.approval.not_required_for[]] | sort) == ([.tools[] | select(.requires_approval | not) | .name] | sort)')"
+assert_true "discovery: content_manage follows active mode" "$(echo "$DISC" | jq -r '
+	(.approval.requires_approval_by_risk.medium) as $medium
+	| (any(.approval.required_for[]; .id == "content_manage")) == $medium')"
 
 echo "== 17. Capability operation_map complete =="
 assert_contains "capabilities: content_manage mapped" "$(echo "$DISC" | jq -r '.capabilities.operation_map | keys | join(",")')" "content_manage"
@@ -134,11 +142,9 @@ assert_contains "config: WPCC_TOKEN placeholder present" "$(echo "$CONFIG" | jq 
 echo
 echo "== Assistant state badges — presentation must not out-claim the registry =="
 
-# The badge layer exists so the Connections screen can say what has actually been
-# verified. Its one hard rule: "Officially Certified" may appear ONLY for a client whose
-# registry status is CERT_GOLD. Nothing has been driven end to end in a real assistant
-# yet, so today that label must appear nowhere at all. This guards the exact failure the
-# certification sprint was called to fix — a UI that claims more than was executed.
+# The badge layer exists so the Connections screen says what the retained evidence proves.
+# Gold remains reserved for the formal lifecycle; Pass means an actual client connected
+# and completed a benign read, with narrower limits left in its validation notes.
 BADGES="$( wp --path="$WP_ROOT" eval '
 	use WPCommandCenter\Integration\AIClientRegistry;
 	$out = [];
@@ -159,10 +165,8 @@ for placeholder in "Not yet certified" "Awaiting certification"; do
   assert_eq "no release-state placeholder: '$placeholder'" "0" "$LEAK"
 done
 
-# Certification stays silent at the default status and speaks only when it should change
-# a decision. A client at CERT_COMPATIBLE/CERT_GOLD emits exactly two badges at most
-# (recommendation + transport) and never a certification badge.
-CERT_WORDS="$( echo "$BADGES" | grep -cE "=(Experimental|Not supported)$" || true )"
+# Compatible stays silent; active/partial/planned levels carry an explicit state badge.
+CERT_WORDS="$( echo "$BADGES" | grep -cE "=(Pass|Experimental|Not supported)$" || true )"
 NON_DEFAULT="$( wp --path="$WP_ROOT" eval '
 	use WPCommandCenter\Integration\AIClientRegistry;
 	$n = 0;
@@ -173,6 +177,20 @@ NON_DEFAULT="$( wp --path="$WP_ROOT" eval '
 	echo $n;
 ' 2>/dev/null )"
 assert_eq "certification badge appears only for non-default statuses" "$NON_DEFAULT" "$CERT_WORDS"
+assert_eq "Claude Code alone carries the Gold Certified badge" "claude_code=Certified" "$(echo "$BADGES" | grep '=Certified$' || true)"
+PASS_BADGES="$(echo "$BADGES" | grep -c '=Pass$' || true)"
+EXPECTED_PASS_CLIENTS="$( wp --path="$WP_ROOT" eval '
+	use WPCommandCenter\Integration\AIClientRegistry;
+	$ids = [];
+	foreach ( AIClientRegistry::get_clients() as $id => $client ) {
+		if ( AIClientRegistry::CERT_ACTIVE === ( $client["status"] ?? "" ) ) { $ids[] = $id; }
+	}
+	sort( $ids );
+	echo implode( "\n", $ids );
+' 2>/dev/null )"
+RENDERED_PASS_CLIENTS="$(echo "$BADGES" | sed -n 's/=Pass$//p' | sort)"
+assert_eq "Pass badge count is derived from active registry metadata" "$(printf '%s\n' "$EXPECTED_PASS_CLIENTS" | grep -c .)" "$PASS_BADGES"
+assert_eq "Pass badge identities exactly match active registry clients" "$EXPECTED_PASS_CLIENTS" "$RENDERED_PASS_CLIENTS"
 
 # Every client must carry a transport badge, because "does this run something on my
 # computer?" is the question that decides whether the setup can work at all.

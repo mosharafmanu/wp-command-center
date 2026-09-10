@@ -441,7 +441,7 @@ final class AppShell {
 				'label'    => __( 'Assistants', 'ai-command-center' ),
 				'view'     => 'ai-integrations',
 				'feature'  => null,
-				'keywords' => 'assistant ai claude chatgpt cursor codex gemini copilot windsurf continue connect client mcp setup',
+				'keywords' => 'assistant ai claude chatgpt cursor codex gemini copilot continue opencode antigravity muse connect client mcp setup',
 			],
 			'api'        => [
 				'label'    => __( 'Your own software', 'ai-command-center' ),
@@ -778,17 +778,30 @@ final class AppShell {
 						 * It carries a real accessible name rather than being decorative: the
 						 * heading beside it names the area, so the mark is now the only thing
 						 * in the header that says which product this is.
+						 *
+						 * ── LIGHT-SURFACE ARTWORK, UNCONDITIONALLY. Do not use Brand::picture() here.
+						 *
+						 * This mark sits on the shell header card, which is white on the WordPress
+						 * admin's #f0f0f1 content background. That is true in EVERY core admin
+						 * colour scheme — those schemes restyle the sidebar and accents, never the
+						 * content area — so this surface is permanently light.
+						 *
+						 * Brand::picture() switches variants on `(prefers-color-scheme: dark)`,
+						 * which reports the viewer's OPERATING SYSTEM / browser theme. It says
+						 * nothing about the surface the artwork is painted on. Using it here meant
+						 * that any admin whose OS was in dark mode was served the dark-surface
+						 * mark — near-white #F8FAFC — onto this light card: a contrast ratio of
+						 * 1.09:1, i.e. invisible. Reported from Firefox in dark mode while Chrome
+						 * in light mode looked perfect, which is exactly why it reads as a caching
+						 * problem and is not one.
+						 *
+						 * picture() and the *-dark assets remain correct and available — for a
+						 * surface that is genuinely dark, like the admin sidebar. This one is not.
 						 */
-						echo wp_kses(
-							Brand::picture(
-								Brand::mark(),
-								Brand::mark_dark(),
-								esc_attr__( 'WP Command Center', 'ai-command-center' ),
-								'wpcc-shell__brand-mark',
-								26,
-								26
-							),
-							Brand::allowed_html()
+						printf(
+							'<img src="%1$s" alt="%2$s" class="wpcc-shell__brand-mark" width="26" height="26" decoding="async" />',
+							esc_url( Brand::mark() ),
+							esc_attr__( 'WP Command Center', 'ai-command-center' )
 						);
 						?>
 						<?php
