@@ -40,15 +40,15 @@ final class AiActivity {
 	/** Human label + dot color for a category. */
 	public static function category_meta( string $cat ): array {
 		$map = [
-			'rollback'   => [ __( 'Rollback', 'action-steward' ), '#7b3fbf' ],
-			'connection' => [ __( 'Connection', 'action-steward' ), '#2271b1' ],
-			'generation' => [ __( 'AI generation', 'action-steward' ), '#0a7a33' ],
-			'agent'      => [ __( 'AI agent', 'action-steward' ), '#1d62b0' ],
-			'change'     => [ __( 'Change', 'action-steward' ), '#8c5e00' ],
-			'operation'  => [ __( 'Operation', 'action-steward' ), '#50575e' ],
-			'security'   => [ __( 'Security', 'action-steward' ), '#d63638' ],
-			'patch'      => [ __( 'Patch', 'action-steward' ), '#2c3a4f' ],
-			'activity'   => [ __( 'Activity', 'action-steward' ), '#646970' ],
+			'rollback'   => [ __( 'Rollback', 'siteradian' ), '#7b3fbf' ],
+			'connection' => [ __( 'Connection', 'siteradian' ), '#2271b1' ],
+			'generation' => [ __( 'AI generation', 'siteradian' ), '#0a7a33' ],
+			'agent'      => [ __( 'AI agent', 'siteradian' ), '#1d62b0' ],
+			'change'     => [ __( 'Change', 'siteradian' ), '#8c5e00' ],
+			'operation'  => [ __( 'Operation', 'siteradian' ), '#50575e' ],
+			'security'   => [ __( 'Security', 'siteradian' ), '#d63638' ],
+			'patch'      => [ __( 'Patch', 'siteradian' ), '#2c3a4f' ],
+			'activity'   => [ __( 'Activity', 'siteradian' ), '#646970' ],
 		];
 		return $map[ $cat ] ?? $map['activity'];
 	}
@@ -83,9 +83,9 @@ final class AiActivity {
 			$title = \WPCommandCenter\Admin\ActionLabels::describe( $m[1], '', [], '' );
 			if ( '' !== $title ) {
 				return match ( $m[2] ) {
-					'started'   => sprintf( /* translators: %s: what the change does. */ __( '%s — started', 'action-steward' ), $title ),
-					'failed'    => sprintf( /* translators: %s: what the change does. */ __( '%s — did not run', 'action-steward' ), $title ),
-					default     => sprintf( /* translators: %s: what the change does. */ __( '%s — done', 'action-steward' ), $title ),
+					'started'   => sprintf( /* translators: %s: what the change does. */ __( '%s — started', 'siteradian' ), $title ),
+					'failed'    => sprintf( /* translators: %s: what the change does. */ __( '%s — did not run', 'siteradian' ), $title ),
+					default     => sprintf( /* translators: %s: what the change does. */ __( '%s — done', 'siteradian' ), $title ),
 				};
 			}
 		}
@@ -104,32 +104,32 @@ final class AiActivity {
 	private static function event_labels(): array {
 		return [
 			// The background queue. "Worker" is the engine's word for it.
-			'operation.worker.started'    => __( 'Background processing started', 'action-steward' ),
-			'operation.worker.completed'  => __( 'Background processing completed', 'action-steward' ),
-			'operation.worker.failed'     => __( 'Background processing failed', 'action-steward' ),
-			'operation.worker.locked'     => __( 'Background processing picked up an item', 'action-steward' ),
+			'operation.worker.started'    => __( 'Background processing started', 'siteradian' ),
+			'operation.worker.completed'  => __( 'Background processing completed', 'siteradian' ),
+			'operation.worker.failed'     => __( 'Background processing failed', 'siteradian' ),
+			'operation.worker.locked'     => __( 'Background processing picked up an item', 'siteradian' ),
 			// Applying an approved change.
-			'operation.execution.started'   => __( 'Applying an approved change', 'action-steward' ),
-			'operation.execution.completed' => __( 'Approved change applied', 'action-steward' ),
-			'operation.execution.failed'    => __( 'A change could not be applied', 'action-steward' ),
+			'operation.execution.started'   => __( 'Applying an approved change', 'siteradian' ),
+			'operation.execution.completed' => __( 'Approved change applied', 'siteradian' ),
+			'operation.execution.failed'    => __( 'A change could not be applied', 'siteradian' ),
 			// Bookkeeping the customer does not need named as bookkeeping.
-			'operation.result.created'    => __( 'Result recorded', 'action-steward' ),
-			'operation.result.completed'  => __( 'Result recorded', 'action-steward' ),
+			'operation.result.created'    => __( 'Result recorded', 'siteradian' ),
+			'operation.result.completed'  => __( 'Result recorded', 'siteradian' ),
 			// Governance moments that matter to them.
-			'operation.approval.required'        => __( 'Waiting for your approval', 'action-steward' ),
-			'operation.approval.auto_requested'  => __( 'Sent for your approval', 'action-steward' ),
-			'operation.request.approved'         => __( 'You approved a change', 'action-steward' ),
-			'operation.request.rejected'         => __( 'You rejected a change', 'action-steward' ),
+			'operation.approval.required'        => __( 'Waiting for your approval', 'siteradian' ),
+			'operation.approval.auto_requested'  => __( 'Sent for your approval', 'siteradian' ),
+			'operation.request.approved'         => __( 'You approved a change', 'siteradian' ),
+			'operation.request.rejected'         => __( 'You rejected a change', 'siteradian' ),
 			// Built-in AI generation.
-			'seo.generate.started'        => __( 'Generating SEO suggestions', 'action-steward' ),
-			'seo.generate.completed'      => __( 'SEO suggestions generated', 'action-steward' ),
-			'alt_text.generate.started'   => __( 'Generating alt text', 'action-steward' ),
-			'alt_text.generate.completed' => __( 'Alt text generated', 'action-steward' ),
-			'content.generate.started'    => __( 'Generating content suggestions', 'action-steward' ),
-			'content.generate.completed'  => __( 'Content suggestions generated', 'action-steward' ),
-			'proposal.created'            => __( 'Suggestion saved as a draft', 'action-steward' ),
-			'proposal.applied'            => __( 'Suggestion applied', 'action-steward' ),
-			'proposal.dismissed'          => __( 'Suggestion dismissed', 'action-steward' ),
+			'seo.generate.started'        => __( 'Generating SEO suggestions', 'siteradian' ),
+			'seo.generate.completed'      => __( 'SEO suggestions generated', 'siteradian' ),
+			'alt_text.generate.started'   => __( 'Generating alt text', 'siteradian' ),
+			'alt_text.generate.completed' => __( 'Alt text generated', 'siteradian' ),
+			'content.generate.started'    => __( 'Generating content suggestions', 'siteradian' ),
+			'content.generate.completed'  => __( 'Content suggestions generated', 'siteradian' ),
+			'proposal.created'            => __( 'Suggestion saved as a draft', 'siteradian' ),
+			'proposal.applied'            => __( 'Suggestion applied', 'siteradian' ),
+			'proposal.dismissed'          => __( 'Suggestion dismissed', 'siteradian' ),
 		];
 	}
 

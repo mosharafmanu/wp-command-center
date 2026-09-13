@@ -114,7 +114,7 @@ class ContentRowActions {
 		$kind = isset( $_GET['kind'] ) ? sanitize_key( (string) $_GET['kind'] ) : '';
 
 		if ( ! $this->allowed( $kind ) ) {
-			wp_die( esc_html__( 'You are not allowed to do this.', 'action-steward' ), 403 );
+			wp_die( esc_html__( 'You are not allowed to do this.', 'siteradian' ), 403 );
 		}
 		check_admin_referer( self::ACTION . '_' . $kind . '_' . $id );
 
@@ -165,10 +165,10 @@ class ContentRowActions {
 	 */
 	public function add_bulk_actions( array $actions ): array {
 		if ( $this->allowed( 'title' ) ) {
-			$actions[ self::ACTION . '_title' ] = __( 'Generate Title Suggestions', 'action-steward' );
+			$actions[ self::ACTION . '_title' ] = __( 'Generate Title Suggestions', 'siteradian' );
 		}
 		if ( $this->allowed( 'excerpt' ) ) {
-			$actions[ self::ACTION . '_excerpt' ] = __( 'Generate Excerpt Suggestions', 'action-steward' );
+			$actions[ self::ACTION . '_excerpt' ] = __( 'Generate Excerpt Suggestions', 'siteradian' );
 		}
 		return $actions;
 	}

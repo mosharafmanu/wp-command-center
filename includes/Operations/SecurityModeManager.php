@@ -166,18 +166,18 @@ final class SecurityModeManager {
 	/** Plain-language label for any mode key. */
 	public static function label_for( string $mode ): string {
 		return match ( $mode ) {
-			self::MODE_CLIENT     => __( 'Standard protection', 'action-steward' ),
-			self::MODE_ENTERPRISE => __( 'Strict approval', 'action-steward' ),
-			default               => __( 'Development — no approval', 'action-steward' ),
+			self::MODE_CLIENT     => __( 'Standard protection', 'siteradian' ),
+			self::MODE_ENTERPRISE => __( 'Strict approval', 'siteradian' ),
+			default               => __( 'Development — no approval', 'siteradian' ),
 		};
 	}
 
 	/** One-sentence description of what a mode does, in the user's terms. */
 	public static function describe( string $mode ): string {
 		return match ( $mode ) {
-			self::MODE_CLIENT     => __( 'Read-only and low-risk requests run straight away. Higher-impact changes wait for your approval.', 'action-steward' ),
-			self::MODE_ENTERPRISE => __( 'Only read-only requests run straight away. Every change of any size waits for you to approve it.', 'action-steward' ),
-			default               => __( 'Changes run immediately with no approval step. For your own development or staging site only.', 'action-steward' ),
+			self::MODE_CLIENT     => __( 'Read-only and low-risk requests run straight away. Higher-impact changes wait for your approval.', 'siteradian' ),
+			self::MODE_ENTERPRISE => __( 'Only read-only requests run straight away. Every change of any size waits for you to approve it.', 'siteradian' ),
+			default               => __( 'Changes run immediately with no approval step. For your own development or staging site only.', 'siteradian' ),
 		};
 	}
 
@@ -221,9 +221,9 @@ final class SecurityModeManager {
 		 * now matches them instead of contradicting them.
 		 */
 		return match ( self::current() ) {
-			self::MODE_ENTERPRISE => __( 'Every change waits for your approval, including low-risk ones, and everything is recorded and can be undone.', 'action-steward' ),
-			self::MODE_CLIENT     => __( 'Higher-impact changes wait for your approval, low-risk edits go straight through, and everything is recorded and can be undone.', 'action-steward' ),
-			default               => __( 'This site is in Development mode, so changes run immediately without approval. Everything is still recorded and can be undone.', 'action-steward' ),
+			self::MODE_ENTERPRISE => __( 'Every change waits for your approval, including low-risk ones, and everything is recorded and can be undone.', 'siteradian' ),
+			self::MODE_CLIENT     => __( 'Higher-impact changes wait for your approval, low-risk edits go straight through, and everything is recorded and can be undone.', 'siteradian' ),
+			default               => __( 'This site is in Development mode, so changes run immediately without approval. Everything is still recorded and can be undone.', 'siteradian' ),
 		};
 	}
 
@@ -233,8 +233,8 @@ final class SecurityModeManager {
 	 */
 	public static function approval_chip(): string {
 		return self::is_protected()
-			? __( 'Requires approval', 'action-steward' )
-			: __( 'Runs immediately', 'action-steward' );
+			? __( 'Requires approval', 'siteradian' )
+			: __( 'Runs immediately', 'siteradian' );
 	}
 
 	/**
@@ -248,8 +248,8 @@ final class SecurityModeManager {
 	 */
 	public static function review_chip(): string {
 		return self::is_protected()
-			? __( 'Reviewed by you', 'action-steward' )
-			: __( 'Not reviewed', 'action-steward' );
+			? __( 'Reviewed by you', 'siteradian' )
+			: __( 'Not reviewed', 'siteradian' );
 	}
 
 	/**
@@ -263,9 +263,9 @@ final class SecurityModeManager {
 		// Three modes, three different truths — see promise() for why Standard
 		// cannot claim that everything waits.
 		return match ( self::current() ) {
-			self::MODE_ENTERPRISE => __( 'Every change waits for your yes, including low-risk ones.', 'action-steward' ),
-			self::MODE_CLIENT     => __( 'Higher-impact changes wait for your approval. Low-risk operations run straight away.', 'action-steward' ),
-			default               => __( 'Development mode is on, so changes run immediately without waiting for you.', 'action-steward' ),
+			self::MODE_ENTERPRISE => __( 'Every change waits for your yes, including low-risk ones.', 'siteradian' ),
+			self::MODE_CLIENT     => __( 'Higher-impact changes wait for your approval. Low-risk operations run straight away.', 'siteradian' ),
+			default               => __( 'Development mode is on, so changes run immediately without waiting for you.', 'siteradian' ),
 		};
 	}
 
@@ -279,8 +279,8 @@ final class SecurityModeManager {
 	 */
 	public static function approvals_desc(): string {
 		return self::is_protected()
-			? __( 'Changes waiting for your decision. These requests do not run until you approve them.', 'action-steward' )
-			: __( 'Development mode is on, so new changes run immediately. Anything queued before you switched still waits for your decision here.', 'action-steward' );
+			? __( 'Changes waiting for your decision. These requests do not run until you approve them.', 'siteradian' )
+			: __( 'Development mode is on, so new changes run immediately. Anything queued before you switched still waits for your decision here.', 'siteradian' );
 	}
 
 	/**
@@ -288,8 +288,8 @@ final class SecurityModeManager {
 	 */
 	public static function approvals_empty_detail(): string {
 		return self::is_protected()
-			? __( 'Requests that need approval appear here for your decision. They do not run until you approve them.', 'action-steward' )
-			: __( 'Development mode is on, so your assistant’s changes apply immediately instead of waiting here. Switch to Standard protection to review higher-impact changes first.', 'action-steward' );
+			? __( 'Requests that need approval appear here for your decision. They do not run until you approve them.', 'siteradian' )
+			: __( 'Development mode is on, so your assistant’s changes apply immediately instead of waiting here. Switch to Standard protection to review higher-impact changes first.', 'siteradian' );
 	}
 
 	/**
@@ -299,7 +299,7 @@ final class SecurityModeManager {
 	public static function dev_warning(): string {
 		return self::is_protected()
 			? ''
-			: __( 'Development mode is on: AI changes apply immediately, with no approval step. Switch to Standard protection before using this on a live site.', 'action-steward' );
+			: __( 'Development mode is on: AI changes apply immediately, with no approval step. Switch to Standard protection before using this on a live site.', 'siteradian' );
 	}
 
 	/** Where a customer changes the mode — used by the warnings above. */

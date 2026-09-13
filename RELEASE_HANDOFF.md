@@ -1,4 +1,30 @@
-# RELEASE HANDOFF — WP Command Center
+# RELEASE HANDOFF — SiteRadian AI v1.0.0
+
+> **Authoritative release identity — 2026-09-13:** Product **SiteRadian AI**; public
+> version/stable tag **1.0.0**; requested WordPress.org slug and package folder
+> `siteradian`; main file `siteradian.php`; text domain `siteradian`; database version
+> **2.6.0**. The authoritative artifact is `build/siteradian-1.0.0.zip`. Do not upload
+> until the SHA-256 and final verification results in the SiteRadian release report have
+> been checked.
+>
+> **Git release contract:** preserve `v1.0.0`, `v1.0.1`, and `v1.0.2` exactly as
+> historical pre-public tags. The SiteRadian source tag is the annotated,
+> collision-free `siteradian-v1.0.0`. Push only `release/v1-security-recut` and that
+> tag, without force; do not push or merge `main`.
+>
+> **Codex same-terminal release closure:** the primary flow visibly requires Steps 1–3
+> in one terminal and explains that MCP registration persists while `WPCC_TOKEN` does
+> not survive a closed terminal session. The exact missing-variable recovery is included;
+> no unnecessary MCP re-registration or unsafe shell-profile persistence is advised.
+>
+> **Final fresh-user onboarding closeout M22/M23/M25 retained:** The current matrix
+> includes the completed Copilot Agent actual-client verification. Older handoff entries
+> below are retained as pre-public engineering history, not current brand or release
+> metadata.
+
+---
+
+## Retained pre-public release-candidate history
 
 > **Final fresh-user onboarding closeout M22/M23/M25 — 2026-09-09:** Continue's first-MCP
 > path now supplies the missing top-level `mcpServers:` structure or a separate correctly

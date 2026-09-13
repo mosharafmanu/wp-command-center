@@ -106,13 +106,13 @@ final class PatchModeResolver {
 			if ( array_key_exists( 'content', $file ) ) {
 				return new \WP_Error(
 					'wpcc_unknown_patch_field',
-					__( "The 'content' field requires an explicit 'mode' (append, prepend, or replace_range). For a full-file replacement, set mode='whole_file' and use the 'modified' field instead of 'content'.", 'action-steward' )
+					__( "The 'content' field requires an explicit 'mode' (append, prepend, or replace_range). For a full-file replacement, set mode='whole_file' and use the 'modified' field instead of 'content'.", 'siteradian' )
 				);
 			}
 			if ( array_key_exists( 'diff', $file ) ) {
 				return new \WP_Error(
 					'wpcc_unknown_patch_field',
-					__( "The 'diff' field requires mode='unified_diff'.", 'action-steward' )
+					__( "The 'diff' field requires mode='unified_diff'.", 'siteradian' )
 				);
 			}
 
@@ -120,7 +120,7 @@ final class PatchModeResolver {
 				'wpcc_missing_patch_mode',
 				sprintf(
 					/* translators: %s: list of valid modes */
-					__( "Specify a 'mode' (%s), or provide the 'modified' field for a whole-file replacement.", 'action-steward' ),
+					__( "Specify a 'mode' (%s), or provide the 'modified' field for a whole-file replacement.", 'siteradian' ),
 					implode( ', ', self::MODES )
 				)
 			);
@@ -131,7 +131,7 @@ final class PatchModeResolver {
 				'wpcc_invalid_patch_mode',
 				sprintf(
 					/* translators: 1: supplied mode, 2: list of valid modes */
-					__( "Invalid patch mode '%1\$s'. Valid modes: %2\$s.", 'action-steward' ),
+					__( "Invalid patch mode '%1\$s'. Valid modes: %2\$s.", 'siteradian' ),
 					$mode,
 					implode( ', ', self::MODES )
 				)
@@ -166,14 +166,14 @@ final class PatchModeResolver {
 
 		$hint = '';
 		if ( self::MODE_WHOLE_FILE === $mode && in_array( 'content', $unknown, true ) ) {
-			$hint = __( " Whole-file replacement uses 'modified', not 'content'.", 'action-steward' );
+			$hint = __( " Whole-file replacement uses 'modified', not 'content'.", 'siteradian' );
 		}
 
 		return new \WP_Error(
 			'wpcc_unknown_patch_field',
 			sprintf(
 				/* translators: 1: unknown field names, 2: mode, 3: allowed field names, 4: optional hint */
-				__( "Unknown field(s) for mode '%2\$s': %1\$s. Allowed fields: %3\$s.%4\$s", 'action-steward' ),
+				__( "Unknown field(s) for mode '%2\$s': %1\$s. Allowed fields: %3\$s.%4\$s", 'siteradian' ),
 				implode( ', ', $unknown ),
 				$mode,
 				implode( ', ', $allowed ),
@@ -186,7 +186,7 @@ final class PatchModeResolver {
 		if ( ! array_key_exists( 'modified', $file ) ) {
 			return new \WP_Error(
 				'wpcc_missing_patch_field',
-				__( "Mode 'whole_file' requires the 'modified' field (the full new file content).", 'action-steward' )
+				__( "Mode 'whole_file' requires the 'modified' field (the full new file content).", 'siteradian' )
 			);
 		}
 
@@ -195,13 +195,13 @@ final class PatchModeResolver {
 		return [
 			'modified' => $modified,
 			'mode'     => self::MODE_WHOLE_FILE,
-			'meta'     => [ 'summary' => __( 'Replaces the entire file.', 'action-steward' ) ],
+			'meta'     => [ 'summary' => __( 'Replaces the entire file.', 'siteradian' ) ],
 		];
 	}
 
 	private static function resolve_append( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'content', $file ) ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'append' requires the 'content' field.", 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'append' requires the 'content' field.", 'siteradian' ) );
 		}
 
 		$content    = (string) $file['content'];
@@ -223,7 +223,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'      => sprintf(
 					/* translators: %d: number of lines appended */
-					__( 'Appends %d line(s) to the end of the file.', 'action-steward' ),
+					__( 'Appends %d line(s) to the end of the file.', 'siteradian' ),
 					self::line_count( $content )
 				),
 				'lines_added' => self::line_count( $content ),
@@ -233,7 +233,7 @@ final class PatchModeResolver {
 
 	private static function resolve_prepend( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'content', $file ) ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'prepend' requires the 'content' field.", 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'prepend' requires the 'content' field.", 'siteradian' ) );
 		}
 
 		$content  = (string) $file['content'];
@@ -249,7 +249,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'     => sprintf(
 					/* translators: %d: number of lines prepended */
-					__( 'Prepends %d line(s) to the start of the file.', 'action-steward' ),
+					__( 'Prepends %d line(s) to the start of the file.', 'siteradian' ),
 					self::line_count( $content )
 				),
 				'lines_added' => self::line_count( $content ),
@@ -259,10 +259,10 @@ final class PatchModeResolver {
 
 	private static function resolve_replace_text( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'find', $file ) || '' === (string) $file['find'] ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires a non-empty 'find' field.", 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires a non-empty 'find' field.", 'siteradian' ) );
 		}
 		if ( ! array_key_exists( 'replace', $file ) ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires the 'replace' field (may be an empty string to delete the text).", 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'replace_text' requires the 'replace' field (may be an empty string to delete the text).", 'siteradian' ) );
 		}
 
 		$find    = (string) $file['find'];
@@ -274,7 +274,7 @@ final class PatchModeResolver {
 				'wpcc_patch_text_not_found',
 				sprintf(
 					/* translators: %s: the search text (truncated) */
-					__( "The text to replace was not found in the file: \"%s\".", 'action-steward' ),
+					__( "The text to replace was not found in the file: \"%s\".", 'siteradian' ),
 					self::truncate( $find )
 				)
 			);
@@ -283,7 +283,7 @@ final class PatchModeResolver {
 		if ( array_key_exists( 'count', $file ) ) {
 			$count = (int) $file['count'];
 			if ( $count < 1 ) {
-				return new \WP_Error( 'wpcc_invalid_patch_field', __( "'count' must be a positive integer.", 'action-steward' ) );
+				return new \WP_Error( 'wpcc_invalid_patch_field', __( "'count' must be a positive integer.", 'siteradian' ) );
 			}
 			// explode with a limit splits on at most $count delimiters, leaving the
 			// remainder intact, so imploding with $replace swaps exactly the first N.
@@ -300,7 +300,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'              => sprintf(
 					/* translators: 1: occurrences changed, 2: total occurrences found */
-					__( 'Replaces %1$d of %2$d occurrence(s) of the target text.', 'action-steward' ),
+					__( 'Replaces %1$d of %2$d occurrence(s) of the target text.', 'siteradian' ),
 					$changed,
 					$total
 				),
@@ -317,7 +317,7 @@ final class PatchModeResolver {
 					'wpcc_missing_patch_field',
 					sprintf(
 						/* translators: %s: field name */
-						__( "Mode 'replace_range' requires the '%s' field.", 'action-steward' ),
+						__( "Mode 'replace_range' requires the '%s' field.", 'siteradian' ),
 						$required
 					)
 				);
@@ -334,7 +334,7 @@ final class PatchModeResolver {
 				'wpcc_patch_range_invalid',
 				sprintf(
 					/* translators: 1: start line, 2: end line, 3: total lines */
-					__( 'Invalid line range %1$d-%2$d: the file has %3$d line(s). Lines are 1-based and the range is inclusive.', 'action-steward' ),
+					__( 'Invalid line range %1$d-%2$d: the file has %3$d line(s). Lines are 1-based and the range is inclusive.', 'siteradian' ),
 					$start,
 					$end,
 					$total
@@ -357,7 +357,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'        => sprintf(
 					/* translators: 1: start line, 2: end line, 3: replacement line count */
-					__( 'Replaces lines %1$d-%2$d with %3$d line(s).', 'action-steward' ),
+					__( 'Replaces lines %1$d-%2$d with %3$d line(s).', 'siteradian' ),
 					$start,
 					$end,
 					count( $replacement )
@@ -370,7 +370,7 @@ final class PatchModeResolver {
 
 	private static function resolve_unified_diff( array $file, string $original ): array|\WP_Error {
 		if ( ! array_key_exists( 'diff', $file ) || '' === (string) $file['diff'] ) {
-			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'unified_diff' requires a non-empty 'diff' field.", 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_patch_field', __( "Mode 'unified_diff' requires a non-empty 'diff' field.", 'siteradian' ) );
 		}
 
 		$result = self::apply_unified_diff( $original, (string) $file['diff'] );
@@ -384,7 +384,7 @@ final class PatchModeResolver {
 			'meta'     => [
 				'summary'        => sprintf(
 					/* translators: %d: number of hunks applied */
-					__( 'Applies a unified diff (%d hunk(s)).', 'action-steward' ),
+					__( 'Applies a unified diff (%d hunk(s)).', 'siteradian' ),
 					$result['hunks']
 				),
 				'hunks_applied'  => $result['hunks'],
@@ -435,16 +435,16 @@ final class PatchModeResolver {
 
 			if ( str_starts_with( $line, '@@' ) ) {
 				if ( ! preg_match( '/^@@ -(\d+)(?:,\d+)? \+\d+(?:,\d+)? @@/', $line, $m ) ) {
-					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Malformed hunk header in unified diff.', 'action-steward' ) );
+					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Malformed hunk header in unified diff.', 'siteradian' ) );
 				}
 				$old_start = (int) $m[1];
 				$target    = max( 0, $old_start - 1 );
 
 				if ( $target < $cursor ) {
-					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Overlapping or out-of-order hunks in unified diff.', 'action-steward' ) );
+					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Overlapping or out-of-order hunks in unified diff.', 'siteradian' ) );
 				}
 				if ( $target > count( $orig_lines ) ) {
-					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'A hunk starts beyond the end of the file.', 'action-steward' ) );
+					return new \WP_Error( 'wpcc_patch_diff_failed', __( 'A hunk starts beyond the end of the file.', 'siteradian' ) );
 				}
 
 				// Copy untouched lines up to the hunk start.
@@ -469,7 +469,7 @@ final class PatchModeResolver {
 				if ( ! isset( $orig_lines[ $cursor ] ) || $orig_lines[ $cursor ] !== $text ) {
 					return new \WP_Error( 'wpcc_patch_diff_failed', sprintf(
 						/* translators: %d: line number */
-						__( 'Context line %d does not match the file; the diff may be stale.', 'action-steward' ),
+						__( 'Context line %d does not match the file; the diff may be stale.', 'siteradian' ),
 						$cursor + 1
 					) );
 				}
@@ -479,7 +479,7 @@ final class PatchModeResolver {
 				if ( ! isset( $orig_lines[ $cursor ] ) || $orig_lines[ $cursor ] !== $text ) {
 					return new \WP_Error( 'wpcc_patch_diff_failed', sprintf(
 						/* translators: %d: line number */
-						__( 'Removed line %d does not match the file; the diff may be stale.', 'action-steward' ),
+						__( 'Removed line %d does not match the file; the diff may be stale.', 'siteradian' ),
 						$cursor + 1
 					) );
 				}
@@ -487,12 +487,12 @@ final class PatchModeResolver {
 			} elseif ( '+' === $marker ) {
 				$result[] = $text;
 			} else {
-				return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Unrecognized line in unified diff hunk.', 'action-steward' ) );
+				return new \WP_Error( 'wpcc_patch_diff_failed', __( 'Unrecognized line in unified diff hunk.', 'siteradian' ) );
 			}
 		}
 
 		if ( 0 === $hunks ) {
-			return new \WP_Error( 'wpcc_patch_diff_failed', __( 'The unified diff contained no hunks.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_patch_diff_failed', __( 'The unified diff contained no hunks.', 'siteradian' ) );
 		}
 
 		// Copy any remaining untouched lines.

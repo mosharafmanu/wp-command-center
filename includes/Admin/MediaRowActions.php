@@ -82,7 +82,7 @@ class MediaRowActions {
 		$id = isset( $_GET['attachment'] ) ? (int) $_GET['attachment'] : 0;
 
 		if ( ! $this->allowed() ) {
-			wp_die( esc_html__( 'You are not allowed to do this.', 'action-steward' ), 403 );
+			wp_die( esc_html__( 'You are not allowed to do this.', 'siteradian' ), 403 );
 		}
 		check_admin_referer( self::ACTION . '_' . $id );
 
@@ -125,7 +125,7 @@ class MediaRowActions {
 	 */
 	public function add_bulk_action( array $actions ): array {
 		if ( $this->allowed() ) {
-			$actions[ self::ACTION ] = __( 'Generate Alt Text', 'action-steward' );
+			$actions[ self::ACTION ] = __( 'Generate Alt Text', 'siteradian' );
 		}
 		return $actions;
 	}

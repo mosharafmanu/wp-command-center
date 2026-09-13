@@ -29,42 +29,42 @@ $view_id = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view
 $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' ) ) );
 ?>
 <div class="wrap wpcc-wrap wpcc-operations">
-	<h1><?php esc_html_e( 'Capabilities', 'action-steward' ); ?></h1>
+	<h1><?php esc_html_e( 'Capabilities', 'siteradian' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'Every operation the platform exposes, with its risk tier, the capability it requires, whether it needs approval in the current security mode, and whether it is available on this site right now. Read-only — this page does not run operations.', 'action-steward' ); ?>
+		<?php esc_html_e( 'Every operation the platform exposes, with its risk tier, the capability it requires, whether it needs approval in the current security mode, and whether it is available on this site right now. Read-only — this page does not run operations.', 'siteradian' ); ?>
 	</p>
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo esc_url( $list_url ); ?>">&larr; <?php esc_html_e( 'Back to all operations', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $list_url ); ?>">&larr; <?php esc_html_e( 'Back to all operations', 'siteradian' ); ?></a>
 		</p>
 		<div id="wpcc-op-detail" data-op-id="<?php echo esc_attr( $view_id ); ?>">
-			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operation…', 'action-steward' ); ?></span></div>
+			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operation…', 'siteradian' ); ?></span></div>
 		</div>
 	<?php else : ?>
 		<div id="wpcc-ops-summary" class="wpcc-ops-summary" role="status" aria-live="polite"></div>
 
 		<div class="wpcc-ops-filters">
-			<label class="screen-reader-text" for="wpcc-ops-search"><?php esc_html_e( 'Filter operations', 'action-steward' ); ?></label>
-			<input type="search" id="wpcc-ops-search" class="regular-text wpcc-cds-field" placeholder="<?php esc_attr_e( 'Filter by name, id, or capability…', 'action-steward' ); ?>" aria-controls="wpcc-ops-panel" />
+			<label class="screen-reader-text" for="wpcc-ops-search"><?php esc_html_e( 'Filter operations', 'siteradian' ); ?></label>
+			<input type="search" id="wpcc-ops-search" class="regular-text wpcc-cds-field" placeholder="<?php esc_attr_e( 'Filter by name, id, or capability…', 'siteradian' ); ?>" aria-controls="wpcc-ops-panel" />
 
-			<label class="screen-reader-text" for="wpcc-ops-risk"><?php esc_html_e( 'Filter by risk', 'action-steward' ); ?></label>
+			<label class="screen-reader-text" for="wpcc-ops-risk"><?php esc_html_e( 'Filter by risk', 'siteradian' ); ?></label>
 			<select id="wpcc-ops-risk" class="wpcc-cds-field" aria-controls="wpcc-ops-panel">
-				<option value=""><?php esc_html_e( 'All risk levels', 'action-steward' ); ?></option>
-				<option value="diagnostic"><?php esc_html_e( 'Diagnostic', 'action-steward' ); ?></option>
-				<option value="low"><?php esc_html_e( 'Low', 'action-steward' ); ?></option>
-				<option value="medium"><?php esc_html_e( 'Medium', 'action-steward' ); ?></option>
-				<option value="high"><?php esc_html_e( 'High', 'action-steward' ); ?></option>
-				<option value="critical"><?php esc_html_e( 'Critical', 'action-steward' ); ?></option>
+				<option value=""><?php esc_html_e( 'All risk levels', 'siteradian' ); ?></option>
+				<option value="diagnostic"><?php esc_html_e( 'Diagnostic', 'siteradian' ); ?></option>
+				<option value="low"><?php esc_html_e( 'Low', 'siteradian' ); ?></option>
+				<option value="medium"><?php esc_html_e( 'Medium', 'siteradian' ); ?></option>
+				<option value="high"><?php esc_html_e( 'High', 'siteradian' ); ?></option>
+				<option value="critical"><?php esc_html_e( 'Critical', 'siteradian' ); ?></option>
 			</select>
 
-			<label><input type="checkbox" id="wpcc-ops-available" /> <?php esc_html_e( 'Available only', 'action-steward' ); ?></label>
+			<label><input type="checkbox" id="wpcc-ops-available" /> <?php esc_html_e( 'Available only', 'siteradian' ); ?></label>
 		</div>
 
 		<div id="wpcc-ops-count" class="wpcc-ops-count" role="status" aria-live="polite"></div>
 
 		<div id="wpcc-ops-panel">
-			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operations…', 'action-steward' ); ?></span></div>
+			<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><span><?php esc_html_e( 'Loading operations…', 'siteradian' ); ?></span></div>
 		</div>
 
 		<div id="wpcc-ops-pager" class="wpcc-ops-pager"></div>
@@ -111,63 +111,63 @@ $list_url = esc_url( add_query_arg( [ 'page' => $page ], admin_url( 'admin.php' 
 		page:    <?php echo wp_json_encode( $page ); ?>
 	};
 	var i18n = {
-		loadFail:   <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'action-steward' ) ); ?>,
-		empty:      <?php echo wp_json_encode( __( 'No operations match your filters.', 'action-steward' ) ); ?>,
-		notFound:   <?php echo wp_json_encode( __( 'Operation not found. It may have been removed.', 'action-steward' ) ); ?>,
-		colOp:      <?php echo wp_json_encode( __( 'Operation', 'action-steward' ) ); ?>,
-		colRisk:    <?php echo wp_json_encode( __( 'Risk', 'action-steward' ) ); ?>,
-		colCap:     <?php echo wp_json_encode( __( 'Required capability', 'action-steward' ) ); ?>,
-		colApproval:<?php echo wp_json_encode( __( 'Approval', 'action-steward' ) ); ?>,
-		colAvail:   <?php echo wp_json_encode( __( 'Availability', 'action-steward' ) ); ?>,
-		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted', 'action-steward' ) ); ?>,
-		readOnly:   <?php echo wp_json_encode( __( 'read-only scope', 'action-steward' ) ); ?>,
-		required:   <?php echo wp_json_encode( __( 'Required', 'action-steward' ) ); ?>,
-		notReq:     <?php echo wp_json_encode( __( 'Not required', 'action-steward' ) ); ?>,
-		available:  <?php echo wp_json_encode( __( 'Available', 'action-steward' ) ); ?>,
-		unavailable:<?php echo wp_json_encode( __( 'Unavailable', 'action-steward' ) ); ?>,
-		statTotal:  <?php echo wp_json_encode( __( 'Operations', 'action-steward' ) ); ?>,
-		statAvail:  <?php echo wp_json_encode( __( 'Available', 'action-steward' ) ); ?>,
-		statApprove:<?php echo wp_json_encode( __( 'Need approval', 'action-steward' ) ); ?>,
-		statUnrest: <?php echo wp_json_encode( __( 'Unrestricted', 'action-steward' ) ); ?>,
-		statMode:   <?php echo wp_json_encode( __( 'Security mode', 'action-steward' ) ); ?>,
-		view:       <?php echo wp_json_encode( __( 'Details', 'action-steward' ) ); ?>,
+		loadFail:   <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'siteradian' ) ); ?>,
+		empty:      <?php echo wp_json_encode( __( 'No operations match your filters.', 'siteradian' ) ); ?>,
+		notFound:   <?php echo wp_json_encode( __( 'Operation not found. It may have been removed.', 'siteradian' ) ); ?>,
+		colOp:      <?php echo wp_json_encode( __( 'Operation', 'siteradian' ) ); ?>,
+		colRisk:    <?php echo wp_json_encode( __( 'Risk', 'siteradian' ) ); ?>,
+		colCap:     <?php echo wp_json_encode( __( 'Required capability', 'siteradian' ) ); ?>,
+		colApproval:<?php echo wp_json_encode( __( 'Approval', 'siteradian' ) ); ?>,
+		colAvail:   <?php echo wp_json_encode( __( 'Availability', 'siteradian' ) ); ?>,
+		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted', 'siteradian' ) ); ?>,
+		readOnly:   <?php echo wp_json_encode( __( 'read-only scope', 'siteradian' ) ); ?>,
+		required:   <?php echo wp_json_encode( __( 'Required', 'siteradian' ) ); ?>,
+		notReq:     <?php echo wp_json_encode( __( 'Not required', 'siteradian' ) ); ?>,
+		available:  <?php echo wp_json_encode( __( 'Available', 'siteradian' ) ); ?>,
+		unavailable:<?php echo wp_json_encode( __( 'Unavailable', 'siteradian' ) ); ?>,
+		statTotal:  <?php echo wp_json_encode( __( 'Operations', 'siteradian' ) ); ?>,
+		statAvail:  <?php echo wp_json_encode( __( 'Available', 'siteradian' ) ); ?>,
+		statApprove:<?php echo wp_json_encode( __( 'Need approval', 'siteradian' ) ); ?>,
+		statUnrest: <?php echo wp_json_encode( __( 'Unrestricted', 'siteradian' ) ); ?>,
+		statMode:   <?php echo wp_json_encode( __( 'Security mode', 'siteradian' ) ); ?>,
+		view:       <?php echo wp_json_encode( __( 'Details', 'siteradian' ) ); ?>,
 		/* translators: %1$d shown operations, %2$d total operations */
-		countFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( 'Showing %1$d of %2$d operations', 'action-steward' ) ); ?>,
-		prev:       <?php echo wp_json_encode( __( '← Previous', 'action-steward' ) ); ?>,
-		next:       <?php echo wp_json_encode( __( 'Next →', 'action-steward' ) ); ?>,
+		countFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( 'Showing %1$d of %2$d operations', 'siteradian' ) ); ?>,
+		prev:       <?php echo wp_json_encode( __( '← Previous', 'siteradian' ) ); ?>,
+		next:       <?php echo wp_json_encode( __( 'Next →', 'siteradian' ) ); ?>,
 		// Detail panel.
-		secOverview:   <?php echo wp_json_encode( __( 'Overview', 'action-steward' ) ); ?>,
-		secAuth:       <?php echo wp_json_encode( __( 'Authorization', 'action-steward' ) ); ?>,
-		secApproval:   <?php echo wp_json_encode( __( 'Approval', 'action-steward' ) ); ?>,
-		secAvail:      <?php echo wp_json_encode( __( 'Availability', 'action-steward' ) ); ?>,
-		secParams:     <?php echo wp_json_encode( __( 'Parameters', 'action-steward' ) ); ?>,
-		secActions:    <?php echo wp_json_encode( __( 'Action risk breakdown', 'action-steward' ) ); ?>,
-		dId:           <?php echo wp_json_encode( __( 'Operation id', 'action-steward' ) ); ?>,
-		dRisk:         <?php echo wp_json_encode( __( 'Worst-case risk', 'action-steward' ) ); ?>,
-		dReqCap:       <?php echo wp_json_encode( __( 'Required capability', 'action-steward' ) ); ?>,
-		dReadOnly:     <?php echo wp_json_encode( __( 'Read-only scope', 'action-steward' ) ); ?>,
-		dAdminUnlock:  <?php echo wp_json_encode( __( 'system.admin override', 'action-steward' ) ); ?>,
-		adminUnlocks:  <?php echo wp_json_encode( __( 'A token with system.admin can run this operation regardless of individual capabilities.', 'action-steward' ) ); ?>,
-		unrestrictedNote: <?php echo wp_json_encode( __( 'This operation requires no capability assignment — it is unrestricted (read-only or low-risk).', 'action-steward' ) ); ?>,
-		readOnlyYes:   <?php echo wp_json_encode( __( 'Only the supported read actions are allowed with Read-only scope; write actions remain denied.', 'action-steward' ) ); ?>,
-		readOnlyNo:    <?php echo wp_json_encode( __( 'Requires a full-scope token (read-only tokens cannot call it).', 'action-steward' ) ); ?>,
+		secOverview:   <?php echo wp_json_encode( __( 'Overview', 'siteradian' ) ); ?>,
+		secAuth:       <?php echo wp_json_encode( __( 'Authorization', 'siteradian' ) ); ?>,
+		secApproval:   <?php echo wp_json_encode( __( 'Approval', 'siteradian' ) ); ?>,
+		secAvail:      <?php echo wp_json_encode( __( 'Availability', 'siteradian' ) ); ?>,
+		secParams:     <?php echo wp_json_encode( __( 'Parameters', 'siteradian' ) ); ?>,
+		secActions:    <?php echo wp_json_encode( __( 'Action risk breakdown', 'siteradian' ) ); ?>,
+		dId:           <?php echo wp_json_encode( __( 'Operation id', 'siteradian' ) ); ?>,
+		dRisk:         <?php echo wp_json_encode( __( 'Worst-case risk', 'siteradian' ) ); ?>,
+		dReqCap:       <?php echo wp_json_encode( __( 'Required capability', 'siteradian' ) ); ?>,
+		dReadOnly:     <?php echo wp_json_encode( __( 'Read-only scope', 'siteradian' ) ); ?>,
+		dAdminUnlock:  <?php echo wp_json_encode( __( 'system.admin override', 'siteradian' ) ); ?>,
+		adminUnlocks:  <?php echo wp_json_encode( __( 'A token with system.admin can run this operation regardless of individual capabilities.', 'siteradian' ) ); ?>,
+		unrestrictedNote: <?php echo wp_json_encode( __( 'This operation requires no capability assignment — it is unrestricted (read-only or low-risk).', 'siteradian' ) ); ?>,
+		readOnlyYes:   <?php echo wp_json_encode( __( 'Only the supported read actions are allowed with Read-only scope; write actions remain denied.', 'siteradian' ) ); ?>,
+		readOnlyNo:    <?php echo wp_json_encode( __( 'Requires a full-scope token (read-only tokens cannot call it).', 'siteradian' ) ); ?>,
 		/* translators: %s: security mode label */
-		approvalGated: <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation requires administrator approval before it runs.', 'action-steward' ) ); ?>,
+		approvalGated: <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation requires administrator approval before it runs.', 'siteradian' ) ); ?>,
 		/* translators: %s: security mode label */
-		approvalFree:  <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation runs immediately (no approval required).', 'action-steward' ) ); ?>,
-		approvalDeclared: <?php echo wp_json_encode( __( 'The operation declares that it can require approval; the actual gate depends on the security mode and the specific action.', 'action-steward' ) ); ?>,
-		availYes:      <?php echo wp_json_encode( __( 'Available on this site right now.', 'action-steward' ) ); ?>,
-		availNo:       <?php echo wp_json_encode( __( 'Not available on this site. Availability reflects the live environment — a required plugin, integration, or WP-CLI may be inactive or missing.', 'action-steward' ) ); ?>,
-		noParams:      <?php echo wp_json_encode( __( 'This operation declares no parameters.', 'action-steward' ) ); ?>,
-		noActions:     <?php echo wp_json_encode( __( 'This operation declares no per-action risk breakdown; the worst-case risk above applies.', 'action-steward' ) ); ?>,
-		colName:       <?php echo wp_json_encode( __( 'Name', 'action-steward' ) ); ?>,
-		colType:       <?php echo wp_json_encode( __( 'Type', 'action-steward' ) ); ?>,
-		colReq:        <?php echo wp_json_encode( __( 'Required', 'action-steward' ) ); ?>,
-		colDesc:       <?php echo wp_json_encode( __( 'Description', 'action-steward' ) ); ?>,
-		colAction:     <?php echo wp_json_encode( __( 'Action', 'action-steward' ) ); ?>,
-		colValues:     <?php echo wp_json_encode( __( 'Allowed values', 'action-steward' ) ); ?>,
-		yes:           <?php echo wp_json_encode( __( 'Yes', 'action-steward' ) ); ?>,
-		no:            <?php echo wp_json_encode( __( 'No', 'action-steward' ) ); ?>
+		approvalFree:  <?php echo wp_json_encode( /* translators: %s: value */ __( 'In %s, this operation runs immediately (no approval required).', 'siteradian' ) ); ?>,
+		approvalDeclared: <?php echo wp_json_encode( __( 'The operation declares that it can require approval; the actual gate depends on the security mode and the specific action.', 'siteradian' ) ); ?>,
+		availYes:      <?php echo wp_json_encode( __( 'Available on this site right now.', 'siteradian' ) ); ?>,
+		availNo:       <?php echo wp_json_encode( __( 'Not available on this site. Availability reflects the live environment — a required plugin, integration, or WP-CLI may be inactive or missing.', 'siteradian' ) ); ?>,
+		noParams:      <?php echo wp_json_encode( __( 'This operation declares no parameters.', 'siteradian' ) ); ?>,
+		noActions:     <?php echo wp_json_encode( __( 'This operation declares no per-action risk breakdown; the worst-case risk above applies.', 'siteradian' ) ); ?>,
+		colName:       <?php echo wp_json_encode( __( 'Name', 'siteradian' ) ); ?>,
+		colType:       <?php echo wp_json_encode( __( 'Type', 'siteradian' ) ); ?>,
+		colReq:        <?php echo wp_json_encode( __( 'Required', 'siteradian' ) ); ?>,
+		colDesc:       <?php echo wp_json_encode( __( 'Description', 'siteradian' ) ); ?>,
+		colAction:     <?php echo wp_json_encode( __( 'Action', 'siteradian' ) ); ?>,
+		colValues:     <?php echo wp_json_encode( __( 'Allowed values', 'siteradian' ) ); ?>,
+		yes:           <?php echo wp_json_encode( __( 'Yes', 'siteradian' ) ); ?>,
+		no:            <?php echo wp_json_encode( __( 'No', 'siteradian' ) ); ?>
 	};
 
 	// S2.1 — server-side pagination state (no client-side load-all).

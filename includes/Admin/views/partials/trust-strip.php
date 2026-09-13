@@ -3,7 +3,7 @@
  * Shared trust strip (Phase 2.5A → generalized in 2.5B).
  *
  * The single, canonical presentation of the Four Guarantees, surfaced on every write
- * screen so the customer always sees how Action Steward stays safe — Reviewed ·
+ * screen so the customer always sees how SiteRadian AI stays safe — Reviewed ·
  * Requires approval · Audited · Reversible. Pure presentation: reuses CDS chip tokens,
  * states only real guarantees, implies no autonomous execution and no metrics. Include via:
  *   require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php';
@@ -41,24 +41,24 @@ $wpcc_ts_warning    = SecurityModeManager::dev_warning();
 $wpcc_ts_reversible = ! isset( $wpcc_trust_reversible ) || (bool) $wpcc_trust_reversible;
 $wpcc_trust_reversible = null;
 ?>
-<div class="wpcc-bai-trust" role="note" aria-label="<?php esc_attr_e( 'How Action Steward keeps changes safe', 'action-steward' ); ?>">
-	<span class="wpcc-bai-trust__label"><?php esc_html_e( 'Every change is', 'action-steward' ); ?></span>
+<div class="wpcc-bai-trust" role="note" aria-label="<?php esc_attr_e( 'How SiteRadian AI keeps changes safe', 'siteradian' ); ?>">
+	<span class="wpcc-bai-trust__label"><?php esc_html_e( 'Every change is', 'siteradian' ); ?></span>
 	<span class="wpcc-cds-chip <?php echo $wpcc_ts_protected ? 'wpcc-cds-chip--audited' : 'wpcc-cds-chip--irreversible'; ?>">
 		<?php echo esc_html( SecurityModeManager::review_chip() ); ?>
 	</span>
 	<span class="wpcc-cds-chip <?php echo $wpcc_ts_protected ? 'wpcc-cds-chip--scoped' : 'wpcc-cds-chip--irreversible'; ?>">
 		<?php echo esc_html( SecurityModeManager::approval_chip() ); ?>
 	</span>
-	<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'action-steward' ); ?></span>
+	<span class="wpcc-cds-chip wpcc-cds-chip--audited"><?php esc_html_e( 'Audited', 'siteradian' ); ?></span>
 	<?php if ( $wpcc_ts_reversible ) : ?>
-		<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible', 'action-steward' ); ?></span>
+		<span class="wpcc-cds-chip wpcc-cds-chip--reversible"><?php esc_html_e( 'Reversible', 'siteradian' ); ?></span>
 	<?php else : ?>
-		<span class="wpcc-cds-chip wpcc-cds-chip--irreversible"><?php esc_html_e( 'Not reversible', 'action-steward' ); ?></span>
+		<span class="wpcc-cds-chip wpcc-cds-chip--irreversible"><?php esc_html_e( 'Not reversible', 'siteradian' ); ?></span>
 	<?php endif; ?>
 </div>
 <?php if ( '' !== $wpcc_ts_warning ) : ?>
 	<p class="wpcc-bai-devnote" role="note">
 		<?php echo esc_html( $wpcc_ts_warning ); ?>
-		<a href="<?php echo esc_url( SecurityModeManager::settings_url() ); ?>"><?php esc_html_e( 'Change protection', 'action-steward' ); ?></a>
+		<a href="<?php echo esc_url( SecurityModeManager::settings_url() ); ?>"><?php esc_html_e( 'Change protection', 'siteradian' ); ?></a>
 	</p>
 <?php endif; ?>

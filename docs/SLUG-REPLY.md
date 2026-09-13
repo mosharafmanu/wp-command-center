@@ -11,25 +11,25 @@ review team can match it to your submission).
 
 ## Paste-ready reply
 
-> Subject: Re: [WordPress Plugin Directory] Plugin Submission — Action Steward
+> Subject: Re: [WordPress Plugin Directory] Plugin Submission — SiteRadian AI
 >
 > Hello,
 >
 > Thank you for the confirmation. Could the plugin slug be set to:
 >
-> **action-steward**
+> **siteradian**
 >
 > rather than the auto-derived `wp-command-center`?
 >
 > The submitted package is already built entirely around that slug — the ZIP's top-level
-> folder, the plugin directory, the main plugin file (`action-steward.php`) and the text
-> domain (`action-steward`) all use it. Matching the slug keeps the text domain valid so
+> folder, the plugin directory, the main plugin file (`siteradian.php`) and the text
+> domain (`siteradian`) all use it. Matching the slug keeps the text domain valid so
 > translations and language packs load correctly.
 >
 > As I understand it the slug is derived automatically from the `Plugin Name:` header, which
-> in our case reads "Action Steward" — the Plugin Developer FAQ notes that the automated
+> in our case reads "SiteRadian AI" — the Plugin Developer FAQ notes that the automated
 > email's slug is populated from that header. The display name is intentional and we would
-> like to keep it as **Action Steward**, with `action-steward` as the directory slug.
+> like to keep it as **SiteRadian AI**, with `siteradian` as the directory slug.
 >
 > I am raising this now rather than after review, since I understand slugs cannot be changed
 > once a plugin is approved.
@@ -45,8 +45,8 @@ review team can match it to your submission).
 
 ## Notes for the sender
 
-- **Requested slug:** `action-steward`
-- **Public plugin name (unchanged):** `Action Steward`
+- **Requested slug:** `siteradian`
+- **Public plugin name (unchanged):** `SiteRadian AI`
 - **Why it is safe to ask:** the slug is auto-derived from the `Plugin Name:` header; the
   Plugin Developer FAQ states the automated email's slug comes from that header. Requesting
   a different slug at submission time is a normal, supported request.

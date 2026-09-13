@@ -90,12 +90,12 @@ final class WpCliBridge {
 		if ( ! $this->is_available() ) {
 			$disabled = array_filter( array_map( 'trim', explode( ',', (string) ini_get( 'disable_functions' ) ) ) );
 			if ( ! function_exists( 'proc_open' ) || in_array( 'proc_open', $disabled, true ) ) {
-				return __( 'proc_open is disabled or unavailable.', 'action-steward' );
+				return __( 'proc_open is disabled or unavailable.', 'siteradian' );
 			}
 			if ( ! function_exists( 'shell_exec' ) || in_array( 'shell_exec', $disabled, true ) ) {
-				return __( 'shell_exec is disabled or unavailable.', 'action-steward' );
+				return __( 'shell_exec is disabled or unavailable.', 'siteradian' );
 			}
-			return __( 'WP-CLI binary not found or not executable.', 'action-steward' );
+			return __( 'WP-CLI binary not found or not executable.', 'siteradian' );
 		}
 		return '';
 	}
@@ -127,11 +127,11 @@ final class WpCliBridge {
 
 		// Structured mode: command_id + args.
 		if ( '' === $command_id ) {
-			return new \WP_Error( 'wpcc_missing_wpcli_command', __( 'command_id is required.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_wpcli_command', __( 'command_id is required.', 'siteradian' ) );
 		}
 
 		if ( ! is_array( $args ) ) {
-			return new \WP_Error( 'wpcc_invalid_wpcli_args', __( 'args must be an object.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_wpcli_args', __( 'args must be an object.', 'siteradian' ) );
 		}
 
 		return $this->run_structured( $command_id, $args, $context );
@@ -151,7 +151,7 @@ final class WpCliBridge {
 		];
 
 		if ( ! isset( $map[ $command_id ] ) ) {
-			return new \WP_Error( 'wpcc_invalid_wpcli_command', __( 'Invalid or unsupported WP-CLI command.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_wpcli_command', __( 'Invalid or unsupported WP-CLI command.', 'siteradian' ) );
 		}
 
 		$shell_cmd = $map[ $command_id ];
@@ -167,7 +167,7 @@ final class WpCliBridge {
 		if ( $this->registry->is_blocked( $command_id ) ) {
 			return new \WP_Error(
 				'wpcc_wpcli_blocked',
-				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'action-steward' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'siteradian' ), esc_html( $command_id ) )
 			);
 		}
 
@@ -176,12 +176,12 @@ final class WpCliBridge {
 		if ( null === $cmd ) {
 			return new \WP_Error(
 				'wpcc_invalid_wpcli_command',
-				sprintf( /* translators: %s: value */ __( 'Unknown or unsupported WP-CLI command: %s', 'action-steward' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'Unknown or unsupported WP-CLI command: %s', 'siteradian' ), esc_html( $command_id ) )
 			);
 		}
 
 		if ( ! $cmd['available'] ) {
-			return new \WP_Error( 'wpcc_wpcli_unavailable_cmd', __( 'This WP-CLI command is not available in the current environment.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_wpcli_unavailable_cmd', __( 'This WP-CLI command is not available in the current environment.', 'siteradian' ) );
 		}
 
 		// Validate args.
@@ -194,7 +194,7 @@ final class WpCliBridge {
 		if ( $this->matches_blocked( $cmd['command_parts'] ) ) {
 			return new \WP_Error(
 				'wpcc_wpcli_blocked',
-				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'action-steward' ), esc_html( $command_id ) )
+				sprintf( /* translators: %s: value */ __( 'WP-CLI command blocked for security: %s', 'siteradian' ), esc_html( $command_id ) )
 			);
 		}
 
@@ -239,7 +239,7 @@ final class WpCliBridge {
 		if ( ! is_resource( $process ) ) {
 			return new \WP_Error(
 				'exec_disabled',
-				__( 'Failed to spawn WP-CLI process (proc_open returned false). The server likely disabled proc_open after the initial availability check, or a security policy is blocking process creation.', 'action-steward' ),
+				__( 'Failed to spawn WP-CLI process (proc_open returned false). The server likely disabled proc_open after the initial availability check, or a security policy is blocking process creation.', 'siteradian' ),
 				[ 'diagnostic' => 'exec_disabled' ]
 			);
 		}
@@ -260,7 +260,7 @@ final class WpCliBridge {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- closes a proc_open PIPE, not a file. WP_Filesystem has no equivalent; the sniff matches on the function name.
 				@fclose( $pipes[2] );
 				@proc_close( $process );
-				return new \WP_Error( 'wpcc_wpcli_timeout', __( 'WP-CLI command timed out.', 'action-steward' ) );
+				return new \WP_Error( 'wpcc_wpcli_timeout', __( 'WP-CLI command timed out.', 'siteradian' ) );
 			}
 			$chunk = @stream_get_contents( $pipes[1] );
 			if ( is_string( $chunk ) ) {
@@ -303,9 +303,9 @@ final class WpCliBridge {
 				$code,
 				sprintf(
 					/* translators: 1: exit code, 2: stderr output or fallback */
-					__( 'WP-CLI command failed (exit %1$d): %2$s', 'action-steward' ),
+					__( 'WP-CLI command failed (exit %1$d): %2$s', 'siteradian' ),
 					$status['exitcode'],
-					$stderr_clean ?: __( 'No error output captured.', 'action-steward' )
+					$stderr_clean ?: __( 'No error output captured.', 'siteradian' )
 				),
 				[
 					'diagnostic' => $code,
@@ -368,7 +368,7 @@ final class WpCliBridge {
 		if ( ! $proc_open_ok && ! $shell_exec_ok ) {
 			return new \WP_Error(
 				'exec_disabled',
-				__( 'WP-CLI is unavailable: proc_open and shell_exec are both disabled on this server. This is common on managed and shared hosting. Use system_info for read-only site information instead.', 'action-steward' ),
+				__( 'WP-CLI is unavailable: proc_open and shell_exec are both disabled on this server. This is common on managed and shared hosting. Use system_info for read-only site information instead.', 'siteradian' ),
 				[
 					'diagnostic'               => 'exec_disabled',
 					'proc_open'                => false,
@@ -382,7 +382,7 @@ final class WpCliBridge {
 		if ( ! $proc_open_ok ) {
 			return new \WP_Error(
 				'proc_open_disabled',
-				__( 'WP-CLI is unavailable: proc_open is disabled. WP-CLI process spawning requires proc_open. Contact your host, or use system_info for read-only environment information.', 'action-steward' ),
+				__( 'WP-CLI is unavailable: proc_open is disabled. WP-CLI process spawning requires proc_open. Contact your host, or use system_info for read-only environment information.', 'siteradian' ),
 				[
 					'diagnostic' => 'proc_open_disabled',
 					'proc_open'  => false,
@@ -398,7 +398,7 @@ final class WpCliBridge {
 			'wp_cli_not_found',
 			sprintf(
 				/* translators: %s: colon-separated list of paths searched */
-				__( 'WP-CLI binary not found. Searched: %s. Install WP-CLI globally or ensure the binary is in one of these directories.', 'action-steward' ),
+				__( 'WP-CLI binary not found. Searched: %s. Install WP-CLI globally or ensure the binary is in one of these directories.', 'siteradian' ),
 				implode( ':', $searched )
 			),
 			[

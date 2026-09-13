@@ -20,13 +20,13 @@ final class Capabilities {
 	/** Ordered capability keys → human label. */
 	public static function keys(): array {
 		return [
-			'streaming'   => __( 'Streaming', 'action-steward' ),
-			'tools'       => __( 'Tool calling', 'action-steward' ),
-			'json'        => __( 'JSON / structured output', 'action-steward' ),
-			'vision'      => __( 'Vision (images)', 'action-steward' ),
-			'reasoning'   => __( 'Reasoning', 'action-steward' ),
-			'embeddings'  => __( 'Embeddings', 'action-steward' ),
-			'audio'       => __( 'Audio', 'action-steward' ),
+			'streaming'   => __( 'Streaming', 'siteradian' ),
+			'tools'       => __( 'Tool calling', 'siteradian' ),
+			'json'        => __( 'JSON / structured output', 'siteradian' ),
+			'vision'      => __( 'Vision (images)', 'siteradian' ),
+			'reasoning'   => __( 'Reasoning', 'siteradian' ),
+			'embeddings'  => __( 'Embeddings', 'siteradian' ),
+			'audio'       => __( 'Audio', 'siteradian' ),
 		];
 	}
 
@@ -59,10 +59,10 @@ final class Capabilities {
 	/** A short human label for a capability value. */
 	public static function value_label( string $v ): string {
 		switch ( $v ) {
-			case 'yes':   return __( 'Yes', 'action-steward' );
-			case 'no':    return __( 'No', 'action-steward' );
-			case 'sep':   return __( 'Separate models', 'action-steward' );
-			case 'model': return __( 'Model-dependent', 'action-steward' );
+			case 'yes':   return __( 'Yes', 'siteradian' );
+			case 'no':    return __( 'No', 'siteradian' );
+			case 'sep':   return __( 'Separate models', 'siteradian' );
+			case 'model': return __( 'Model-dependent', 'siteradian' );
 			default:      return $v;
 		}
 	}

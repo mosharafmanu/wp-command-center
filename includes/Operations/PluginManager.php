@@ -45,7 +45,7 @@ final class PluginManager {
 		}
 
 		if ( PluginRegistry::ACTION_LIST !== $action && 'plugin_rollback' !== $action && '' === $slug ) {
-			return new \WP_Error( 'wpcc_missing_plugin_slug', __( 'Plugin slug is required for this action.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_plugin_slug', __( 'Plugin slug is required for this action.', 'siteradian' ) );
 		}
 
 		if ( '' !== $slug ) {
@@ -71,7 +71,7 @@ final class PluginManager {
 			PluginRegistry::ACTION_UPDATE     => $this->plugin_update( $slug, $context ),
 			PluginRegistry::ACTION_DELETE     => $this->plugin_delete( $slug, $context ),
 			'plugin_rollback'                  => $this->plugin_rollback_action( $params, $context ),
-			default                            => new \WP_Error( 'wpcc_invalid_plugin_action', __( 'Unknown plugin action.', 'action-steward' ) ),
+			default                            => new \WP_Error( 'wpcc_invalid_plugin_action', __( 'Unknown plugin action.', 'siteradian' ) ),
 		};
 	}
 
@@ -90,7 +90,7 @@ final class PluginManager {
 
 	private function plugin_install( string $slug, array $context ): array|\WP_Error {
 		if ( $this->registry->is_installed( $slug ) ) {
-			return new \WP_Error( 'wpcc_plugin_already_installed', __( 'Plugin is already installed.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_already_installed', __( 'Plugin is already installed.', 'siteradian' ) );
 		}
 
 		$this->audit( 'plugin.install.started', [ 'slug' => $slug ], $context );
@@ -122,7 +122,7 @@ final class PluginManager {
 
 		if ( ! $result ) {
 			$this->audit( 'plugin.install.failed', [ 'slug' => $slug ], $context );
-			return new \WP_Error( 'wpcc_plugin_install_failed', __( 'Plugin installation failed.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_install_failed', __( 'Plugin installation failed.', 'siteradian' ) );
 		}
 
 		$this->audit( 'plugin.install.completed', [ 'slug' => $slug ], $context );
@@ -150,11 +150,11 @@ final class PluginManager {
 		$plugin_info = $this->registry->get_plugin( $slug );
 
 		if ( null === $plugin_info ) {
-			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'siteradian' ) );
 		}
 
 		if ( $plugin_info['active'] ) {
-			return new \WP_Error( 'wpcc_plugin_already_active', __( 'Plugin is already active.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_already_active', __( 'Plugin is already active.', 'siteradian' ) );
 		}
 
 		if ( ! function_exists( 'activate_plugin' ) ) {
@@ -201,11 +201,11 @@ final class PluginManager {
 		$plugin_info = $this->registry->get_plugin( $slug );
 
 		if ( null === $plugin_info ) {
-			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'siteradian' ) );
 		}
 
 		if ( ! $plugin_info['active'] ) {
-			return new \WP_Error( 'wpcc_plugin_already_inactive', __( 'Plugin is already inactive.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_already_inactive', __( 'Plugin is already inactive.', 'siteradian' ) );
 		}
 
 		if ( ! function_exists( 'deactivate_plugins' ) ) {
@@ -244,11 +244,11 @@ final class PluginManager {
 		$plugin_info = $this->registry->get_plugin( $slug );
 
 		if ( null === $plugin_info ) {
-			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'siteradian' ) );
 		}
 
 		if ( ! $plugin_info['update_available'] ) {
-			return new \WP_Error( 'wpcc_plugin_no_update', __( 'No update available for this plugin.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_no_update', __( 'No update available for this plugin.', 'siteradian' ) );
 		}
 
 		$old_version  = $plugin_info['version'];
@@ -286,7 +286,7 @@ final class PluginManager {
 
 		if ( ! $result ) {
 			$this->audit( 'plugin.update.failed', [ 'slug' => $slug ], $context );
-			return new \WP_Error( 'wpcc_plugin_update_failed', __( 'Plugin update failed.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_update_failed', __( 'Plugin update failed.', 'siteradian' ) );
 		}
 
 		if ( $was_active ) {
@@ -319,7 +319,7 @@ final class PluginManager {
 			// files on disk and captures no rollback artifact, so it is NOT reversible. Stated
 			// explicitly so the contract is truthful (additive field; no registry/contract change).
 			'reversible'      => false,
-			'reversible_note' => __( 'Plugin updates are not automatically reversible; no rollback is captured. Snapshot before updating if reversibility is required.', 'action-steward' ),
+			'reversible_note' => __( 'Plugin updates are not automatically reversible; no rollback is captured. Snapshot before updating if reversibility is required.', 'siteradian' ),
 		];
 	}
 
@@ -329,11 +329,11 @@ final class PluginManager {
 		$plugin_info = $this->registry->get_plugin( $slug );
 
 		if ( null === $plugin_info ) {
-			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_not_found', __( 'Plugin not found.', 'siteradian' ) );
 		}
 
 		if ( $plugin_info['active'] ) {
-			return new \WP_Error( 'wpcc_plugin_delete_active', __( 'Cannot delete an active plugin. Deactivate it first.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_plugin_delete_active', __( 'Cannot delete an active plugin. Deactivate it first.', 'siteradian' ) );
 		}
 
 		if ( ! function_exists( 'delete_plugins' ) ) {
@@ -513,7 +513,7 @@ final class PluginManager {
 	private function backup_dir(): string|\WP_Error {
 		return \WPCommandCenter\Security\PrivateStore::dir(
 			'wpcc-plugin-backups',
-			__( 'Failed to create the plugin backup directory.', 'action-steward' )
+			__( 'Failed to create the plugin backup directory.', 'siteradian' )
 		);
 	}
 
@@ -522,15 +522,15 @@ final class PluginManager {
 	private function plugin_rollback_action( array $params, array $context ): array|\WP_Error {
 		$rid = sanitize_text_field( $params['rollback_id'] ?? '' );
 		if ( '' === $rid ) {
-			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_rollback_id', __( 'rollback_id is required.', 'siteradian' ) );
 		}
 		$records = get_option( 'wpcc_plugin_rollbacks', [] );
 		if ( ! isset( $records[ $rid ] ) ) {
-			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'siteradian' ) );
 		}
 		$r = $records[ $rid ];
 		if ( ! empty( $r['rollback_applied'] ) ) {
-			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'siteradian' ) );
 		}
 		$slug   = $r['plugin_slug'];
 		$action = $r['plugin_action'];
@@ -544,7 +544,7 @@ final class PluginManager {
 			deactivate_plugins( $this->registry->get_plugin( $slug )['plugin_file'] ?? '', true );
 		} elseif ( 'deactivate' === $action || 'delete' === $action ) {
 			// Cannot truly undo delete/install, but we log the attempt
-			return new \WP_Error( 'wpcc_rollback_partial', __( 'Rollback for this action is limited. Manual restoration may be required.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_rollback_partial', __( 'Rollback for this action is limited. Manual restoration may be required.', 'siteradian' ) );
 		}
 
 		$records[ $rid ]['rollback_applied'] = true;

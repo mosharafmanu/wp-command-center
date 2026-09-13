@@ -97,6 +97,12 @@ echo "== 7. Publish the page + verify frontend =="
 sb "$(jq -n --argjson p "$PGID" '{action:"page_update",page_id:$p,status:"publish"}')" >/dev/null
 assert_eq "page published" "publish" "$(wpe 'echo get_post_status('"$PGID"');')"
 PERMALINK=$(wpe 'echo get_permalink('"$PGID"');')
+# Isolated release gates may serve WordPress from a temporary port while the
+# canonical site URL remains unchanged for configuration/hash assertions.
+if [ -n "${WPCC_FRONTEND_BASE:-}" ]; then
+  SITE_HOME=$(wpe 'echo home_url();')
+  PERMALINK="${PERMALINK/#$SITE_HOME/${WPCC_FRONTEND_BASE%/}}"
+fi
 assert_eq "page frontend HTTP 200" "200" "$(curl -s -o /dev/null -w "%{http_code}" "$PERMALINK")"
 
 echo "== 8. page_get + page_list reflect the page =="

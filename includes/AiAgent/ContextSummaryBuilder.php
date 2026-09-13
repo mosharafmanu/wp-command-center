@@ -66,7 +66,7 @@ final class ContextSummaryBuilder {
 		return [
 			'context_mode' => 'compact',
 			'plugin'       => [
-				'name'    => 'Action Steward',
+				'name'    => 'SiteRadian AI',
 				'version' => WPCC_VERSION,
 			],
 			'security'     => [

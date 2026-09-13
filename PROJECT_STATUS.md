@@ -1,4 +1,28 @@
-# PROJECT STATUS — WP Command Center
+# PROJECT STATUS — SiteRadian AI
+
+> **SiteRadian AI v1.0.0 release candidate — 2026-09-13:** The owner-approved public
+> identity is SiteRadian AI, slug/folder/text domain `siteradian`, main file
+> `siteradian.php`, and initial public version 1.0.0. The certified internal PHP/DB
+> prefix `WPCC`/`wpcc_*`, MCP server key `wp-command-center`, and REST namespace
+> `wp-command-center/v1` remain compatibility contracts. The product promise is:
+> **Safe, governed AI operations for WordPress.** The release package is
+> `siteradian-1.0.0.zip`; source tagging uses `siteradian-v1.0.0` because historical
+> pre-public tags `v1.0.0`–`v1.0.2` are immutable.
+>
+> **Codex same-terminal remediation — 2026-09-13:** Recommended setup now states
+> “Important: Keep this terminal open,” requires Steps 1–3 in the same terminal, and
+> names the exact `Environment variable WPCC_TOKEN is not set` recovery without asking
+> users to recreate a persistent MCP registration. Windows Codex uses the current
+> PowerShell session instead of `setx`, so the same-terminal contract is truthful.
+>
+> **Final fresh-user onboarding closeout M22/M23/M25 retained:** Current certification
+> still records the completed Copilot Agent actual-client verification and the existing
+> assistant matrix. The pre-public evidence below is retained for traceability and is not
+> the current public product identity.
+
+---
+
+## Retained pre-public development history
 
 > **Final fresh-user onboarding closeout M22/M23/M25 — 2026-09-09:** Continue now offers
 > a complete top-level `mcpServers:` block when the key is missing and a correctly

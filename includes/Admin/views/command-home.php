@@ -131,24 +131,24 @@ $wpcc_home_ai_key = AdoptionStatus::ai_configured();
 $wpcc_steps = [
 	[
 		'done'  => ConnectionStatus::STATE_NO_TOKEN !== $wpcc_conn['state'],
-		'title' => __( 'Connect your assistant', 'action-steward' ),
-		'body'  => __( 'Pick Claude, Cursor, Codex, ChatGPT or Gemini, create an access token, and copy the setup. No AI provider key needed.', 'action-steward' ),
-		'cta'   => __( 'Connect', 'action-steward' ),
+		'title' => __( 'Connect your assistant', 'siteradian' ),
+		'body'  => __( 'Pick Claude, Cursor, Codex, ChatGPT or Gemini, create an access token, and copy the setup. No AI provider key needed.', 'siteradian' ),
+		'cta'   => __( 'Connect', 'siteradian' ),
 		'url'   => $links['connect'],
-		'donce' => __( 'An access token is ready.', 'action-steward' ),
+		'donce' => __( 'An access token is ready.', 'siteradian' ),
 	],
 	[
 		'done'   => ConnectionStatus::ever_connected(),
-		'title'  => __( 'Ask your assistant to do something', 'action-steward' ),
-		'body'   => __( 'Questions are answered straight away.', 'action-steward' ) . ' ' . \WPCommandCenter\Operations\SecurityModeManager::approval_step(),
+		'title'  => __( 'Ask your assistant to do something', 'siteradian' ),
+		'body'   => __( 'Questions are answered straight away.', 'siteradian' ) . ' ' . \WPCommandCenter\Operations\SecurityModeManager::approval_step(),
 		// A step with no action and no completion signal is a dead end. This one
 		// gives the customer the exact words to type, and says plainly how it
 		// finishes — which is by evidence, not by them ticking a box.
-		'prompt' => __( 'What plugins are installed on my site?', 'action-steward' ),
-		'note'   => __( 'This step completes on its own the moment your assistant reaches the site.', 'action-steward' ),
-		'cta'    => __( 'Back to setup', 'action-steward' ),
+		'prompt' => __( 'What plugins are installed on my site?', 'siteradian' ),
+		'note'   => __( 'This step completes on its own the moment your assistant reaches the site.', 'siteradian' ),
+		'cta'    => __( 'Back to setup', 'siteradian' ),
 		'url'    => $links['connect'],
-		'donce'  => __( 'Your assistant has reached this site.', 'action-steward' ),
+		'donce'  => __( 'Your assistant has reached this site.', 'siteradian' ),
 	],
 ];
 
@@ -212,12 +212,12 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		printf(
 			'<img src="%1$s" alt="%2$s" class="wpcc-setup__logo" width="244" height="32" decoding="async" />',
 			esc_url( Brand::logo() ),
-			esc_attr__( 'Action Steward', 'action-steward' )
+			esc_attr__( 'SiteRadian AI', 'siteradian' )
 		);
 		?>
-		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Let an AI assistant work on this site — safely', 'action-steward' ); ?></h2>
+		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Safe, governed AI operations for WordPress.', 'siteradian' ); ?></h2>
 		<p class="wpcc-setup__lede">
-			<?php esc_html_e( 'You work in your AI assistant — Claude, Cursor or ChatGPT — and ask for changes to this site in your own words and your own language. Your selected protection mode controls which changes wait for approval, every change is recorded, and supported changes can be undone.', 'action-steward' ); ?>
+			<?php esc_html_e( 'Connect AI assistants to your WordPress site with scoped access, approvals, audit trails, and rollback.', 'siteradian' ); ?>
 		</p>
 
 		<?php
@@ -233,12 +233,12 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 				// customer about a protection they did not have.
 				echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::is_protected()
 					? \WPCommandCenter\Operations\SecurityModeManager::approval_step()
-					: __( 'Development mode — AI changes apply immediately, with no approval step.', 'action-steward' ) );
+					: __( 'Development mode — AI changes apply immediately, with no approval step.', 'siteradian' ) );
 			} else {
-				esc_html_e( 'Approvals are off — AI changes will apply immediately.', 'action-steward' );
+				esc_html_e( 'Approvals are off — AI changes will apply immediately.', 'siteradian' );
 			}
 			?>
-			<a href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Change', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Change', 'siteradian' ); ?></a>
 		</p>
 
 		<p class="wpcc-setup__progress">
@@ -248,7 +248,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			// "step 3 of 3" above an unfinished step 1 is simply wrong.
 			printf(
 				/* translators: 1: the step the customer is on, 2: total steps */
-				esc_html__( 'Step %1$d of %2$d', 'action-steward' ),
+				esc_html__( 'Step %1$d of %2$d', 'siteradian' ),
 				(int) ( null === $wpcc_active_step ? count( $wpcc_steps ) : $wpcc_active_step + 1 ),
 				(int) count( $wpcc_steps )
 			);
@@ -270,7 +270,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 						</p>
 						<?php if ( $wpcc_is_active && ! empty( $wpcc_step['prompt'] ) ) : ?>
 							<p class="wpcc-setup__prompt">
-								<span class="wpcc-setup__prompt-label"><?php esc_html_e( 'Try asking:', 'action-steward' ); ?></span>
+								<span class="wpcc-setup__prompt-label"><?php esc_html_e( 'Try asking:', 'siteradian' ); ?></span>
 								<code>“<?php echo esc_html( $wpcc_step['prompt'] ); ?>”</code>
 							</p>
 							<p class="wpcc-setup__note"><?php echo esc_html( $wpcc_step['note'] ); ?></p>
@@ -280,18 +280,18 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 							</a>
 						<?php endif; ?>
 					</div>
-					<span class="screen-reader-text"><?php echo $wpcc_step['done'] ? esc_html__( '(done)', 'action-steward' ) : esc_html__( '(to do)', 'action-steward' ); ?></span>
+					<span class="screen-reader-text"><?php echo $wpcc_step['done'] ? esc_html__( '(done)', 'siteradian' ) : esc_html__( '(to do)', 'siteradian' ); ?></span>
 				</li>
 			<?php endforeach; ?>
 		</ol>
 
 		<details class="wpcc-home__limits wpcc-setup__limits">
-			<summary><?php esc_html_e( 'What it does not do', 'action-steward' ); ?></summary>
+			<summary><?php esc_html_e( 'What it does not do', 'siteradian' ); ?></summary>
 			<ul>
-				<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'action-steward' ); ?></li>
-				<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'action-steward' ); ?></li>
-				<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'action-steward' ); ?></li>
-				<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'action-steward' ); ?></li>
+				<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'siteradian' ); ?></li>
+				<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'siteradian' ); ?></li>
+				<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'siteradian' ); ?></li>
+				<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'siteradian' ); ?></li>
 			</ul>
 		</details>
 	</section>
@@ -313,17 +313,17 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 * puts it, is worth more than two in two styles.
 	 */
 	?>
-	<h2 class="screen-reader-text"><?php esc_html_e( 'Site status', 'action-steward' ); ?></h2>
+	<h2 class="screen-reader-text"><?php esc_html_e( 'Site status', 'siteradian' ); ?></h2>
 	<div class="wpcc-home__status">
 		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Protection', 'action-steward' ); ?></span>
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Protection', 'siteradian' ); ?></span>
 			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['security'] ); ?>">
 				<span class="wpcc-home__dot <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 				<?php echo esc_html( SecurityModeManager::label() ); ?>
 			</a>
 		</div>
 		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Assistant', 'action-steward' ); ?></span>
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Assistant', 'siteradian' ); ?></span>
 			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['connect'] ); ?>">
 				<span class="wpcc-home__dot <?php echo ConnectionStatus::STATE_CONNECTED === $wpcc_conn['state'] ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 				<?php echo esc_html( $wpcc_conn['label'] ); ?>
@@ -349,7 +349,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 					'' !== $wpcc_conn['last_label']
 						? sprintf(
 							/* translators: 1: the name the customer gave the token that last connected, e.g. "Claude Desktop"; 2: sentence about when, e.g. "Last request 28 minutes ago." */
-							__( '%1$s · %2$s', 'action-steward' ),
+							__( '%1$s · %2$s', 'siteradian' ),
 							$wpcc_conn['last_label'],
 							$wpcc_conn['detail']
 						)
@@ -359,10 +359,10 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			</span>
 		</div>
 		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Waiting for you', 'action-steward' ); ?></span>
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Waiting for you', 'siteradian' ); ?></span>
 			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['approvals'] ); ?>" id="wpcc-home-pending-stat">
 				<span class="wpcc-home__dot is-idle" aria-hidden="true"></span>
-				<span id="wpcc-home-pending-text"><?php esc_html_e( 'Checking…', 'action-steward' ); ?></span>
+				<span id="wpcc-home-pending-text"><?php esc_html_e( 'Checking…', 'siteradian' ); ?></span>
 			</a>
 		</div>
 	</div>
@@ -370,10 +370,10 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	<?php if ( ! $wpcc_protected ) : ?>
 		<section class="wpcc-home__next" aria-labelledby="wpcc-home-next-h">
 			<div>
-				<h2 id="wpcc-home-next-h"><?php esc_html_e( 'Approvals are turned off', 'action-steward' ); ?></h2>
-				<p><?php esc_html_e( 'This site applies AI changes with no review step. That is fine for staging, risky for a live site.', 'action-steward' ); ?></p>
+				<h2 id="wpcc-home-next-h"><?php esc_html_e( 'Approvals are turned off', 'siteradian' ); ?></h2>
+				<p><?php esc_html_e( 'This site applies AI changes with no review step. That is fine for staging, risky for a live site.', 'siteradian' ); ?></p>
 			</div>
-			<a class="button button-primary button-hero" href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Choose protection', 'action-steward' ); ?></a>
+			<a class="button button-primary button-hero" href="<?php echo esc_url( $links['security'] ); ?>"><?php esc_html_e( 'Choose protection', 'siteradian' ); ?></a>
 		</section>
 	<?php endif; ?>
 <?php endif; ?>
@@ -406,46 +406,46 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	?>
 	<div id="wpcc-home-ready" role="status" aria-live="polite"></div>
 
-	<h2><?php esc_html_e( 'Recent changes', 'action-steward' ); ?></h2>
+	<h2><?php esc_html_e( 'Recent changes', 'siteradian' ); ?></h2>
 	<div id="wpcc-home-activity" aria-live="polite">
-		<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></div>
+		<div class="wpcc-cds-loading"><span class="spinner is-active" style="float:none;margin:0"></span><?php esc_html_e( 'Loading…', 'siteradian' ); ?></div>
 	</div>
 	<p class="wpcc-home__more">
-		<a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'View all changes and undo →', 'action-steward' ); ?></a>
+		<a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'View all changes and undo →', 'siteradian' ); ?></a>
 	</p>
 
 	<?php if ( $wpcc_show_guide ) : ?>
 		<section class="wpcc-home__guide" aria-labelledby="wpcc-home-guide-h">
-			<h2 id="wpcc-home-guide-h"><?php esc_html_e( 'How this keeps you in control', 'action-steward' ); ?></h2>
+			<h2 id="wpcc-home-guide-h"><?php esc_html_e( 'How this keeps you in control', 'siteradian' ); ?></h2>
 			<ol class="wpcc-home__steps">
-				<li><strong><?php esc_html_e( 'You ask', 'action-steward' ); ?></strong><?php esc_html_e( 'Tell your assistant what you want changed, in your own words.', 'action-steward' ); ?></li>
+				<li><strong><?php esc_html_e( 'You ask', 'siteradian' ); ?></strong><?php esc_html_e( 'Tell your assistant what you want changed, in your own words.', 'siteradian' ); ?></li>
 				<?php // Mode-aware: this sat directly under a banner reading "Approvals are turned off". ?>
-				<li><strong><?php esc_html_e( 'You approve', 'action-steward' ); ?></strong><?php echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::approval_step() ); ?> <a href="<?php echo esc_url( $links['approvals'] ); ?>"><?php esc_html_e( 'Approvals →', 'action-steward' ); ?></a></li>
-				<li><strong><?php esc_html_e( 'It is recorded', 'action-steward' ); ?></strong><?php esc_html_e( 'Every change is logged with who made it and when.', 'action-steward' ); ?></li>
-				<li><strong><?php esc_html_e( 'You can undo', 'action-steward' ); ?></strong><?php esc_html_e( 'Supported changes can be undone. An undo is a change too, so it follows the same approval rules.', 'action-steward' ); ?> <a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'Changes →', 'action-steward' ); ?></a></li>
+				<li><strong><?php esc_html_e( 'You approve', 'siteradian' ); ?></strong><?php echo esc_html( \WPCommandCenter\Operations\SecurityModeManager::approval_step() ); ?> <a href="<?php echo esc_url( $links['approvals'] ); ?>"><?php esc_html_e( 'Approvals →', 'siteradian' ); ?></a></li>
+				<li><strong><?php esc_html_e( 'It is recorded', 'siteradian' ); ?></strong><?php esc_html_e( 'Every change is logged with who made it and when.', 'siteradian' ); ?></li>
+				<li><strong><?php esc_html_e( 'You can undo', 'siteradian' ); ?></strong><?php esc_html_e( 'Supported changes can be undone. An undo is a change too, so it follows the same approval rules.', 'siteradian' ); ?> <a href="<?php echo esc_url( $links['change_history'] ); ?>"><?php esc_html_e( 'Changes →', 'siteradian' ); ?></a></li>
 			</ol>
 
 			<details class="wpcc-home__limits">
-				<summary><?php esc_html_e( 'What it does not do', 'action-steward' ); ?></summary>
+				<summary><?php esc_html_e( 'What it does not do', 'siteradian' ); ?></summary>
 				<ul>
-					<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'action-steward' ); ?></li>
-					<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'action-steward' ); ?></li>
-					<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'action-steward' ); ?></li>
-					<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'action-steward' ); ?></li>
+					<li><?php esc_html_e( 'Not everything can be undone. Plugin and theme updates are not automatically reversible, and some areas — WooCommerce orders, for example — have no undo at all. You are told which is which before you approve.', 'siteradian' ); ?></li>
+					<li><?php esc_html_e( 'It is not a backup tool. It records and reverses individual changes; it does not take full-site backups. Keep your usual backups.', 'siteradian' ); ?></li>
+					<li><?php esc_html_e( 'It manages this one site, not a fleet.', 'siteradian' ); ?></li>
+					<li><?php esc_html_e( 'No AI runs on this site unless you connect an assistant. Nothing is sent anywhere until you do.', 'siteradian' ); ?></li>
 				</ul>
 			</details>
 
 			<?php if ( ! $wpcc_incomplete ) : ?>
 				<form method="post" class="wpcc-home__dismiss">
 					<?php wp_nonce_field( 'wpcc_firstrun' ); ?>
-					<button type="submit" name="wpcc_firstrun_action" value="dismiss" class="button button-small"><?php esc_html_e( 'Hide this', 'action-steward' ); ?></button>
+					<button type="submit" name="wpcc_firstrun_action" value="dismiss" class="button button-small"><?php esc_html_e( 'Hide this', 'siteradian' ); ?></button>
 				</form>
 			<?php endif; ?>
 		</section>
 	<?php elseif ( $wpcc_fr_dismissed ) : ?>
 		<form method="post" class="wpcc-home__dismiss">
 			<?php wp_nonce_field( 'wpcc_firstrun' ); ?>
-			<button type="submit" name="wpcc_firstrun_action" value="reopen" class="button-link"><?php esc_html_e( 'Show how this works', 'action-steward' ); ?></button>
+			<button type="submit" name="wpcc_firstrun_action" value="reopen" class="button-link"><?php esc_html_e( 'Show how this works', 'siteradian' ); ?></button>
 		</form>
 	<?php endif; ?>
 
@@ -465,8 +465,8 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 * is not being reintroduced in the UI.
 	 */
 	?>
-	<h2><?php esc_html_e( 'Also included', 'action-steward' ); ?></h2>
-	<p class="wpcc-home__also-lede"><?php esc_html_e( 'Optional extras that are part of the plugin. Nothing here is switched on unless you choose it.', 'action-steward' ); ?></p>
+	<h2><?php esc_html_e( 'Also included', 'siteradian' ); ?></h2>
+	<p class="wpcc-home__also-lede"><?php esc_html_e( 'Optional extras that are part of the plugin. Nothing here is switched on unless you choose it.', 'siteradian' ); ?></p>
 	<div class="wpcc-home__also">
 		<?php
 		/*
@@ -501,7 +501,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		 */
 		$wpcc_bai_ratio = sprintf(
 			/* translators: 1: how many built-in AI tools are switched on; 2: how many exist in total. */
-			__( '%1$s of %2$s tools on', 'action-steward' ),
+			__( '%1$s of %2$s tools on', 'siteradian' ),
 			number_format_i18n( $wpcc_bai_count ),
 			number_format_i18n( $wpcc_bai_total )
 		);
@@ -509,24 +509,24 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		if ( $wpcc_home_tools_on && $wpcc_home_ai_key ) {
 			$wpcc_bai_tone  = 'on';
 			$wpcc_bai_state = $wpcc_bai_ratio;
-			$wpcc_bai_cta   = __( 'Open Built-in AI →', 'action-steward' );
+			$wpcc_bai_cta   = __( 'Open Built-in AI →', 'siteradian' );
 		} elseif ( $wpcc_home_tools_on ) {
 			// Switched on and unable to generate — the one state worth flagging.
 			$wpcc_bai_tone  = 'warn';
-			$wpcc_bai_state = __( 'Needs a provider key', 'action-steward' );
-			$wpcc_bai_cta   = __( 'Add a provider key →', 'action-steward' );
+			$wpcc_bai_state = __( 'Needs a provider key', 'siteradian' );
+			$wpcc_bai_cta   = __( 'Add a provider key →', 'siteradian' );
 		} elseif ( $wpcc_home_ai_key ) {
 			// A key on its own generates nothing. Say both halves, so the customer
 			// is not left wondering why a "ready" provider produces no output.
 			$wpcc_bai_state = sprintf(
 				/* translators: %s: e.g. "0 of 3 tools on". */
-				__( 'Provider ready · %s', 'action-steward' ),
+				__( 'Provider ready · %s', 'siteradian' ),
 				$wpcc_bai_ratio
 			);
-			$wpcc_bai_cta = __( 'Turn on a tool →', 'action-steward' );
+			$wpcc_bai_cta = __( 'Turn on a tool →', 'siteradian' );
 		} else {
-			$wpcc_bai_state = __( 'Not set up', 'action-steward' );
-			$wpcc_bai_cta   = __( 'Set up Built-in AI →', 'action-steward' );
+			$wpcc_bai_state = __( 'Not set up', 'siteradian' );
+			$wpcc_bai_cta   = __( 'Set up Built-in AI →', 'siteradian' );
 		}
 
 		/*
@@ -542,13 +542,13 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		}
 		?>
 		<a class="wpcc-home__also-card" href="<?php echo esc_url( $wpcc_bai_link ); ?>">
-			<strong><?php esc_html_e( 'Built-in AI', 'action-steward' ); ?></strong>
+			<strong><?php esc_html_e( 'Built-in AI', 'siteradian' ); ?></strong>
 			<span class="wpcc-home__also-state is-<?php echo esc_attr( $wpcc_bai_tone ); ?>"><?php echo esc_html( $wpcc_bai_state ); ?></span>
-			<span><?php esc_html_e( 'Let the plugin write SEO descriptions, image alt text and draft content by itself, without opening an assistant. Needs your own AI provider key, and only for the tools you switch on.', 'action-steward' ); ?></span>
+			<span><?php esc_html_e( 'Let the plugin write SEO descriptions, image alt text and draft content by itself, without opening an assistant. Needs your own AI provider key, and only for the tools you switch on.', 'siteradian' ); ?></span>
 			<em><?php echo esc_html( $wpcc_bai_cta ); ?></em>
 		</a>
 		<a class="wpcc-home__also-card" href="<?php echo esc_url( $links['change_history'] ); ?>">
-			<strong><?php esc_html_e( 'Undo any change', 'action-steward' ); ?></strong>
+			<strong><?php esc_html_e( 'Undo any change', 'siteradian' ); ?></strong>
 			<?php
 			/*
 			 * The third card's state — filled in by script, not by a query.
@@ -569,8 +569,8 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			 */
 			?>
 			<span class="wpcc-home__also-state" id="wpcc-home-undo-state" hidden></span>
-			<span><?php esc_html_e( 'Every change is recorded with who made it and when. Supported changes can be put back exactly as they were, and the undo follows the same approval rules.', 'action-steward' ); ?></span>
-			<em><?php esc_html_e( 'See what changed →', 'action-steward' ); ?></em>
+			<span><?php esc_html_e( 'Every change is recorded with who made it and when. Supported changes can be put back exactly as they were, and the undo follows the same approval rules.', 'siteradian' ); ?></span>
+			<em><?php esc_html_e( 'See what changed →', 'siteradian' ); ?></em>
 		</a>
 		<?php
 		/*
@@ -606,16 +606,16 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		 */
 		?>
 		<a class="wpcc-home__also-card" href="<?php echo esc_url( $links['access'] ); ?>">
-			<strong><?php esc_html_e( 'Read-only access', 'action-steward' ); ?></strong>
+			<strong><?php esc_html_e( 'Read-only access', 'siteradian' ); ?></strong>
 			<span class="wpcc-home__also-state is-<?php echo $wpcc_home_ro > 0 ? 'on' : 'off'; ?>">
 				<?php
 				if ( 0 === $wpcc_home_tokens ) {
-					esc_html_e( 'No tokens yet', 'action-steward' );
+					esc_html_e( 'No tokens yet', 'siteradian' );
 				} elseif ( $wpcc_home_ro > 0 ) {
 					echo esc_html(
 						sprintf(
 							/* translators: 1: total active access tokens; 2: how many of them are read-only. */
-							_n( '%1$s active token · %2$s read-only', '%1$s active tokens · %2$s read-only', $wpcc_home_tokens, 'action-steward' ),
+							_n( '%1$s active token · %2$s read-only', '%1$s active tokens · %2$s read-only', $wpcc_home_tokens, 'siteradian' ),
 							number_format_i18n( $wpcc_home_tokens ),
 							number_format_i18n( $wpcc_home_ro )
 						)
@@ -630,14 +630,14 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 					echo esc_html(
 						sprintf(
 							/* translators: %s: number of active access tokens, none of which are read-only. */
-							_n( '%s active token · full access', '%s active tokens · all full access', $wpcc_home_tokens, 'action-steward' ),
+							_n( '%s active token · full access', '%s active tokens · all full access', $wpcc_home_tokens, 'siteradian' ),
 							number_format_i18n( $wpcc_home_tokens )
 						)
 					);
 				}
 				?>
 			</span>
-			<span><?php esc_html_e( 'Give an assistant a token that can answer questions about the site but can never change anything — useful for trying one out safely.', 'action-steward' ); ?></span>
+			<span><?php esc_html_e( 'Give an assistant a token that can answer questions about the site but can never change anything — useful for trying one out safely.', 'siteradian' ); ?></span>
 			<em>
 				<?php
 				/*
@@ -647,11 +647,11 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 				 * wrong verb. It offers the thing the card is about.
 				 */
 				if ( 0 === $wpcc_home_tokens ) {
-					esc_html_e( 'Create an access token →', 'action-steward' );
+					esc_html_e( 'Create an access token →', 'siteradian' );
 				} elseif ( 0 === $wpcc_home_ro ) {
-					esc_html_e( 'Add a read-only token →', 'action-steward' );
+					esc_html_e( 'Add a read-only token →', 'siteradian' );
 				} else {
-					esc_html_e( 'Manage access tokens →', 'action-steward' );
+					esc_html_e( 'Manage access tokens →', 'siteradian' );
 				}
 				?>
 			</em>
@@ -660,12 +660,12 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 
 	<!-- Engineering detail: present, never in the way. -->
 	<div class="wpcc-engineer-only">
-		<h2><?php esc_html_e( 'Platform invariants', 'action-steward' ); ?></h2>
+		<h2><?php esc_html_e( 'Platform invariants', 'siteradian' ); ?></h2>
 		<div id="wpcc-home-invariants" class="wpcc-cds-kpis" role="status" aria-live="polite"></div>
 		<p class="wpcc-home__more">
-			<a href="<?php echo esc_url( $links['advanced'] ); ?>"><?php esc_html_e( 'Capabilities & operation map →', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $links['advanced'] ); ?>"><?php esc_html_e( 'Capabilities & operation map →', 'siteradian' ); ?></a>
 			&nbsp;·&nbsp;
-			<a href="<?php echo esc_url( $links['diagnostics'] ); ?>"><?php esc_html_e( 'Diagnostics →', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $links['diagnostics'] ); ?>"><?php esc_html_e( 'Diagnostics →', 'siteradian' ); ?></a>
 		</p>
 	</div>
 	<?php endif; // dashboard (setup complete) ?>
@@ -689,7 +689,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 /* The first-run lockup, sized by HEIGHT so the wordmark lands at a known size.
    It used to be capped by width (max-width:248px) against an artwork whose 456px
    viewBox was sized by a tagline, not by the name — so the whole lockup rendered
-   at 0.54x and "Action Steward" came out at 12px: smaller than the 13px body
+   at 0.54x and "SiteRadian AI" came out at 12px: smaller than the 13px body
    text beneath it, and the smallest type on the screen that introduces the
    product. The tagline is gone from the artwork and the viewBox is retightened to
    244x32, so height:32px now renders the wordmark at its intended 20px with the
@@ -803,22 +803,22 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	var isProtected = <?php echo wp_json_encode( (bool) $wpcc_protected ); ?>;
 
 	var i18n = {
-		loadFail:    <?php echo wp_json_encode( __( 'Could not load. Your admin session may have expired — refresh and try again.', 'action-steward' ) ); ?>,
-		tJustNow:    <?php echo wp_json_encode( __( 'Just now', 'action-steward' ) ); ?>,
+		loadFail:    <?php echo wp_json_encode( __( 'Could not load. Your admin session may have expired — refresh and try again.', 'siteradian' ) ); ?>,
+		tJustNow:    <?php echo wp_json_encode( __( 'Just now', 'siteradian' ) ); ?>,
 		/* translators: %d: number of minutes */
-		tMinutes:    <?php echo wp_json_encode( /* translators: %d: number */ __( '%d min ago', 'action-steward' ) ); ?>,
+		tMinutes:    <?php echo wp_json_encode( /* translators: %d: number */ __( '%d min ago', 'siteradian' ) ); ?>,
 		/* translators: %d: number of hours */
-		tHours:      <?php echo wp_json_encode( /* translators: %d: number */ __( '%d hr ago', 'action-steward' ) ); ?>,
+		tHours:      <?php echo wp_json_encode( /* translators: %d: number */ __( '%d hr ago', 'siteradian' ) ); ?>,
 		/* translators: %d: number of days */
-		tDays:       <?php echo wp_json_encode( /* translators: %d: number */ __( '%d days ago', 'action-steward' ) ); ?>,
-		attnTitle:   <?php echo wp_json_encode( __( 'Waiting for your approval', 'action-steward' ) ); ?>,
-		attnTitleFailed: <?php echo wp_json_encode( __( 'Something did not run', 'action-steward' ) ); ?>,
+		tDays:       <?php echo wp_json_encode( /* translators: %d: number */ __( '%d days ago', 'siteradian' ) ); ?>,
+		attnTitle:   <?php echo wp_json_encode( __( 'Waiting for your approval', 'siteradian' ) ); ?>,
+		attnTitleFailed: <?php echo wp_json_encode( __( 'Something did not run', 'siteradian' ) ); ?>,
 		/* translators: %d: number of pending approvals */
-		attnPending:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes need your decision before they can run.', 'action-steward' ) ); ?>,
-		attnPending1: <?php echo wp_json_encode( __( '1 change needs your decision before it can run.', 'action-steward' ) ); ?>,
+		attnPending:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes need your decision before they can run.', 'siteradian' ) ); ?>,
+		attnPending1: <?php echo wp_json_encode( __( '1 change needs your decision before it can run.', 'siteradian' ) ); ?>,
 		/* translators: %d: number of failed queue items */
-		attnFailed:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d requests failed to run.', 'action-steward' ) ); ?>,
-		attnFailed1: <?php echo wp_json_encode( __( '1 request failed to run.', 'action-steward' ) ); ?>,
+		attnFailed:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d requests failed to run.', 'siteradian' ) ); ?>,
+		attnFailed1: <?php echo wp_json_encode( __( '1 request failed to run.', 'siteradian' ) ); ?>,
 		/*
 		 * Shown only when approvals are OFF and a queue still exists — the one
 		 * combination on this screen that reads as a contradiction. "Approvals are
@@ -828,43 +828,43 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		 * obvious that a setting is not retroactive. One sentence, only in the state
 		 * that needs it.
 		 */
-		attnQueuedBefore: <?php echo wp_json_encode( __( 'These were queued while approvals were still on. Turning approvals off does not release them — they wait for you either way.', 'action-steward' ) ); ?>,
-		attnReview:  <?php echo wp_json_encode( __( 'Review now', 'action-steward' ) ); ?>,
-		attnSeeFailed: <?php echo wp_json_encode( __( 'See what failed', 'action-steward' ) ); ?>,
-		pendingNone: <?php echo wp_json_encode( __( 'Nothing', 'action-steward' ) ); ?>,
+		attnQueuedBefore: <?php echo wp_json_encode( __( 'These were queued while approvals were still on. Turning approvals off does not release them — they wait for you either way.', 'siteradian' ) ); ?>,
+		attnReview:  <?php echo wp_json_encode( __( 'Review now', 'siteradian' ) ); ?>,
+		attnSeeFailed: <?php echo wp_json_encode( __( 'See what failed', 'siteradian' ) ); ?>,
+		pendingNone: <?php echo wp_json_encode( __( 'Nothing', 'siteradian' ) ); ?>,
 		/* translators: %d: number of pending approvals */
-		pendingSome:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d approvals', 'action-steward' ) ); ?>,
-		pendingSome1: <?php echo wp_json_encode( __( '1 approval', 'action-steward' ) ); ?>,
-		readyTitle:  <?php echo wp_json_encode( __( 'Your assistant is ready', 'action-steward' ) ); ?>,
-		readyBody:   <?php echo wp_json_encode( __( 'Go back to Claude, Codex, ChatGPT, or whichever assistant you connected, and describe what you want changed on this site — in your own words, in any language your assistant speaks. Requests arrive here under the same protection, approval and undo rules.', 'action-steward' ) ); ?>,
-		readyTryLbl: <?php echo wp_json_encode( __( 'Try asking:', 'action-steward' ) ); ?>,
+		pendingSome:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d approvals', 'siteradian' ) ); ?>,
+		pendingSome1: <?php echo wp_json_encode( __( '1 approval', 'siteradian' ) ); ?>,
+		readyTitle:  <?php echo wp_json_encode( __( 'Your assistant is ready', 'siteradian' ) ); ?>,
+		readyBody:   <?php echo wp_json_encode( __( 'Go back to Claude, Codex, ChatGPT, or whichever assistant you connected, and describe what you want changed on this site — in your own words, in any language your assistant speaks. Requests arrive here under the same protection, approval and undo rules.', 'siteradian' ) ); ?>,
+		readyTryLbl: <?php echo wp_json_encode( __( 'Try asking:', 'siteradian' ) ); ?>,
 		/* A read-only question: it answers instantly and changes nothing, so the
 		   first thing a customer tries cannot go wrong. */
-		readyPrompt: <?php echo wp_json_encode( __( 'What plugins are installed on this site?', 'action-steward' ) ); ?>,
+		readyPrompt: <?php echo wp_json_encode( __( 'What plugins are installed on this site?', 'siteradian' ) ); ?>,
 		/* The change-shaped example, which will come back here for approval. */
-		readyPrompt2: <?php echo wp_json_encode( __( 'Change my site tagline to “Handmade ceramics from Lisbon”.', 'action-steward' ) ); ?>,
-		readyCopy:   <?php echo wp_json_encode( __( 'Copy starter prompt', 'action-steward' ) ); ?>,
-		readyCopied: <?php echo wp_json_encode( __( 'Copied', 'action-steward' ) ); ?>,
-		readyGuide:  <?php echo wp_json_encode( __( 'View connection guide', 'action-steward' ) ); ?>,
+		readyPrompt2: <?php echo wp_json_encode( __( 'Change my site tagline to “Handmade ceramics from Lisbon”.', 'siteradian' ) ); ?>,
+		readyCopy:   <?php echo wp_json_encode( __( 'Copy starter prompt', 'siteradian' ) ); ?>,
+		readyCopied: <?php echo wp_json_encode( __( 'Copied', 'siteradian' ) ); ?>,
+		readyGuide:  <?php echo wp_json_encode( __( 'View connection guide', 'siteradian' ) ); ?>,
 		/* The "Undo any change" card's state pill. Real counts from the dashboard
 		   read that is already in flight — never a placeholder or an estimate. */
-		undoNone:    <?php echo wp_json_encode( __( 'Nothing to undo yet', 'action-steward' ) ); ?>,
-		undoOne:     <?php echo wp_json_encode( __( '1 change recorded', 'action-steward' ) ); ?>,
+		undoNone:    <?php echo wp_json_encode( __( 'Nothing to undo yet', 'siteradian' ) ); ?>,
+		undoOne:     <?php echo wp_json_encode( __( '1 change recorded', 'siteradian' ) ); ?>,
 		/* translators: %s: number of recorded changes. */
-		undoMany:    <?php echo wp_json_encode( /* translators: %s: number of recorded changes. */ __( '%s changes recorded', 'action-steward' ) ); ?>,
-		actEmptyTitle:  <?php echo wp_json_encode( __( 'No changes yet', 'action-steward' ) ); ?>,
-		actEmptyDetail: <?php echo wp_json_encode( __( 'Once your assistant changes something here, it appears in this list — with an undo where the change supports one.', 'action-steward' ) ); ?>,
+		undoMany:    <?php echo wp_json_encode( /* translators: %s: number of recorded changes. */ __( '%s changes recorded', 'siteradian' ) ); ?>,
+		actEmptyTitle:  <?php echo wp_json_encode( __( 'No changes yet', 'siteradian' ) ); ?>,
+		actEmptyDetail: <?php echo wp_json_encode( __( 'Once your assistant changes something here, it appears in this list — with an undo where the change supports one.', 'siteradian' ) ); ?>,
 		/* translators: %d: number of changes in a session */
-		actChanges:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes', 'action-steward' ) ); ?>,
-		actChanges1: <?php echo wp_json_encode( __( '1 change', 'action-steward' ) ); ?>,
-		chipReversible: <?php echo wp_json_encode( __( 'Can be undone', 'action-steward' ) ); ?>,
-		byLabel:     <?php echo wp_json_encode( __( 'by', 'action-steward' ) ); ?>,
-		view:        <?php echo wp_json_encode( __( 'View', 'action-steward' ) ); ?>,
-		invOpMap:    <?php echo wp_json_encode( __( 'Mapped operations', 'action-steward' ) ); ?>,
-		invCaps:     <?php echo wp_json_encode( __( 'Capabilities', 'action-steward' ) ); ?>,
-		invCat:      <?php echo wp_json_encode( __( 'Operations', 'action-steward' ) ); ?>,
-		invMcp:      <?php echo wp_json_encode( __( 'MCP tools', 'action-steward' ) ); ?>,
-		invDb:       <?php echo wp_json_encode( __( 'DB version', 'action-steward' ) ); ?>
+		actChanges:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d changes', 'siteradian' ) ); ?>,
+		actChanges1: <?php echo wp_json_encode( __( '1 change', 'siteradian' ) ); ?>,
+		chipReversible: <?php echo wp_json_encode( __( 'Can be undone', 'siteradian' ) ); ?>,
+		byLabel:     <?php echo wp_json_encode( __( 'by', 'siteradian' ) ); ?>,
+		view:        <?php echo wp_json_encode( __( 'View', 'siteradian' ) ); ?>,
+		invOpMap:    <?php echo wp_json_encode( __( 'Mapped operations', 'siteradian' ) ); ?>,
+		invCaps:     <?php echo wp_json_encode( __( 'Capabilities', 'siteradian' ) ); ?>,
+		invCat:      <?php echo wp_json_encode( __( 'Operations', 'siteradian' ) ); ?>,
+		invMcp:      <?php echo wp_json_encode( __( 'MCP tools', 'siteradian' ) ); ?>,
+		invDb:       <?php echo wp_json_encode( __( 'DB version', 'siteradian' ) ); ?>
 	};
 
 	function esc( s ) { return WPCC.escHtml ? WPCC.escHtml( s ) : String( s == null ? '' : s ); }

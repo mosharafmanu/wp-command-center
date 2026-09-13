@@ -43,7 +43,7 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-history">
-	<h1><?php esc_html_e( 'Changes', 'action-steward' ); ?></h1>
+	<h1><?php esc_html_e( 'Changes', 'siteradian' ); ?></h1>
 
 	<?php
 	// This hero carried two paragraphs and four chips for one idea. Two of the
@@ -66,23 +66,23 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>">&larr; <?php esc_html_e( 'Back to Changes', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>">&larr; <?php esc_html_e( 'Back to Changes', 'siteradian' ); ?></a>
 		</p>
 		<div id="wpcc-history-detail" data-change-id="<?php echo esc_attr( $view_id ); ?>">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'action-steward' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading change…', 'siteradian' ); ?></p>
 		</div>
-		<h2 id="wpcc-diff-heading" style="display:none;"><?php esc_html_e( 'What changed', 'action-steward' ); ?></h2>
+		<h2 id="wpcc-diff-heading" style="display:none;"><?php esc_html_e( 'What changed', 'siteradian' ); ?></h2>
 		<div id="wpcc-history-diff"></div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'action-steward' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'sessions' ) ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'action-steward' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'reversible' ) ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Can be undone', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'timeline' ) ); ?>" class="nav-tab <?php echo 'timeline' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'timeline' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Timeline', 'siteradian' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'sessions' ) ); ?>" class="nav-tab <?php echo 'sessions' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'sessions' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Sessions', 'siteradian' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'reversible' ) ); ?>" class="nav-tab <?php echo 'reversible' === $tab ? 'nav-tab-active' : ''; ?>"<?php echo 'reversible' === $tab ? ' aria-current="page"' : ''; ?>><?php esc_html_e( 'Can be undone', 'siteradian' ); ?></a>
 		</h2>
 
 		<?php if ( '' !== $session_id ) : ?>
 			<div id="wpcc-session-summary" data-session-id="<?php echo esc_attr( $session_id ); ?>" class="wpcc-session-summary">
-				<span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading session…', 'action-steward' ); ?>
+				<span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading session…', 'siteradian' ); ?>
 			</div>
 		<?php endif; ?>
 
@@ -102,43 +102,43 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		?>
 		<?php if ( 'sessions' !== $tab ) : ?>
 			<details class="wpcc-history-filtertoggle"<?php echo $wpcc_filters_active ? ' open' : ''; ?>>
-				<summary><?php esc_html_e( 'Filter', 'action-steward' ); ?></summary>
+				<summary><?php esc_html_e( 'Filter', 'siteradian' ); ?></summary>
 			<form method="get" class="wpcc-history-filters">
 				<input type="hidden" name="page" value="<?php echo esc_attr( $page ); ?>" />
 				<input type="hidden" name="tab" value="<?php echo esc_attr( $tab ); ?>" />
 				<?php if ( '' !== $session_id ) : ?>
 					<input type="hidden" name="session_id" value="<?php echo esc_attr( $session_id ); ?>" />
 				<?php endif; ?>
-				<label><?php esc_html_e( 'Area', 'action-steward' ); ?>
-					<input type="text" name="runtime" value="<?php echo esc_attr( $f_runtime ); ?>" placeholder="<?php esc_attr_e( 'e.g. seo', 'action-steward' ); ?>" />
+				<label><?php esc_html_e( 'Area', 'siteradian' ); ?>
+					<input type="text" name="runtime" value="<?php echo esc_attr( $f_runtime ); ?>" placeholder="<?php esc_attr_e( 'e.g. seo', 'siteradian' ); ?>" />
 				</label>
-				<label><?php esc_html_e( 'Status', 'action-steward' ); ?>
-					<input type="text" name="status" value="<?php echo esc_attr( $f_status ); ?>" placeholder="<?php esc_attr_e( 'e.g. success', 'action-steward' ); ?>" />
+				<label><?php esc_html_e( 'Status', 'siteradian' ); ?>
+					<input type="text" name="status" value="<?php echo esc_attr( $f_status ); ?>" placeholder="<?php esc_attr_e( 'e.g. success', 'siteradian' ); ?>" />
 				</label>
-				<label><?php esc_html_e( 'From', 'action-steward' ); ?>
+				<label><?php esc_html_e( 'From', 'siteradian' ); ?>
 					<input type="date" name="date_from" value="<?php echo esc_attr( $f_from ); ?>" />
 				</label>
-				<label><?php esc_html_e( 'To', 'action-steward' ); ?>
+				<label><?php esc_html_e( 'To', 'siteradian' ); ?>
 					<input type="date" name="date_to" value="<?php echo esc_attr( $f_to ); ?>" />
 				</label>
-				<?php submit_button( __( 'Apply', 'action-steward' ), 'secondary', '', false ); ?>
-				<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => $page, 'tab' => $tab ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Reset', 'action-steward' ); ?></a>
+				<?php submit_button( __( 'Apply', 'siteradian' ), 'secondary', '', false ); ?>
+				<a class="button" href="<?php echo esc_url( add_query_arg( [ 'page' => $page, 'tab' => $tab ], admin_url( 'admin.php' ) ) ); ?>"><?php esc_html_e( 'Reset', 'siteradian' ); ?></a>
 			</form>
 			</details>
 		<?php endif; ?>
 
 		<div id="wpcc-history-list">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'siteradian' ); ?></p>
 		</div>
 		<p id="wpcc-history-more" style="display:none;">
-			<button type="button" class="button" id="wpcc-history-more-btn"><?php esc_html_e( 'Load more', 'action-steward' ); ?></button>
+			<button type="button" class="button" id="wpcc-history-more-btn"><?php esc_html_e( 'Load more', 'siteradian' ); ?></button>
 		</p>
 	<?php endif; ?>
 </div>
 
 <div id="wpcc-restore-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-restore-title" aria-describedby="wpcc-restore-msg">
 	<div class="wpcc-modal-box" role="document">
-		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Undo change', 'action-steward' ); ?></h2>
+		<h2 id="wpcc-restore-title"><?php esc_html_e( 'Undo change', 'siteradian' ); ?></h2>
 		<p id="wpcc-restore-msg"></p>
 		<div id="wpcc-restore-highrisk" style="display:none;">
 			<div class="wpcc-restore-warning" id="wpcc-restore-warning" role="alert"></div>
@@ -296,38 +296,38 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		page:       <?php echo wp_json_encode( $page ); ?>
 	};
 	var i18n = {
-		none:        <?php echo wp_json_encode( __( 'None', 'action-steward' ) ); ?>,
-		empty:       <?php echo wp_json_encode( __( 'No changes recorded yet. As soon as AI or an app changes this site, every change appears here — with a way to undo it.', 'action-steward' ) ); ?>,
-		emptySess:   <?php echo wp_json_encode( __( 'No agent sessions found. Changes made without a session id appear in the Timeline view.', 'action-steward' ) ); ?>,
-		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'action-steward' ) ); ?>,
-		reversible:  <?php echo wp_json_encode( __( 'Reversible', 'action-steward' ) ); ?>,
-		notRev:      <?php echo wp_json_encode( __( 'Not reversible', 'action-steward' ) ); ?>,
-		rolledBack:  <?php echo wp_json_encode( __( 'Rolled back', 'action-steward' ) ); ?>,
-		changes:     <?php echo wp_json_encode( __( 'changes', 'action-steward' ) ); ?>,
-		session:     <?php echo wp_json_encode( __( 'Session', 'action-steward' ) ); ?>,
-		changeSets:  <?php echo wp_json_encode( __( 'change-sets', 'action-steward' ) ); ?>,
-		allChanges:  <?php echo wp_json_encode( __( 'all changes', 'action-steward' ) ); ?>,
-		view:        <?php echo wp_json_encode( __( 'View', 'action-steward' ) ); ?>,
-		actor:       <?php echo wp_json_encode( __( 'Actor', 'action-steward' ) ); ?>,
+		none:        <?php echo wp_json_encode( __( 'None', 'siteradian' ) ); ?>,
+		empty:       <?php echo wp_json_encode( __( 'No changes recorded yet. As soon as AI or an app changes this site, every change appears here — with a way to undo it.', 'siteradian' ) ); ?>,
+		emptySess:   <?php echo wp_json_encode( __( 'No agent sessions found. Changes made without a session id appear in the Timeline view.', 'siteradian' ) ); ?>,
+		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'siteradian' ) ); ?>,
+		reversible:  <?php echo wp_json_encode( __( 'Reversible', 'siteradian' ) ); ?>,
+		notRev:      <?php echo wp_json_encode( __( 'Not reversible', 'siteradian' ) ); ?>,
+		rolledBack:  <?php echo wp_json_encode( __( 'Rolled back', 'siteradian' ) ); ?>,
+		changes:     <?php echo wp_json_encode( __( 'changes', 'siteradian' ) ); ?>,
+		session:     <?php echo wp_json_encode( __( 'Session', 'siteradian' ) ); ?>,
+		changeSets:  <?php echo wp_json_encode( __( 'change-sets', 'siteradian' ) ); ?>,
+		allChanges:  <?php echo wp_json_encode( __( 'all changes', 'siteradian' ) ); ?>,
+		view:        <?php echo wp_json_encode( __( 'View', 'siteradian' ) ); ?>,
+		actor:       <?php echo wp_json_encode( __( 'Actor', 'siteradian' ) ); ?>,
 		// "Actor" is the data model's word. On a row a customer reads to find out
 		// what happened to their site, the word is "By".
-		by:          <?php echo wp_json_encode( __( 'By', 'action-steward' ) ); ?>,
+		by:          <?php echo wp_json_encode( __( 'By', 'siteradian' ) ); ?>,
 		actorTypes:  {
-			mcp:     <?php echo wp_json_encode( __( 'an AI assistant', 'action-steward' ) ); ?>,
-			token:   <?php echo wp_json_encode( __( 'a connected assistant', 'action-steward' ) ); ?>,
-			admin:   <?php echo wp_json_encode( __( 'a site administrator', 'action-steward' ) ); ?>,
-			system:  <?php echo wp_json_encode( __( 'this site, automatically', 'action-steward' ) ); ?>,
-			unknown: <?php echo wp_json_encode( __( 'an unidentified caller', 'action-steward' ) ); ?>
+			mcp:     <?php echo wp_json_encode( __( 'an AI assistant', 'siteradian' ) ); ?>,
+			token:   <?php echo wp_json_encode( __( 'a connected assistant', 'siteradian' ) ); ?>,
+			admin:   <?php echo wp_json_encode( __( 'a site administrator', 'siteradian' ) ); ?>,
+			system:  <?php echo wp_json_encode( __( 'this site, automatically', 'siteradian' ) ); ?>,
+			unknown: <?php echo wp_json_encode( __( 'an unidentified caller', 'siteradian' ) ); ?>
 		},
-		restore:     <?php echo wp_json_encode( __( 'Undo', 'action-steward' ) ); ?>,
-		restoreQ:    <?php echo wp_json_encode( __( 'Undo this change? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'action-steward' ) ); ?>,
+		restore:     <?php echo wp_json_encode( __( 'Undo', 'siteradian' ) ); ?>,
+		restoreQ:    <?php echo wp_json_encode( __( 'Undo this change? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'siteradian' ) ); ?>,
 		/* translators: %s: plain-language name of the change being undone */
-		restoreQNamed: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Undo “%s”? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'action-steward' ) ); ?>,
-		restoreOk:   <?php echo wp_json_encode( __( 'Change undone. Reloading…', 'action-steward' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This undo is waiting for your approval — nothing has changed yet.', 'action-steward' ) ); ?>,
-		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'action-steward' ) ); ?>,
-		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'action-steward' ) ); ?>,
-		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'action-steward' ) ); ?>,
+		restoreQNamed: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Undo “%s”? It runs through the same approval and safety checks as any other change — high-risk undos ask for extra confirmation.', 'siteradian' ) ); ?>,
+		restoreOk:   <?php echo wp_json_encode( __( 'Change undone. Reloading…', 'siteradian' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This undo is waiting for your approval — nothing has changed yet.', 'siteradian' ) ); ?>,
+		phraseLabel: <?php echo wp_json_encode( __( 'Type ROLLBACK_CHANGE to confirm', 'siteradian' ) ); ?>,
+		reasonLabel: <?php echo wp_json_encode( __( 'Reason (required)', 'siteradian' ) ); ?>,
+		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'siteradian' ) ); ?>,
 		/*
 		 * "Restore failed." leaves the one question that matters unanswered: what
 		 * is the state of my site now?
@@ -339,33 +339,33 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		 * can restore some fields and skip others). So this must NOT promise that
 		 * nothing happened; it points at the one place that always knows.
 		 */
-		genericFail: <?php echo wp_json_encode( __( 'The undo could not be completed. Reload this page before trying again — the change list always shows where things actually stand.', 'action-steward' ) ); ?>,
-		openApprove: <?php echo wp_json_encode( __( 'Review and approve it', 'action-steward' ) ); ?>,
-		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'action-steward' ) ); ?>,
-		close:       <?php echo wp_json_encode( __( 'Close', 'action-steward' ) ); ?>,
-		emptyRev:    <?php echo wp_json_encode( __( 'Nothing to undo yet. Changes that can be reversed will appear here.', 'action-steward' ) ); ?>,
-		emptyFiltered: <?php echo wp_json_encode( __( 'No changes match these filters. Your history is intact — only this view is narrowed.', 'action-steward' ) ); ?>,
-		emptyTitle:  <?php echo wp_json_encode( __( 'Nothing has changed yet', 'action-steward' ) ); ?>,
-		clearFilters:  <?php echo wp_json_encode( __( 'Clear filters', 'action-steward' ) ); ?>,
-		restoreOne:  <?php echo wp_json_encode( __( 'Undo this change', 'action-steward' ) ); ?>,
-		colRuntimes: <?php echo wp_json_encode( __( 'Runtimes', 'action-steward' ) ); ?>,
-		colLastAct:  <?php echo wp_json_encode( __( 'Last activity', 'action-steward' ) ); ?>,
-		dRuntimes:   <?php echo wp_json_encode( __( 'runtimes', 'action-steward' ) ); ?>,
-		lChangeId:   <?php echo wp_json_encode( __( 'Change ID', 'action-steward' ) ); ?>,
-		lOperation:  <?php echo wp_json_encode( __( 'Operation', 'action-steward' ) ); ?>,
-		lRuntime:    <?php echo wp_json_encode( __( 'Runtime', 'action-steward' ) ); ?>,
-		lStatus:     <?php echo wp_json_encode( __( 'Status', 'action-steward' ) ); ?>,
-		lRisk:       <?php echo wp_json_encode( __( 'Risk level', 'action-steward' ) ); ?>,
-		lSource:     <?php echo wp_json_encode( __( 'Source', 'action-steward' ) ); ?>,
-		lTarget:     <?php echo wp_json_encode( __( 'Target', 'action-steward' ) ); ?>,
-		lReversible: <?php echo wp_json_encode( __( 'Reversible', 'action-steward' ) ); ?>,
-		lKind:       <?php echo wp_json_encode( __( 'Rollback kind', 'action-steward' ) ); ?>,
-		lChangeSet:  <?php echo wp_json_encode( __( 'Change-set', 'action-steward' ) ); ?>,
-		lWhen:       <?php echo wp_json_encode( __( 'When', 'action-steward' ) ); ?>,
-		lCounts:     <?php echo wp_json_encode( __( 'Counts', 'action-steward' ) ); ?>,
+		genericFail: <?php echo wp_json_encode( __( 'The undo could not be completed. Reload this page before trying again — the change list always shows where things actually stand.', 'siteradian' ) ); ?>,
+		openApprove: <?php echo wp_json_encode( __( 'Review and approve it', 'siteradian' ) ); ?>,
+		cancel:      <?php echo wp_json_encode( __( 'Cancel', 'siteradian' ) ); ?>,
+		close:       <?php echo wp_json_encode( __( 'Close', 'siteradian' ) ); ?>,
+		emptyRev:    <?php echo wp_json_encode( __( 'Nothing to undo yet. Changes that can be reversed will appear here.', 'siteradian' ) ); ?>,
+		emptyFiltered: <?php echo wp_json_encode( __( 'No changes match these filters. Your history is intact — only this view is narrowed.', 'siteradian' ) ); ?>,
+		emptyTitle:  <?php echo wp_json_encode( __( 'Nothing has changed yet', 'siteradian' ) ); ?>,
+		clearFilters:  <?php echo wp_json_encode( __( 'Clear filters', 'siteradian' ) ); ?>,
+		restoreOne:  <?php echo wp_json_encode( __( 'Undo this change', 'siteradian' ) ); ?>,
+		colRuntimes: <?php echo wp_json_encode( __( 'Runtimes', 'siteradian' ) ); ?>,
+		colLastAct:  <?php echo wp_json_encode( __( 'Last activity', 'siteradian' ) ); ?>,
+		dRuntimes:   <?php echo wp_json_encode( __( 'runtimes', 'siteradian' ) ); ?>,
+		lChangeId:   <?php echo wp_json_encode( __( 'Change ID', 'siteradian' ) ); ?>,
+		lOperation:  <?php echo wp_json_encode( __( 'Operation', 'siteradian' ) ); ?>,
+		lRuntime:    <?php echo wp_json_encode( __( 'Runtime', 'siteradian' ) ); ?>,
+		lStatus:     <?php echo wp_json_encode( __( 'Status', 'siteradian' ) ); ?>,
+		lRisk:       <?php echo wp_json_encode( __( 'Risk level', 'siteradian' ) ); ?>,
+		lSource:     <?php echo wp_json_encode( __( 'Source', 'siteradian' ) ); ?>,
+		lTarget:     <?php echo wp_json_encode( __( 'Target', 'siteradian' ) ); ?>,
+		lReversible: <?php echo wp_json_encode( __( 'Reversible', 'siteradian' ) ); ?>,
+		lKind:       <?php echo wp_json_encode( __( 'Rollback kind', 'siteradian' ) ); ?>,
+		lChangeSet:  <?php echo wp_json_encode( __( 'Change-set', 'siteradian' ) ); ?>,
+		lWhen:       <?php echo wp_json_encode( __( 'When', 'siteradian' ) ); ?>,
+		lCounts:     <?php echo wp_json_encode( __( 'Counts', 'siteradian' ) ); ?>,
 		/* translators: %1$d created, %2$d updated, %3$d skipped, %4$d errors */
-		countsFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number, %4$d: number */ __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'action-steward' ) ); ?>,
-		restoreBusy: <?php echo wp_json_encode( __( 'Undoing…', 'action-steward' ) ); ?>
+		countsFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number, %4$d: number */ __( 'created %1$d, updated %2$d, skipped %3$d, error %4$d', 'siteradian' ) ); ?>,
+		restoreBusy: <?php echo wp_json_encode( __( 'Undoing…', 'siteradian' ) ); ?>
 	};
 	var REQUIRED_PHRASE = 'ROLLBACK_CHANGE';
 	var approvalsUrl = <?php echo wp_json_encode( admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' ) ); ?>;

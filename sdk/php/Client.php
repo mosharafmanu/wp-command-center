@@ -1,8 +1,8 @@
 <?php
 /**
- * Action Steward PHP SDK
+ * SiteRadian AI PHP SDK
  *
- * Lightweight REST client for the Action Steward API.
+ * Lightweight REST client for the SiteRadian AI API.
  *
  * @example
  * ```php

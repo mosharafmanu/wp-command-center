@@ -43,7 +43,7 @@ final class ContentSeed {
 		if ( ! isset( $params['type'] ) || '' === trim( (string) $params['type'] ) ) {
 			return new \WP_Error(
 				'wpcc_missing_seed_type',
-				__( 'type is required. Supported: post, page.', 'action-steward' )
+				__( 'type is required. Supported: post, page.', 'siteradian' )
 			);
 		}
 
@@ -54,11 +54,11 @@ final class ContentSeed {
 		$content_template = wp_kses_post( $params['content_template'] ?? 'Sample content' );
 
 		if ( ! in_array( $type, self::ALLOWED_TYPES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_post_type', __( 'Invalid post type. Supported: post, page.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_post_type', __( 'Invalid post type. Supported: post, page.', 'siteradian' ) );
 		}
 
 		if ( ! in_array( $status, self::ALLOWED_STATUSES, true ) ) {
-			return new \WP_Error( 'wpcc_invalid_post_status', __( 'Invalid post status. Supported: draft, publish.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_post_status', __( 'Invalid post status. Supported: draft, publish.', 'siteradian' ) );
 		}
 
 		$created_ids = [];
@@ -78,7 +78,7 @@ final class ContentSeed {
 			}
 
 			if ( 0 === $post_id ) {
-				return new \WP_Error( 'wpcc_content_seed_failed', __( 'Failed to create post.', 'action-steward' ) );
+				return new \WP_Error( 'wpcc_content_seed_failed', __( 'Failed to create post.', 'siteradian' ) );
 			}
 
 			$created_ids[] = $post_id;

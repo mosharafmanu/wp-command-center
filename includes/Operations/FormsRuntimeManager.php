@@ -18,7 +18,7 @@ final class FormsRuntimeManager {
 	public function run( array $payload, array $context = [] ): array {
 		$provider = sanitize_key( (string) ( $payload['provider'] ?? 'cf7' ) );
 		if ( ! isset( $this->providers[ $provider ] ) ) {
-			return $this->error( 'wpcc_provider_not_available', sprintf( /* translators: %s: value */ __( 'Form provider "%s" is not available.', 'action-steward' ), $provider ) );
+			return $this->error( 'wpcc_provider_not_available', sprintf( /* translators: %s: value */ __( 'Form provider "%s" is not available.', 'siteradian' ), $provider ) );
 		}
 		$p = $this->providers[ $provider ];
 		$a = (string) ( $payload['action'] ?? '' );
@@ -58,12 +58,12 @@ final class FormsRuntimeManager {
 
 	public function rollback( array $payload, array $context = [] ): array {
 		$rid = (string) ( $payload['rollback_id'] ?? '' );
-		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'action-steward' ) );
+		if ( '' === $rid ) return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID required.', 'siteradian' ) );
 		$rollbacks = get_option( 'wpcc_forms_rollbacks', [] );
 		$rec = null; $idx = null;
 		foreach ( $rollbacks as $i => $r ) { if ( $r['id'] === $rid ) { $rec = $r; $idx = $i; break; } }
-		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'action-steward' ) );
-		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'action-steward' ) );
+		if ( ! $rec ) return $this->error( 'wpcc_rollback_not_found', __( 'Rollback not found.', 'siteradian' ) );
+		if ( $rec['rollback_applied'] ) return $this->error( 'wpcc_rollback_already_applied', __( 'Already applied.', 'siteradian' ) );
 		// Undo create = delete
 		$act = $rec['action'];
 		$eid = $rec['entity_id'];
@@ -83,7 +83,7 @@ final class FormsRuntimeManager {
 		if ( $result && FormsRegistry::supports_rollback( $action ) && isset( $result['id'] ) ) {
 			$this->store_rollback( (string) $result['id'], $rollback_action, [], $context );
 		}
-		return $result ?: $this->error( 'wpcc_mutation_failed', __( 'Operation failed.', 'action-steward' ) );
+		return $result ?: $this->error( 'wpcc_mutation_failed', __( 'Operation failed.', 'siteradian' ) );
 	}
 
 	private function wrap( string $action, callable $fn, string $err_code, string $err_msg ): array {

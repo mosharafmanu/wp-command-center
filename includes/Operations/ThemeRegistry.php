@@ -96,10 +96,10 @@ final class ThemeRegistry {
 
 	public function validate_slug( string $slug ): ?\WP_Error {
 		if ( '' === $slug ) {
-			return new \WP_Error( 'wpcc_missing_theme_slug', __( 'Theme slug is required.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_theme_slug', __( 'Theme slug is required.', 'siteradian' ) );
 		}
 		if ( ! preg_match( '/^[a-zA-Z0-9][a-zA-Z0-9._\-]*$/', $slug ) ) {
-			return new \WP_Error( 'wpcc_invalid_theme_slug', __( 'Invalid theme slug format.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_theme_slug', __( 'Invalid theme slug format.', 'siteradian' ) );
 		}
 		return null;
 	}

@@ -1,5 +1,5 @@
 /**
- * Register Action Steward's screens with WordPress's own ⌘K command palette.
+ * Register SiteRadian AI's screens with WordPress's own ⌘K command palette.
  *
  * See includes/Admin/CommandPaletteIntegration.php for why: with nothing of ours
  * registered, the palette's subsequence filter answered "token" with Marketing and
@@ -25,8 +25,8 @@
 		var store = data.dispatch( 'core/commands' );
 		if ( ! store || typeof store.registerCommand !== 'function' ) { return false; }
 
-		var template = ( cfg.i18n && cfg.i18n.commandLabel ) || 'Action Steward: %s';
-		var product  = ( cfg.i18n && cfg.i18n.product ) || 'Action Steward';
+		var template = ( cfg.i18n && cfg.i18n.commandLabel ) || 'SiteRadian AI: %s';
+		var product  = ( cfg.i18n && cfg.i18n.product ) || 'SiteRadian AI';
 
 		cfg.destinations.forEach( function ( item ) {
 			if ( ! item || ! item.url || ! item.label ) { return; }

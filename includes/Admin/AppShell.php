@@ -2,7 +2,7 @@
 /**
  * Experience Layer — App Shell + the "Three Doors, One Engine" information architecture.
  *
- * The single source of truth for Action Steward's navigation. It presents FIVE
+ * The single source of truth for SiteRadian AI's navigation. It presents FIVE
  * product-language sections — Home · Connect · Activity · History · Settings —
  * each rendered as a branded shell (header + sub-tab bar) hosting the EXISTING view
  * files in a content canvas. It adds no REST routes, operations, capabilities, MCP
@@ -267,16 +267,16 @@ final class AppShell {
 	 */
 	public static function builtin_tabs(): array {
 		$tabs = [
-			'providers' => [ 'label' => __( 'Providers', 'action-steward' ), 'view' => 'ai-setup', 'feature' => null ],
+			'providers' => [ 'label' => __( 'Providers', 'siteradian' ), 'view' => 'ai-setup', 'feature' => null ],
 		];
 		if ( self::flag( 'WPCC_SEO_META_UI', 'wpcc_seo_meta_ui' ) && FeatureGate::allows( 'seo_meta_generator' ) ) {
-			$tabs['seo'] = [ 'label' => __( 'SEO', 'action-steward' ), 'view' => 'seo-meta', 'feature' => null ];
+			$tabs['seo'] = [ 'label' => __( 'SEO', 'siteradian' ), 'view' => 'seo-meta', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_ALT_TEXT_UI', 'wpcc_alt_text_ui' ) && FeatureGate::allows( 'ai_alt_text' ) ) {
-			$tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'action-steward' ), 'view' => 'ai-alt-text', 'feature' => null ];
+			$tabs['alt_text'] = [ 'label' => __( 'Alt Text', 'siteradian' ), 'view' => 'ai-alt-text', 'feature' => null ];
 		}
 		if ( self::flag( 'WPCC_AI_CONTENT_UI', 'wpcc_ai_content_ui' ) && ( FeatureGate::allows( 'title_generator' ) || FeatureGate::allows( 'excerpt_generator' ) ) ) {
-			$tabs['content'] = [ 'label' => __( 'Content', 'action-steward' ), 'view' => 'ai-content', 'feature' => null ];
+			$tabs['content'] = [ 'label' => __( 'Content', 'siteradian' ), 'view' => 'ai-content', 'feature' => null ];
 		}
 		return $tabs;
 	}
@@ -337,7 +337,7 @@ final class AppShell {
 		 */
 		$tree = [
 			self::HOME_SLUG => [
-				'label'  => __( 'Home', 'action-steward' ),
+				'label'  => __( 'Home', 'siteradian' ),
 				/*
 				 * Home's subtitle is the product's promise, not a description of the
 				 * page — so it has to follow the mode. It ended with "You approve
@@ -348,12 +348,12 @@ final class AppShell {
 				 */
 				'desc'   => sprintf(
 					/* translators: %s: the mode-aware guarantee sentence. */
-					__( 'Ask your AI assistant to change this site, in your own words and your own language. %s', 'action-steward' ),
+					__( 'Ask your AI assistant to change this site, in your own words and your own language. %s', 'siteradian' ),
 					SecurityModeManager::promise()
 				),
 				'detail' => true,
 				'tabs'  => [
-					'home' => [ 'label' => __( 'Home', 'action-steward' ), 'view' => 'command-home', 'feature' => null ],
+					'home' => [ 'label' => __( 'Home', 'siteradian' ), 'view' => 'command-home', 'feature' => null ],
 				],
 			],
 			// Was "Activity" — a word that describes nothing a customer wants. This
@@ -361,28 +361,28 @@ final class AppShell {
 			// draft surface that used to share it are engine internals; they moved to
 			// Settings › Advanced where the rest of the machinery lives.
 			self::ACTIVITY_SLUG => [
-				'label'  => __( 'Approvals', 'action-steward' ),
+				'label'  => __( 'Approvals', 'siteradian' ),
 				// Mode-aware: on a Development site nothing new is held here, but a
 				// queue built up before the switch still is. See approvals_desc().
 				'desc'   => SecurityModeManager::approvals_desc(),
 				'detail' => true,
 				'tabs'  => [
-					'approvals' => [ 'label' => __( 'Approvals', 'action-steward' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
+					'approvals' => [ 'label' => __( 'Approvals', 'siteradian' ), 'view' => 'approval-center', 'feature' => 'approval_center' ],
 				],
 			],
 			// Was "History" — the system's word for it. The customer calls these
 			// changes, and comes here to see or undo one.
 			self::HISTORY_SLUG => [
-				'label'  => __( 'Changes', 'action-steward' ),
-				'desc'   => __( 'Everything that has changed on this site. Supported changes can be undone from here.', 'action-steward' ),
+				'label'  => __( 'Changes', 'siteradian' ),
+				'desc'   => __( 'Everything that has changed on this site. Supported changes can be undone from here.', 'siteradian' ),
 				'detail' => true,
 				'tabs'  => [
-					'changes' => [ 'label' => __( 'Changes', 'action-steward' ), 'view' => 'change-history', 'feature' => 'change_history' ],
+					'changes' => [ 'label' => __( 'Changes', 'siteradian' ), 'view' => 'change-history', 'feature' => 'change_history' ],
 				],
 			],
 			self::SETTINGS_SLUG => [
-				'label'  => __( 'Settings', 'action-steward' ),
-				'desc'   => __( 'How this site is protected, who can reach it, and everything advanced.', 'action-steward' ),
+				'label'  => __( 'Settings', 'siteradian' ),
+				'desc'   => __( 'How this site is protected, who can reach it, and everything advanced.', 'siteradian' ),
 				// No Detailed view: Settings screens are already the detailed ones.
 				// Advanced is, by its own subtitle, "everything a normal customer
 				// never needs to open" — there is nothing here to progressively
@@ -393,9 +393,9 @@ final class AppShell {
 				//   Connections — who is allowed to reach this site?
 				//   Advanced    — everything a normal customer never needs.
 				'tabs'  => [
-					'security'    => [ 'label' => __( 'Protection', 'action-steward' ),  'view' => 'settings',             'feature' => null ],
-					'connections' => [ 'label' => __( 'Connections', 'action-steward' ), 'view' => 'settings-connections', 'feature' => null ],
-					'advanced'    => [ 'label' => __( 'Advanced', 'action-steward' ),    'view' => 'settings-advanced',    'feature' => null ],
+					'security'    => [ 'label' => __( 'Protection', 'siteradian' ),  'view' => 'settings',             'feature' => null ],
+					'connections' => [ 'label' => __( 'Connections', 'siteradian' ), 'view' => 'settings-connections', 'feature' => null ],
+					'advanced'    => [ 'label' => __( 'Advanced', 'siteradian' ),    'view' => 'settings-advanced',    'feature' => null ],
 				],
 			],
 		];
@@ -438,19 +438,19 @@ final class AppShell {
 	public static function connection_panes(): array {
 		$panes = [
 			'assistants' => [
-				'label'    => __( 'Assistants', 'action-steward' ),
+				'label'    => __( 'Assistants', 'siteradian' ),
 				'view'     => 'ai-integrations',
 				'feature'  => null,
 				'keywords' => 'assistant ai claude chatgpt cursor codex gemini copilot continue opencode antigravity muse connect client mcp setup',
 			],
 			'api'        => [
-				'label'    => __( 'Your own software', 'action-steward' ),
+				'label'    => __( 'Your own software', 'siteradian' ),
 				'view'     => 'api-integrations',
 				'feature'  => null,
 				'keywords' => 'api rest developer integration endpoint openapi code',
 			],
 			'tokens'     => [
-				'label'    => __( 'Access tokens', 'action-steward' ),
+				'label'    => __( 'Access tokens', 'siteradian' ),
 				'view'     => 'token-capability-manager',
 				'feature'  => 'token_capability_manager',
 				'keywords' => 'token tokens access key secret revoke expire scope capabilities permission',
@@ -472,25 +472,25 @@ final class AppShell {
 	public static function advanced_panes(): array {
 		$panes = [
 			'ai'           => [
-				'label'    => __( 'Built-in AI', 'action-steward' ),
+				'label'    => __( 'Built-in AI', 'siteradian' ),
 				'view'     => 'settings-ai',
 				'feature'  => null,
 				'keywords' => 'ai provider anthropic openai api key model seo alt text content generate',
 			],
 			'diagnostics'  => [
-				'label'    => __( 'Diagnostics', 'action-steward' ),
+				'label'    => __( 'Diagnostics', 'siteradian' ),
 				'view'     => 'settings-diagnostics',
 				'feature'  => null,
 				'keywords' => 'diagnostics health troubleshoot problem report recommendations patches status check',
 			],
 			'system'       => [
-				'label'    => __( 'System', 'action-steward' ),
+				'label'    => __( 'System', 'siteradian' ),
 				'view'     => 'operations-center',
 				'feature'  => null,
 				'keywords' => 'system engine runtime live feed operations activity queue',
 			],
 			'capabilities' => [
-				'label'    => __( 'Capabilities', 'action-steward' ),
+				'label'    => __( 'Capabilities', 'siteradian' ),
 				'view'     => 'operations-explorer',
 				'feature'  => 'operations_explorer',
 				'keywords' => 'capabilities capability operations permissions allowed map what can it do',
@@ -500,7 +500,7 @@ final class AppShell {
 		// Dev-only proposal surface: build-flagged, off on a stock install.
 		if ( self::proposals_ui_enabled() ) {
 			$panes['drafts'] = [
-				'label'    => __( 'Drafts (Dev)', 'action-steward' ),
+				'label'    => __( 'Drafts (Dev)', 'siteradian' ),
 				'view'     => 'proposals',
 				'feature'  => null,
 				'keywords' => 'drafts proposals pending suggestions',
@@ -511,13 +511,13 @@ final class AppShell {
 		// REST/MCP; these screens appear only when developer tools are switched on.
 		if ( DeveloperTools::enabled() ) {
 			$panes['files'] = [
-				'label'    => __( 'File access', 'action-steward' ),
+				'label'    => __( 'File access', 'siteradian' ),
 				'view'     => 'file-access',
 				'feature'  => null,
 				'keywords' => 'files file access browse read theme plugin code',
 			];
 			$panes['tools'] = [
-				'label'    => __( 'Search & replace', 'action-steward' ),
+				'label'    => __( 'Search & replace', 'siteradian' ),
 				'view'     => 'tools-search-replace',
 				'feature'  => null,
 				'keywords' => 'search replace database find text bulk',
@@ -570,7 +570,7 @@ final class AppShell {
 	 * fuzzily: the longer and more varied a searchable string, the more likely some
 	 * unrelated query's letters appear across it in order. Feeding it the inherited
 	 * words was enough to make "protection" rank Changes above Protection — Changes
-	 * does not contain the word at all, but "Action Steward: Changes … rollback
+	 * does not contain the word at all, but "SiteRadian AI: Changes … rollback
 	 * revert restore …" contains its letters in sequence. The plugin's own palette
 	 * matches contiguously and is unaffected, so it keeps using `keywords`; see
 	 * CommandPaletteIntegration for the other consumer.
@@ -610,7 +610,7 @@ final class AppShell {
 			if ( self::HOME_SLUG === $slug || count( $section['tabs'] ) <= 1 ) {
 				$add(
 					$section['label'],
-					__( 'Section', 'action-steward' ),
+					__( 'Section', 'siteradian' ),
 					admin_url( 'admin.php?page=' . $slug ),
 					$keywords
 				);
@@ -750,7 +750,7 @@ final class AppShell {
 			 * core and every other plugin render normally, just in one predictable band.
 			 */
 			?>
-			<div class="wpcc-shell__notices" role="region" aria-label="<?php esc_attr_e( 'WordPress notices', 'action-steward' ); ?>">
+			<div class="wpcc-shell__notices" role="region" aria-label="<?php esc_attr_e( 'WordPress notices', 'siteradian' ); ?>">
 				<hr class="wp-header-end" />
 			</div>
 
@@ -801,16 +801,16 @@ final class AppShell {
 						printf(
 							'<img src="%1$s" alt="%2$s" class="wpcc-shell__brand-mark" width="26" height="26" decoding="async" />',
 							esc_url( Brand::mark() ),
-							esc_attr__( 'Action Steward', 'action-steward' )
+							esc_attr__( 'SiteRadian AI', 'siteradian' )
 						);
 						?>
 						<?php
 						/*
 						 * NAMING HIERARCHY — each surface names one thing, once.
 						 *
-						 *   admin menu       -> "Action Steward"  (which product, globally)
+						 *   admin menu       -> "SiteRadian AI"  (which product, globally)
 						 *   shell header     -> the current area     (where you are, now)
-						 *   first-run lockup -> "Action Steward"  (the introduction)
+						 *   first-run lockup -> "SiteRadian AI"  (the introduction)
 						 *
 						 * This heading used to read "Command Center / Approvals": a third spelling
 						 * of the product name, repeated on every screen at 18px, with the one word
@@ -837,7 +837,7 @@ final class AppShell {
 					<?php endif; ?>
 				</div>
 				<div class="wpcc-shell__tools">
-					<span class="wpcc-shell__posture" data-mode="<?php echo esc_attr( $mode ); ?>" title="<?php esc_attr_e( 'Current security mode', 'action-steward' ); ?>">
+					<span class="wpcc-shell__posture" data-mode="<?php echo esc_attr( $mode ); ?>" title="<?php esc_attr_e( 'Current security mode', 'siteradian' ); ?>">
 						<?php echo esc_html( $label ); ?>
 					</span>
 					<?php
@@ -847,9 +847,9 @@ final class AppShell {
 					// to decide how much detail they wanted.
 					?>
 					<?php if ( $has_started && ! empty( $section['detail'] ) ) : ?>
-						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'action-steward' ); ?>">
-							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'action-steward' ); ?></button>
-							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'action-steward' ); ?></button>
+						<div class="wpcc-shell__modes" role="group" aria-label="<?php esc_attr_e( 'Level of detail', 'siteradian' ); ?>">
+							<button type="button" class="wpcc-shell__mode" data-mode="builder" aria-pressed="true"><?php esc_html_e( 'Simple', 'siteradian' ); ?></button>
+							<button type="button" class="wpcc-shell__mode" data-mode="engineer" aria-pressed="false"><?php esc_html_e( 'Detailed', 'siteradian' ); ?></button>
 						</div>
 					<?php endif; ?>
 					<?php
@@ -858,7 +858,7 @@ final class AppShell {
 					?>
 					<?php if ( $has_started ) : ?>
 						<button type="button" class="wpcc-shell__cmdk" aria-haspopup="dialog">
-							<?php esc_html_e( 'Search', 'action-steward' ); ?> <kbd>&#8984;K</kbd>
+							<?php esc_html_e( 'Search', 'siteradian' ); ?> <kbd>&#8984;K</kbd>
 						</button>
 					<?php endif; ?>
 				</div>
@@ -902,9 +902,9 @@ final class AppShell {
 	private function render_empty_section( string $label ): void {
 		?>
 		<div class="wpcc-cds-empty" role="status">
-			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'action-steward' ), $label ) ); ?></strong></p>
-			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in Action Steward stays available.', 'action-steward' ); ?></p>
-			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'action-steward' ); ?></a></p>
+			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'siteradian' ), $label ) ); ?></strong></p>
+			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in SiteRadian AI stays available.', 'siteradian' ); ?></p>
+			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'siteradian' ); ?></a></p>
 		</div>
 		<?php
 	}

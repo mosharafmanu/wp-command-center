@@ -82,13 +82,17 @@ final class CodexIntegration extends BaseClientIntegration {
 		// configuration block completes these commands too. A second placeholder string
 		// would be a second thing to keep in sync, and the last time this screen had two
 		// they drifted apart and the fill silently stopped working.
-		$value = '' !== $token ? $token : AIClientRegistry::TOKEN_PLACEHOLDER;
-		$var   = self::credential_env_var();
+		$value              = '' !== $token ? $token : AIClientRegistry::TOKEN_PLACEHOLDER;
+		$var                = self::credential_env_var();
+		$powershell_literal = str_replace( "'", "''", $value );
 
 		return [
 			'macos'   => sprintf( 'export %s=%s', $var, escapeshellarg( $value ) ),
 			'linux'   => sprintf( 'export %s=%s', $var, escapeshellarg( $value ) ),
-			'windows' => sprintf( 'setx %s "%s"', $var, $value ),
+			// PowerShell's process environment is inherited by Codex launched from this
+			// window. `setx` only affects future processes, which contradicted the guided
+			// same-terminal flow and reproduced the missing-variable failure on Windows.
+			'windows' => sprintf( "\$env:%s = '%s'", $var, $powershell_literal ),
 		];
 	}
 
@@ -117,8 +121,9 @@ final class CodexIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Why the launch command: the current codex mcp add command can register the URL and token-variable name, but it cannot safely set or merge Codex’s server-specific approval mode. The copy-ready on-request launch keeps client approvals available without changing your global Codex settings.', 'action-steward' ),
-			__( 'Advanced persistent option: Codex supports default_tools_approval_mode = "writes" inside [mcp_servers.wp-command-center]. It skips the client prompt only for tools Action Steward truthfully marks read-only and prompts for other Action Steward tools. Add it manually only if you are comfortable merging TOML; Action Steward never edits the file itself.', 'action-steward' ),
+			__( '“Environment variable WPCC_TOKEN is not set” means Codex started outside the terminal session that received the token. The MCP registration persists, but the WPCC_TOKEN value in that terminal environment does not persist after the session is gone. Return to the original terminal, or set a valid token again in a new terminal before starting Codex. You do not need to recreate the MCP registration.', 'siteradian' ),
+			__( 'Why the launch command: the current codex mcp add command can register the URL and token-variable name, but it cannot safely set or merge Codex’s server-specific approval mode. The copy-ready on-request launch keeps client approvals available without changing your global Codex settings.', 'siteradian' ),
+			__( 'Advanced persistent option: Codex supports default_tools_approval_mode = "writes" inside [mcp_servers.wp-command-center]. It skips the client prompt only for tools SiteRadian AI truthfully marks read-only and prompts for other SiteRadian AI tools. Add it manually only if you are comfortable merging TOML; SiteRadian AI never edits the file itself.', 'siteradian' ),
 		];
 	}
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# Action Steward — Create Content Workflow Example
+# SiteRadian AI — Create Content Workflow Example
 # ──────────────────────────────────────────────────────────────────────────────
 # Demonstrates the operation request → approve → execute → check results
 # lifecycle using the REST API.
@@ -27,7 +27,7 @@ else
   exit 1
 fi
 
-echo "=== Action Steward — Create Content Workflow ==="
+echo "=== SiteRadian AI — Create Content Workflow ==="
 echo ""
 
 # ── Helper ──

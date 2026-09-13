@@ -15,17 +15,17 @@ if ( ! in_array( $tab, $valid_tabs, true ) ) {
 }
 
 $tabs = [
-	'performance' => __( 'Performance', 'action-steward' ),
-	'security'    => __( 'Security', 'action-steward' ),
-	'woocommerce' => __( 'WooCommerce', 'action-steward' ),
-	'debug-log'   => __( 'Debug Log', 'action-steward' ),
+	'performance' => __( 'Performance', 'siteradian' ),
+	'security'    => __( 'Security', 'siteradian' ),
+	'woocommerce' => __( 'WooCommerce', 'siteradian' ),
+	'debug-log'   => __( 'Debug Log', 'siteradian' ),
 ];
 
 $status_labels = [
-	'good'        => __( 'Good', 'action-steward' ),
-	'recommended' => __( 'Recommended', 'action-steward' ),
-	'critical'    => __( 'Critical', 'action-steward' ),
-	'info'        => __( 'Info', 'action-steward' ),
+	'good'        => __( 'Good', 'siteradian' ),
+	'recommended' => __( 'Recommended', 'siteradian' ),
+	'critical'    => __( 'Critical', 'siteradian' ),
+	'info'        => __( 'Info', 'siteradian' ),
 ];
 
 // CDS status pill — color carries meaning (good=success, recommended=warning,
@@ -49,9 +49,9 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 	<table class="widefat striped wpcc-cds-table wpcc-table">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Check', 'action-steward' ); ?></th>
-				<th><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
-				<th><?php esc_html_e( 'Details', 'action-steward' ); ?></th>
+				<th><?php esc_html_e( 'Check', 'siteradian' ); ?></th>
+				<th><?php esc_html_e( 'Status', 'siteradian' ); ?></th>
+				<th><?php esc_html_e( 'Details', 'siteradian' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -68,8 +68,8 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 };
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'Diagnostics', 'action-steward' ); ?></h1>
-	<p><?php esc_html_e( 'Performance, security, and WooCommerce diagnostics, plus the debug log viewer.', 'action-steward' ); ?></p>
+	<h1><?php esc_html_e( 'Diagnostics', 'siteradian' ); ?></h1>
+	<p><?php esc_html_e( 'Performance, security, and WooCommerce diagnostics, plus the debug log viewer.', 'siteradian' ); ?></p>
 
 	<h2 class="nav-tab-wrapper">
 		<?php foreach ( $tabs as $tab_id => $tab_label ) : ?>
@@ -107,7 +107,7 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 			if ( is_wp_error( $cleared ) ) {
 				printf( '<div class="wpcc-cds-notice wpcc-cds-notice--danger"><p>%s</p></div>', esc_html( $cleared->get_error_message() ) );
 			} else {
-				printf( '<div class="wpcc-cds-notice wpcc-cds-notice--success"><p>%s</p></div>', esc_html__( 'Debug log cleared.', 'action-steward' ) );
+				printf( '<div class="wpcc-cds-notice wpcc-cds-notice--success"><p>%s</p></div>', esc_html__( 'Debug log cleared.', 'siteradian' ) );
 			}
 		}
 
@@ -124,13 +124,13 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 		<form method="get" class="wpcc-debug-log-controls">
 			<input type="hidden" name="page" value="wpcc-diagnostics" />
 			<input type="hidden" name="tab" value="debug-log" />
-			<label for="wpcc-lines"><?php esc_html_e( 'Lines:', 'action-steward' ); ?></label>
+			<label for="wpcc-lines"><?php esc_html_e( 'Lines:', 'siteradian' ); ?></label>
 			<select name="lines" id="wpcc-lines" onchange="this.form.submit()">
 				<?php foreach ( $line_options as $option ) : ?>
 					<option value="<?php echo esc_attr( $option ); ?>" <?php selected( $lines, $option ); ?>><?php echo esc_html( $option ); ?></option>
 				<?php endforeach; ?>
 			</select>
-			<?php submit_button( __( 'Refresh', 'action-steward' ), 'secondary', '', false ); ?>
+			<?php submit_button( __( 'Refresh', 'siteradian' ), 'secondary', '', false ); ?>
 		</form>
 
 		<?php if ( is_wp_error( $result ) ) : ?>
@@ -143,13 +143,13 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 				<?php
 				printf(
 					/* translators: 1: file size, 2: last modified date/time */
-					esc_html__( 'Size: %1$s — Last modified: %2$s', 'action-steward' ),
+					esc_html__( 'Size: %1$s — Last modified: %2$s', 'siteradian' ),
 					esc_html( size_format( $result['size'] ) ),
 					esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $result['modified'] ) )
 				);
 
 				if ( $result['truncated'] ) {
-					echo ' &mdash; ' . esc_html__( 'showing the most recent portion of a large log file.', 'action-steward' );
+					echo ' &mdash; ' . esc_html__( 'showing the most recent portion of a large log file.', 'siteradian' );
 				}
 				?>
 			</p>
@@ -176,7 +176,7 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 			}
 			?>
 			<?php if ( ! $wpcc_log_has_content ) : ?>
-				<div class="wpcc-cds-empty"><div class="wpcc-cds-empty__title"><?php esc_html_e( 'The debug log is empty.', 'action-steward' ); ?></div></div>
+				<div class="wpcc-cds-empty"><div class="wpcc-cds-empty__title"><?php esc_html_e( 'The debug log is empty.', 'siteradian' ); ?></div></div>
 			<?php else : ?>
 				<pre class="wpcc-debug-log"><?php foreach ( $result['lines'] as $line ) : ?><span class="wpcc-log-line wpcc-log-line--<?php echo esc_attr( $line['level'] ); ?>"><?php echo esc_html( $line['text'] ); ?>
 </span><?php endforeach; ?></pre>
@@ -185,7 +185,7 @@ $render_checks = static function ( array $checks ) use ( $status_badge ): void {
 			<form method="post">
 				<?php wp_nonce_field( 'wpcc_clear_debug_log' ); ?>
 				<input type="hidden" name="wpcc_action" value="clear_debug_log" />
-				<?php submit_button( __( 'Clear Log', 'action-steward' ), 'delete', 'submit', false ); ?>
+				<?php submit_button( __( 'Clear Log', 'siteradian' ), 'delete', 'submit', false ); ?>
 			</form>
 
 		<?php endif; ?>

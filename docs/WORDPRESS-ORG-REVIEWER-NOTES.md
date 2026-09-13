@@ -1,6 +1,6 @@
 # Notes for the WordPress.org Plugin Review Team
 
-Action Steward 1.0.2. These are the four things in this plugin that reasonably prompt a
+SiteRadian AI 1.0.0. These are the four things in this plugin that reasonably prompt a
 reviewer question, stated plainly with where to look.
 
 ---
@@ -12,7 +12,7 @@ Desktop, Cursor, Codex and similar tools. It contains:
 
 ```
 bash -c "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" \
-  'https://example.com/wp-content/plugins/action-steward/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.2'; node \"$RELAY\""
+  'https://example.com/wp-content/plugins/siteradian/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""
 ```
 
 **What it is.** A stdio↔HTTP bridge that runs on the **site owner's own computer**, under

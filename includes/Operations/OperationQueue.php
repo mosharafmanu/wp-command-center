@@ -34,11 +34,11 @@ final class OperationQueue {
 		$request = $manager->get_request( $request_id );
 
 		if ( ! $request ) {
-			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_request_not_found', __( 'Operation request not found.', 'siteradian' ) );
 		}
 
 		if ( OperationManager::STATUS_APPROVED !== $request['status'] ) {
-			return new \WP_Error( 'wpcc_request_not_approved', __( 'Only approved requests can be queued.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_request_not_approved', __( 'Only approved requests can be queued.', 'siteradian' ) );
 		}
 
 		$existing = $wpdb->get_row(
@@ -73,7 +73,7 @@ final class OperationQueue {
 		);
 
 		if ( false === $inserted ) {
-			return new \WP_Error( 'wpcc_queue_create_failed', __( 'Failed to create queue item.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_queue_create_failed', __( 'Failed to create queue item.', 'siteradian' ) );
 		}
 
 		( new AuditLog() )->record( 'operation.queue.created', [
@@ -98,11 +98,11 @@ final class OperationQueue {
 
 		$item = $this->get_item( $queue_id );
 		if ( ! $item ) {
-			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'siteradian' ) );
 		}
 
 		if ( self::STATUS_QUEUED !== $item['status'] && self::STATUS_FAILED !== $item['status'] ) {
-			return new \WP_Error( 'wpcc_invalid_queue_status', sprintf( /* translators: %s: value */ __( 'Cannot run queue item in status %s.', 'action-steward' ), $item['status'] ) );
+			return new \WP_Error( 'wpcc_invalid_queue_status', sprintf( /* translators: %s: value */ __( 'Cannot run queue item in status %s.', 'siteradian' ), $item['status'] ) );
 		}
 
 		// B2-2 execute-once (queue path). Do not run a queue item whose request was
@@ -127,7 +127,7 @@ final class OperationQueue {
 				'path'         => 'queue',
 				'reason'       => 'request_' . $request['status'],
 			] );
-			return new \WP_Error( 'wpcc_request_already_terminal', sprintf( /* translators: %s: value */ __( 'Skipped queue item: request is already %s.', 'action-steward' ), $request['status'] ) );
+			return new \WP_Error( 'wpcc_request_already_terminal', sprintf( /* translators: %s: value */ __( 'Skipped queue item: request is already %s.', 'siteradian' ), $request['status'] ) );
 		}
 
 		// Mark as running
@@ -203,11 +203,11 @@ final class OperationQueue {
 
 		$item = $this->get_item( $queue_id );
 		if ( ! $item ) {
-			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'siteradian' ) );
 		}
 
 		if ( ! in_array( $item['status'], [ self::STATUS_QUEUED, self::STATUS_FAILED ], true ) ) {
-			return new \WP_Error( 'wpcc_cannot_cancel', sprintf( /* translators: %s: value */ __( 'Cannot cancel queue item in status %s.', 'action-steward' ), $item['status'] ) );
+			return new \WP_Error( 'wpcc_cannot_cancel', sprintf( /* translators: %s: value */ __( 'Cannot cancel queue item in status %s.', 'siteradian' ), $item['status'] ) );
 		}
 
 		$updated = $wpdb->update(
@@ -229,15 +229,15 @@ final class OperationQueue {
 
 		$item = $this->get_item( $queue_id );
 		if ( ! $item ) {
-			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_queue_item_not_found', __( 'Queue item not found.', 'siteradian' ) );
 		}
 
 		if ( self::STATUS_FAILED !== $item['status'] ) {
-			return new \WP_Error( 'wpcc_cannot_retry', sprintf( /* translators: %s: value */ __( 'Cannot retry queue item in status %s.', 'action-steward' ), $item['status'] ) );
+			return new \WP_Error( 'wpcc_cannot_retry', sprintf( /* translators: %s: value */ __( 'Cannot retry queue item in status %s.', 'siteradian' ), $item['status'] ) );
 		}
 
 		if ( (int) $item['attempts'] >= (int) $item['max_attempts'] ) {
-			return new \WP_Error( 'wpcc_max_attempts_reached', __( 'Maximum retry attempts reached.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_max_attempts_reached', __( 'Maximum retry attempts reached.', 'siteradian' ) );
 		}
 
 		$updated = $wpdb->update(
@@ -249,7 +249,7 @@ final class OperationQueue {
 		);
 
 		if ( false === $updated ) {
-			return new \WP_Error( 'wpcc_queue_update_failed', __( 'Failed to queue the retry.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_queue_update_failed', __( 'Failed to queue the retry.', 'siteradian' ) );
 		}
 
 		return $this->get_item( $queue_id );

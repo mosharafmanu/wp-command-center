@@ -40,11 +40,11 @@ if ( ! isset( $wpcc_adv_panes[ $wpcc_adv_active ] ) ) {
 ?>
 <div class="wpcc-settings-advanced">
 	<p class="description" style="max-width:70ch;margin:0 0 16px;">
-		<?php esc_html_e( 'Everything below is optional. A site that just wants an AI assistant working safely never needs to open this tab.', 'action-steward' ); ?>
+		<?php esc_html_e( 'Everything below is optional. A site that just wants an AI assistant working safely never needs to open this tab.', 'siteradian' ); ?>
 	</p>
 
 	<?php if ( count( $wpcc_adv_panes ) > 1 ) : ?>
-		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Advanced sections', 'action-steward' ); ?>">
+		<nav class="wpcc-cds-subnav" aria-label="<?php esc_attr_e( 'Advanced sections', 'siteradian' ); ?>">
 			<?php foreach ( $wpcc_adv_panes as $wpcc_ak => $wpcc_ap ) : ?>
 				<a class="wpcc-cds-subnav__item<?php echo $wpcc_ak === $wpcc_adv_active ? ' is-active' : ''; ?>"
 					href="<?php echo esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=' . $wpcc_ak ) ); ?>"
@@ -63,7 +63,7 @@ if ( ! isset( $wpcc_adv_panes[ $wpcc_adv_active ] ) ) {
 				require $wpcc_adv_path;
 			}
 		} else {
-			echo '<div class="wpcc-cds-empty" role="status"><p class="description">' . esc_html__( 'No advanced surfaces are available in this edition.', 'action-steward' ) . '</p></div>';
+			echo '<div class="wpcc-cds-empty" role="status"><p class="description">' . esc_html__( 'No advanced surfaces are available in this edition.', 'siteradian' ) . '</p></div>';
 		}
 		?>
 	</div>

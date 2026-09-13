@@ -96,7 +96,8 @@ assert_not_contains "Codex macOS: no launchctl" "$CRED_MAC" "launchctl"
 DESKTOP_MAC="$(wpe "\$c=WPCommandCenter\\Integration\\AIClientRegistry::credential_commands_for('chatgpt'); echo \$c['macos'];")"
 assert_contains "Desktop macOS: launchctl remains" "$DESKTOP_MAC" "launchctl setenv WPCC_TOKEN"
 assert_contains "linux: uses export"              "$CRED_LIN" "export WPCC_TOKEN="
-assert_contains "windows: uses setx"              "$CRED_WIN" "setx WPCC_TOKEN"
+assert_contains "windows: sets current PowerShell session" "$CRED_WIN" '$env:WPCC_TOKEN ='
+assert_not_contains "windows: does not defer token to a future shell" "$CRED_WIN" "setx WPCC_TOKEN"
 
 # Unfilled, these carry the shared placeholder so the browser-side fill completes them.
 assert_contains "macOS: carries the fillable placeholder" "$CRED_MAC" '${WPCC_TOKEN}'

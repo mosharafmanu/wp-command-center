@@ -2,6 +2,23 @@
 
 ---
 
+## Codex: `Environment variable WPCC_TOKEN is not set`
+
+The MCP registration persists in `~/.codex/config.toml`. The token value does not: an
+`export WPCC_TOKEN=...` command applies only to that terminal session and programs
+started from it.
+
+Use either resolution:
+
+1. Return to the terminal where you set the token and start Codex there; or
+2. In a new terminal, set a valid `WPCC_TOKEN` again before starting Codex.
+
+You do not need to recreate the MCP registration if `codex mcp list` already shows
+`wp-command-center`. During initial setup, keep the terminal open and run all three
+recommended steps in that same terminal window.
+
+---
+
 ## Missing API token
 
 **Symptom:** every request returns "Missing API token" even though the token is valid.
@@ -9,7 +26,7 @@
 **Cause:** some server configurations (commonly Apache with CGI/FastCGI) never populate
 `$_SERVER['HTTP_AUTHORIZATION']`, so WordPress's own header lookup sees nothing.
 
-Action Steward already checks the alternative sources core and the ecosystem use, so this usually
+SiteRadian AI already checks the alternative sources core and the ecosystem use, so this usually
 resolves itself. If it persists, add to `.htaccess`:
 
 ```apache
@@ -38,7 +55,7 @@ not resolve.
 https://example.com/index.php?rest_route=/wp-command-center/v1/health
 ```
 
-Configurations Action Steward generates already use whichever form is correct for your site.
+Configurations SiteRadian AI generates already use whichever form is correct for your site.
 
 ---
 
@@ -49,7 +66,7 @@ Work through these in order:
 1. **Is Node installed** on the machine running the client? `node --version`.
 2. **Is the relay reachable?**
    ```bash
-   curl -sI https://example.com/wp-content/plugins/action-steward/sdk/javascript/wpcc-mcp-relay.mjs
+   curl -sI https://example.com/wp-content/plugins/siteradian/sdk/javascript/wpcc-mcp-relay.mjs
    ```
    Expect `200`. A `404` means the plugin files are not where the config expects.
 3. **Does the endpoint answer?**
@@ -67,7 +84,7 @@ Work through these in order:
 
 Working as designed. Standard protection gates every medium-risk or higher change.
 
-- Approve at **Action Steward → Approvals**.
+- Approve at **SiteRadian AI → Approvals**.
 - To let low-risk writes through automatically, that is already Standard protection's
   behaviour; Strict approval gates those too.
 - Development mode removes approval entirely — **local and staging only**.
@@ -125,7 +142,7 @@ current values) so you can decide what to do about each.
 
 ## Network activation is refused
 
-Intentional. Action Steward 1.0.2 is single-site: tokens, protection mode, approvals and history are
+Intentional. SiteRadian AI 1.0.0 is single-site: tokens, protection mode, approvals and history are
 per-site. Activate it on individual sites within the network instead. See
 [ARCHITECTURE.md](ARCHITECTURE.md#multisite).
 

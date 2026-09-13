@@ -272,7 +272,7 @@ final class AuditLog {
 	private function get_storage_dir(): string|\WP_Error {
 		return PrivateStore::dir(
 			self::DIR_NAME,
-			__( 'Failed to create the audit log directory.', 'action-steward' )
+			__( 'Failed to create the audit log directory.', 'siteradian' )
 		);
 	}
 

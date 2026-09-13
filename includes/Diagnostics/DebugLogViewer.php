@@ -23,11 +23,11 @@ final class DebugLogViewer {
 		$path = $this->get_log_path();
 
 		if ( ! file_exists( $path ) ) {
-			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'siteradian' ) );
 		}
 
 		if ( ! is_readable( $path ) ) {
-			return new \WP_Error( 'wpcc_unreadable_debug_log', __( 'debug.log exists but is not readable.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_unreadable_debug_log', __( 'debug.log exists but is not readable.', 'siteradian' ) );
 		}
 
 		$size = filesize( $path );
@@ -36,7 +36,7 @@ final class DebugLogViewer {
 		$handle = fopen( $path, 'rb' );
 
 		if ( false === $handle ) {
-			return new \WP_Error( 'wpcc_open_failed', __( 'Failed to open debug.log.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_open_failed', __( 'Failed to open debug.log.', 'siteradian' ) );
 		}
 
 		$read_bytes = min( $size, self::MAX_READ_BYTES );
@@ -73,11 +73,11 @@ final class DebugLogViewer {
 		$path = $this->get_log_path();
 
 		if ( ! file_exists( $path ) ) {
-			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_no_debug_log', __( 'No debug.log file was found.', 'siteradian' ) );
 		}
 
 		if ( ! wp_is_writable( $path ) ) {
-			return new \WP_Error( 'wpcc_unwritable_debug_log', __( 'debug.log exists but is not writable.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_unwritable_debug_log', __( 'debug.log exists but is not writable.', 'siteradian' ) );
 		}
 
 		return false !== file_put_contents( $path, '' );

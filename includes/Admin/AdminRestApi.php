@@ -504,7 +504,7 @@ final class AdminRestApi {
 
 		$proposal = ( new ProposalAdminQuery() )->get( $id );
 		if ( null === $proposal ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_proposal_not_found', 'message' => __( 'Proposal not found.', 'action-steward' ) ], 404 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_proposal_not_found', 'message' => __( 'Proposal not found.', 'siteradian' ) ], 404 );
 		}
 		return new \WP_REST_Response( $proposal, 200 );
 	}
@@ -577,10 +577,10 @@ final class AdminRestApi {
 
 		$feature = [ 'title' => 'title_generator', 'excerpt' => 'excerpt_generator' ][ $kind ] ?? '';
 		if ( '' === $feature ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_generate_kind', 'message' => __( 'Unsupported content generation kind.', 'action-steward' ) ], 400 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_generate_kind', 'message' => __( 'Unsupported content generation kind.', 'siteradian' ) ], 400 );
 		}
 		if ( ! FeatureGate::allows( $feature ) ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_feature_unavailable', 'message' => __( 'This feature is not available in the current edition.', 'action-steward' ) ], 403 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_feature_unavailable', 'message' => __( 'This feature is not available in the current edition.', 'siteradian' ) ], 403 );
 		}
 		/*
 		 * The Content tool must actually be switched on.
@@ -592,10 +592,10 @@ final class AdminRestApi {
 		 * everywhere, not just where the buttons happen to be hidden.
 		 */
 		if ( ! BuiltinAiSettings::is_on( 'content' ) ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_tool_disabled', 'message' => __( 'The Content tool is switched off for this site.', 'action-steward' ) ], 403 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_tool_disabled', 'message' => __( 'The Content tool is switched off for this site.', 'siteradian' ) ], 403 );
 		}
 		if ( $post_id <= 0 ) {
-			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_post_id', 'message' => __( 'A valid post id is required.', 'action-steward' ) ], 400 );
+			return new \WP_REST_Response( [ 'error' => true, 'code' => 'wpcc_invalid_post_id', 'message' => __( 'A valid post id is required.', 'siteradian' ) ], 400 );
 		}
 
 		$result = ( new ContentFieldGenerator() )->generate( $post_id, $kind, [
@@ -759,7 +759,7 @@ final class AdminRestApi {
 						'warning'               => $destructive['warning'],
 						'message'               => sprintf(
 							/* translators: %s: confirmation phrase */
-							__( 'This is a destructive approval. Type the phrase "%s" and a reason to confirm.', 'action-steward' ),
+							__( 'This is a destructive approval. Type the phrase "%s" and a reason to confirm.', 'siteradian' ),
 							$destructive['phrase']
 						),
 					], 200 );
@@ -888,7 +888,7 @@ final class AdminRestApi {
 
 		if ( null === $detail ) {
 			return new \WP_REST_Response(
-				[ 'success' => false, 'code' => 'wpcc_request_not_found', 'message' => __( 'Operation request not found.', 'action-steward' ) ],
+				[ 'success' => false, 'code' => 'wpcc_request_not_found', 'message' => __( 'Operation request not found.', 'siteradian' ) ],
 				404
 			);
 		}
@@ -928,7 +928,7 @@ final class AdminRestApi {
 				'diff_kind' => 'patch_unavailable',
 				'available' => false,
 				'summary'   => null,
-				'html'      => '<p class="description">' . esc_html__( 'The diff for this patch is no longer available (its snapshot has been cleaned up).', 'action-steward' ) . '</p>',
+				'html'      => '<p class="description">' . esc_html__( 'The diff for this patch is no longer available (its snapshot has been cleaned up).', 'siteradian' ) . '</p>',
 			];
 		}
 
@@ -1006,7 +1006,7 @@ final class AdminRestApi {
 
 		if ( ! $row ) {
 			return new \WP_REST_Response(
-				[ 'success' => false, 'code' => 'wpcc_result_not_found', 'message' => __( 'Operation result not found.', 'action-steward' ) ],
+				[ 'success' => false, 'code' => 'wpcc_result_not_found', 'message' => __( 'Operation result not found.', 'siteradian' ) ],
 				404
 			);
 		}
@@ -1073,8 +1073,8 @@ final class AdminRestApi {
 			if ( is_wp_error( $patch ) || empty( $patch['files'] ) ) {
 				// Snapshot rotated/cleaned or no file records — degrade, never error.
 				return $this->diff_payload( $change_id, 'patch_unavailable', false, null,
-					'<p class="description">' . esc_html__( 'The diff for this change is no longer available (its snapshot has been cleaned up). The change metadata is shown above.', 'action-steward' ) . '</p>',
-					__( 'Diff snapshot unavailable.', 'action-steward' )
+					'<p class="description">' . esc_html__( 'The diff for this change is no longer available (its snapshot has been cleaned up). The change metadata is shown above.', 'siteradian' ) . '</p>',
+					__( 'Diff snapshot unavailable.', 'siteradian' )
 				);
 			}
 
@@ -1090,8 +1090,8 @@ final class AdminRestApi {
 
 		if ( 'none' === $kind ) {
 			return $this->diff_payload( $change_id, 'none', false, null,
-				'<p class="description">' . esc_html__( 'This change is not reversible and has no recorded diff.', 'action-steward' ) . '</p>',
-				__( 'No diff for this change.', 'action-steward' )
+				'<p class="description">' . esc_html__( 'This change is not reversible and has no recorded diff.', 'siteradian' ) . '</p>',
+				__( 'No diff for this change.', 'siteradian' )
 			);
 		}
 
@@ -1099,7 +1099,7 @@ final class AdminRestApi {
 		// before/after content, so present a structured "what changed" summary
 		// rather than a synthesized diff.
 		return $this->diff_payload( $change_id, 'metadata', false, null, $this->render_change_metadata( $change ),
-			__( 'Field-level change — previous value is restorable, but no textual diff is stored.', 'action-steward' )
+			__( 'Field-level change — previous value is restorable, but no textual diff is stored.', 'siteradian' )
 		);
 	}
 
@@ -1114,7 +1114,7 @@ final class AdminRestApi {
 		$counts = is_array( $change['counts'] ?? null ) ? $change['counts'] : [];
 		$html  .= '<p>' . esc_html( sprintf(
 			/* translators: 1: created, 2: updated, 3: skipped, 4: errors */
-			__( 'Created %1$d · Updated %2$d · Skipped %3$d · Errors %4$d', 'action-steward' ),
+			__( 'Created %1$d · Updated %2$d · Skipped %3$d · Errors %4$d', 'siteradian' ),
 			(int) ( $counts['created'] ?? 0 ),
 			(int) ( $counts['updated'] ?? 0 ),
 			(int) ( $counts['skipped'] ?? 0 ),
@@ -1130,7 +1130,7 @@ final class AdminRestApi {
 			}
 			$html .= '</tbody></table>';
 		} else {
-			$html .= '<p class="description">' . esc_html__( 'No field-level detail was recorded for this change.', 'action-steward' ) . '</p>';
+			$html .= '<p class="description">' . esc_html__( 'No field-level detail was recorded for this change.', 'siteradian' ) . '</p>';
 		}
 
 		$html .= '</div>';
@@ -1533,7 +1533,7 @@ final class AdminRestApi {
 				'success' => false,
 				'errors'  => [ [
 					'code'    => 'wpcc_invalid_expiry',
-					'message' => __( 'Choose when this token should stop working, then try again.', 'action-steward' ),
+					'message' => __( 'Choose when this token should stop working, then try again.', 'siteradian' ),
 				] ],
 			], 400 );
 		}

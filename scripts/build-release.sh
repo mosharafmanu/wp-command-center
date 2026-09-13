@@ -9,7 +9,7 @@
 # default.
 #
 # Usage:  ./scripts/build-release.sh [output-dir]
-# Output: <output-dir>/action-steward-<version>.zip  (default: ./build)
+# Output: <output-dir>/siteradian-<version>.zip  (default: ./build)
 
 set -euo pipefail
 
@@ -18,7 +18,7 @@ OUT_DIR="${1:-$ROOT/build}"
 if [[ "$OUT_DIR" != /* ]]; then
   OUT_DIR="$ROOT/$OUT_DIR"
 fi
-SLUG="action-steward"
+SLUG="siteradian"
 
 # Single source of truth for the version: the plugin header.
 VERSION="$( grep -m1 '^ \* Version:' "$ROOT/$SLUG.php" | sed -E 's/.*Version:[[:space:]]*//' | tr -d '[:space:]' )"
@@ -124,10 +124,36 @@ done < <( find "$DEST" -name '*.php' )
 # ── Package ─────────────────────────────────────────────────────────────────
 mkdir -p "$OUT_DIR"
 ZIP="$OUT_DIR/$SLUG-$VERSION.zip"
+SHA_FILE="$OUT_DIR/$SLUG-$VERSION.zip.sha256"
+FILES_MANIFEST="$OUT_DIR/$SLUG-$VERSION.files.sha256"
+RELEASE_MANIFEST="$OUT_DIR/$SLUG-$VERSION.manifest.txt"
 rm -f "$ZIP"
 ( cd "$STAGE" && zip -rq "$ZIP" "$SLUG" )
 
+( cd "$STAGE" && find "$SLUG" -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 ) > "$FILES_MANIFEST"
+ZIP_SHA="$( shasum -a 256 "$ZIP" | awk '{print $1}' )"
+TREE_SHA="$( shasum -a 256 "$FILES_MANIFEST" | awk '{print $1}' )"
+FILE_COUNT="$( find "$DEST" -type f | wc -l | tr -d ' ' )"
+SIZE_BYTES="$( wc -c < "$ZIP" | tr -d ' ' )"
+PRODUCT="$( grep -m1 '^ \* Plugin Name:' "$ROOT/$SLUG.php" | sed -E 's/.*Plugin Name:[[:space:]]*//' )"
+TEXT_DOMAIN="$( grep -m1 '^ \* Text Domain:' "$ROOT/$SLUG.php" | sed -E 's/.*Text Domain:[[:space:]]*//' | tr -d '[:space:]' )"
+
+printf '%s  %s\n' "$ZIP_SHA" "$( basename "$ZIP" )" > "$SHA_FILE"
+printf '%s\n' \
+  "Product: $PRODUCT" \
+  "Version: $VERSION" \
+  "Slug: $SLUG" \
+  "Text domain: $TEXT_DOMAIN" \
+  "Artifact: $( basename "$ZIP" )" \
+  "Size: $SIZE_BYTES bytes" \
+  "Files: $FILE_COUNT" \
+  "SHA-256: $ZIP_SHA" \
+  "Tree SHA-256: $TREE_SHA" \
+  > "$RELEASE_MANIFEST"
+
 echo "Built $ZIP"
 echo "  version : $VERSION"
-echo "  files   : $( find "$DEST" -type f | wc -l | tr -d ' ' )"
+echo "  files   : $FILE_COUNT"
 echo "  size    : $( du -h "$ZIP" | cut -f1 | tr -d ' ' )"
+echo "  sha256  : $ZIP_SHA"
+echo "  tree    : $TREE_SHA"

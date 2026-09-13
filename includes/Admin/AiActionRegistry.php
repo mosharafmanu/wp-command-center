@@ -149,9 +149,9 @@ final class AiActionRegistry {
 		$is_title = ( 'title' === $kind );
 		return [
 			'id'           => $kind,
-			'label'        => $is_title ? __( 'Generate Title', 'action-steward' ) : __( 'Generate Excerpt', 'action-steward' ),
-			'subject'      => $is_title ? __( 'title', 'action-steward' ) : __( 'excerpt', 'action-steward' ),
-			'panel_title'  => $is_title ? __( 'Generate Title Suggestion', 'action-steward' ) : __( 'Generate Excerpt Suggestion', 'action-steward' ),
+			'label'        => $is_title ? __( 'Generate Title', 'siteradian' ) : __( 'Generate Excerpt', 'siteradian' ),
+			'subject'      => $is_title ? __( 'title', 'siteradian' ) : __( 'excerpt', 'siteradian' ),
+			'panel_title'  => $is_title ? __( 'Generate Title Suggestion', 'siteradian' ) : __( 'Generate Excerpt Suggestion', 'siteradian' ),
 			// Distinct icons so the two content actions read differently at a glance:
 			// Title = edit/pencil, Excerpt = lines-of-text.
 			'icon'         => $is_title ? 'dashicons-edit' : 'dashicons-text',
@@ -164,8 +164,8 @@ final class AiActionRegistry {
 			'suggest'      => null,
 			'fields'       => [
 				$is_title
-					? [ 'key' => 'title', 'label' => __( 'Title', 'action-steward' ), 'type' => 'text', 'prior' => 'title' ]
-					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'action-steward' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
+					? [ 'key' => 'title', 'label' => __( 'Title', 'siteradian' ), 'type' => 'text', 'prior' => 'title' ]
+					: [ 'key' => 'excerpt', 'label' => __( 'Excerpt', 'siteradian' ), 'type' => 'textarea', 'prior' => 'excerpt' ],
 			],
 			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
 			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=content&tab=suggestions&kind=' . $kind ) ),
@@ -177,9 +177,9 @@ final class AiActionRegistry {
 	private function seo_def(): array {
 		return [
 			'id'           => 'seo',
-			'label'        => __( 'Generate SEO Meta', 'action-steward' ),
-			'subject'      => __( 'SEO title and description', 'action-steward' ),
-			'panel_title'  => __( 'Generate SEO Suggestion', 'action-steward' ),
+			'label'        => __( 'Generate SEO Meta', 'siteradian' ),
+			'subject'      => __( 'SEO title and description', 'siteradian' ),
+			'panel_title'  => __( 'Generate SEO Suggestion', 'siteradian' ),
 			'icon'         => 'dashicons-search',
 			'object_types' => self::CONTENT_TYPES,
 			'build_flag'   => 'WPCC_SEO_META_UI',
@@ -189,8 +189,8 @@ final class AiActionRegistry {
 			'apply'        => [ 'action' => 'seo_update', 'idKey' => 'content_id', 'nest' => 'seo' ],
 			'suggest'      => 'seo',
 			'fields'       => [
-				[ 'key' => 'title', 'label' => __( 'SEO title', 'action-steward' ), 'type' => 'text', 'prior' => 'title' ],
-				[ 'key' => 'description', 'label' => __( 'Meta description', 'action-steward' ), 'type' => 'textarea', 'prior' => 'description' ],
+				[ 'key' => 'title', 'label' => __( 'SEO title', 'siteradian' ), 'type' => 'text', 'prior' => 'title' ],
+				[ 'key' => 'description', 'label' => __( 'Meta description', 'siteradian' ), 'type' => 'textarea', 'prior' => 'description' ],
 			],
 			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
 			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=seo&tab=suggestions' ) ),
@@ -202,9 +202,9 @@ final class AiActionRegistry {
 	private function alt_def(): array {
 		return [
 			'id'           => 'alt_text',
-			'label'        => __( 'Generate Alt Text', 'action-steward' ),
-			'subject'      => __( 'description of this image', 'action-steward' ),
-			'panel_title'  => __( 'Generate Alt Text', 'action-steward' ),
+			'label'        => __( 'Generate Alt Text', 'siteradian' ),
+			'subject'      => __( 'description of this image', 'siteradian' ),
+			'panel_title'  => __( 'Generate Alt Text', 'siteradian' ),
 			'icon'         => 'dashicons-format-image',
 			'object_types' => self::MEDIA_TYPES,
 			'build_flag'   => 'WPCC_ALT_TEXT_UI',
@@ -214,7 +214,7 @@ final class AiActionRegistry {
 			'apply'        => [ 'action' => 'media_update', 'idKey' => 'media_id' ],
 			'suggest'      => null,
 			'fields'       => [
-				[ 'key' => 'alt', 'label' => __( 'Alt text', 'action-steward' ), 'type' => 'textarea', 'prior' => 'alt' ],
+				[ 'key' => 'alt', 'label' => __( 'Alt text', 'siteradian' ), 'type' => 'textarea', 'prior' => 'alt' ],
 			],
 			'suggest_url'  => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),
 			'fallback_url' => esc_url_raw( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=alt_text' ) ),

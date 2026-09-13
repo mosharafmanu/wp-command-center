@@ -50,7 +50,7 @@ final class PatchApproval {
 		}
 
 		if ( ! in_array( $patch['status'], [ PatchManager::STATUS_DRAFT, PatchManager::STATUS_PENDING_APPROVAL ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'Only patches awaiting approval can be approved.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'Only patches awaiting approval can be approved.', 'siteradian' ) );
 		}
 
 		$result = $this->patches->update_status( $id, PatchManager::STATUS_APPROVED );
@@ -83,7 +83,7 @@ final class PatchApproval {
 		}
 
 		if ( ! in_array( $patch['status'], [ PatchManager::STATUS_DRAFT, PatchManager::STATUS_PENDING_APPROVAL, PatchManager::STATUS_APPROVED ], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'This patch can no longer be rejected.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'This patch can no longer be rejected.', 'siteradian' ) );
 		}
 
 		$result = $this->patches->update_status( $id, PatchManager::STATUS_REJECTED );
@@ -121,7 +121,7 @@ final class PatchApproval {
 		}
 
 		if ( PatchManager::STATUS_APPROVED !== $patch['status'] ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'Only approved patches can be applied.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'Only approved patches can be applied.', 'siteradian' ) );
 		}
 
 		// Pre-flight: resolve every target file and make sure none of them
@@ -138,7 +138,7 @@ final class PatchApproval {
 			if ( ! wp_is_writable( $real ) ) {
 				return new \WP_Error( 'wpcc_not_writable', sprintf(
 					/* translators: %s: file path */
-					__( '%s is not writable.', 'action-steward' ),
+					__( '%s is not writable.', 'siteradian' ),
 					$file['path']
 				) );
 			}
@@ -146,7 +146,7 @@ final class PatchApproval {
 			if ( file_get_contents( $real ) !== $file['original'] ) {
 				return new \WP_Error( 'wpcc_file_changed', sprintf(
 					/* translators: %s: file path */
-					__( '%s has changed since this patch was generated. Regenerate the patch and try again.', 'action-steward' ),
+					__( '%s has changed since this patch was generated. Regenerate the patch and try again.', 'siteradian' ),
 					$file['path']
 				) );
 			}
@@ -179,7 +179,7 @@ final class PatchApproval {
 				$target['path'],
 				sprintf(
 					/* translators: %s: patch ID */
-					__( 'Before applying patch %s', 'action-steward' ),
+					__( 'Before applying patch %s', 'siteradian' ),
 					$id
 				),
 				$id
@@ -339,11 +339,11 @@ final class PatchApproval {
 		}
 
 		if ( PatchManager::STATUS_APPLIED !== $patch['status'] ) {
-			return new \WP_Error( 'wpcc_invalid_status', __( 'Only applied patches can be rolled back.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_status', __( 'Only applied patches can be rolled back.', 'siteradian' ) );
 		}
 
 		if ( empty( $patch['snapshot_ids'] ) ) {
-			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_no_snapshots', __( 'No snapshots are available for this patch.', 'siteradian' ) );
 		}
 
 		$results      = [];
@@ -376,7 +376,7 @@ final class PatchApproval {
 
 			return new \WP_Error(
 				'wpcc_rollback_verification_failed',
-				__( 'One or more files could not be verified after rollback. The files have been restored, but the patch status was not changed — please investigate.', 'action-steward' ),
+				__( 'One or more files could not be verified after rollback. The files have been restored, but the patch status was not changed — please investigate.', 'siteradian' ),
 				[
 					'status'           => 500,
 					'rollback_results' => $results,
@@ -456,7 +456,7 @@ final class PatchApproval {
 		if ( 'php' !== strtolower( pathinfo( $real_path, PATHINFO_EXTENSION ) ) ) {
 			return [
 				'passed'  => true,
-				'message' => __( 'Not a PHP file — syntax check skipped.', 'action-steward' ),
+				'message' => __( 'Not a PHP file — syntax check skipped.', 'siteradian' ),
 				'method'  => 'none',
 				'code'    => 'ok',
 				'reason'  => 'none',
@@ -471,7 +471,7 @@ final class PatchApproval {
 			if ( $lint['passed'] ) {
 				return [
 					'passed'  => true,
-					'message' => trim( $lint['output'] ) ?: __( 'No syntax errors detected.', 'action-steward' ),
+					'message' => trim( $lint['output'] ) ?: __( 'No syntax errors detected.', 'siteradian' ),
 					'method'  => 'php -l',
 					'code'    => 'ok',
 					'reason'  => 'none',
@@ -528,7 +528,7 @@ final class PatchApproval {
 		if ( ! function_exists( 'token_get_all' ) || ! defined( 'TOKEN_PARSE' ) ) {
 			return [
 				'passed'  => true,
-				'message' => __( 'Syntax check skipped (tokenizer unavailable).', 'action-steward' ),
+				'message' => __( 'Syntax check skipped (tokenizer unavailable).', 'siteradian' ),
 				'method'  => 'none',
 			];
 		}
@@ -537,7 +537,7 @@ final class PatchApproval {
 			token_get_all( $code, TOKEN_PARSE );
 			return [
 				'passed'  => true,
-				'message' => __( 'No syntax errors detected (tokenizer).', 'action-steward' ),
+				'message' => __( 'No syntax errors detected (tokenizer).', 'siteradian' ),
 				'method'  => 'tokenizer',
 			];
 		} catch ( \ParseError $e ) {
@@ -586,14 +586,14 @@ final class PatchApproval {
 		$warning = null;
 		if ( $fallback ) {
 			$why = [
-				'php_cli_not_found'      => __( 'no PHP CLI binary was found', 'action-steward' ),
-				'php_cli_not_executable' => __( 'the configured PHP binary is not an executable CLI', 'action-steward' ),
-				'verification_timeout'   => __( 'php -l exceeded the time budget', 'action-steward' ),
+				'php_cli_not_found'      => __( 'no PHP CLI binary was found', 'siteradian' ),
+				'php_cli_not_executable' => __( 'the configured PHP binary is not an executable CLI', 'siteradian' ),
+				'verification_timeout'   => __( 'php -l exceeded the time budget', 'siteradian' ),
 			];
 			$warning = sprintf(
 				/* translators: %s: reason php -l was unavailable */
-				__( 'Syntax verified with the tokenizer fallback because %s. Set the WPCC_PHP_BINARY constant/option to a PHP CLI path for full `php -l` verification.', 'action-steward' ),
-				$why[ $reason ] ?? __( 'php -l was unavailable', 'action-steward' )
+				__( 'Syntax verified with the tokenizer fallback because %s. Set the WPCC_PHP_BINARY constant/option to a PHP CLI path for full `php -l` verification.', 'siteradian' ),
+				$why[ $reason ] ?? __( 'php -l was unavailable', 'siteradian' )
 			);
 		}
 

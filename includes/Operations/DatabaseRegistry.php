@@ -55,7 +55,7 @@ final class DatabaseRegistry {
 	public function validate_table( string $table ): ?\WP_Error {
 		$clean = $this->sanitize_table( $table );
 		if ( null === $clean ) {
-			return new \WP_Error( 'wpcc_invalid_db_table', __( 'Table not in the allowed core table list.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_db_table', __( 'Table not in the allowed core table list.', 'siteradian' ) );
 		}
 		return null;
 	}

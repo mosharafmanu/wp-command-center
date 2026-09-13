@@ -48,27 +48,27 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 };
 ?>
 <div class="wrap wpcc-wrap wpcc-tokens">
-	<h1><?php esc_html_e( 'Access', 'action-steward' ); ?></h1>
+	<h1><?php esc_html_e( 'Access', 'siteradian' ); ?></h1>
 	<p class="description">
-		<?php esc_html_e( 'A token is how an assistant reaches this site. Create one for each assistant you connect, and see exactly what it is allowed to do. The token is shown once when you create it — copy it then. You can revoke any token instantly.', 'action-steward' ); ?>
+		<?php esc_html_e( 'A token is how an assistant reaches this site. Create one for each assistant you connect, and see exactly what it is allowed to do. The token is shown once when you create it — copy it then. You can revoke any token instantly.', 'siteradian' ); ?>
 	</p>
 
 	<?php if ( '' !== $view_id ) : ?>
 		<p>
-			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>">&larr; <?php esc_html_e( 'Back to Tokens', 'siteradian' ); ?></a>
 		</p>
 		<div id="wpcc-token-detail" data-token-id="<?php echo esc_attr( $view_id ); ?>">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading token…', 'action-steward' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading token…', 'siteradian' ); ?></p>
 		</div>
 	<?php else : ?>
 		<h2 class="nav-tab-wrapper">
-			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'action-steward' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'capabilities' ) ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'action-steward' ); ?></a>
-			<a href="<?php echo esc_url( $tab_url( 'operations' ) ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'action-steward' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'tokens' ) ); ?>" class="nav-tab <?php echo 'tokens' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Tokens', 'siteradian' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'capabilities' ) ); ?>" class="nav-tab <?php echo 'capabilities' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Capabilities', 'siteradian' ); ?></a>
+			<a href="<?php echo esc_url( $tab_url( 'operations' ) ); ?>" class="nav-tab <?php echo 'operations' === $tab ? 'nav-tab-active' : ''; ?>"><?php esc_html_e( 'Operation Map', 'siteradian' ); ?></a>
 		</h2>
 
 		<div id="wpcc-tokens-panel">
-			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'action-steward' ); ?></p>
+			<p><span class="spinner is-active wpcc-spin"></span><?php esc_html_e( 'Loading…', 'siteradian' ); ?></p>
 		</div>
 	<?php endif; ?>
 </div>
@@ -95,25 +95,25 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 ?>
 <div id="wpcc-tok-dialog" class="wpcc-modal wpcc-tokdlg" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-tokdlg-title">
 	<div class="wpcc-modal-box wpcc-tokdlg__box" role="document">
-		<h2 id="wpcc-tokdlg-title"><?php esc_html_e( 'Create an access token', 'action-steward' ); ?></h2>
+		<h2 id="wpcc-tokdlg-title"><?php esc_html_e( 'Create an access token', 'siteradian' ); ?></h2>
 
 		<?php // ── The form. Hidden once the secret is on screen. ── ?>
 		<div id="wpcc-tokdlg-form">
 			<p class="description" style="margin-top:0;">
-				<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'action-steward' ); ?>
+				<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'siteradian' ); ?>
 			</p>
 
 			<div class="wpcc-tokdlg__field">
-				<label class="wpcc-tokdlg__label" for="wpcc-new-label"><?php esc_html_e( 'Name this token', 'action-steward' ); ?></label>
+				<label class="wpcc-tokdlg__label" for="wpcc-new-label"><?php esc_html_e( 'Name this token', 'siteradian' ); ?></label>
 				<input type="text" id="wpcc-new-label" class="regular-text" maxlength="120" autocomplete="off" spellcheck="false" aria-describedby="wpcc-tokdlg-label-hint" />
 				<p class="wpcc-tokdlg__hint" id="wpcc-tokdlg-label-hint">
-					<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'action-steward' ); ?>
+					<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'siteradian' ); ?>
 				</p>
 				<p class="wpcc-tokdlg__dupe" id="wpcc-tokdlg-dupe" role="status" hidden></p>
 			</div>
 
 			<fieldset class="wpcc-tokdlg__field">
-				<legend class="wpcc-tokdlg__label"><?php esc_html_e( 'What this token may do', 'action-steward' ); ?></legend>
+				<legend class="wpcc-tokdlg__label"><?php esc_html_e( 'What this token may do', 'siteradian' ); ?></legend>
 
 				<?php
 				/*
@@ -129,32 +129,32 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 				<label class="wpcc-tokdlg__choice">
 					<input type="radio" name="wpcc-new-scope" value="read_only" checked />
 					<span>
-						<strong><?php esc_html_e( 'Read-only — inspect the site, no changes', 'action-steward' ); ?></strong>
-						<em><?php esc_html_e( 'Can read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'action-steward' ); ?></em>
+						<strong><?php esc_html_e( 'Read-only — inspect the site, no changes', 'siteradian' ); ?></strong>
+						<em><?php esc_html_e( 'Can read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'siteradian' ); ?></em>
 					</span>
 				</label>
 
 				<label class="wpcc-tokdlg__choice">
 					<input type="radio" name="wpcc-new-scope" value="full" />
 					<span>
-						<strong><?php esc_html_e( 'Full access — read the site and request changes', 'action-steward' ); ?></strong>
-						<em><?php esc_html_e( 'Can answer questions about the whole site and ask to change it. This is what a connected assistant normally needs.', 'action-steward' ); ?></em>
+						<strong><?php esc_html_e( 'Full access — read the site and request changes', 'siteradian' ); ?></strong>
+						<em><?php esc_html_e( 'Can answer questions about the whole site and ask to change it. This is what a connected assistant normally needs.', 'siteradian' ); ?></em>
 					</span>
 				</label>
 			</fieldset>
 
 			<div class="wpcc-tokdlg__field">
-				<label class="wpcc-tokdlg__label" for="wpcc-new-expires"><?php esc_html_e( 'Stop working after', 'action-steward' ); ?></label>
+				<label class="wpcc-tokdlg__label" for="wpcc-new-expires"><?php esc_html_e( 'Stop working after', 'siteradian' ); ?></label>
 				<?php
 				// 30 days is the default; Never remains available as a deliberate
 				// choice rather than an inherited one. See the note in
 				// ai-integrations.php — both forms behave the same way.
 				?>
 				<select id="wpcc-new-expires">
-					<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'action-steward' ); ?></option>
-					<option value="90d"><?php esc_html_e( '90 days', 'action-steward' ); ?></option>
-					<option value="1y"><?php esc_html_e( '1 year', 'action-steward' ); ?></option>
-					<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'action-steward' ); ?></option>
+					<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'siteradian' ); ?></option>
+					<option value="90d"><?php esc_html_e( '90 days', 'siteradian' ); ?></option>
+					<option value="1y"><?php esc_html_e( '1 year', 'siteradian' ); ?></option>
+					<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'siteradian' ); ?></option>
 				</select>
 			</div>
 
@@ -167,7 +167,7 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 			// expiry to fall back on if it leaks. Shown only when both are chosen.
 			?>
 			<p class="wpcc-tokdlg__warn wpcc-tokdlg__warn--danger" id="wpcc-tokdlg-longlived" hidden>
-				<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'action-steward' ); ?>
+				<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'siteradian' ); ?>
 			</p>
 
 			<p class="wpcc-tokdlg__warn<?php echo esc_attr( $wpcc_tok_protected ? '' : ' wpcc-tokdlg__warn--danger' ); ?>" id="wpcc-tokdlg-warn" hidden>
@@ -176,21 +176,21 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 					echo esc_html(
 						sprintf(
 							/* translators: %s: the site's protection mode, e.g. "Standard protection". */
-							__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'action-steward' ),
+							__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'siteradian' ),
 							$wpcc_tok_mode
 						)
 					);
 					?>
 				<?php else : ?>
-					<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'action-steward' ); ?>
+					<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'siteradian' ); ?>
 				<?php endif; ?>
 			</p>
 
 			<div id="wpcc-tokdlg-result" class="wpcc-cap-result" style="display:none;" role="status" aria-live="polite"></div>
 
 			<p class="wpcc-modal-actions">
-				<button type="button" class="button" id="wpcc-tokdlg-cancel"><?php esc_html_e( 'Cancel', 'action-steward' ); ?></button>
-				<button type="button" class="button button-primary" id="wpcc-tokdlg-create"><?php esc_html_e( 'Create token', 'action-steward' ); ?></button>
+				<button type="button" class="button" id="wpcc-tokdlg-cancel"><?php esc_html_e( 'Cancel', 'siteradian' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-create"><?php esc_html_e( 'Create token', 'siteradian' ); ?></button>
 			</p>
 		</div>
 
@@ -198,15 +198,15 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		<div id="wpcc-tokdlg-secret" hidden>
 			<p class="wpcc-tokdlg__ready" id="wpcc-tokdlg-ready"></p>
 			<p class="wpcc-tokdlg__hint">
-				<?php esc_html_e( 'This is the only time it will be shown. Copy it now and paste it into your assistant — if you lose it, revoke this token and create another.', 'action-steward' ); ?>
+				<?php esc_html_e( 'This is the only time it will be shown. Copy it now and paste it into your assistant — if you lose it, revoke this token and create another.', 'siteradian' ); ?>
 			</p>
 			<div class="wpcc-tokdlg__secretrow">
 				<input type="text" id="wpcc-tokdlg-value" class="large-text code" readonly />
-				<button type="button" class="button button-primary" id="wpcc-tokdlg-copy"><?php esc_html_e( 'Copy', 'action-steward' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-copy"><?php esc_html_e( 'Copy', 'siteradian' ); ?></button>
 			</div>
-			<p class="wpcc-tokdlg__copied" id="wpcc-tokdlg-copied" role="status" hidden><?php esc_html_e( 'Copied to your clipboard.', 'action-steward' ); ?></p>
+			<p class="wpcc-tokdlg__copied" id="wpcc-tokdlg-copied" role="status" hidden><?php esc_html_e( 'Copied to your clipboard.', 'siteradian' ); ?></p>
 			<p class="wpcc-modal-actions">
-				<button type="button" class="button button-primary" id="wpcc-tokdlg-done"><?php esc_html_e( 'Done', 'action-steward' ); ?></button>
+				<button type="button" class="button button-primary" id="wpcc-tokdlg-done"><?php esc_html_e( 'Done', 'siteradian' ); ?></button>
 			</p>
 		</div>
 	</div>
@@ -215,12 +215,12 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 <?php // STEP 107.3/107.4 — one shared confirm modal for capability writes AND token lifecycle. ?>
 <div id="wpcc-cap-modal" class="wpcc-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="wpcc-cap-modal-title" aria-describedby="wpcc-cap-modal-msg">
 	<div class="wpcc-modal-box" role="document">
-		<h2 id="wpcc-cap-modal-title"><?php esc_html_e( 'Please confirm', 'action-steward' ); ?></h2>
+		<h2 id="wpcc-cap-modal-title"><?php esc_html_e( 'Please confirm', 'siteradian' ); ?></h2>
 		<p id="wpcc-cap-modal-msg"></p>
 		<div id="wpcc-cap-modal-result" class="wpcc-cap-result" style="display:none;" role="status" aria-live="polite"></div>
 		<p class="wpcc-modal-actions">
-			<button type="button" class="button button-primary" id="wpcc-cap-modal-confirm"><?php esc_html_e( 'Confirm', 'action-steward' ); ?></button>
-			<button type="button" class="button" id="wpcc-cap-modal-cancel"><?php esc_html_e( 'Cancel', 'action-steward' ); ?></button>
+			<button type="button" class="button button-primary" id="wpcc-cap-modal-confirm"><?php esc_html_e( 'Confirm', 'siteradian' ); ?></button>
+			<button type="button" class="button" id="wpcc-cap-modal-cancel"><?php esc_html_e( 'Cancel', 'siteradian' ); ?></button>
 		</p>
 	</div>
 </div>
@@ -293,98 +293,98 @@ $wpcc_tok_mode      = \WPCommandCenter\Operations\SecurityModeManager::label();
 		page:    <?php echo wp_json_encode( $page ); ?>
 	};
 	var i18n = {
-		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'action-steward' ) ); ?>,
-		emptyTokens: <?php echo wp_json_encode( __( 'No access tokens yet. Create one above, then paste it into your assistant to connect it.', 'action-steward' ) ); ?>,
-		emptyActive: <?php echo wp_json_encode( __( 'No active tokens. Create one above, or show revoked tokens to review past access.', 'action-steward' ) ); ?>,
+		loadFail:    <?php echo wp_json_encode( __( 'Failed to load. Your admin session may have expired — refresh the page and try again.', 'siteradian' ) ); ?>,
+		emptyTokens: <?php echo wp_json_encode( __( 'No access tokens yet. Create one above, then paste it into your assistant to connect it.', 'siteradian' ) ); ?>,
+		emptyActive: <?php echo wp_json_encode( __( 'No active tokens. Create one above, or show revoked tokens to review past access.', 'siteradian' ) ); ?>,
 		/* translators: %1$d and %2$d are both the number of revoked or expired tokens */
-		showRevoked: <?php echo wp_json_encode( /* translators: %1$d: number */ __( 'Show %1$d revoked or expired token(s)', 'action-steward' ) ); ?>,
-		emptyCaps:   <?php echo wp_json_encode( __( 'No capabilities are defined.', 'action-steward' ) ); ?>,
-		emptyOps:    <?php echo wp_json_encode( __( 'No operations are mapped.', 'action-steward' ) ); ?>,
-		notFound:    <?php echo wp_json_encode( __( 'Token not found. It may have been deleted.', 'action-steward' ) ); ?>,
-		none:        <?php echo wp_json_encode( __( 'None', 'action-steward' ) ); ?>,
-		never:       <?php echo wp_json_encode( __( 'Never', 'action-steward' ) ); ?>,
-		view:        <?php echo wp_json_encode( __( 'View', 'action-steward' ) ); ?>,
-		allow:       <?php echo wp_json_encode( __( 'Allowed', 'action-steward' ) ); ?>,
-		deny:        <?php echo wp_json_encode( __( 'Denied', 'action-steward' ) ); ?>,
-		colLabel:    <?php echo wp_json_encode( __( 'Label', 'action-steward' ) ); ?>,
-		colToken:    <?php echo wp_json_encode( __( 'Token', 'action-steward' ) ); ?>,
-		colScope:    <?php echo wp_json_encode( __( 'Scope', 'action-steward' ) ); ?>,
-		colStatus:   <?php echo wp_json_encode( __( 'Status', 'action-steward' ) ); ?>,
-		colAccess:   <?php echo wp_json_encode( __( 'Operation access', 'action-steward' ) ); ?>,
-		colLastUsed: <?php echo wp_json_encode( __( 'Last used', 'action-steward' ) ); ?>,
-		colCap:      <?php echo wp_json_encode( __( 'Capability', 'action-steward' ) ); ?>,
-		colUnlocks:  <?php echo wp_json_encode( __( 'Unlocks operations', 'action-steward' ) ); ?>,
-		colOp:       <?php echo wp_json_encode( __( 'Operation', 'action-steward' ) ); ?>,
-		colReqCap:   <?php echo wp_json_encode( __( 'Required capability', 'action-steward' ) ); ?>,
-		colReadOnly: <?php echo wp_json_encode( __( 'Read-only scope', 'action-steward' ) ); ?>,
-		colAccessOp: <?php echo wp_json_encode( __( 'Access', 'action-steward' ) ); ?>,
-		yes:         <?php echo wp_json_encode( __( 'Yes', 'action-steward' ) ); ?>,
-		no:          <?php echo wp_json_encode( __( 'No', 'action-steward' ) ); ?>,
+		showRevoked: <?php echo wp_json_encode( /* translators: %1$d: number */ __( 'Show %1$d revoked or expired token(s)', 'siteradian' ) ); ?>,
+		emptyCaps:   <?php echo wp_json_encode( __( 'No capabilities are defined.', 'siteradian' ) ); ?>,
+		emptyOps:    <?php echo wp_json_encode( __( 'No operations are mapped.', 'siteradian' ) ); ?>,
+		notFound:    <?php echo wp_json_encode( __( 'Token not found. It may have been deleted.', 'siteradian' ) ); ?>,
+		none:        <?php echo wp_json_encode( __( 'None', 'siteradian' ) ); ?>,
+		never:       <?php echo wp_json_encode( __( 'Never', 'siteradian' ) ); ?>,
+		view:        <?php echo wp_json_encode( __( 'View', 'siteradian' ) ); ?>,
+		allow:       <?php echo wp_json_encode( __( 'Allowed', 'siteradian' ) ); ?>,
+		deny:        <?php echo wp_json_encode( __( 'Denied', 'siteradian' ) ); ?>,
+		colLabel:    <?php echo wp_json_encode( __( 'Label', 'siteradian' ) ); ?>,
+		colToken:    <?php echo wp_json_encode( __( 'Token', 'siteradian' ) ); ?>,
+		colScope:    <?php echo wp_json_encode( __( 'Scope', 'siteradian' ) ); ?>,
+		colStatus:   <?php echo wp_json_encode( __( 'Status', 'siteradian' ) ); ?>,
+		colAccess:   <?php echo wp_json_encode( __( 'Operation access', 'siteradian' ) ); ?>,
+		colLastUsed: <?php echo wp_json_encode( __( 'Last used', 'siteradian' ) ); ?>,
+		colCap:      <?php echo wp_json_encode( __( 'Capability', 'siteradian' ) ); ?>,
+		colUnlocks:  <?php echo wp_json_encode( __( 'Unlocks operations', 'siteradian' ) ); ?>,
+		colOp:       <?php echo wp_json_encode( __( 'Operation', 'siteradian' ) ); ?>,
+		colReqCap:   <?php echo wp_json_encode( __( 'Required capability', 'siteradian' ) ); ?>,
+		colReadOnly: <?php echo wp_json_encode( __( 'Read-only scope', 'siteradian' ) ); ?>,
+		colAccessOp: <?php echo wp_json_encode( __( 'Access', 'siteradian' ) ); ?>,
+		yes:         <?php echo wp_json_encode( __( 'Yes', 'siteradian' ) ); ?>,
+		no:          <?php echo wp_json_encode( __( 'No', 'siteradian' ) ); ?>,
 		/* translators: %1$d allowed operations, %2$d total operations */
-		accessFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d operations', 'action-steward' ) ); ?>,
-		dLabel:      <?php echo wp_json_encode( __( 'Label', 'action-steward' ) ); ?>,
-		dPreview:    <?php echo wp_json_encode( __( 'Token preview', 'action-steward' ) ); ?>,
-		dScope:      <?php echo wp_json_encode( __( 'Scope', 'action-steward' ) ); ?>,
-		dStatus:     <?php echo wp_json_encode( __( 'Status', 'action-steward' ) ); ?>,
-		dCaps:       <?php echo wp_json_encode( __( 'Assigned capabilities', 'action-steward' ) ); ?>,
-		dCreated:    <?php echo wp_json_encode( __( 'Created', 'action-steward' ) ); ?>,
-		dExpires:    <?php echo wp_json_encode( __( 'Expires', 'action-steward' ) ); ?>,
-		dLastUsed:   <?php echo wp_json_encode( __( 'Last used', 'action-steward' ) ); ?>,
-		dAccess:     <?php echo wp_json_encode( __( 'Operation access', 'action-steward' ) ); ?>,
-		matrixTitle: <?php echo wp_json_encode( __( 'Operation access matrix', 'action-steward' ) ); ?>,
-		adminNote:   <?php echo wp_json_encode( __( 'This token has system.admin (full access). It can run every operation regardless of individual capabilities.', 'action-steward' ) ); ?>,
-		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted (system.admin)', 'action-steward' ) ); ?>,
-		reasonAdmin: <?php echo wp_json_encode( __( 'system.admin', 'action-steward' ) ); ?>,
-		reasonRead: <?php echo wp_json_encode( __( 'supported read actions only', 'action-steward' ) ); ?>,
-		reasonScope: <?php echo wp_json_encode( __( 'blocked by read-only scope', 'action-steward' ) ); ?>,
-		reasonMiss:  <?php echo wp_json_encode( __( 'missing capability', 'action-steward' ) ); ?>,
-		reasonHas:   <?php echo wp_json_encode( __( 'capability assigned', 'action-steward' ) ); ?>,
-		auditTitle:  <?php echo wp_json_encode( __( 'Capability audit trail', 'action-steward' ) ); ?>,
-		auditEmpty:  <?php echo wp_json_encode( __( 'No capability changes recorded for this token yet.', 'action-steward' ) ); ?>,
-		colWhen:     <?php echo wp_json_encode( __( 'When', 'action-steward' ) ); ?>,
-		colEvent:    <?php echo wp_json_encode( __( 'Event', 'action-steward' ) ); ?>,
-		colCapEvt:   <?php echo wp_json_encode( __( 'Capability', 'action-steward' ) ); ?>,
-		colActor:    <?php echo wp_json_encode( __( 'Actor', 'action-steward' ) ); ?>,
-		unknownActor:<?php echo wp_json_encode( __( 'unknown', 'action-steward' ) ); ?>,
-		manageTitle: <?php echo wp_json_encode( __( 'Manage capabilities', 'action-steward' ) ); ?>,
-		manageHelp:  <?php echo wp_json_encode( __( 'Assigning or removing a capability runs through the same audited engine, security mode, and approval gates as the agent API.', 'action-steward' ) ); ?>,
-		noAssigned:  <?php echo wp_json_encode( __( 'No capabilities assigned. A read-only-scope token without capabilities can run nothing until one is assigned.', 'action-steward' ) ); ?>,
-		addLabel:    <?php echo wp_json_encode( __( 'Add capability', 'action-steward' ) ); ?>,
-		assignBtn:   <?php echo wp_json_encode( __( 'Assign', 'action-steward' ) ); ?>,
-		removeBtn:   <?php echo wp_json_encode( __( 'Remove', 'action-steward' ) ); ?>,
-		allAssigned: <?php echo wp_json_encode( __( 'All assignable capabilities are already granted.', 'action-steward' ) ); ?>,
-		adminLocked: <?php echo wp_json_encode( __( 'Capability editing is disabled for this token because system.admin already grants every operation.', 'action-steward' ) ); ?>,
+		accessFmt:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d operations', 'siteradian' ) ); ?>,
+		dLabel:      <?php echo wp_json_encode( __( 'Label', 'siteradian' ) ); ?>,
+		dPreview:    <?php echo wp_json_encode( __( 'Token preview', 'siteradian' ) ); ?>,
+		dScope:      <?php echo wp_json_encode( __( 'Scope', 'siteradian' ) ); ?>,
+		dStatus:     <?php echo wp_json_encode( __( 'Status', 'siteradian' ) ); ?>,
+		dCaps:       <?php echo wp_json_encode( __( 'Assigned capabilities', 'siteradian' ) ); ?>,
+		dCreated:    <?php echo wp_json_encode( __( 'Created', 'siteradian' ) ); ?>,
+		dExpires:    <?php echo wp_json_encode( __( 'Expires', 'siteradian' ) ); ?>,
+		dLastUsed:   <?php echo wp_json_encode( __( 'Last used', 'siteradian' ) ); ?>,
+		dAccess:     <?php echo wp_json_encode( __( 'Operation access', 'siteradian' ) ); ?>,
+		matrixTitle: <?php echo wp_json_encode( __( 'Operation access matrix', 'siteradian' ) ); ?>,
+		adminNote:   <?php echo wp_json_encode( __( 'This token has system.admin (full access). It can run every operation regardless of individual capabilities.', 'siteradian' ) ); ?>,
+		unrestricted:<?php echo wp_json_encode( __( 'Unrestricted (system.admin)', 'siteradian' ) ); ?>,
+		reasonAdmin: <?php echo wp_json_encode( __( 'system.admin', 'siteradian' ) ); ?>,
+		reasonRead: <?php echo wp_json_encode( __( 'supported read actions only', 'siteradian' ) ); ?>,
+		reasonScope: <?php echo wp_json_encode( __( 'blocked by read-only scope', 'siteradian' ) ); ?>,
+		reasonMiss:  <?php echo wp_json_encode( __( 'missing capability', 'siteradian' ) ); ?>,
+		reasonHas:   <?php echo wp_json_encode( __( 'capability assigned', 'siteradian' ) ); ?>,
+		auditTitle:  <?php echo wp_json_encode( __( 'Capability audit trail', 'siteradian' ) ); ?>,
+		auditEmpty:  <?php echo wp_json_encode( __( 'No capability changes recorded for this token yet.', 'siteradian' ) ); ?>,
+		colWhen:     <?php echo wp_json_encode( __( 'When', 'siteradian' ) ); ?>,
+		colEvent:    <?php echo wp_json_encode( __( 'Event', 'siteradian' ) ); ?>,
+		colCapEvt:   <?php echo wp_json_encode( __( 'Capability', 'siteradian' ) ); ?>,
+		colActor:    <?php echo wp_json_encode( __( 'Actor', 'siteradian' ) ); ?>,
+		unknownActor:<?php echo wp_json_encode( __( 'unknown', 'siteradian' ) ); ?>,
+		manageTitle: <?php echo wp_json_encode( __( 'Manage capabilities', 'siteradian' ) ); ?>,
+		manageHelp:  <?php echo wp_json_encode( __( 'Assigning or removing a capability runs through the same audited engine, security mode, and approval gates as the agent API.', 'siteradian' ) ); ?>,
+		noAssigned:  <?php echo wp_json_encode( __( 'No capabilities assigned. A read-only-scope token without capabilities can run nothing until one is assigned.', 'siteradian' ) ); ?>,
+		addLabel:    <?php echo wp_json_encode( __( 'Add capability', 'siteradian' ) ); ?>,
+		assignBtn:   <?php echo wp_json_encode( __( 'Assign', 'siteradian' ) ); ?>,
+		removeBtn:   <?php echo wp_json_encode( __( 'Remove', 'siteradian' ) ); ?>,
+		allAssigned: <?php echo wp_json_encode( __( 'All assignable capabilities are already granted.', 'siteradian' ) ); ?>,
+		adminLocked: <?php echo wp_json_encode( __( 'Capability editing is disabled for this token because system.admin already grants every operation.', 'siteradian' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmAssign: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Assign the capability "%s" to this token?', 'action-steward' ) ); ?>,
+		confirmAssign: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Assign the capability "%s" to this token?', 'siteradian' ) ); ?>,
 		/* translators: %s: capability name */
-		confirmRemove: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Remove the capability "%s" from this token?', 'action-steward' ) ); ?>,
-		working:     <?php echo wp_json_encode( __( 'Working…', 'action-steward' ) ); ?>,
-		doneReload:  <?php echo wp_json_encode( __( 'Done. Reloading…', 'action-steward' ) ); ?>,
-		sentApprove: <?php echo wp_json_encode( __( 'This change needs your approval. It has been sent to Approvals.', 'action-steward' ) ); ?>,
-		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'action-steward' ) ); ?>,
+		confirmRemove: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Remove the capability "%s" from this token?', 'siteradian' ) ); ?>,
+		working:     <?php echo wp_json_encode( __( 'Working…', 'siteradian' ) ); ?>,
+		doneReload:  <?php echo wp_json_encode( __( 'Done. Reloading…', 'siteradian' ) ); ?>,
+		sentApprove: <?php echo wp_json_encode( __( 'This change needs your approval. It has been sent to Approvals.', 'siteradian' ) ); ?>,
+		nonceFail:   <?php echo wp_json_encode( __( 'Your admin session expired. Refresh the page and try again.', 'siteradian' ) ); ?>,
 		// Says what happened, that nothing changed, and what to do next. "The
 		// change could not be completed." left the customer to guess all three.
-		genericFail: <?php echo wp_json_encode( __( 'That did not go through, so nothing has changed. Check your connection and try again — if it keeps happening, look under Settings › Advanced › Diagnostics.', 'action-steward' ) ); ?>,
-		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'action-steward' ) ); ?>,
-		createHelp:  <?php echo wp_json_encode( __( 'A token is how one assistant reaches this site. You choose what it may do and when it stops working; it is shown once, when you create it.', 'action-steward' ) ); ?>,
-		createBtn:   <?php echo wp_json_encode( __( 'Create token', 'action-steward' ) ); ?>,
-		creating:    <?php echo wp_json_encode( __( 'Creating…', 'action-steward' ) ); ?>,
-		labelReq:    <?php echo wp_json_encode( __( 'Give this token a name first — you will need it to tell your tokens apart later.', 'action-steward' ) ); ?>,
+		genericFail: <?php echo wp_json_encode( __( 'That did not go through, so nothing has changed. Check your connection and try again — if it keeps happening, look under Settings › Advanced › Diagnostics.', 'siteradian' ) ); ?>,
+		createTitle: <?php echo wp_json_encode( __( 'Create a token', 'siteradian' ) ); ?>,
+		createHelp:  <?php echo wp_json_encode( __( 'A token is how one assistant reaches this site. You choose what it may do and when it stops working; it is shown once, when you create it.', 'siteradian' ) ); ?>,
+		createBtn:   <?php echo wp_json_encode( __( 'Create token', 'siteradian' ) ); ?>,
+		creating:    <?php echo wp_json_encode( __( 'Creating…', 'siteradian' ) ); ?>,
+		labelReq:    <?php echo wp_json_encode( __( 'Give this token a name first — you will need it to tell your tokens apart later.', 'siteradian' ) ); ?>,
 		/* translators: %s: the name the customer gave the token. */
-		tokenReady:  <?php echo wp_json_encode( /* translators: %s: value */ __( '“%s” is ready', 'action-steward' ) ); ?>,
+		tokenReady:  <?php echo wp_json_encode( /* translators: %s: value */ __( '“%s” is ready', 'siteradian' ) ); ?>,
 		/* translators: %s: the name of an existing active token. */
-		dupeWarn:    <?php echo wp_json_encode( /* translators: %s: value */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'action-steward' ) ); ?>,
-		colActions:  <?php echo wp_json_encode( __( 'Actions', 'action-steward' ) ); ?>,
-		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'action-steward' ) ); ?>,
-		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'action-steward' ) ); ?>,
+		dupeWarn:    <?php echo wp_json_encode( /* translators: %s: value */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'siteradian' ) ); ?>,
+		colActions:  <?php echo wp_json_encode( __( 'Actions', 'siteradian' ) ); ?>,
+		revokeBtn:   <?php echo wp_json_encode( __( 'Revoke', 'siteradian' ) ); ?>,
+		deleteBtn:   <?php echo wp_json_encode( __( 'Delete', 'siteradian' ) ); ?>,
 		/* translators: %s: token label */
-		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any assistant using it loses access immediately.', 'action-steward' ) ); ?>,
+		confirmRevoke: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Revoke the token "%s"? Any assistant using it loses access immediately.', 'siteradian' ) ); ?>,
 		/* translators: %s: token label */
-		confirmDelete: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Permanently delete the token "%s"? This cannot be undone.', 'action-steward' ) ); ?>,
-		prev:          <?php echo wp_json_encode( __( '← Previous', 'action-steward' ) ); ?>,
-		next:          <?php echo wp_json_encode( __( 'Next →', 'action-steward' ) ); ?>,
+		confirmDelete: <?php echo wp_json_encode( /* translators: %s: value */ __( 'Permanently delete the token "%s"? This cannot be undone.', 'siteradian' ) ); ?>,
+		prev:          <?php echo wp_json_encode( __( '← Previous', 'siteradian' ) ); ?>,
+		next:          <?php echo wp_json_encode( __( 'Next →', 'siteradian' ) ); ?>,
 		/* translators: %1$d first row on page, %2$d last row on page, %3$d total */
-		pageInfo:      <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Tokens %1$d–%2$d of %3$d', 'action-steward' ) ); ?>
+		pageInfo:      <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Tokens %1$d–%2$d of %3$d', 'siteradian' ) ); ?>
 	};
 
 	function escHtml( s ) {

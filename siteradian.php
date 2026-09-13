@@ -1,20 +1,20 @@
 <?php
 /**
- * Plugin Name:       Action Steward
- * Description:       Safe AI operations for WordPress. Scope access, assess risk, require approval, and keep an audit trail with rollback for supported changes.
- * Version:           1.0.2
+ * Plugin Name:       SiteRadian AI
+ * Description:       Safe, governed AI operations for WordPress.
+ * Version:           1.0.0
  * Requires at least: 6.4
  * Requires PHP:      8.0
  * Author:            Mosharaf Hossain
  * Author URI:        https://mosharafmanu.com
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       action-steward
+ * Text Domain:       siteradian
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPCC_VERSION', '1.0.2' );
+define( 'WPCC_VERSION', '1.0.0' );
 define( 'WPCC_PLUGIN_FILE', __FILE__ );
 define( 'WPCC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPCC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

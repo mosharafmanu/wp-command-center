@@ -15,7 +15,7 @@ $data = ( new SiteScanner() )->scan( $force_refresh );
 // CDS status pill — a boolean fact, not an error: Yes=success, No=neutral
 // (color carries meaning; "No" is informational, not alarming).
 $badge = static function ( bool $value ): string {
-	$label   = $value ? __( 'Yes', 'action-steward' ) : __( 'No', 'action-steward' );
+	$label   = $value ? __( 'Yes', 'siteradian' ) : __( 'No', 'siteradian' );
 	$variant = $value ? 'success' : 'neutral';
 
 	return sprintf( '<span class="wpcc-cds-pill wpcc-cds-pill--%s">%s</span>', esc_attr( $variant ), esc_html( $label ) );
@@ -52,14 +52,14 @@ $server  = $data['server'];
 $debug   = $data['debug'];
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'Site report', 'action-steward' ); ?></h1>
-	<p><?php esc_html_e( 'A structured snapshot of this site for AI agents — WordPress & PHP versions, active theme/plugins, WooCommerce status, cache configuration, server capabilities, debug status, and file permissions.', 'action-steward' ); ?></p>
+	<h1><?php esc_html_e( 'Site report', 'siteradian' ); ?></h1>
+	<p><?php esc_html_e( 'A structured snapshot of this site for AI agents — WordPress & PHP versions, active theme/plugins, WooCommerce status, cache configuration, server capabilities, debug status, and file permissions.', 'siteradian' ); ?></p>
 
 	<p class="wpcc-scan-meta">
 		<?php
 		printf(
 			/* translators: %s: date and time of the last scan. */
-			esc_html__( 'Last scanned: %s', 'action-steward' ),
+			esc_html__( 'Last scanned: %s', 'siteradian' ),
 			esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $data['generated_at'] ) )
 		);
 		?>
@@ -68,57 +68,57 @@ $debug   = $data['debug'];
 	<form method="post">
 		<?php wp_nonce_field( 'wpcc_site_intelligence' ); ?>
 		<input type="hidden" name="wpcc_action" value="refresh_scan" />
-		<?php submit_button( __( 'Refresh Scan', 'action-steward' ), 'secondary', 'submit', false ); ?>
+		<?php submit_button( __( 'Refresh Scan', 'siteradian' ), 'secondary', 'submit', false ); ?>
 	</form>
 
 	<?php
 	$render_section(
-		__( 'WordPress Environment', 'action-steward' ),
+		__( 'WordPress Environment', 'siteradian' ),
 		[
-			__( 'WordPress Version', 'action-steward' )   => esc_html( $wp_info['version'] ),
-			__( 'Site URL', 'action-steward' )            => esc_html( $wp_info['site_url'] ),
-			__( 'Home URL', 'action-steward' )            => esc_html( $wp_info['home_url'] ),
-			__( 'Multisite', 'action-steward' )           => $badge( $wp_info['is_multisite'] ),
-			__( 'Locale', 'action-steward' )              => esc_html( $wp_info['locale'] ),
-			__( 'Timezone', 'action-steward' )            => esc_html( $wp_info['timezone'] ?: 'UTC' ),
-			__( 'Permalink Structure', 'action-steward' ) => esc_html( $wp_info['permalink_structure'] ),
-			__( 'SSL (HTTPS)', 'action-steward' )         => $badge( $wp_info['is_ssl'] ),
+			__( 'WordPress Version', 'siteradian' )   => esc_html( $wp_info['version'] ),
+			__( 'Site URL', 'siteradian' )            => esc_html( $wp_info['site_url'] ),
+			__( 'Home URL', 'siteradian' )            => esc_html( $wp_info['home_url'] ),
+			__( 'Multisite', 'siteradian' )           => $badge( $wp_info['is_multisite'] ),
+			__( 'Locale', 'siteradian' )              => esc_html( $wp_info['locale'] ),
+			__( 'Timezone', 'siteradian' )            => esc_html( $wp_info['timezone'] ?: 'UTC' ),
+			__( 'Permalink Structure', 'siteradian' ) => esc_html( $wp_info['permalink_structure'] ),
+			__( 'SSL (HTTPS)', 'siteradian' )         => $badge( $wp_info['is_ssl'] ),
 		]
 	);
 
 	$render_section(
-		__( 'PHP Environment', 'action-steward' ),
+		__( 'PHP Environment', 'siteradian' ),
 		[
-			__( 'PHP Version', 'action-steward' )         => esc_html( $php['version'] ),
-			__( 'Memory Limit', 'action-steward' )        => esc_html( $php['memory_limit'] ),
-			__( 'Max Execution Time', 'action-steward' )  => esc_html( $php['max_execution_time'] . 's' ),
-			__( 'Upload Max Filesize', 'action-steward' ) => esc_html( $php['upload_max_filesize'] ),
-			__( 'Post Max Size', 'action-steward' )       => esc_html( $php['post_max_size'] ),
-			__( 'Loaded Extensions', 'action-steward' )   => esc_html( $php['loaded_extensions'] ? implode( ', ', $php['loaded_extensions'] ) : '—' ),
-			__( 'Missing Extensions', 'action-steward' )  => esc_html( $php['missing_extensions'] ? implode( ', ', $php['missing_extensions'] ) : __( 'None', 'action-steward' ) ),
+			__( 'PHP Version', 'siteradian' )         => esc_html( $php['version'] ),
+			__( 'Memory Limit', 'siteradian' )        => esc_html( $php['memory_limit'] ),
+			__( 'Max Execution Time', 'siteradian' )  => esc_html( $php['max_execution_time'] . 's' ),
+			__( 'Upload Max Filesize', 'siteradian' ) => esc_html( $php['upload_max_filesize'] ),
+			__( 'Post Max Size', 'siteradian' )       => esc_html( $php['post_max_size'] ),
+			__( 'Loaded Extensions', 'siteradian' )   => esc_html( $php['loaded_extensions'] ? implode( ', ', $php['loaded_extensions'] ) : '—' ),
+			__( 'Missing Extensions', 'siteradian' )  => esc_html( $php['missing_extensions'] ? implode( ', ', $php['missing_extensions'] ) : __( 'None', 'siteradian' ) ),
 		]
 	);
 
 	$theme_rows = [
-		__( 'Name', 'action-steward' )        => esc_html( $theme['name'] ),
-		__( 'Version', 'action-steward' )     => esc_html( $theme['version'] ),
-		__( 'Author', 'action-steward' )      => esc_html( $theme['author'] ),
-		__( 'Template', 'action-steward' )    => esc_html( $theme['template'] ),
-		__( 'Child Theme', 'action-steward' ) => $badge( $theme['is_child_theme'] ),
+		__( 'Name', 'siteradian' )        => esc_html( $theme['name'] ),
+		__( 'Version', 'siteradian' )     => esc_html( $theme['version'] ),
+		__( 'Author', 'siteradian' )      => esc_html( $theme['author'] ),
+		__( 'Template', 'siteradian' )    => esc_html( $theme['template'] ),
+		__( 'Child Theme', 'siteradian' ) => $badge( $theme['is_child_theme'] ),
 	];
 
 	if ( $theme['parent'] ) {
-		$theme_rows[ __( 'Parent Theme', 'action-steward' ) ] = esc_html( sprintf( '%1$s (%2$s)', $theme['parent']['name'], $theme['parent']['version'] ) );
+		$theme_rows[ __( 'Parent Theme', 'siteradian' ) ] = esc_html( sprintf( '%1$s (%2$s)', $theme['parent']['name'], $theme['parent']['version'] ) );
 	}
 
-	$render_section( __( 'Active Theme', 'action-steward' ), $theme_rows );
+	$render_section( __( 'Active Theme', 'siteradian' ), $theme_rows );
 	?>
 
 	<h2>
 		<?php
 		printf(
 			/* translators: %d: number of active plugins. */
-			esc_html__( 'Active Plugins (%d)', 'action-steward' ),
+			esc_html__( 'Active Plugins (%d)', 'siteradian' ),
 			count( $data['plugins'] )
 		);
 		?>
@@ -126,9 +126,9 @@ $debug   = $data['debug'];
 	<table class="widefat striped wpcc-cds-table wpcc-table">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Plugin', 'action-steward' ); ?></th>
-				<th><?php esc_html_e( 'Version', 'action-steward' ); ?></th>
-				<th><?php esc_html_e( 'Author', 'action-steward' ); ?></th>
+				<th><?php esc_html_e( 'Plugin', 'siteradian' ); ?></th>
+				<th><?php esc_html_e( 'Version', 'siteradian' ); ?></th>
+				<th><?php esc_html_e( 'Author', 'siteradian' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -145,67 +145,67 @@ $debug   = $data['debug'];
 	<?php
 	if ( $wc['active'] ) {
 		$render_section(
-			__( 'WooCommerce', 'action-steward' ),
+			__( 'WooCommerce', 'siteradian' ),
 			[
-				__( 'Status', 'action-steward' )        => $badge( true ),
-				__( 'Version', 'action-steward' )       => esc_html( $wc['version'] ),
-				__( 'Currency', 'action-steward' )      => esc_html( $wc['currency'] ),
-				__( 'Base Location', 'action-steward' ) => esc_html( $wc['base_location'] ),
+				__( 'Status', 'siteradian' )        => $badge( true ),
+				__( 'Version', 'siteradian' )       => esc_html( $wc['version'] ),
+				__( 'Currency', 'siteradian' )      => esc_html( $wc['currency'] ),
+				__( 'Base Location', 'siteradian' ) => esc_html( $wc['base_location'] ),
 			]
 		);
 	} else {
 		$render_section(
-			__( 'WooCommerce', 'action-steward' ),
+			__( 'WooCommerce', 'siteradian' ),
 			[
-				__( 'Status', 'action-steward' ) => $badge( false ) . ' ' . esc_html__( 'WooCommerce is not active on this site.', 'action-steward' ),
+				__( 'Status', 'siteradian' ) => $badge( false ) . ' ' . esc_html__( 'WooCommerce is not active on this site.', 'siteradian' ),
 			]
 		);
 	}
 
 	$render_section(
-		__( 'Cache Configuration', 'action-steward' ),
+		__( 'Cache Configuration', 'siteradian' ),
 		[
-			__( 'External Object Cache', 'action-steward' )      => $badge( $cache['object_cache_enabled'] ),
-			__( 'object-cache.php Drop-in', 'action-steward' )    => $badge( $cache['object_cache_dropin'] ),
-			__( 'advanced-cache.php Drop-in', 'action-steward' )  => $badge( $cache['page_cache_dropin'] ),
-			__( 'OPcache Enabled', 'action-steward' )             => $badge( $cache['opcache_enabled'] ),
-			__( 'Detected Caching Plugins', 'action-steward' )    => esc_html( $cache['caching_plugins'] ? implode( ', ', $cache['caching_plugins'] ) : __( 'None detected', 'action-steward' ) ),
+			__( 'External Object Cache', 'siteradian' )      => $badge( $cache['object_cache_enabled'] ),
+			__( 'object-cache.php Drop-in', 'siteradian' )    => $badge( $cache['object_cache_dropin'] ),
+			__( 'advanced-cache.php Drop-in', 'siteradian' )  => $badge( $cache['page_cache_dropin'] ),
+			__( 'OPcache Enabled', 'siteradian' )             => $badge( $cache['opcache_enabled'] ),
+			__( 'Detected Caching Plugins', 'siteradian' )    => esc_html( $cache['caching_plugins'] ? implode( ', ', $cache['caching_plugins'] ) : __( 'None detected', 'siteradian' ) ),
 		]
 	);
 
 	$render_section(
-		__( 'Server Capabilities', 'action-steward' ),
+		__( 'Server Capabilities', 'siteradian' ),
 		[
-			__( 'Server Software', 'action-steward' )       => esc_html( $server['software'] ?: '—' ),
-			__( 'Operating System', 'action-steward' )      => esc_html( $server['os'] ),
-			__( 'shell_exec() Enabled', 'action-steward' )  => $badge( $server['shell_exec_enabled'] ),
-			__( 'proc_open() Enabled', 'action-steward' )   => $badge( $server['proc_open_enabled'] ),
-			__( 'WP-CLI Available', 'action-steward' )      => $badge( $server['wp_cli_available'] ),
-			__( 'Disabled PHP Functions', 'action-steward' ) => esc_html( $server['disabled_functions'] ? implode( ', ', $server['disabled_functions'] ) : __( 'None', 'action-steward' ) ),
+			__( 'Server Software', 'siteradian' )       => esc_html( $server['software'] ?: '—' ),
+			__( 'Operating System', 'siteradian' )      => esc_html( $server['os'] ),
+			__( 'shell_exec() Enabled', 'siteradian' )  => $badge( $server['shell_exec_enabled'] ),
+			__( 'proc_open() Enabled', 'siteradian' )   => $badge( $server['proc_open_enabled'] ),
+			__( 'WP-CLI Available', 'siteradian' )      => $badge( $server['wp_cli_available'] ),
+			__( 'Disabled PHP Functions', 'siteradian' ) => esc_html( $server['disabled_functions'] ? implode( ', ', $server['disabled_functions'] ) : __( 'None', 'siteradian' ) ),
 		]
 	);
 
 	$render_section(
-		__( 'Debug Status', 'action-steward' ),
+		__( 'Debug Status', 'siteradian' ),
 		[
-			__( 'WP_DEBUG', 'action-steward' )         => $badge( $debug['wp_debug'] ),
-			__( 'WP_DEBUG_LOG', 'action-steward' )     => $badge( $debug['wp_debug_log'] ),
-			__( 'WP_DEBUG_DISPLAY', 'action-steward' ) => $badge( $debug['wp_debug_display'] ),
-			__( 'SCRIPT_DEBUG', 'action-steward' )     => $badge( $debug['script_debug'] ),
-			__( 'debug.log Exists', 'action-steward' ) => $badge( $debug['log_exists'] ),
-			__( 'debug.log Size', 'action-steward' )   => esc_html( $debug['log_exists'] ? size_format( $debug['log_size'] ) : '—' ),
+			__( 'WP_DEBUG', 'siteradian' )         => $badge( $debug['wp_debug'] ),
+			__( 'WP_DEBUG_LOG', 'siteradian' )     => $badge( $debug['wp_debug_log'] ),
+			__( 'WP_DEBUG_DISPLAY', 'siteradian' ) => $badge( $debug['wp_debug_display'] ),
+			__( 'SCRIPT_DEBUG', 'siteradian' )     => $badge( $debug['script_debug'] ),
+			__( 'debug.log Exists', 'siteradian' ) => $badge( $debug['log_exists'] ),
+			__( 'debug.log Size', 'siteradian' )   => esc_html( $debug['log_exists'] ? size_format( $debug['log_size'] ) : '—' ),
 		]
 	);
 	?>
 
-	<h2><?php esc_html_e( 'File & Directory Permissions', 'action-steward' ); ?></h2>
+	<h2><?php esc_html_e( 'File & Directory Permissions', 'siteradian' ); ?></h2>
 	<table class="widefat striped wpcc-cds-table wpcc-table">
 		<thead>
 			<tr>
-				<th><?php esc_html_e( 'Path', 'action-steward' ); ?></th>
-				<th><?php esc_html_e( 'Exists', 'action-steward' ); ?></th>
-				<th><?php esc_html_e( 'Permissions', 'action-steward' ); ?></th>
-				<th><?php esc_html_e( 'Writable', 'action-steward' ); ?></th>
+				<th><?php esc_html_e( 'Path', 'siteradian' ); ?></th>
+				<th><?php esc_html_e( 'Exists', 'siteradian' ); ?></th>
+				<th><?php esc_html_e( 'Permissions', 'siteradian' ); ?></th>
+				<th><?php esc_html_e( 'Writable', 'siteradian' ); ?></th>
 			</tr>
 		</thead>
 		<tbody>

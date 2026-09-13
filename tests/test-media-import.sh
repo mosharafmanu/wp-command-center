@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Media Import Operation test suite for Action Steward (Step 27).
+# Media Import Operation test suite for SiteRadian AI (Step 27).
 #
 # Verifies:
 #   - valid image import

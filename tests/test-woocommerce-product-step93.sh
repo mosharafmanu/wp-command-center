@@ -73,6 +73,10 @@ assert_eq "stock quantity" "37" "$(wpe 'echo (int) wc_get_product('"$PROD"')->ge
 
 echo "== 7. Verify frontend =="
 PERMALINK=$(wpe 'echo get_permalink('"$PROD"');')
+if [ -n "${WPCC_FRONTEND_BASE:-}" ]; then
+  SITE_HOME=$(wpe 'echo home_url();')
+  PERMALINK="${PERMALINK/#$SITE_HOME/${WPCC_FRONTEND_BASE%/}}"
+fi
 assert_eq "product page HTTP 200" "200" "$(curl -s -o /dev/null -w "%{http_code}" "$PERMALINK")"
 assert_eq "product retrievable via product_get" "$PROD" "$(woo "$(jq -n --argjson pid "$PROD" '{action:"product_get",product_id:$pid}')" | jq -r '.product.id // .product_id // empty')"
 

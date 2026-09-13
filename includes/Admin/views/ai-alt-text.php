@@ -32,41 +32,41 @@ $approval_url  = admin_url( 'admin.php?page=wpcc-activity&wpcc_tab=approvals' );
 $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'Alt Text', 'action-steward' ); ?></h1>
+	<h1><?php esc_html_e( 'Alt Text', 'siteradian' ); ?></h1>
 	<p class="description" style="max-width:720px;">
-		<?php esc_html_e( 'Generate clear, descriptive alt text for your images — better for accessibility and SEO. Review each suggestion, then approve to apply. Nothing is saved until you do.', 'action-steward' ); ?>
+		<?php esc_html_e( 'Generate clear, descriptive alt text for your images — better for accessibility and SEO. Review each suggestion, then approve to apply. Nothing is saved until you do.', 'siteradian' ); ?>
 	</p>
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<!-- Readiness header -->
 	<div id="wpcc-at-readiness" class="wpcc-cds-card" style="display:flex;gap:24px;flex-wrap:wrap;margin:16px 0;">
-		<div><strong style="font-size:22px;" id="wpcc-at-pct">—</strong><br><span class="description"><?php esc_html_e( 'Media described', 'action-steward' ); ?></span></div>
-		<div><strong style="font-size:22px;color:var(--wpcc-state-danger-fg);" id="wpcc-at-missing">—</strong><br><span class="description"><?php esc_html_e( 'Missing alt text', 'action-steward' ); ?></span></div>
-		<div><strong style="font-size:22px;color:var(--wpcc-state-warning-fg);" id="wpcc-at-weak">—</strong><br><span class="description"><?php esc_html_e( 'Weak alt text', 'action-steward' ); ?></span></div>
-		<div><strong style="font-size:22px;" id="wpcc-at-total">—</strong><br><span class="description"><?php esc_html_e( 'Total images', 'action-steward' ); ?></span></div>
+		<div><strong style="font-size:22px;" id="wpcc-at-pct">—</strong><br><span class="description"><?php esc_html_e( 'Media described', 'siteradian' ); ?></span></div>
+		<div><strong style="font-size:22px;color:var(--wpcc-state-danger-fg);" id="wpcc-at-missing">—</strong><br><span class="description"><?php esc_html_e( 'Missing alt text', 'siteradian' ); ?></span></div>
+		<div><strong style="font-size:22px;color:var(--wpcc-state-warning-fg);" id="wpcc-at-weak">—</strong><br><span class="description"><?php esc_html_e( 'Weak alt text', 'siteradian' ); ?></span></div>
+		<div><strong style="font-size:22px;" id="wpcc-at-total">—</strong><br><span class="description"><?php esc_html_e( 'Total images', 'siteradian' ); ?></span></div>
 	</div>
 
 	<!-- Tabs -->
 	<h2 class="nav-tab-wrapper">
-		<a href="#" class="nav-tab nav-tab-active" id="wpcc-at-tab-review"><?php esc_html_e( 'Review', 'action-steward' ); ?></a>
-		<a href="#" class="nav-tab" id="wpcc-at-tab-suggestions"><?php esc_html_e( 'Suggestions', 'action-steward' ); ?></a>
-		<a href="#" class="nav-tab" id="wpcc-at-tab-applied"><?php esc_html_e( 'Applied', 'action-steward' ); ?></a>
+		<a href="#" class="nav-tab nav-tab-active" id="wpcc-at-tab-review"><?php esc_html_e( 'Review', 'siteradian' ); ?></a>
+		<a href="#" class="nav-tab" id="wpcc-at-tab-suggestions"><?php esc_html_e( 'Suggestions', 'siteradian' ); ?></a>
+		<a href="#" class="nav-tab" id="wpcc-at-tab-applied"><?php esc_html_e( 'Applied', 'siteradian' ); ?></a>
 	</h2>
 
 	<!-- ============ REVIEW TAB ============ -->
 	<div id="wpcc-at-panel-review">
 		<div style="display:flex;align-items:center;gap:12px;margin:12px 0;flex-wrap:wrap;">
-			<label for="wpcc-at-filter"><?php esc_html_e( 'Show:', 'action-steward' ); ?></label>
+			<label for="wpcc-at-filter"><?php esc_html_e( 'Show:', 'siteradian' ); ?></label>
 			<select id="wpcc-at-filter">
-				<option value="missing"><?php esc_html_e( 'Missing', 'action-steward' ); ?></option>
-				<option value="weak"><?php esc_html_e( 'Weak', 'action-steward' ); ?></option>
-				<option value="all"><?php esc_html_e( 'All images', 'action-steward' ); ?></option>
+				<option value="missing"><?php esc_html_e( 'Missing', 'siteradian' ); ?></option>
+				<option value="weak"><?php esc_html_e( 'Weak', 'siteradian' ); ?></option>
+				<option value="all"><?php esc_html_e( 'All images', 'siteradian' ); ?></option>
 			</select>
-			<label><input type="checkbox" id="wpcc-at-selectall"> <?php esc_html_e( 'Select all on this page', 'action-steward' ); ?></label>
-			<button type="button" class="button button-primary" id="wpcc-at-generate" disabled><?php esc_html_e( 'Generate suggestions', 'action-steward' ); ?></button>
+			<label><input type="checkbox" id="wpcc-at-selectall"> <?php esc_html_e( 'Select all on this page', 'siteradian' ); ?></label>
+			<button type="button" class="button button-primary" id="wpcc-at-generate" disabled><?php esc_html_e( 'Generate suggestions', 'siteradian' ); ?></button>
 			<span class="description"><?php
 				/* translators: %d: max images per generation */
-				printf( esc_html__( 'Up to %d images per generation.', 'action-steward' ), 25 );
+				printf( esc_html__( 'Up to %d images per generation.', 'siteradian' ), 25 );
 			?></span>
 			<span id="wpcc-at-status" role="status" aria-live="polite" style="margin-left:auto;color:#646970;"></span>
 		</div>
@@ -80,43 +80,43 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 			<thead>
 				<tr>
 					<th style="width:28px;"></th>
-					<th style="width:60px;"><?php esc_html_e( 'Image', 'action-steward' ); ?></th>
-					<th><?php esc_html_e( 'File', 'action-steward' ); ?></th>
-					<th><?php esc_html_e( 'Current alt text', 'action-steward' ); ?></th>
-					<th style="width:120px;"><?php esc_html_e( 'State', 'action-steward' ); ?></th>
+					<th style="width:60px;"><?php esc_html_e( 'Image', 'siteradian' ); ?></th>
+					<th><?php esc_html_e( 'File', 'siteradian' ); ?></th>
+					<th><?php esc_html_e( 'Current alt text', 'siteradian' ); ?></th>
+					<th style="width:120px;"><?php esc_html_e( 'State', 'siteradian' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-at-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'siteradian' ); ?></td></tr>
 			</tbody>
 		</table>
 
 		<p style="margin-top:12px;">
-			<button type="button" class="button" id="wpcc-at-prev" disabled>&larr; <?php esc_html_e( 'Previous', 'action-steward' ); ?></button>
-			<button type="button" class="button" id="wpcc-at-next" disabled><?php esc_html_e( 'Next', 'action-steward' ); ?> &rarr;</button>
+			<button type="button" class="button" id="wpcc-at-prev" disabled>&larr; <?php esc_html_e( 'Previous', 'siteradian' ); ?></button>
+			<button type="button" class="button" id="wpcc-at-next" disabled><?php esc_html_e( 'Next', 'siteradian' ); ?> &rarr;</button>
 		</p>
 	</div>
 
 	<!-- ============ SUGGESTIONS TAB ============ -->
 	<div id="wpcc-at-panel-suggestions" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit, dismiss, or apply suggestions individually or in bulk. Nothing is applied to your site until you choose to.', 'action-steward' ); ?></span>
+			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit, dismiss, or apply suggestions individually or in bulk. Nothing is applied to your site until you choose to.', 'siteradian' ); ?></span>
 			<span id="wpcc-at-sg-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
 
 		<!-- Task 8.4 — bulk action bar. Operates on the selected draft rows on this
 		     page via the EXISTING per-proposal apply/dismiss endpoints (sequential). -->
 		<div style="display:flex;align-items:center;gap:12px;margin:12px 0;flex-wrap:wrap;">
-			<label for="wpcc-at-sg-scope"><?php esc_html_e( 'Show:', 'action-steward' ); ?></label>
+			<label for="wpcc-at-sg-scope"><?php esc_html_e( 'Show:', 'siteradian' ); ?></label>
 			<select id="wpcc-at-sg-scope">
-				<option value="all"><?php esc_html_e( 'All drafts', 'action-steward' ); ?></option>
-				<option value="last" disabled><?php esc_html_e( 'Last generated', 'action-steward' ); ?></option>
+				<option value="all"><?php esc_html_e( 'All drafts', 'siteradian' ); ?></option>
+				<option value="last" disabled><?php esc_html_e( 'Last generated', 'siteradian' ); ?></option>
 			</select>
-			<label><input type="checkbox" id="wpcc-at-sg-selectall"> <?php esc_html_e( 'Select all on this page', 'action-steward' ); ?></label>
-			<button type="button" class="button button-primary" id="wpcc-at-sg-apply" disabled><?php esc_html_e( 'Apply selected', 'action-steward' ); ?></button>
-			<button type="button" class="button" id="wpcc-at-sg-dismiss" disabled><?php esc_html_e( 'Dismiss selected', 'action-steward' ); ?></button>
+			<label><input type="checkbox" id="wpcc-at-sg-selectall"> <?php esc_html_e( 'Select all on this page', 'siteradian' ); ?></label>
+			<button type="button" class="button button-primary" id="wpcc-at-sg-apply" disabled><?php esc_html_e( 'Apply selected', 'siteradian' ); ?></button>
+			<button type="button" class="button" id="wpcc-at-sg-dismiss" disabled><?php esc_html_e( 'Dismiss selected', 'siteradian' ); ?></button>
 			<?php // S2.2.1 — cross-page "select all matching": server resolves a bounded id set; bulk acts over it. ?>
-			<button type="button" class="button" id="wpcc-at-sg-matchall"><?php esc_html_e( 'Select all matching', 'action-steward' ); ?></button>
+			<button type="button" class="button" id="wpcc-at-sg-matchall"><?php esc_html_e( 'Select all matching', 'siteradian' ); ?></button>
 		</div>
 		<div id="wpcc-at-sg-matchall-bar" role="status" aria-live="polite" style="display:none;margin:6px 0;padding:8px 10px;border:1px solid #c3c4c7;background:#f6f7f7;border-radius:4px;font-size:13px;"></div>
 		<div id="wpcc-at-sg-progress" role="status" aria-live="polite" style="display:none;margin:8px 0;padding:10px;border:1px solid #c3c4c7;background:#fff;border-radius:4px;"></div>
@@ -124,42 +124,42 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 		<table class="widefat striped">
 			<thead>
 				<tr>
-					<th style="width:28px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'action-steward' ); ?></span></th>
-					<th style="width:60px;"><?php esc_html_e( 'Image', 'action-steward' ); ?></th>
-					<th><?php esc_html_e( 'File', 'action-steward' ); ?></th>
-					<th style="width:24%;"><?php esc_html_e( 'Current alt text', 'action-steward' ); ?></th>
-					<th><?php esc_html_e( 'Suggested alt text', 'action-steward' ); ?></th>
-					<th style="width:150px;"><?php esc_html_e( 'Actions', 'action-steward' ); ?></th>
+					<th style="width:28px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'siteradian' ); ?></span></th>
+					<th style="width:60px;"><?php esc_html_e( 'Image', 'siteradian' ); ?></th>
+					<th><?php esc_html_e( 'File', 'siteradian' ); ?></th>
+					<th style="width:24%;"><?php esc_html_e( 'Current alt text', 'siteradian' ); ?></th>
+					<th><?php esc_html_e( 'Suggested alt text', 'siteradian' ); ?></th>
+					<th style="width:150px;"><?php esc_html_e( 'Actions', 'siteradian' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-at-sg-rows">
-				<tr><td colspan="6"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
+				<tr><td colspan="6"><?php esc_html_e( 'Loading…', 'siteradian' ); ?></td></tr>
 			</tbody>
 		</table>
 		<p style="margin-top:12px;">
-			<button type="button" class="button" id="wpcc-at-sg-prev" disabled>&larr; <?php esc_html_e( 'Previous', 'action-steward' ); ?></button>
-			<button type="button" class="button" id="wpcc-at-sg-next" disabled><?php esc_html_e( 'Next', 'action-steward' ); ?> &rarr;</button>
+			<button type="button" class="button" id="wpcc-at-sg-prev" disabled>&larr; <?php esc_html_e( 'Previous', 'siteradian' ); ?></button>
+			<button type="button" class="button" id="wpcc-at-sg-next" disabled><?php esc_html_e( 'Next', 'siteradian' ); ?> &rarr;</button>
 		</p>
 	</div>
 
 	<!-- ============ APPLIED TAB ============ -->
 	<div id="wpcc-at-panel-applied" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'Applied descriptions and items awaiting approval. Undo is available for reversible changes.', 'action-steward' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Applied descriptions and items awaiting approval. Undo is available for reversible changes.', 'siteradian' ); ?></span>
 			<span id="wpcc-at-ap-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
 		<table class="widefat striped">
 			<thead>
 				<tr>
-					<th style="width:60px;"><?php esc_html_e( 'Image', 'action-steward' ); ?></th>
-					<th><?php esc_html_e( 'File', 'action-steward' ); ?></th>
-					<th><?php esc_html_e( 'Applied alt text', 'action-steward' ); ?></th>
-					<th style="width:140px;"><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
-					<th style="width:160px;"><?php esc_html_e( 'Actions', 'action-steward' ); ?></th>
+					<th style="width:60px;"><?php esc_html_e( 'Image', 'siteradian' ); ?></th>
+					<th><?php esc_html_e( 'File', 'siteradian' ); ?></th>
+					<th><?php esc_html_e( 'Applied alt text', 'siteradian' ); ?></th>
+					<th style="width:140px;"><?php esc_html_e( 'Status', 'siteradian' ); ?></th>
+					<th style="width:160px;"><?php esc_html_e( 'Actions', 'siteradian' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-at-ap-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'siteradian' ); ?></td></tr>
 			</tbody>
 		</table>
 	</div>
@@ -178,23 +178,23 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 	const MAX_BATCH = 25;
 	const CHUNK = 3; // client-side chunked generation: small requests, incremental progress
 	const STR = {
-		empty:   <?php echo wp_json_encode( esc_html__( 'No images in this view. 🎉', 'action-steward' ) ); ?>,
-		error:   <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'action-steward' ) ); ?>,
-		loading: <?php echo wp_json_encode( esc_html__( 'Loading…', 'action-steward' ) ); ?>,
-		none:    <?php echo wp_json_encode( esc_html__( '(no alt text)', 'action-steward' ) ); ?>,
-		pending: <?php echo wp_json_encode( esc_html__( 'Suggestion pending', 'action-steward' ) ); ?>,
-		missing: <?php echo wp_json_encode( esc_html__( 'Missing', 'action-steward' ) ); ?>,
-		weak:    <?php echo wp_json_encode( esc_html__( 'Weak', 'action-steward' ) ); ?>,
-		ok:      <?php echo wp_json_encode( esc_html__( 'OK', 'action-steward' ) ); ?>,
-		cap:     <?php echo wp_json_encode( esc_html__( 'You can generate up to 25 at a time; only the first 25 will be used.', 'action-steward' ) ); ?>,
-		generating: <?php echo wp_json_encode( esc_html__( 'Generating', 'action-steward' ) ); ?>,
-		byAI:    <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'action-steward' ) ); ?>,
-		edited:  <?php echo wp_json_encode( esc_html__( 'Edited', 'action-steward' ) ); ?>,
-		save:    <?php echo wp_json_encode( esc_html__( 'Save', 'action-steward' ) ); ?>,
-		saved:   <?php echo wp_json_encode( esc_html__( 'Saved', 'action-steward' ) ); ?>,
-		dismiss: <?php echo wp_json_encode( esc_html__( 'Dismiss', 'action-steward' ) ); ?>,
-		dismissed: <?php echo wp_json_encode( esc_html__( 'Dismissed', 'action-steward' ) ); ?>,
-		noSug:   <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from the Review tab.', 'action-steward' ) ); ?>,
+		empty:   <?php echo wp_json_encode( esc_html__( 'No images in this view. 🎉', 'siteradian' ) ); ?>,
+		error:   <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'siteradian' ) ); ?>,
+		loading: <?php echo wp_json_encode( esc_html__( 'Loading…', 'siteradian' ) ); ?>,
+		none:    <?php echo wp_json_encode( esc_html__( '(no alt text)', 'siteradian' ) ); ?>,
+		pending: <?php echo wp_json_encode( esc_html__( 'Suggestion pending', 'siteradian' ) ); ?>,
+		missing: <?php echo wp_json_encode( esc_html__( 'Missing', 'siteradian' ) ); ?>,
+		weak:    <?php echo wp_json_encode( esc_html__( 'Weak', 'siteradian' ) ); ?>,
+		ok:      <?php echo wp_json_encode( esc_html__( 'OK', 'siteradian' ) ); ?>,
+		cap:     <?php echo wp_json_encode( esc_html__( 'You can generate up to 25 at a time; only the first 25 will be used.', 'siteradian' ) ); ?>,
+		generating: <?php echo wp_json_encode( esc_html__( 'Generating', 'siteradian' ) ); ?>,
+		byAI:    <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'siteradian' ) ); ?>,
+		edited:  <?php echo wp_json_encode( esc_html__( 'Edited', 'siteradian' ) ); ?>,
+		save:    <?php echo wp_json_encode( esc_html__( 'Save', 'siteradian' ) ); ?>,
+		saved:   <?php echo wp_json_encode( esc_html__( 'Saved', 'siteradian' ) ); ?>,
+		dismiss: <?php echo wp_json_encode( esc_html__( 'Dismiss', 'siteradian' ) ); ?>,
+		dismissed: <?php echo wp_json_encode( esc_html__( 'Dismissed', 'siteradian' ) ); ?>,
+		noSug:   <?php echo wp_json_encode( esc_html__( 'No suggestions yet. Generate some from the Review tab.', 'siteradian' ) ); ?>,
 		/*
 		 * __() not esc_html__(): every STR value is escaped again by the JS `esc()`
 		 * helper at the moment it is inserted, so escaping here as well runs the
@@ -202,51 +202,51 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 		 * shows it — the button rendered literally as "Approve &amp; Apply" on the
 		 * suggestions table. Anything added here must stay insert-time escaped.
 		 */
-		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'action-steward' ) ); ?>,
-		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'action-steward' ) ); ?>,
-		applied:   <?php echo wp_json_encode( esc_html__( 'Applied', 'action-steward' ) ); ?>,
-		awaiting:  <?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'action-steward' ) ); ?>,
-		reverted:  <?php echo wp_json_encode( esc_html__( 'Reverted', 'action-steward' ) ); ?>,
-		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'action-steward' ) ); ?>,
-		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'action-steward' ) ); ?>,
-		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'action-steward' ) ); ?>,
-		reviewAppr: <?php echo wp_json_encode( esc_html__( 'Review in Approvals →', 'action-steward' ) ); ?>,
-		viewHist:  <?php echo wp_json_encode( esc_html__( 'View in Changes →', 'action-steward' ) ); ?>,
-		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'action-steward' ) ); ?>,
+		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'siteradian' ) ); ?>,
+		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'siteradian' ) ); ?>,
+		applied:   <?php echo wp_json_encode( esc_html__( 'Applied', 'siteradian' ) ); ?>,
+		awaiting:  <?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'siteradian' ) ); ?>,
+		reverted:  <?php echo wp_json_encode( esc_html__( 'Reverted', 'siteradian' ) ); ?>,
+		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'siteradian' ) ); ?>,
+		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'siteradian' ) ); ?>,
+		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'siteradian' ) ); ?>,
+		reviewAppr: <?php echo wp_json_encode( esc_html__( 'Review in Approvals →', 'siteradian' ) ); ?>,
+		viewHist:  <?php echo wp_json_encode( esc_html__( 'View in Changes →', 'siteradian' ) ); ?>,
+		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'siteradian' ) ); ?>,
 		// Task 8.4 — bulk action labels (Suggestions tab).
-		selectAllSg: <?php echo wp_json_encode( esc_html__( 'Select all on this page', 'action-steward' ) ); ?>,
-		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'action-steward' ) ); ?>,
+		selectAllSg: <?php echo wp_json_encode( esc_html__( 'Select all on this page', 'siteradian' ) ); ?>,
+		applySel:    <?php echo wp_json_encode( esc_html__( 'Apply selected', 'siteradian' ) ); ?>,
 		/* translators: %s: the image title. */
-		genFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Generate alt text for %s', 'action-steward' ) ); ?>,
+		genFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Generate alt text for %s', 'siteradian' ) ); ?>,
 		/* translators: %s: the image title. */
-		selectSugFor:<?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select suggestion for %s', 'action-steward' ) ); ?>,
-		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'action-steward' ) ); ?>,
-		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'action-steward' ) ); ?>,
-		bulkDone:    <?php echo wp_json_encode( esc_html__( 'processed', 'action-steward' ) ); ?>,
-		lblApplied:  <?php echo wp_json_encode( esc_html__( 'applied', 'action-steward' ) ); ?>,
-		lblPending:  <?php echo wp_json_encode( esc_html__( 'submitted for approval', 'action-steward' ) ); ?>,
-		lblDismissed: <?php echo wp_json_encode( esc_html__( 'dismissed', 'action-steward' ) ); ?>,
-		lblFailed:   <?php echo wp_json_encode( esc_html__( 'failed', 'action-steward' ) ); ?>,
-		scopeAll:    <?php echo wp_json_encode( esc_html__( 'All drafts', 'action-steward' ) ); ?>,
-		scopeLast:   <?php echo wp_json_encode( esc_html__( 'Last generated', 'action-steward' ) ); ?>,
+		selectSugFor:<?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select suggestion for %s', 'siteradian' ) ); ?>,
+		dismissSel:  <?php echo wp_json_encode( esc_html__( 'Dismiss selected', 'siteradian' ) ); ?>,
+		bulkProcessing: <?php echo wp_json_encode( esc_html__( 'Processing', 'siteradian' ) ); ?>,
+		bulkDone:    <?php echo wp_json_encode( esc_html__( 'processed', 'siteradian' ) ); ?>,
+		lblApplied:  <?php echo wp_json_encode( esc_html__( 'applied', 'siteradian' ) ); ?>,
+		lblPending:  <?php echo wp_json_encode( esc_html__( 'submitted for approval', 'siteradian' ) ); ?>,
+		lblDismissed: <?php echo wp_json_encode( esc_html__( 'dismissed', 'siteradian' ) ); ?>,
+		lblFailed:   <?php echo wp_json_encode( esc_html__( 'failed', 'siteradian' ) ); ?>,
+		scopeAll:    <?php echo wp_json_encode( esc_html__( 'All drafts', 'siteradian' ) ); ?>,
+		scopeLast:   <?php echo wp_json_encode( esc_html__( 'Last generated', 'siteradian' ) ); ?>,
 		// Confirm dialogs use plain text (not HTML-escaped) — they are not injected into the DOM.
-		confirmApplyDev:  <?php echo wp_json_encode( __( 'Apply the selected suggestions now? Each is applied individually and can be undone.', 'action-steward' ) ); ?>,
-		confirmApplyGate: <?php echo wp_json_encode( __( 'Submit the selected suggestions for approval? Each becomes its own approval request.', 'action-steward' ) ); ?>,
-		confirmDismiss:   <?php echo wp_json_encode( __( 'Dismiss the selected suggestions? This discards the drafts.', 'action-steward' ) ); ?>,
+		confirmApplyDev:  <?php echo wp_json_encode( __( 'Apply the selected suggestions now? Each is applied individually and can be undone.', 'siteradian' ) ); ?>,
+		confirmApplyGate: <?php echo wp_json_encode( __( 'Submit the selected suggestions for approval? Each becomes its own approval request.', 'siteradian' ) ); ?>,
+		confirmDismiss:   <?php echo wp_json_encode( __( 'Dismiss the selected suggestions? This discards the drafts.', 'siteradian' ) ); ?>,
 		// S2.2.1 — cross-page "select all matching".
-		resolving:    <?php echo wp_json_encode( esc_html__( 'Resolving…', 'action-steward' ) ); ?>,
-		matchClear:   <?php echo wp_json_encode( esc_html__( 'Clear', 'action-steward' ) ); ?>,
-		matchNone:    <?php echo wp_json_encode( esc_html__( 'No matching draft suggestions.', 'action-steward' ) ); ?>,
+		resolving:    <?php echo wp_json_encode( esc_html__( 'Resolving…', 'siteradian' ) ); ?>,
+		matchClear:   <?php echo wp_json_encode( esc_html__( 'Clear', 'siteradian' ) ); ?>,
+		matchNone:    <?php echo wp_json_encode( esc_html__( 'No matching draft suggestions.', 'siteradian' ) ); ?>,
 		/* translators: %d: number of matching draft suggestions */
-		matchSelected: <?php echo wp_json_encode( /* translators: %d: number */ __( 'All %d matching draft suggestions selected (across pages).', 'action-steward' ) ); ?>,
+		matchSelected: <?php echo wp_json_encode( /* translators: %d: number */ __( 'All %d matching draft suggestions selected (across pages).', 'siteradian' ) ); ?>,
 		/* translators: %1$d: number of matches, %2$d: per-action cap */
-		matchOverCap: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d matches exceed the limit of %2$d. Narrow the view or act in pages.', 'action-steward' ) ); ?>,
+		matchOverCap: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d matches exceed the limit of %2$d. Narrow the view or act in pages.', 'siteradian' ) ); ?>,
 		/* translators: %d: number of matching suggestions */
-		confirmApplyAllDev:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Apply all %d matching suggestions now? Each is applied individually and can be undone.', 'action-steward' ) ); ?>,
+		confirmApplyAllDev:  <?php echo wp_json_encode( /* translators: %d: number */ __( 'Apply all %d matching suggestions now? Each is applied individually and can be undone.', 'siteradian' ) ); ?>,
 		/* translators: %d: number of matching suggestions */
-		confirmApplyAllGate: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Submit all %d matching suggestions for approval? Each becomes its own approval request.', 'action-steward' ) ); ?>,
+		confirmApplyAllGate: <?php echo wp_json_encode( /* translators: %d: number */ __( 'Submit all %d matching suggestions for approval? Each becomes its own approval request.', 'siteradian' ) ); ?>,
 		/* translators: %d: number of matching suggestions */
-		confirmDismissAll:   <?php echo wp_json_encode( /* translators: %d: number */ __( 'Dismiss all %d matching suggestions? This discards the drafts.', 'action-steward' ) ); ?>
+		confirmDismissAll:   <?php echo wp_json_encode( /* translators: %d: number */ __( 'Dismiss all %d matching suggestions? This discards the drafts.', 'siteradian' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );
@@ -284,8 +284,8 @@ $history_url   = admin_url( 'admin.php?page=wpcc-history&wpcc_tab=changes' );
 		const btn = $( 'wpcc-at-generate' );
 		btn.disabled = n === 0;
 		btn.textContent = n > 0
-			? <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'action-steward' ) ); ?> + ' (' + n + ')'
-			: <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'action-steward' ) ); ?>;
+			? <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'siteradian' ) ); ?> + ' (' + n + ')'
+			: <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'siteradian' ) ); ?>;
 		$( 'wpcc-at-status' ).textContent = ( n > MAX_BATCH ) ? STR.cap : '';
 	}
 

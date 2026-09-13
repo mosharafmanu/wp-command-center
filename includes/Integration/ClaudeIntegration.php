@@ -229,7 +229,7 @@ final class ClaudeIntegration {
 
 		return [
 			'server'        => [
-				'name'           => 'Action Steward MCP',
+				'name'           => 'SiteRadian AI MCP',
 				'version'        => WPCC_VERSION,
 				'protocol'       => 'JSON-RPC 2.0',
 				'mcp_version'    => McpServerRuntime::MCP_VERSION,

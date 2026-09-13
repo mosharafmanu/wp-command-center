@@ -66,10 +66,10 @@ final class OpenAiCompatibleTransport {
 		$model = $request->model();
 
 		if ( '' === $api_key ) {
-			return GenerationResult::error( 'not_configured', __( 'No API key configured for this provider.', 'action-steward' ), $model );
+			return GenerationResult::error( 'not_configured', __( 'No API key configured for this provider.', 'siteradian' ), $model );
 		}
 		if ( '' === $endpoint ) {
-			return GenerationResult::error( 'not_configured', __( 'No endpoint configured for this provider.', 'action-steward' ), $model );
+			return GenerationResult::error( 'not_configured', __( 'No endpoint configured for this provider.', 'siteradian' ), $model );
 		}
 
 		$profile = OpenAiCompatProfiles::for_provider( $provider );

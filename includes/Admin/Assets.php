@@ -65,14 +65,14 @@ final class Assets {
 			'mode' => $default_mode,
 			'nav'  => AppShell::nav_map(),
 			'i18n' => [
-				'section'         => __( 'Section', 'action-steward' ),
-				'paletteLabel'    => __( 'Search Action Steward', 'action-steward' ),
+				'section'         => __( 'Section', 'siteradian' ),
+				'paletteLabel'    => __( 'Search SiteRadian AI', 'siteradian' ),
 				// The palette reaches every screen, not just the four top sections
 				// — "Jump to a section…" described a smaller product than the one
 				// the customer is searching.
-				'paletteSearch'   => __( 'Search for a screen…', 'action-steward' ),
-				'paletteNone'     => __( 'Nothing here matches that.', 'action-steward' ),
-				'paletteNoneHint' => __( 'Try a shorter word — or clear the box to see every screen.', 'action-steward' ),
+				'paletteSearch'   => __( 'Search for a screen…', 'siteradian' ),
+				'paletteNone'     => __( 'Nothing here matches that.', 'siteradian' ),
+				'paletteNoneHint' => __( 'Try a shorter word — or clear the box to see every screen.', 'siteradian' ),
 			],
 		] );
 	}

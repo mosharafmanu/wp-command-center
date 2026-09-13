@@ -49,15 +49,15 @@ final class FileAccessApi {
 		}
 
 		if ( is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'siteradian' ) );
 		}
 
 		if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'siteradian' ) );
 		}
 
 		if ( $this->is_binary( $real ) ) {
-			return new \WP_Error( 'wpcc_binary_file', __( 'Binary files cannot be previewed.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_binary_file', __( 'Binary files cannot be previewed.', 'siteradian' ) );
 		}
 
 		$total_bytes = (int) filesize( $real );
@@ -283,11 +283,11 @@ final class FileAccessApi {
 		}
 
 		if ( is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_is_directory', __( 'The requested path is a directory.', 'siteradian' ) );
 		}
 
 		if ( ! is_file( $real ) || ! is_readable( $real ) ) {
-			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_not_readable', __( 'File not found or not readable.', 'siteradian' ) );
 		}
 
 		return [
@@ -329,7 +329,7 @@ final class FileAccessApi {
 		}
 
 		if ( ! is_dir( $real ) ) {
-			return new \WP_Error( 'wpcc_not_a_directory', __( 'The requested path is not a directory.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_not_a_directory', __( 'The requested path is not a directory.', 'siteradian' ) );
 		}
 
 		$entries = [];

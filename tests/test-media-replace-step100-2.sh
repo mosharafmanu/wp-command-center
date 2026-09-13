@@ -24,6 +24,7 @@ pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; [ "$e" = "$a" ] && pass "$d" || fail "$d (expected '$e', got '$a')"; }
 assert_nonempty() { local d="$1" a="$2"; { [ -n "$a" ] && [ "$a" != "null" ]; } && pass "$d" || fail "$d (empty/null)"; }
+url_path() { local u="${1#*://}"; printf '/%s' "${u#*/}"; }
 ms() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/operations/media_manage/run"; }
 msmcp() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/mcp" | jq -r '.result.content[0].text // empty'; }
 msrb() { curl -s -X POST -H "Authorization: Bearer $WPCC_TOKEN" -H "Content-Type: application/json" -d "$1" "$WPCC_BASE/operations/media_manage/rollback"; }
@@ -53,12 +54,16 @@ A_URL=$(wpe 'echo wp_get_attachment_url('"$A"');')
 B_URL=$(wpe 'echo wp_get_attachment_url('"$B"');')
 B_HASH=$(wpe 'echo md5_file(get_attached_file('"$B"'));')
 ATT_BEFORE=$(wpe '$q=new WP_Query(["post_type"=>"attachment","post_status"=>"inherit","posts_per_page"=>-1,"fields"=>"ids"]); echo $q->found_posts;')
+if [ -n "${WPCC_FRONTEND_BASE:-}" ]; then
+  SITE_HOME=$(wpe 'echo home_url();')
+  B_URL="${B_URL/#$SITE_HOME/${WPCC_FRONTEND_BASE%/}}"
+fi
 
 echo "== 1. media_replace (REST) — in place, snapshot-backed =="
 R=$(ms "$(jq -n --argjson a "$A" --arg u "$B_URL" '{action:"media_replace",media_id:$a,source_url:$u}')")
 RID=$(echo "$R" | jq -r '.rollback_id')
 assert_nonempty "replace returned rollback_id" "$RID"
-assert_eq "URL preserved (same attachment)" "$A_URL" "$(echo "$R" | jq -r '.url')"
+assert_eq "URL path preserved (same attachment)" "$(url_path "$A_URL")" "$(url_path "$(echo "$R" | jq -r '.url')")"
 
 echo "== 2. No orphan attachment created (the original-bug guard) =="
 ATT_AFTER=$(wpe '$q=new WP_Query(["post_type"=>"attachment","post_status"=>"inherit","posts_per_page"=>-1,"fields"=>"ids"]); echo $q->found_posts;')
@@ -75,7 +80,7 @@ RB=$(msrb "$(jq -n --arg r "$RID" '{rollback_id:$r}')")
 assert_eq "rollback media_id" "$A" "$(echo "$RB" | jq -r '.media_id')"
 V2=$(ms "$(jq -n --argjson a "$A" '{action:"media_replace_verify",media_id:$a}')")
 assert_eq "ORIGINAL restored byte-for-byte" "$A_HASH" "$(echo "$V2" | jq -r '.hash')"
-assert_eq "URL still preserved after rollback" "$A_URL" "$(echo "$V2" | jq -r '.url')"
+assert_eq "URL path still preserved after rollback" "$(url_path "$A_URL")" "$(url_path "$(echo "$V2" | jq -r '.url')")"
 assert_eq "double rollback rejected" "wpcc_rollback_already_applied" "$(msrb "$(jq -n --arg r "$RID" '{rollback_id:$r}')" | jq -r '.code // .data.code // "none"')"
 
 echo "== 5. MCP parity — replace + verify + rollback over MCP =="
@@ -90,6 +95,9 @@ echo "== 6. Structured errors =="
 assert_eq "missing source_url" "wpcc_missing_url" "$(ms "$(jq -n --argjson a "$A" '{action:"media_replace",media_id:$a}')" | jq -r '.code // .data.code // "none"')"
 assert_eq "replace non-attachment" "wpcc_media_not_found" "$(ms "$(jq -n --arg u "$B_URL" '{action:"media_replace",media_id:99999999,source_url:$u}')" | jq -r '.code // .data.code // "none"')"
 BAD_URL=$(wpe '$u=wp_upload_dir(); file_put_contents($u["basedir"]."/s1002-bad.txt","not an image"); echo $u["baseurl"]."/s1002-bad.txt";')
+if [ -n "${WPCC_FRONTEND_BASE:-}" ]; then
+  BAD_URL="${BAD_URL/#$SITE_HOME/${WPCC_FRONTEND_BASE%/}}"
+fi
 assert_eq "non-image source rejected" "wpcc_replace_not_image" "$(ms "$(jq -n --argjson a "$A" --arg u "$BAD_URL" '{action:"media_replace",media_id:$a,source_url:$u}')" | jq -r '.code // .data.code // "none"')"
 assert_eq "verify non-attachment" "wpcc_media_not_found" "$(ms '{"action":"media_replace_verify","media_id":99999999}' | jq -r '.code // .data.code // "none"')"
 

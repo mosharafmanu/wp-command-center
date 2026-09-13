@@ -36,8 +36,8 @@ final class OptionRegistry {
 			'site_title' => [
 				'option_id'       => 'site_title',
 				'option_name'     => 'blogname',
-				'title'           => __( 'Site Title', 'action-steward' ),
-				'description'     => __( 'The site title displayed in the header and browser title bar.', 'action-steward' ),
+				'title'           => __( 'Site Title', 'siteradian' ),
+				'description'     => __( 'The site title displayed in the header and browser title bar.', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -50,8 +50,8 @@ final class OptionRegistry {
 			'tagline' => [
 				'option_id'       => 'tagline',
 				'option_name'     => 'blogdescription',
-				'title'           => __( 'Tagline', 'action-steward' ),
-				'description'     => __( 'A short description or tagline for the site.', 'action-steward' ),
+				'title'           => __( 'Tagline', 'siteradian' ),
+				'description'     => __( 'A short description or tagline for the site.', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -63,8 +63,8 @@ final class OptionRegistry {
 			'timezone' => [
 				'option_id'       => 'timezone',
 				'option_name'     => 'timezone_string',
-				'title'           => __( 'Timezone', 'action-steward' ),
-				'description'     => __( 'The site timezone string (e.g. America/Chicago).', 'action-steward' ),
+				'title'           => __( 'Timezone', 'siteradian' ),
+				'description'     => __( 'The site timezone string (e.g. America/Chicago).', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -76,8 +76,8 @@ final class OptionRegistry {
 			'date_format' => [
 				'option_id'       => 'date_format',
 				'option_name'     => 'date_format',
-				'title'           => __( 'Date Format', 'action-steward' ),
-				'description'     => __( 'The default date format string.', 'action-steward' ),
+				'title'           => __( 'Date Format', 'siteradian' ),
+				'description'     => __( 'The default date format string.', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -89,8 +89,8 @@ final class OptionRegistry {
 			'time_format' => [
 				'option_id'       => 'time_format',
 				'option_name'     => 'time_format',
-				'title'           => __( 'Time Format', 'action-steward' ),
-				'description'     => __( 'The default time format string.', 'action-steward' ),
+				'title'           => __( 'Time Format', 'siteradian' ),
+				'description'     => __( 'The default time format string.', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -102,8 +102,8 @@ final class OptionRegistry {
 			'start_of_week' => [
 				'option_id'       => 'start_of_week',
 				'option_name'     => 'start_of_week',
-				'title'           => __( 'Start of Week', 'action-steward' ),
-				'description'     => __( 'The day the week starts on (0=Sunday, 1=Monday, ...).', 'action-steward' ),
+				'title'           => __( 'Start of Week', 'siteradian' ),
+				'description'     => __( 'The day the week starts on (0=Sunday, 1=Monday, ...).', 'siteradian' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_LOW,
 				'requires_approval' => false,
@@ -116,8 +116,8 @@ final class OptionRegistry {
 			'posts_per_page' => [
 				'option_id'       => 'posts_per_page',
 				'option_name'     => 'posts_per_page',
-				'title'           => __( 'Posts Per Page', 'action-steward' ),
-				'description'     => __( 'Number of blog posts shown per page.', 'action-steward' ),
+				'title'           => __( 'Posts Per Page', 'siteradian' ),
+				'description'     => __( 'Number of blog posts shown per page.', 'siteradian' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -130,8 +130,8 @@ final class OptionRegistry {
 			'show_on_front' => [
 				'option_id'       => 'show_on_front',
 				'option_name'     => 'show_on_front',
-				'title'           => __( 'Front Page Displays', 'action-steward' ),
-				'description'     => __( 'What to show on the front page: posts or a static page.', 'action-steward' ),
+				'title'           => __( 'Front Page Displays', 'siteradian' ),
+				'description'     => __( 'What to show on the front page: posts or a static page.', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -143,8 +143,8 @@ final class OptionRegistry {
 			'page_on_front' => [
 				'option_id'       => 'page_on_front',
 				'option_name'     => 'page_on_front',
-				'title'           => __( 'Front Page', 'action-steward' ),
-				'description'     => __( 'The ID of the page shown on the front page (when Front Page Displays is "page").', 'action-steward' ),
+				'title'           => __( 'Front Page', 'siteradian' ),
+				'description'     => __( 'The ID of the page shown on the front page (when Front Page Displays is "page").', 'siteradian' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -157,8 +157,8 @@ final class OptionRegistry {
 			'page_for_posts' => [
 				'option_id'       => 'page_for_posts',
 				'option_name'     => 'page_for_posts',
-				'title'           => __( 'Posts Page', 'action-steward' ),
-				'description'     => __( 'The ID of the page used for blog posts (when Front Page Displays is "page").', 'action-steward' ),
+				'title'           => __( 'Posts Page', 'siteradian' ),
+				'description'     => __( 'The ID of the page used for blog posts (when Front Page Displays is "page").', 'siteradian' ),
 				'type'            => self::TYPE_INTEGER,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -171,8 +171,8 @@ final class OptionRegistry {
 			'default_comment_status' => [
 				'option_id'       => 'default_comment_status',
 				'option_name'     => 'default_comment_status',
-				'title'           => __( 'Default Comment Status', 'action-steward' ),
-				'description'     => __( 'Default comment status for new posts.', 'action-steward' ),
+				'title'           => __( 'Default Comment Status', 'siteradian' ),
+				'description'     => __( 'Default comment status for new posts.', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -184,8 +184,8 @@ final class OptionRegistry {
 			'default_ping_status' => [
 				'option_id'       => 'default_ping_status',
 				'option_name'     => 'default_ping_status',
-				'title'           => __( 'Default Ping Status', 'action-steward' ),
-				'description'     => __( 'Default ping/trackback status for new posts.', 'action-steward' ),
+				'title'           => __( 'Default Ping Status', 'siteradian' ),
+				'description'     => __( 'Default ping/trackback status for new posts.', 'siteradian' ),
 				'type'            => self::TYPE_STRING,
 				'risk_level'      => self::RISK_MEDIUM,
 				'requires_approval' => true,
@@ -197,8 +197,8 @@ final class OptionRegistry {
 			'admin_email' => [
 				'option_id'       => 'admin_email',
 				'option_name'     => 'admin_email',
-				'title'           => __( 'Administration Email', 'action-steward' ),
-				'description'     => __( 'The email address used for site administration notifications.', 'action-steward' ),
+				'title'           => __( 'Administration Email', 'siteradian' ),
+				'description'     => __( 'The email address used for site administration notifications.', 'siteradian' ),
 				'type'            => self::TYPE_EMAIL,
 				'risk_level'      => self::RISK_HIGH,
 				'requires_approval' => true,
@@ -226,7 +226,7 @@ final class OptionRegistry {
 	public function validate_value( string $option_id, mixed $value ): ?\WP_Error {
 		$option = $this->get_option( $option_id );
 		if ( null === $option ) {
-			return new \WP_Error( 'wpcc_invalid_option_id', __( 'Unknown option ID.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_option_id', __( 'Unknown option ID.', 'siteradian' ) );
 		}
 
 		$type       = $option['type'];
@@ -238,18 +238,18 @@ final class OptionRegistry {
 			case self::TYPE_EMAIL:
 			case self::TYPE_URL:
 				if ( ! is_string( $value ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected string, got %s.', 'action-steward' ), gettype( $value ) ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected string, got %s.', 'siteradian' ), gettype( $value ) ) );
 				}
 				break;
 			case self::TYPE_INTEGER:
 				if ( ! is_int( $value ) && ! ctype_digit( (string) $value ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected integer, got %s.', 'action-steward' ), gettype( $value ) ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', sprintf( /* translators: %s: value */ __( 'Expected integer, got %s.', 'siteradian' ), gettype( $value ) ) );
 				}
 				$value = (int) $value;
 				break;
 			case self::TYPE_BOOL:
 				if ( ! is_bool( $value ) && ! in_array( $value, [ 0, 1, '0', '1', 'true', 'false' ], true ) ) {
-					return new \WP_Error( 'wpcc_invalid_option_type', __( 'Expected boolean value.', 'action-steward' ) );
+					return new \WP_Error( 'wpcc_invalid_option_type', __( 'Expected boolean value.', 'siteradian' ) );
 				}
 				break;
 		}
@@ -258,39 +258,39 @@ final class OptionRegistry {
 		if ( is_string( $value ) ) {
 			$len = mb_strlen( $value );
 			if ( isset( $validation['min_length'] ) && $len < $validation['min_length'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_short', sprintf( /* translators: %d: number */ __( 'Value must be at least %d characters.', 'action-steward' ), $validation['min_length'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_short', sprintf( /* translators: %d: number */ __( 'Value must be at least %d characters.', 'siteradian' ), $validation['min_length'] ) );
 			}
 			if ( isset( $validation['max_length'] ) && $len > $validation['max_length'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_long', sprintf( /* translators: %d: number */ __( 'Value must be at most %d characters.', 'action-steward' ), $validation['max_length'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_long', sprintf( /* translators: %d: number */ __( 'Value must be at most %d characters.', 'siteradian' ), $validation['max_length'] ) );
 			}
 		}
 
 		// Min/max for integers.
 		if ( is_int( $value ) ) {
 			if ( isset( $validation['min'] ) && $value < $validation['min'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_small', sprintf( /* translators: %d: number */ __( 'Value must be at least %d.', 'action-steward' ), $validation['min'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_small', sprintf( /* translators: %d: number */ __( 'Value must be at least %d.', 'siteradian' ), $validation['min'] ) );
 			}
 			if ( isset( $validation['max'] ) && $value > $validation['max'] ) {
-				return new \WP_Error( 'wpcc_option_value_too_large', sprintf( /* translators: %d: number */ __( 'Value must be at most %d.', 'action-steward' ), $validation['max'] ) );
+				return new \WP_Error( 'wpcc_option_value_too_large', sprintf( /* translators: %d: number */ __( 'Value must be at most %d.', 'siteradian' ), $validation['max'] ) );
 			}
 		}
 
 		// Enum validation.
 		if ( isset( $validation['enum'] ) && ! in_array( $value, $validation['enum'], true ) ) {
-			return new \WP_Error( 'wpcc_invalid_option_value', sprintf( /* translators: %s: value */ __( 'Invalid value. Allowed: %s.', 'action-steward' ), implode( ', ', $validation['enum'] ) ) );
+			return new \WP_Error( 'wpcc_invalid_option_value', sprintf( /* translators: %s: value */ __( 'Invalid value. Allowed: %s.', 'siteradian' ), implode( ', ', $validation['enum'] ) ) );
 		}
 
 		// Valid timezone check.
 		if ( ! empty( $validation['valid_timezone'] ) && is_string( $value ) ) {
 			if ( ! in_array( $value, timezone_identifiers_list(), true ) ) {
-				return new \WP_Error( 'wpcc_invalid_timezone', __( 'Invalid timezone identifier.', 'action-steward' ) );
+				return new \WP_Error( 'wpcc_invalid_timezone', __( 'Invalid timezone identifier.', 'siteradian' ) );
 			}
 		}
 
 		// Valid email check.
 		if ( ! empty( $validation['valid_email'] ) && is_string( $value ) ) {
 			if ( ! is_email( $value ) ) {
-				return new \WP_Error( 'wpcc_invalid_email', __( 'Invalid email address.', 'action-steward' ) );
+				return new \WP_Error( 'wpcc_invalid_email', __( 'Invalid email address.', 'siteradian' ) );
 			}
 		}
 
@@ -300,7 +300,7 @@ final class OptionRegistry {
 			if ( 0 !== $page_id ) {
 				$post = get_post( $page_id );
 				if ( ! $post || 'page' !== $post->post_type || 'publish' !== $post->post_status ) {
-					return new \WP_Error( 'wpcc_invalid_page_id', __( 'The specified page does not exist or is not published.', 'action-steward' ) );
+					return new \WP_Error( 'wpcc_invalid_page_id', __( 'The specified page does not exist or is not published.', 'siteradian' ) );
 				}
 			}
 		}

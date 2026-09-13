@@ -42,45 +42,45 @@ final class DesignPartnerReadiness {
 		// 1. Approvals on (Client-safe mode).
 		$items[] = [
 			'key'          => 'security_mode',
-			'label'        => __( 'Approvals are on (Client-safe mode)', 'action-steward' ),
+			'label'        => __( 'Approvals are on (Client-safe mode)', 'siteradian' ),
 			'status'       => $client_safe ? 'pass' : 'warning',
 			'detail'       => $client_safe
 				? \WPCommandCenter\Operations\SecurityModeManager::promise()
-				: __( 'You’re in Developer mode, which applies AI writes without approval. Switch to Client-safe mode before working on a real site.', 'action-steward' ),
-			'action_label' => $client_safe ? '' : __( 'Set Client-safe mode', 'action-steward' ),
+				: __( 'You’re in Developer mode, which applies AI writes without approval. Switch to Client-safe mode before working on a real site.', 'siteradian' ),
+			'action_label' => $client_safe ? '' : __( 'Set Client-safe mode', 'siteradian' ),
 			'action_url'   => $security_url,
 		];
 
 		// 2. Provider connected.
 		$items[] = [
 			'key'          => 'provider_connected',
-			'label'        => __( 'AI provider connected', 'action-steward' ),
+			'label'        => __( 'AI provider connected', 'siteradian' ),
 			'status'       => $configured ? 'pass' : 'blocked',
 			'detail'       => $configured
-				? __( 'A provider key is configured.', 'action-steward' )
-				: __( 'No provider yet. Add your AI provider key to start.', 'action-steward' ),
-			'action_label' => $configured ? '' : __( 'Connect a provider', 'action-steward' ),
+				? __( 'A provider key is configured.', 'siteradian' )
+				: __( 'No provider yet. Add your AI provider key to start.', 'siteradian' ),
+			'action_label' => $configured ? '' : __( 'Connect a provider', 'siteradian' ),
 			'action_url'   => $providers_url,
 		];
 
 		// 3. Provider tested.
 		$items[] = [
 			'key'          => 'provider_tested',
-			'label'        => __( 'Provider tested', 'action-steward' ),
+			'label'        => __( 'Provider tested', 'siteradian' ),
 			'status'       => $tested ? 'pass' : ( $configured ? 'warning' : 'blocked' ),
 			'detail'       => $tested
-				? __( 'Your provider key passed a connection test.', 'action-steward' )
-				: __( 'Run “Test connection” on your provider to confirm the key works.', 'action-steward' ),
-			'action_label' => $tested ? '' : __( 'Test the connection', 'action-steward' ),
+				? __( 'Your provider key passed a connection test.', 'siteradian' )
+				: __( 'Run “Test connection” on your provider to confirm the key works.', 'siteradian' ),
+			'action_label' => $tested ? '' : __( 'Test the connection', 'siteradian' ),
 			'action_url'   => $providers_url,
 		];
 
 		// 4. Generation supported (honest provider reality).
 		$items[] = [
 			'key'          => 'generation_supported',
-			'label'        => __( 'Generation supported', 'action-steward' ),
+			'label'        => __( 'Generation supported', 'siteradian' ),
 			'status'       => $configured ? 'pass' : 'blocked',
-			'detail'       => __( 'Generation runs on the provider you set as the default — Anthropic (Claude) or an OpenAI-compatible provider. Other providers can be connected and tested, but only the one you select will generate.', 'action-steward' ),
+			'detail'       => __( 'Generation runs on the provider you set as the default — Anthropic (Claude) or an OpenAI-compatible provider. Other providers can be connected and tested, but only the one you select will generate.', 'siteradian' ),
 			'action_label' => '',
 			'action_url'   => $providers_url,
 		];
@@ -88,32 +88,32 @@ final class DesignPartnerReadiness {
 		// 5. At least one built-in AI tool enabled.
 		$items[] = [
 			'key'          => 'tool_enabled',
-			'label'        => __( 'A built-in AI tool is on', 'action-steward' ),
+			'label'        => __( 'A built-in AI tool is on', 'siteradian' ),
 			'status'       => $any_tool ? 'pass' : 'blocked',
 			'detail'       => $any_tool
-				? __( 'At least one tool (SEO, Alt Text, or Content) is turned on.', 'action-steward' )
-				: __( 'Turn on SEO, Alt Text, or Content under Built-in AI › Providers.', 'action-steward' ),
-			'action_label' => $any_tool ? '' : __( 'Turn on a tool', 'action-steward' ),
+				? __( 'At least one tool (SEO, Alt Text, or Content) is turned on.', 'siteradian' )
+				: __( 'Turn on SEO, Alt Text, or Content under Built-in AI › Providers.', 'siteradian' ),
+			'action_label' => $any_tool ? '' : __( 'Turn on a tool', 'siteradian' ),
 			'action_url'   => $providers_url,
 		];
 
 		// 6. Test content available.
 		$items[] = [
 			'key'          => 'test_content',
-			'label'        => __( 'Test content available', 'action-steward' ),
+			'label'        => __( 'Test content available', 'siteradian' ),
 			'status'       => ( $content['has_post'] && $content['has_image'] ) ? 'pass' : 'warning',
 			'detail'       => self::content_detail( $content ),
-			'action_label' => ( $content['has_post'] && $content['has_image'] ) ? '' : __( 'Add a post or image', 'action-steward' ),
+			'action_label' => ( $content['has_post'] && $content['has_image'] ) ? '' : __( 'Add a post or image', 'siteradian' ),
 			'action_url'   => admin_url( 'post-new.php' ),
 		];
 
 		// 7. Approvals workflow ready.
 		$items[] = [
 			'key'          => 'approvals_ready',
-			'label'        => __( 'Approvals are ready', 'action-steward' ),
+			'label'        => __( 'Approvals are ready', 'siteradian' ),
 			'status'       => 'pass',
-			'detail'       => __( 'Changes that need your sign-off appear under Approvals.', 'action-steward' ),
-			'action_label' => __( 'Open Approvals', 'action-steward' ),
+			'detail'       => __( 'Changes that need your sign-off appear under Approvals.', 'siteradian' ),
+			'action_label' => __( 'Open Approvals', 'siteradian' ),
 			'action_url'   => $approvals_url,
 		];
 
@@ -121,10 +121,10 @@ final class DesignPartnerReadiness {
 		$history_ok = FeatureGate::allows( 'change_history' );
 		$items[]    = [
 			'key'          => 'history_ready',
-			'label'        => __( 'History &amp; undo are ready', 'action-steward' ),
+			'label'        => __( 'History &amp; undo are ready', 'siteradian' ),
 			'status'       => $history_ok ? 'pass' : 'warning',
-			'detail'       => __( 'Every change is recorded in History, where you can undo what’s reversible.', 'action-steward' ),
-			'action_label' => __( 'Open History', 'action-steward' ),
+			'detail'       => __( 'Every change is recorded in History, where you can undo what’s reversible.', 'siteradian' ),
+			'action_label' => __( 'Open History', 'siteradian' ),
 			'action_url'   => $history_url,
 		];
 
@@ -203,14 +203,14 @@ final class DesignPartnerReadiness {
 
 	private static function content_detail( array $content ): string {
 		if ( $content['has_post'] && $content['has_image'] ) {
-			return __( 'You have a post and an image to try SEO and Alt Text on.', 'action-steward' );
+			return __( 'You have a post and an image to try SEO and Alt Text on.', 'siteradian' );
 		}
 		if ( ! $content['has_post'] && ! $content['has_image'] ) {
-			return __( 'Add a draft post and upload an image so you have something to generate on.', 'action-steward' );
+			return __( 'Add a draft post and upload an image so you have something to generate on.', 'siteradian' );
 		}
 		if ( ! $content['has_post'] ) {
-			return __( 'Add a draft post to try SEO on.', 'action-steward' );
+			return __( 'Add a draft post to try SEO on.', 'siteradian' );
 		}
-		return __( 'Upload an image to try Alt Text on.', 'action-steward' );
+		return __( 'Upload an image to try Alt Text on.', 'siteradian' );
 	}
 }

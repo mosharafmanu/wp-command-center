@@ -64,19 +64,26 @@ foreach (['codex' => 'Codex CLI', 'chatgpt' => 'Codex in ChatGPT Desktop'] as $t
         contract("$test_client manual agrees with guided", str_contains($text, 'Manual setup replaces only Step 2.') && str_contains($text, 'then follow Step 3 for your selected client'));
         contract("$test_client variable is not token", str_contains($text, 'WPCC_TOKEN is the variable name, never replace it with your token'));
         contract("$test_client browser test limitation", str_contains($text, 'This does not test whether your assistant loaded the server'));
-        contract("$test_client test success claim scoped", str_contains($text, 'WPCC can authenticate this token. Server checks passed; verify the connection inside your client.'));
+        contract("$test_client test success claim scoped", str_contains($text, 'SiteRadian AI can authenticate this token. Server checks passed; verify the connection inside your client.'));
         $cmds = Registry::credential_commands_for($test_client, 'fixture-not-a-secret');
-        if ($test_client === 'codex') {
+		if ($test_client === 'codex') {
             contract('macOS export', $cmds['macos'] === "export WPCC_TOKEN='fixture-not-a-secret'");
+			contract('Windows uses current PowerShell session', $cmds['windows'] === "\$env:WPCC_TOKEN = 'fixture-not-a-secret'");
             contract('Codex no launchctl / desktop restart', !str_contains($guided, 'launchctl') && !str_contains($guided, 'restart the app'));
-			contract('same terminal explicit', str_contains($guided, 'same private terminal'));
+			contract('prominent keep-terminal warning', str_contains($guided, 'Important: Keep this terminal open.'));
+			contract('same terminal flow explicit', str_contains($guided, 'Run Steps 1–3 in this same terminal window.'));
+			contract('different Terminal or Warp tab prohibited', str_contains($guided, 'Do not open a different Terminal/Warp tab for this step.'));
+			contract('same terminal explicit', str_contains($guided, 'same terminal'));
 			contract('new terminal explicit', str_contains($guided, 'a new terminal needs this action again'));
-			contract('CLI launch step', str_contains($guided, 'Start Codex'));
+			contract('CLI launch step', str_contains($guided, 'Start Codex in this same terminal'));
 			contract('CLI launch uses on-request approvals', str_contains($guided, 'codex --ask-for-approval on-request'));
 			contract('CLI launch command is copy-ready', str_contains($guided, 'Copy start command'));
 			contract('technical detail is collapsed', str_contains($guided, 'Why this step?') && str_contains($guided, 'Why this command?'));
             contract('safe verification', str_contains($guided, 'printenv WPCC_TOKEN >/dev/null'));
             contract('native registration', str_contains(Registry::setup_command_for($test_client), "--bearer-token-env-var 'WPCC_TOKEN'"));
+			contract('missing-token troubleshooting names exact error', str_contains($guided, 'Environment variable WPCC_TOKEN is not set'));
+			contract('troubleshooting separates registration from environment', str_contains($guided, 'MCP registration persists') && str_contains($guided, 'does not persist after the session is gone'));
+			contract('troubleshooting does not require re-registration', str_contains($guided, 'do not need to recreate the MCP registration'));
         } else {
             contract('Desktop launchctl preserved', str_starts_with($cmds['macos'], 'launchctl setenv WPCC_TOKEN '));
 			contract('Desktop GUI restart remains in Step 3', str_contains($guided, 'Fully quit and reopen the ChatGPT desktop app'));

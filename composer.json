@@ -1,6 +1,6 @@
 {
-	"name": "mosharafmanu/action-steward",
-	"description": "Safe AI operations for WordPress with scoped access, approvals, audit trails, and rollback.",
+	"name": "mosharafmanu/siteradian",
+	"description": "Safe, governed AI operations for WordPress.",
 	"type": "wordpress-plugin",
 	"authors": [
 		{

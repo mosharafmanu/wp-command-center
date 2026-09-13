@@ -120,11 +120,11 @@ final class PluginRegistry {
 	 */
 	public function validate_slug( string $slug ): ?\WP_Error {
 		if ( '' === $slug ) {
-			return new \WP_Error( 'wpcc_missing_plugin_slug', __( 'Plugin slug is required.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_missing_plugin_slug', __( 'Plugin slug is required.', 'siteradian' ) );
 		}
 
 		if ( ! preg_match( '/^[a-zA-Z0-9][a-zA-Z0-9._\-]*$/', $slug ) ) {
-			return new \WP_Error( 'wpcc_invalid_plugin_slug', __( 'Invalid plugin slug format.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_invalid_plugin_slug', __( 'Invalid plugin slug format.', 'siteradian' ) );
 		}
 
 		return null;

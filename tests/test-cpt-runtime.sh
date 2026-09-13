@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Custom Post Type Runtime test suite for Action Steward (Step 74).
+# Custom Post Type Runtime test suite for SiteRadian AI (Step 74).
 #
 # Verifies:
 #   - registry discovery (manifest / context)

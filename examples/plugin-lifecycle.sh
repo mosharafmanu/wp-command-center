@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# Action Steward — Plugin Lifecycle & Snapshot/Rollback Example
+# SiteRadian AI — Plugin Lifecycle & Snapshot/Rollback Example
 # ──────────────────────────────────────────────────────────────────────────────
 # Demonstrates:
 #   1. List plugins via plugin_manage operation
@@ -27,7 +27,7 @@ else
   exit 1
 fi
 
-echo "=== Action Steward — Plugin Lifecycle & Rollback ==="
+echo "=== SiteRadian AI — Plugin Lifecycle & Rollback ==="
 echo ""
 
 # ── Helper ──

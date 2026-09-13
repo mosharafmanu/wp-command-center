@@ -34,17 +34,17 @@ final class AiEndpointGuard {
 		$scheme = strtolower( (string) ( $parts['scheme'] ?? '' ) );
 
 		if ( 'http' !== $scheme && 'https' !== $scheme ) {
-			return self::block( 'invalid_scheme', __( 'The endpoint must use http or https.', 'action-steward' ) );
+			return self::block( 'invalid_scheme', __( 'The endpoint must use http or https.', 'siteradian' ) );
 		}
 
 		$host = (string) ( $parts['host'] ?? '' );
 		if ( '' === $host ) {
-			return self::block( 'invalid_host', __( 'The endpoint has no host.', 'action-steward' ) );
+			return self::block( 'invalid_host', __( 'The endpoint has no host.', 'siteradian' ) );
 		}
 
 		$ips = self::resolve( $host );
 		if ( empty( $ips ) ) {
-			return self::block( 'unresolvable_host', __( 'The endpoint host could not be resolved.', 'action-steward' ) );
+			return self::block( 'unresolvable_host', __( 'The endpoint host could not be resolved.', 'siteradian' ) );
 		}
 
 		foreach ( $ips as $ip ) {
@@ -52,7 +52,7 @@ final class AiEndpointGuard {
 				if ( $allow_local ) {
 					continue; // a declared local provider may use a loopback/private address.
 				}
-				return self::block( 'private_endpoint', __( 'The endpoint resolves to a private, local, or reserved address, which is not allowed for this provider.', 'action-steward' ) );
+				return self::block( 'private_endpoint', __( 'The endpoint resolves to a private, local, or reserved address, which is not allowed for this provider.', 'siteradian' ) );
 			}
 		}
 

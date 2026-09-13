@@ -1,12 +1,12 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Action Steward REST API",
+    "title": "SiteRadian AI REST API",
     "description": "REST API for managing WordPress sites — Site Intelligence, Diagnostics, File Access, Patch Engine, Operations, MCP, and Agent orchestration.",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "contact": {
-      "name": "Action Steward",
-      "url": "https://github.com/anomalyco/wp-command-center"
+      "name": "SiteRadian AI",
+      "url": "https://github.com/mosharafmanu/wp-command-center"
     },
     "license": {
       "name": "GPL v2 or later",
@@ -30,7 +30,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "WPCC API Token",
-        "description": "Action Steward API token created from Settings → API Tokens. Read-only tokens access GET routes; full-access tokens are required for POST/PATCH/DELETE write actions."
+        "description": "SiteRadian AI API token created from Settings → API Tokens. Read-only tokens access GET routes; full-access tokens are required for POST/PATCH/DELETE write actions."
       }
     },
     "schemas": {
@@ -124,7 +124,7 @@
     "/system/environment": {
       "get": {
         "tags": ["System"],
-        "summary": "Get the current Action Steward environment mode",
+        "summary": "Get the current SiteRadian AI environment mode",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {

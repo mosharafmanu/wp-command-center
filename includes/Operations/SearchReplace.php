@@ -40,24 +40,24 @@ final class SearchReplace {
 		$max_matches    = isset( $params['max_matches'] ) ? max( 1, (int) $params['max_matches'] ) : self::DEFAULT_MAX_MATCHES;
 
 		if ( '' === $search ) {
-			return new \WP_Error( 'wpcc_empty_search', __( 'Search string cannot be empty.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_empty_search', __( 'Search string cannot be empty.', 'siteradian' ) );
 		}
 
 		if ( $search === $replace ) {
-			return new \WP_Error( 'wpcc_search_equals_replace', __( 'Search and replace strings cannot be identical.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_search_equals_replace', __( 'Search and replace strings cannot be identical.', 'siteradian' ) );
 		}
 
 		if ( empty( $tables ) ) {
-			return new \WP_Error( 'wpcc_no_tables_selected', __( 'No tables selected for search and replace.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_no_tables_selected', __( 'No tables selected for search and replace.', 'siteradian' ) );
 		}
 
 		// Validate tables
 		foreach ( $tables as $table ) {
 			if ( ! str_starts_with( $table, $wpdb->prefix ) ) {
-				return new \WP_Error( 'wpcc_invalid_table_prefix', sprintf( /* translators: %s: value */ __( 'Table %s does not start with the required WordPress prefix.', 'action-steward' ), $table ) );
+				return new \WP_Error( 'wpcc_invalid_table_prefix', sprintf( /* translators: %s: value */ __( 'Table %s does not start with the required WordPress prefix.', 'siteradian' ), $table ) );
 			}
 			if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) {
-				return new \WP_Error( 'wpcc_invalid_table', sprintf( /* translators: %s: value */ __( 'Table %s does not exist.', 'action-steward' ), $table ) );
+				return new \WP_Error( 'wpcc_invalid_table', sprintf( /* translators: %s: value */ __( 'Table %s does not exist.', 'siteradian' ), $table ) );
 			}
 		}
 
@@ -146,7 +146,7 @@ final class SearchReplace {
 			'tables_affected' => $tables_affected,
 			'matches_found'   => $matches_found,
 			'rows_affected'   => $rows_affected,
-			'warning'         => __( 'External database backup is strongly recommended before running a live search and replace.', 'action-steward' ),
+			'warning'         => __( 'External database backup is strongly recommended before running a live search and replace.', 'siteradian' ),
 		];
 
 		if ( $return_matches ) {

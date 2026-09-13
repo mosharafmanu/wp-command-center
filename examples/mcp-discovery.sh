@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────────────
-# Action Steward — MCP Discovery Example
+# SiteRadian AI — MCP Discovery Example
 # ──────────────────────────────────────────────────────────────────────────────
 # Demonstrates the MCP JSON-RPC protocol: initialize, resources/list,
 # tools/list, and resources/read (manifest).
@@ -24,7 +24,7 @@ else
   exit 1
 fi
 
-echo "=== Action Steward — MCP Discovery ==="
+echo "=== SiteRadian AI — MCP Discovery ==="
 echo ""
 
 # ── Helper: send an MCP JSON-RPC request ──

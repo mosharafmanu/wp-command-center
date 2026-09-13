@@ -31,7 +31,7 @@ final class CommentsRuntimeManager {
 			CommentsRegistry::ACTION_TRASH     => $this->trash_comment( $payload, $context ),
 			CommentsRegistry::ACTION_DELETE    => $this->delete_comment( $payload, $context ),
 			CommentsRegistry::ACTION_REPLY     => $this->reply_comment( $payload, $context ),
-			default => $this->error( 'wpcc_unknown_comment_action', __( 'Unknown comment action.', 'action-steward' ) ),
+			default => $this->error( 'wpcc_unknown_comment_action', __( 'Unknown comment action.', 'siteradian' ) ),
 		};
 	}
 
@@ -74,7 +74,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'siteradian' ) );
 		}
 
 		$this->audit->record( 'comment.get', [ 'comment_id' => $comment_id ] );
@@ -87,7 +87,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'siteradian' ) );
 		}
 
 		// PROGRAM-4 / P4.4 — capture the prior moderation status BEFORE the change so it is
@@ -97,7 +97,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_set_comment_status( $comment_id, 'approve' );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_approve_failed', __( 'Failed to approve comment.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_approve_failed', __( 'Failed to approve comment.', 'siteradian' ) );
 		}
 
 		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
@@ -112,7 +112,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'siteradian' ) );
 		}
 
 		$accessor = new CommentFieldAccessor();
@@ -120,7 +120,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_set_comment_status( $comment_id, 'hold' );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_unapprove_failed', __( 'Failed to unapprove comment.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_unapprove_failed', __( 'Failed to unapprove comment.', 'siteradian' ) );
 		}
 
 		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
@@ -135,7 +135,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'siteradian' ) );
 		}
 
 		$accessor = new CommentFieldAccessor();
@@ -143,7 +143,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_spam_comment( $comment_id );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_spam_failed', __( 'Failed to mark comment as spam.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_spam_failed', __( 'Failed to mark comment as spam.', 'siteradian' ) );
 		}
 
 		$rollback_id = $this->store_status_delta( $comment_id, $prior, [ 'status' => $accessor->read_field( $comment_id, 'status' ) ], $context );
@@ -158,7 +158,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'siteradian' ) );
 		}
 
 		$before = $this->format_comment( $comment );
@@ -166,7 +166,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_trash_comment( $comment_id );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_trash_failed', __( 'Failed to trash comment.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_trash_failed', __( 'Failed to trash comment.', 'siteradian' ) );
 		}
 
 		$this->audit->record( 'comment.trashed', [ 'comment_id' => $comment_id ] );
@@ -179,7 +179,7 @@ final class CommentsRuntimeManager {
 		$comment    = get_comment( $comment_id );
 
 		if ( ! $comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Comment not found.', 'siteradian' ) );
 		}
 
 		$before = $this->format_comment( $comment );
@@ -187,7 +187,7 @@ final class CommentsRuntimeManager {
 
 		$result = wp_delete_comment( $comment_id, true );
 		if ( ! $result ) {
-			return $this->error( 'wpcc_comment_delete_failed', __( 'Failed to delete comment.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_delete_failed', __( 'Failed to delete comment.', 'siteradian' ) );
 		}
 
 		$this->audit->record( 'comment.deleted', [ 'comment_id' => $comment_id ] );
@@ -200,12 +200,12 @@ final class CommentsRuntimeManager {
 		$parent_comment = get_comment( $comment_id );
 
 		if ( ! $parent_comment ) {
-			return $this->error( 'wpcc_comment_not_found', __( 'Parent comment not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_not_found', __( 'Parent comment not found.', 'siteradian' ) );
 		}
 
 		$content = sanitize_textarea_field( (string) ( $payload['content'] ?? '' ) );
 		if ( '' === $content ) {
-			return $this->error( 'wpcc_missing_reply_content', __( 'Reply content is required.', 'action-steward' ) );
+			return $this->error( 'wpcc_missing_reply_content', __( 'Reply content is required.', 'siteradian' ) );
 		}
 
 		$user_id  = (int) ( $payload['user_id'] ?? 0 );
@@ -227,7 +227,7 @@ final class CommentsRuntimeManager {
 
 		$reply_id = wp_insert_comment( $reply_data );
 		if ( ! $reply_id || is_wp_error( $reply_id ) ) {
-			return $this->error( 'wpcc_comment_reply_failed', is_wp_error( $reply_id ) ? $reply_id->get_error_message() : __( 'Failed to create reply.', 'action-steward' ) );
+			return $this->error( 'wpcc_comment_reply_failed', is_wp_error( $reply_id ) ? $reply_id->get_error_message() : __( 'Failed to create reply.', 'siteradian' ) );
 		}
 
 		$this->audit->record( 'comment.replied', [ 'comment_id' => $comment_id, 'reply_id' => $reply_id ] );
@@ -238,7 +238,7 @@ final class CommentsRuntimeManager {
 	public function rollback( array $payload, array $context = [] ): array {
 		$rollback_id = (string) ( $payload['rollback_id'] ?? '' );
 		if ( '' === $rollback_id ) {
-			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'action-steward' ) );
+			return $this->error( 'wpcc_missing_rollback_id', __( 'Rollback ID is required.', 'siteradian' ) );
 		}
 
 		$rollbacks = get_option( 'wpcc_comments_rollbacks', [] );
@@ -254,10 +254,10 @@ final class CommentsRuntimeManager {
 		}
 
 		if ( null === $record ) {
-			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'action-steward' ) );
+			return $this->error( 'wpcc_rollback_not_found', __( 'Rollback record not found.', 'siteradian' ) );
 		}
 		if ( $record['rollback_applied'] ) {
-			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'action-steward' ) );
+			return $this->error( 'wpcc_rollback_already_applied', __( 'Rollback already applied.', 'siteradian' ) );
 		}
 
 		$comment_id = $record['comment_id'];
@@ -280,7 +280,7 @@ final class CommentsRuntimeManager {
 				wp_untrash_comment( $comment_id );
 				break;
 			case 'delete':
-				return $this->error( 'wpcc_rollback_unsupported', __( 'This comment was permanently deleted and cannot be restored.', 'action-steward' ) );
+				return $this->error( 'wpcc_rollback_unsupported', __( 'This comment was permanently deleted and cannot be restored.', 'siteradian' ) );
 		}
 
 		$rollbacks[ $idx ]['rollback_applied'] = true;

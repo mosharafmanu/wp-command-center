@@ -1,7 +1,8 @@
-# Action Steward release process
+# SiteRadian AI release process
 
-This is the current release procedure for v1.0.2. The root `RELEASE_HANDOFF.md` records
-the immutable v1.0.1 release and remains historical evidence.
+This is the current release procedure for SiteRadian AI v1.0.0. Pre-public WP Command
+Center and Action Steward release evidence is retained unchanged in Git history and the
+historical release report.
 
 ---
 
@@ -29,9 +30,9 @@ WordPress.org release.
 
 | | Value | Why |
 |---|---|---|
-| WordPress.org slug | `action-steward` | The slug is derived from the plugin at submission and **cannot be changed after approval**. A `wp-` prefixed slug is flagged by WordPress.org's automated checks — not because "WP" is trademarked (it is not) but to close a rename loophole. Spending a rename before submission was cheaper than discovering it in review. |
-| Product / display name | **Action Steward** | It is the brand, and it appears in the plugin header, `readme.txt`, and every customer-facing surface. |
-| Text domain | `action-steward` | Must equal the slug, or wordpress.org language packs will not load. |
+| WordPress.org slug | `siteradian` | The slug is derived from the plugin at submission and **cannot be changed after approval**. A `wp-` prefixed slug is flagged by WordPress.org's automated checks — not because "WP" is trademarked (it is not) but to close a rename loophole. Spending a rename before submission was cheaper than discovering it in review. |
+| Product / display name | **SiteRadian AI** | It is the brand, and it appears in the plugin header, `readme.txt`, and every customer-facing surface. |
+| Text domain | `siteradian` | Must equal the slug, or wordpress.org language packs will not load. |
 
 The name does not begin with `WP` or `WordPress`, and it is not based on another software
 product's brand. Plugin Check must report no restricted-name error.
@@ -51,7 +52,7 @@ A rename previously broke 27 assertions across 11 suites, every one a hardcoded 
 
 Four places must agree:
 
-1. `action-steward.php` header `Version:`
+1. `siteradian.php` header `Version:`
 2. `WPCC_VERSION` constant
 3. `readme.txt` `Stable tag:`
 4. the changelog entry
@@ -69,12 +70,12 @@ The build is an **allowlist**, not a blocklist — anything not explicitly inclu
 out. It asserts `sdk/javascript/wpcc-mcp-relay.mjs` is present and **exits 1** if it is
 not; without the relay every generated client configuration would point at a 404.
 
-Output: `build/action-steward-<version>.zip`.
+Output: `build/siteradian-<version>.zip`.
 
 Verify no development files leaked:
 
 ```bash
-unzip -l build/action-steward-1.0.2.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
+unzip -l build/siteradian-1.0.0.zip | grep -Ei "/tests/|\.git|node_modules|wpcc-env|\.DS_Store|\.md$"
 ```
 
 Expect no matches. `docs/` and `tests/` do not ship.
@@ -82,13 +83,16 @@ Expect no matches. `docs/` and `tests/` do not ship.
 ## Test
 
 ```bash
-bash tests/run.sh --tier T0          # lint + primary suites, fast
-bash tests/run.sh --tier T1          # the touched runtime, plus core registry
-bash tests/run.sh --tier T2          # everything — required before release
+bash tests/run.sh --tier T0 --changed  # lint + primary suites selected by the diff
+bash tests/run.sh --tier T1 --changed  # touched groups plus core registry
+bash tests/run.sh --tier T2            # required after runtime-contract changes
 ```
 
-Run T2 **standalone**. Several suites switch protection mode globally, so a concurrent
-run against the same database produces meaningless failures.
+Branding, package identity, text-domain, documentation, and onboarding-copy changes use
+the focused T0/T1 gates plus package and isolated-install verification. Run T2 after a
+material MCP runtime, authentication, authorization, REST execution, governance, schema,
+or operation-execution change. Run T2 **standalone** when required; several suites switch
+protection mode globally, so a concurrent run against the same database is invalid.
 
 `tests/regression-baseline.tsv` records the explicitly reviewed historical baseline. The
 release gate must report **zero net-new failures**, and rename-related suites must pass
@@ -100,8 +104,8 @@ Plugin Check must be run against the **built artifact**, not the checkout — th
 contains `build/`, `tests/`, `.git` and `.DS_Store`, none of which ship:
 
 ```bash
-unzip -q build/action-steward-1.0.2.zip -d /tmp/pkg
-wp plugin check /tmp/pkg/action-steward --format=csv --fields=type,code,file,line
+unzip -q build/siteradian-1.0.0.zip -d /tmp/pkg
+wp plugin check /tmp/pkg/siteradian --format=csv --fields=type,code,file,line
 ```
 
 Required: **0 errors**.
@@ -123,9 +127,9 @@ in Standard protection returns `pending_approval` **and writes nothing** until a
 1. Confirm the four version numbers agree.
 2. Update the `readme.txt` changelog.
 3. Build, verify contents, run Plugin Check on the artifact.
-4. Run T2 standalone; expect zero failures.
+4. Run the change-selected T0/T1 gates and any broader gate required by the actual diff.
 5. Certify the lifecycle on a clean install.
-6. Tag the release.
+6. Create the collision-free annotated source tag `siteradian-v1.0.0`.
 7. Submit the ZIP to WordPress.org.
 
 `main` auto-deploys. Release work happens on a release branch and is merged deliberately.

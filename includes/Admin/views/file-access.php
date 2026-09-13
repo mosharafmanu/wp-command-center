@@ -19,7 +19,7 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 	$built    = '';
 	?>
 	<p class="wpcc-breadcrumbs">
-		<a href="<?php echo esc_url( $page_url() ); ?>"><?php esc_html_e( 'wp-content', 'action-steward' ); ?></a>
+		<a href="<?php echo esc_url( $page_url() ); ?>"><?php esc_html_e( 'wp-content', 'siteradian' ); ?></a>
 		<?php foreach ( $segments as $segment ) : ?>
 			<?php $built = '' === $built ? $segment : $built . '/' . $segment; ?>
 			/ <a href="<?php echo esc_url( $page_url( [ 'path' => $built ] ) ); ?>"><?php echo esc_html( $segment ); ?></a>
@@ -29,26 +29,26 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 };
 ?>
 <div class="wrap wpcc-wrap">
-	<h1><?php esc_html_e( 'File Access', 'action-steward' ); ?></h1>
-	<p><?php esc_html_e( 'Read-only file browser and code search across themes, plugins, and mu-plugins for AI agent investigation.', 'action-steward' ); ?></p>
+	<h1><?php esc_html_e( 'File Access', 'siteradian' ); ?></h1>
+	<p><?php esc_html_e( 'Read-only file browser and code search across themes, plugins, and mu-plugins for AI agent investigation.', 'siteradian' ); ?></p>
 
 	<form method="get" class="wpcc-search-form">
 		<input type="hidden" name="page" value="wpcc-file-access" />
 		<?php if ( '' !== $path ) : ?>
 			<input type="hidden" name="path" value="<?php echo esc_attr( $path ); ?>" />
 		<?php endif; ?>
-		<label for="wpcc-search-q" class="screen-reader-text"><?php esc_html_e( 'Search code', 'action-steward' ); ?></label>
-		<input type="search" id="wpcc-search-q" name="q" value="<?php echo esc_attr( $query ); ?>" placeholder="<?php esc_attr_e( 'Search file contents…', 'action-steward' ); ?>" class="regular-text" />
-		<?php submit_button( __( 'Search', 'action-steward' ), 'secondary', '', false ); ?>
+		<label for="wpcc-search-q" class="screen-reader-text"><?php esc_html_e( 'Search code', 'siteradian' ); ?></label>
+		<input type="search" id="wpcc-search-q" name="q" value="<?php echo esc_attr( $query ); ?>" placeholder="<?php esc_attr_e( 'Search file contents…', 'siteradian' ); ?>" class="regular-text" />
+		<?php submit_button( __( 'Search', 'siteradian' ), 'secondary', '', false ); ?>
 		<?php if ( '' !== $query ) : ?>
-			<a class="button" href="<?php echo esc_url( $page_url( [ 'path' => $path ] ) ); ?>"><?php esc_html_e( 'Clear Search', 'action-steward' ); ?></a>
+			<a class="button" href="<?php echo esc_url( $page_url( [ 'path' => $path ] ) ); ?>"><?php esc_html_e( 'Clear Search', 'siteradian' ); ?></a>
 		<?php endif; ?>
 		<?php if ( '' !== $path ) : ?>
 			<p class="description">
 				<?php
 				printf(
 					/* translators: %s: directory path being searched */
-					esc_html__( 'Search is scoped to: %s', 'action-steward' ),
+					esc_html__( 'Search is scoped to: %s', 'siteradian' ),
 					'<code>' . esc_html( $path ) . '</code>'
 				);
 				?>
@@ -73,7 +73,7 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 				<?php
 				printf(
 					/* translators: 1: search term, 2: number of files scanned */
-					esc_html__( 'No matches for "%1$s" (%2$d files scanned).', 'action-steward' ),
+					esc_html__( 'No matches for "%1$s" (%2$d files scanned).', 'siteradian' ),
 					esc_html( $results['query'] ),
 					(int) $results['files_scanned']
 				);
@@ -87,13 +87,13 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 				<?php
 				printf(
 					/* translators: 1: number of matches, 2: number of files scanned */
-					esc_html__( '%1$d match(es) across %2$d files scanned.', 'action-steward' ),
+					esc_html__( '%1$d match(es) across %2$d files scanned.', 'siteradian' ),
 					count( $results['matches'] ),
 					(int) $results['files_scanned']
 				);
 
 				if ( $results['truncated'] ) {
-					echo ' &mdash; ' . esc_html__( 'results truncated.', 'action-steward' );
+					echo ' &mdash; ' . esc_html__( 'results truncated.', 'siteradian' );
 				}
 				?>
 			</p>
@@ -148,19 +148,19 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 				<?php
 				printf(
 					/* translators: 1: file size, 2: last modified date/time */
-					esc_html__( 'Size: %1$s — Last modified: %2$s', 'action-steward' ),
+					esc_html__( 'Size: %1$s — Last modified: %2$s', 'siteradian' ),
 					esc_html( size_format( $file['size'] ) ),
 					esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $file['modified'] ) )
 				);
 
 				if ( $file['truncated'] ) {
-					echo ' &mdash; ' . esc_html__( 'showing the first 1 MB of a larger file.', 'action-steward' );
+					echo ' &mdash; ' . esc_html__( 'showing the first 1 MB of a larger file.', 'siteradian' );
 				}
 				?>
 			</p>
 
 			<p class="wpcc-actions">
-				<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( [ 'page' => 'wpcc-patches', 'path' => $file['path'] ], admin_url( 'admin.php' ) ) . '#create-patch' ); ?>"><?php esc_html_e( 'Create Patch for This File', 'action-steward' ); ?></a>
+				<a class="button button-secondary" href="<?php echo esc_url( add_query_arg( [ 'page' => 'wpcc-patches', 'path' => $file['path'] ], admin_url( 'admin.php' ) ) . '#create-patch' ); ?>"><?php esc_html_e( 'Create Patch for This File', 'siteradian' ); ?></a>
 			</p>
 
 			<pre class="wpcc-file-viewer"><code><?php echo esc_html( $file['contents'] ); ?></code></pre>
@@ -174,19 +174,19 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 			<table class="widefat striped wpcc-cds-table wpcc-table">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Name', 'action-steward' ); ?></th>
-						<th><?php esc_html_e( 'Type', 'action-steward' ); ?></th>
-						<th><?php esc_html_e( 'Size', 'action-steward' ); ?></th>
-						<th><?php esc_html_e( 'Modified', 'action-steward' ); ?></th>
+						<th><?php esc_html_e( 'Name', 'siteradian' ); ?></th>
+						<th><?php esc_html_e( 'Type', 'siteradian' ); ?></th>
+						<th><?php esc_html_e( 'Size', 'siteradian' ); ?></th>
+						<th><?php esc_html_e( 'Modified', 'siteradian' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 				<?php if ( null !== $listing['parent'] ) : ?>
 					<tr>
 						<td>
-							<a href="<?php echo esc_url( $page_url( [ 'path' => $listing['parent'] ] ) ); ?>">.. <?php esc_html_e( '(parent directory)', 'action-steward' ); ?></a>
+							<a href="<?php echo esc_url( $page_url( [ 'path' => $listing['parent'] ] ) ); ?>">.. <?php esc_html_e( '(parent directory)', 'siteradian' ); ?></a>
 						</td>
-						<td><?php esc_html_e( 'Directory', 'action-steward' ); ?></td>
+						<td><?php esc_html_e( 'Directory', 'siteradian' ); ?></td>
 						<td>—</td>
 						<td>—</td>
 					</tr>
@@ -198,14 +198,14 @@ $render_breadcrumbs = static function ( string $path ) use ( $page_url ): void {
 								<?php echo esc_html( $entry['name'] ); ?><?php echo 'dir' === $entry['type'] ? '/' : ''; ?>
 							</a>
 						</td>
-						<td><?php echo 'dir' === $entry['type'] ? esc_html__( 'Directory', 'action-steward' ) : esc_html( strtoupper( $entry['extension'] ) ?: __( 'File', 'action-steward' ) ); ?></td>
+						<td><?php echo 'dir' === $entry['type'] ? esc_html__( 'Directory', 'siteradian' ) : esc_html( strtoupper( $entry['extension'] ) ?: __( 'File', 'siteradian' ) ); ?></td>
 						<td><?php echo null === $entry['size'] ? '—' : esc_html( size_format( $entry['size'] ) ); ?></td>
 						<td><?php echo esc_html( wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $entry['modified'] ) ); ?></td>
 					</tr>
 				<?php endforeach; ?>
 				<?php if ( empty( $listing['entries'] ) && null === $listing['parent'] ) : ?>
 					<tr>
-						<td colspan="4"><?php esc_html_e( 'No accessible directories found.', 'action-steward' ); ?></td>
+						<td colspan="4"><?php esc_html_e( 'No accessible directories found.', 'siteradian' ); ?></td>
 					</tr>
 				<?php endif; ?>
 				</tbody>

@@ -44,8 +44,8 @@ final class Plugin {
 
 		printf(
 			'<div class="notice notice-warning"><p><strong>%s</strong> %s</p></div>',
-			esc_html__( 'Action Steward is network activated.', 'action-steward' ),
-			esc_html__( 'This version supports one site at a time. Its tables and settings exist only for the site it was set up on, so other sites in this network will show an empty Command Center. Deactivate it for the network and activate it on each site that should have one.', 'action-steward' )
+			esc_html__( 'SiteRadian AI is network activated.', 'siteradian' ),
+			esc_html__( 'This version supports one site at a time. Its tables and settings exist only for the site it was set up on, so other sites in this network will show an empty SiteRadian AI screen. Deactivate it for the network and activate it on each site that should use it.', 'siteradian' )
 		);
 	}
 
@@ -109,7 +109,7 @@ final class Plugin {
 	public function add_cron_schedules( array $schedules ): array {
 		$schedules['wpcc_five_minutes'] = [
 			'interval' => 300,
-			'display'  => __( 'Every 5 Minutes', 'action-steward' ),
+			'display'  => __( 'Every 5 Minutes', 'siteradian' ),
 		];
 		return $schedules;
 	}

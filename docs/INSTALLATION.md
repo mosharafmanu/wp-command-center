@@ -7,14 +7,14 @@
 | WordPress | 6.4 or newer (tested to 7.1) |
 | PHP | 8.0 or newer |
 | Site type | Single site. Network activation is refused — see [ARCHITECTURE.md](ARCHITECTURE.md#multisite) |
-| For MCP clients | Node.js on the machine running the assistant — **only for connector clients** (Claude Desktop, Continue for VS Code). Direct-HTTP clients (GitHub Copilot in VS Code, Claude Code, Codex CLI, Codex in ChatGPT Desktop, Gemini CLI, Antigravity CLI (`agy`), Cursor, OpenCode, Command Code and Muse Code) need nothing installed. Muse Code remains in the Experimental product group, but its actual read-only Action Steward connection is tested. |
+| For MCP clients | Node.js on the machine running the assistant — **only for connector clients** (Claude Desktop, Continue for VS Code). Direct-HTTP clients (GitHub Copilot in VS Code, Claude Code, Codex CLI, Codex in ChatGPT Desktop, Gemini CLI, Antigravity CLI (`agy`), Cursor, OpenCode, Command Code and Muse Code) need nothing installed. Muse Code remains in the Experimental product group, but its actual read-only SiteRadian AI connection is tested. |
 
 Optional integrations, detected automatically when present: WooCommerce, Advanced Custom
 Fields, Elementor, Contact Form 7, Rank Math or Yoast SEO.
 
 ## Install
 
-**Plugins → Add New → Upload Plugin**, choose `action-steward-1.0.2.zip`, install,
+**Plugins → Add New → Upload Plugin**, choose `siteradian-1.0.0.zip`, install,
 activate.
 
 Activation:
@@ -28,14 +28,14 @@ Nothing is enabled that changes your site, and no outbound request is made.
 
 ## Verify
 
-**Action Steward → Home** should show the site as protected. Then:
+**SiteRadian AI → Home** should show the site as protected. Then:
 
 ```bash
 curl -s https://example.com/wp-json/wp-command-center/v1/health \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
-Expect `{"status":"ok","plugin_version":"1.0.2", …}`.
+Expect `{"status":"ok","plugin_version":"1.0.0", …}`.
 
 > **Plain permalinks.** On a site using WordPress's default plain permalinks,
 > `/wp-json/` does not resolve. The plugin advertises its endpoint through `rest_url()`,

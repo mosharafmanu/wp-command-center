@@ -35,29 +35,29 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		if ( $bytes <= 0 ) {
 			$status      = self::STATUS_GOOD;
-			$description = __( 'No PHP memory limit is set (unlimited).', 'action-steward' );
+			$description = __( 'No PHP memory limit is set (unlimited).', 'siteradian' );
 		} elseif ( $bytes < 64 * MB_IN_BYTES ) {
 			$status      = self::STATUS_CRITICAL;
-			$description = __( 'PHP memory limit is below 64 MB and may cause "allowed memory size exhausted" fatal errors.', 'action-steward' );
+			$description = __( 'PHP memory limit is below 64 MB and may cause "allowed memory size exhausted" fatal errors.', 'siteradian' );
 		} elseif ( $bytes < 128 * MB_IN_BYTES ) {
 			$status      = self::STATUS_RECOMMENDED;
-			$description = __( 'PHP memory limit is below the recommended 128 MB minimum.', 'action-steward' );
+			$description = __( 'PHP memory limit is below the recommended 128 MB minimum.', 'siteradian' );
 		} else {
 			$status      = self::STATUS_GOOD;
-			$description = __( 'PHP memory limit is sufficient.', 'action-steward' );
+			$description = __( 'PHP memory limit is sufficient.', 'siteradian' );
 		}
 
-		return $this->check( 'memory_limit', __( 'PHP Memory Limit', 'action-steward' ), $status, sprintf( '%s (%s)', $description, $raw ) );
+		return $this->check( 'memory_limit', __( 'PHP Memory Limit', 'siteradian' ), $status, sprintf( '%s (%s)', $description, $raw ) );
 	}
 
 	private function check_memory_usage(): array {
 		return $this->check(
 			'memory_usage',
-			__( 'Current Request Memory Usage', 'action-steward' ),
+			__( 'Current Request Memory Usage', 'siteradian' ),
 			self::STATUS_INFO,
 			sprintf(
 				/* translators: 1: current memory usage, 2: peak memory usage */
-				__( 'Current: %1$s, Peak: %2$s', 'action-steward' ),
+				__( 'Current: %1$s, Peak: %2$s', 'siteradian' ),
 				size_format( memory_get_usage() ),
 				size_format( memory_get_peak_usage() )
 			)
@@ -69,11 +69,11 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'object_cache',
-			__( 'External Object Cache', 'action-steward' ),
+			__( 'External Object Cache', 'siteradian' ),
 			$enabled ? self::STATUS_GOOD : self::STATUS_RECOMMENDED,
 			$enabled
-				? __( 'A persistent object cache (e.g. Redis/Memcached) is active.', 'action-steward' )
-				: __( 'No persistent object cache detected. Database-heavy sites benefit from one.', 'action-steward' )
+				? __( 'A persistent object cache (e.g. Redis/Memcached) is active.', 'siteradian' )
+				: __( 'No persistent object cache detected. Database-heavy sites benefit from one.', 'siteradian' )
 		);
 	}
 
@@ -82,11 +82,11 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'opcache',
-			__( 'OPcache', 'action-steward' ),
+			__( 'OPcache', 'siteradian' ),
 			$enabled ? self::STATUS_GOOD : self::STATUS_RECOMMENDED,
 			$enabled
-				? __( 'PHP OPcache is enabled.', 'action-steward' )
-				: __( 'PHP OPcache is not enabled. Enabling it significantly speeds up PHP execution.', 'action-steward' )
+				? __( 'PHP OPcache is enabled.', 'siteradian' )
+				: __( 'PHP OPcache is not enabled. Enabling it significantly speeds up PHP execution.', 'siteradian' )
 		);
 	}
 
@@ -94,15 +94,15 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 		if ( $cache['page_cache_dropin'] || ! empty( $cache['caching_plugins'] ) ) {
 			$source = ! empty( $cache['caching_plugins'] )
 				? implode( ', ', $cache['caching_plugins'] )
-				: __( 'advanced-cache.php drop-in', 'action-steward' );
+				: __( 'advanced-cache.php drop-in', 'siteradian' );
 
 			return $this->check(
 				'page_cache',
-				__( 'Page Caching', 'action-steward' ),
+				__( 'Page Caching', 'siteradian' ),
 				self::STATUS_GOOD,
 				sprintf(
 					/* translators: %s: detected caching plugin(s) or drop-in */
-					__( 'Page caching detected: %s.', 'action-steward' ),
+					__( 'Page caching detected: %s.', 'siteradian' ),
 					$source
 				)
 			);
@@ -110,9 +110,9 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'page_cache',
-			__( 'Page Caching', 'action-steward' ),
+			__( 'Page Caching', 'siteradian' ),
 			self::STATUS_RECOMMENDED,
-			__( 'No page caching plugin or drop-in detected.', 'action-steward' )
+			__( 'No page caching plugin or drop-in detected.', 'siteradian' )
 		);
 	}
 
@@ -135,11 +135,11 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'autoloaded_options',
-			__( 'Autoloaded Options Size', 'action-steward' ),
+			__( 'Autoloaded Options Size', 'siteradian' ),
 			$status,
 			sprintf(
 				/* translators: %s: formatted size of autoloaded options */
-				__( 'Total size of autoloaded options: %s. Large autoloaded data is loaded on every page request.', 'action-steward' ),
+				__( 'Total size of autoloaded options: %s. Large autoloaded data is loaded on every page request.', 'siteradian' ),
 				size_format( $bytes )
 			)
 		);
@@ -150,11 +150,11 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'active_plugins_count',
-			__( 'Active Plugins', 'action-steward' ),
+			__( 'Active Plugins', 'siteradian' ),
 			$count > 50 ? self::STATUS_RECOMMENDED : self::STATUS_INFO,
 			sprintf(
 				/* translators: %d: number of active plugins */
-				_n( '%d plugin is active.', '%d plugins are active.', $count, 'action-steward' ),
+				_n( '%d plugin is active.', '%d plugins are active.', $count, 'siteradian' ),
 				$count
 			)
 		);
@@ -165,11 +165,11 @@ final class PerformanceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'wp_cron',
-			__( 'WP-Cron', 'action-steward' ),
+			__( 'WP-Cron', 'siteradian' ),
 			self::STATUS_INFO,
 			$disabled
-				? __( 'WP-Cron is disabled via DISABLE_WP_CRON. Ensure a real system cron job triggers wp-cron.php.', 'action-steward' )
-				: __( 'WP-Cron runs on page loads (default behavior).', 'action-steward' )
+				? __( 'WP-Cron is disabled via DISABLE_WP_CRON. Ensure a real system cron job triggers wp-cron.php.', 'siteradian' )
+				: __( 'WP-Cron runs on page loads (default behavior).', 'siteradian' )
 		);
 	}
 }

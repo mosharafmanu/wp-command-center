@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Structured WP-CLI Runtime test suite for Action Steward (Step 37).
+# Structured WP-CLI Runtime test suite for SiteRadian AI (Step 37).
 #
 # Verifies:
 #   - unavailable WP-CLI environment fallback

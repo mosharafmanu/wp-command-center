@@ -117,70 +117,70 @@ final class ActionPanelAssets {
 	/** One shared i18n block consumed by every workflow (field labels live per field). */
 	private function shared_i18n(): array {
 		return [
-			'title'            => __( 'Generate Suggestion', 'action-steward' ),
-			'chooserTitle'     => __( 'Action Steward AI', 'action-steward' ),
-			'chooserIntro'     => __( 'Choose what to generate for this item.', 'action-steward' ),
+			'title'            => __( 'Generate Suggestion', 'siteradian' ),
+			'chooserTitle'     => __( 'SiteRadian AI', 'siteradian' ),
+			'chooserIntro'     => __( 'Choose what to generate for this item.', 'siteradian' ),
 			/* translators: %1$s: what is being generated, e.g. "title" or "SEO details". */
-			'generatingFor'    => /* translators: %1$s: value */ __( 'Generating a %1$s…', 'action-steward' ),
-			'generating'       => __( 'Generating suggestion…', 'action-steward' ),
+			'generatingFor'    => /* translators: %1$s: value */ __( 'Generating a %1$s…', 'siteradian' ),
+			'generating'       => __( 'Generating suggestion…', 'siteradian' ),
 			/* translators: %1$s: the AI model being used, e.g. "claude-sonnet-4-6". */
-			'usingModel'       => /* translators: %1$s: value */ __( 'Using %1$s', 'action-steward' ),
+			'usingModel'       => /* translators: %1$s: value */ __( 'Using %1$s', 'siteradian' ),
 			// Said while the customer waits, because waiting is exactly when someone
 			// wonders whether they have already changed something.
-			'nothingYet'       => __( 'Nothing on your site is changing yet.', 'action-steward' ),
-			'current'          => __( 'Current', 'action-steward' ),
-			'suggested'        => __( 'Suggested', 'action-steward' ),
-			'empty'            => __( '(none)', 'action-steward' ),
-			'openSuggest'      => __( 'Open in Suggestions', 'action-steward' ),
-			'close'            => __( 'Close', 'action-steward' ),
-			'draftNote'        => __( 'Saved as a draft for review — nothing has been applied to your site.', 'action-steward' ),
-			'provBy'           => /* translators: %1$s: value, %2$s: value */ __( 'Suggested by %1$s · %2$s', 'action-steward' ),
+			'nothingYet'       => __( 'Nothing on your site is changing yet.', 'siteradian' ),
+			'current'          => __( 'Current', 'siteradian' ),
+			'suggested'        => __( 'Suggested', 'siteradian' ),
+			'empty'            => __( '(none)', 'siteradian' ),
+			'openSuggest'      => __( 'Open in Suggestions', 'siteradian' ),
+			'close'            => __( 'Close', 'siteradian' ),
+			'draftNote'        => __( 'Saved as a draft for review — nothing has been applied to your site.', 'siteradian' ),
+			'provBy'           => /* translators: %1$s: value, %2$s: value */ __( 'Suggested by %1$s · %2$s', 'siteradian' ),
 			/*
 			 * The duplicate state. "A suggestion already exists" told the customer
 			 * that something was in their way without saying what, why, or what to
 			 * do — so the natural reading is "it failed". It is the opposite: their
 			 * earlier suggestion is safe and waiting.
 			 */
-			'existsTitle'      => __( 'You already have a draft for this', 'action-steward' ),
-			'exists'           => __( 'An earlier suggestion for this item is still waiting for your review, so a second one was not generated. Review or dismiss that draft first — generating again would leave you with two.', 'action-steward' ),
-			'reviewDraft'      => __( 'Review existing draft', 'action-steward' ),
+			'existsTitle'      => __( 'You already have a draft for this', 'siteradian' ),
+			'exists'           => __( 'An earlier suggestion for this item is still waiting for your review, so a second one was not generated. Review or dismiss that draft first — generating again would leave you with two.', 'siteradian' ),
+			'reviewDraft'      => __( 'Review existing draft', 'siteradian' ),
 			// Skips that are NOT failures. Each used to fall through to the generic
 			// failure text, which told the customer something had broken when in
 			// fact there was simply nothing to do.
-			'skNothingTitle'   => __( 'Nothing to generate here', 'action-steward' ),
-			'skUnsupported'    => __( 'This item does not support that kind of suggestion, so nothing was generated and nothing on your site changed.', 'action-steward' ),
-			'skNotFound'       => __( 'That item could not be found — it may have been deleted since this page loaded. Nothing on your site changed.', 'action-steward' ),
-			'skUpToDate'       => __( 'This item is already up to date, so there was nothing to suggest. Nothing on your site changed.', 'action-steward' ),
-			'failedTitle'      => __( 'That did not work', 'action-steward' ),
-			'nothingChanged'   => __( 'Nothing on your site changed.', 'action-steward' ),
+			'skNothingTitle'   => __( 'Nothing to generate here', 'siteradian' ),
+			'skUnsupported'    => __( 'This item does not support that kind of suggestion, so nothing was generated and nothing on your site changed.', 'siteradian' ),
+			'skNotFound'       => __( 'That item could not be found — it may have been deleted since this page loaded. Nothing on your site changed.', 'siteradian' ),
+			'skUpToDate'       => __( 'This item is already up to date, so there was nothing to suggest. Nothing on your site changed.', 'siteradian' ),
+			'failedTitle'      => __( 'That did not work', 'siteradian' ),
+			'nothingChanged'   => __( 'Nothing on your site changed.', 'siteradian' ),
 			// Same destination correction as the SEO and Content views: Built-in AI
 			// keys live on Built-in AI > Providers, not on the MCP assistants screen.
-			'noProvider'       => __( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key under Settings › Built-in AI › Providers.', 'action-steward' ),
-			'noPlugin'         => __( 'No supported SEO plugin (Rank Math or Yoast) is active.', 'action-steward' ),
-			'unsupportedStatus'=> __( 'Suggestions are only generated for published or draft content — this item is trashed or not started yet.', 'action-steward' ),
-			'failed'           => __( 'The AI did not return a suggestion this time, so nothing was created and nothing on your site changed. Try again — if it keeps happening, check Settings › Advanced › Diagnostics.', 'action-steward' ),
-			'error'            => __( 'Something went wrong. Please try again.', 'action-steward' ),
-			'applyDev'         => __( 'Approve & Apply', 'action-steward' ),
-			'applyGate'        => __( 'Submit for approval', 'action-steward' ),
-			'applying'         => __( 'Applying…', 'action-steward' ),
-			'approvalRequired' => __( 'Approval required — this will be sent for approval, not applied immediately.', 'action-steward' ),
-			'appliedTitle'     => __( 'Applied successfully', 'action-steward' ),
-			'submittedTitle'   => __( 'Submitted for approval', 'action-steward' ),
-			'appliedNote'      => __( 'The change was applied. It is reversible and recorded in the audit log.', 'action-steward' ),
-			'submittedNote'    => __( 'Your suggestion is waiting for approval and is recorded in the audit log. Nothing on your site has changed yet.', 'action-steward' ),
+			'noProvider'       => __( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key under Settings › Built-in AI › Providers.', 'siteradian' ),
+			'noPlugin'         => __( 'No supported SEO plugin (Rank Math or Yoast) is active.', 'siteradian' ),
+			'unsupportedStatus'=> __( 'Suggestions are only generated for published or draft content — this item is trashed or not started yet.', 'siteradian' ),
+			'failed'           => __( 'The AI did not return a suggestion this time, so nothing was created and nothing on your site changed. Try again — if it keeps happening, check Settings › Advanced › Diagnostics.', 'siteradian' ),
+			'error'            => __( 'Something went wrong. Please try again.', 'siteradian' ),
+			'applyDev'         => __( 'Approve & Apply', 'siteradian' ),
+			'applyGate'        => __( 'Submit for approval', 'siteradian' ),
+			'applying'         => __( 'Applying…', 'siteradian' ),
+			'approvalRequired' => __( 'Approval required — this will be sent for approval, not applied immediately.', 'siteradian' ),
+			'appliedTitle'     => __( 'Applied successfully', 'siteradian' ),
+			'submittedTitle'   => __( 'Submitted for approval', 'siteradian' ),
+			'appliedNote'      => __( 'The change was applied. It is reversible and recorded in the audit log.', 'siteradian' ),
+			'submittedNote'    => __( 'Your suggestion is waiting for approval and is recorded in the audit log. Nothing on your site has changed yet.', 'siteradian' ),
 			// The continuation. Both states used to end on "Close", which is not a
 			// next step — it is the absence of one.
-			'reviewApproval'   => __( 'Review approval', 'action-steward' ),
-			'viewInChanges'    => __( 'View in Changes', 'action-steward' ),
-			'done'             => __( 'Done', 'action-steward' ),
-			'chipReversible'   => __( 'Reversible', 'action-steward' ),
-			'chipAudited'      => __( 'Audited', 'action-steward' ),
-			'undo'             => __( 'Undo', 'action-steward' ),
-			'undoing'          => __( 'Undoing…', 'action-steward' ),
-			'reverted'         => __( 'Reverted', 'action-steward' ),
-			'undoSent'         => __( 'Undo sent for approval', 'action-steward' ),
-			'cantApply'        => __( 'Couldn’t apply. Please try again.', 'action-steward' ),
-			'cantUndo'         => __( 'Couldn’t undo. Please try again.', 'action-steward' ),
+			'reviewApproval'   => __( 'Review approval', 'siteradian' ),
+			'viewInChanges'    => __( 'View in Changes', 'siteradian' ),
+			'done'             => __( 'Done', 'siteradian' ),
+			'chipReversible'   => __( 'Reversible', 'siteradian' ),
+			'chipAudited'      => __( 'Audited', 'siteradian' ),
+			'undo'             => __( 'Undo', 'siteradian' ),
+			'undoing'          => __( 'Undoing…', 'siteradian' ),
+			'reverted'         => __( 'Reverted', 'siteradian' ),
+			'undoSent'         => __( 'Undo sent for approval', 'siteradian' ),
+			'cantApply'        => __( 'Couldn’t apply. Please try again.', 'siteradian' ),
+			'cantUndo'         => __( 'Couldn’t undo. Please try again.', 'siteradian' ),
 		];
 	}
 }

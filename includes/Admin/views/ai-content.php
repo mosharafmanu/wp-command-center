@@ -59,7 +59,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
  * The Content screen used to consist of two review tabs and nothing else. Its empty
  * state read "No suggestions yet. Generate some from a post or page." — a true sentence
  * that named no page, linked nowhere, and did not mention that the thing to look for is
- * a row action called "✨ Action Steward AI". SEO and Alt Text both have a Review tab where you
+ * a row action called "✨ SiteRadian AI". SEO and Alt Text both have a Review tab where you
  * pick items and press Generate; Content was the only built-in tool with no way to start
  * from its own screen, so an independent tester enabled it, opened it, found four stale
  * drafts and concluded there was no generation path at all.
@@ -75,16 +75,16 @@ $has_provider  = \WPCommandCenter\Admin\AdoptionStatus::ai_configured();
 $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 ?>
 <div class="wrap wpcc-wrap wpcc-aic">
-	<h1><?php esc_html_e( 'Content', 'action-steward' ); ?></h1>
+	<h1><?php esc_html_e( 'Content', 'siteradian' ); ?></h1>
 	<p class="description" style="max-width:720px;">
-		<?php esc_html_e( 'Draft titles and excerpts for your posts and pages with AI. Review and edit each suggestion, then approve to apply — you’re always in control.', 'action-steward' ); ?>
+		<?php esc_html_e( 'Draft titles and excerpts for your posts and pages with AI. Review and edit each suggestion, then approve to apply — you’re always in control.', 'siteradian' ); ?>
 	</p>
 	<?php require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php'; ?>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-review"><?php esc_html_e( 'Review', 'action-steward' ); ?></a>
-		<a href="#" class="nav-tab" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'action-steward' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>
-		<a href="#" class="nav-tab" id="wpcc-aic-tab-applied"><?php esc_html_e( 'Applied', 'action-steward' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-applied"></span></a>
+		<a href="#" class="nav-tab nav-tab-active" id="wpcc-aic-tab-review"><?php esc_html_e( 'Review', 'siteradian' ); ?></a>
+		<a href="#" class="nav-tab" id="wpcc-aic-tab-suggestions"><?php esc_html_e( 'Suggestions', 'siteradian' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-suggestions"></span></a>
+		<a href="#" class="nav-tab" id="wpcc-aic-tab-applied"><?php esc_html_e( 'Applied', 'siteradian' ); ?><span class="wpcc-aic-tabcount" id="wpcc-aic-tabcount-applied"></span></a>
 	</h2>
 
 	<?php // Result of a contextual "Generate" row/bulk action (set via the wpcc_content_gen
@@ -99,37 +99,37 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 			// that can only fail. ?>
 			<div class="notice notice-warning inline" style="margin:12px 0;max-width:1100px;">
 				<p>
-					<strong><?php esc_html_e( 'No AI provider key yet.', 'action-steward' ); ?></strong>
-					<?php esc_html_e( 'Content is switched on, but generating a title or excerpt needs your own provider key. Nothing on your site has changed, and adding a key alone will not change anything either — you choose what to generate, and every suggestion still needs your approval.', 'action-steward' ); ?>
-					<a href="<?php echo esc_url( $ai_url ); ?>"><?php esc_html_e( 'Add a key on Built-in AI › Providers', 'action-steward' ); ?></a>
+					<strong><?php esc_html_e( 'No AI provider key yet.', 'siteradian' ); ?></strong>
+					<?php esc_html_e( 'Content is switched on, but generating a title or excerpt needs your own provider key. Nothing on your site has changed, and adding a key alone will not change anything either — you choose what to generate, and every suggestion still needs your approval.', 'siteradian' ); ?>
+					<a href="<?php echo esc_url( $ai_url ); ?>"><?php esc_html_e( 'Add a key on Built-in AI › Providers', 'siteradian' ); ?></a>
 				</p>
 			</div>
 		<?php endif; ?>
 
 		<p style="margin:12px 0;max-width:900px;">
-			<span class="description"><?php esc_html_e( 'Pick the posts or pages you want a suggestion for, choose whether to draft a title or an excerpt, then generate. Each suggestion is saved as a draft for you to review — nothing is applied to your site here.', 'action-steward' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Pick the posts or pages you want a suggestion for, choose whether to draft a title or an excerpt, then generate. Each suggestion is saved as a draft for you to review — nothing is applied to your site here.', 'siteradian' ); ?></span>
 		</p>
 
 		<div class="wpcc-aic-filters" id="wpcc-aic-rv-controls">
-			<label for="wpcc-aic-rv-kind"><?php esc_html_e( 'Generate:', 'action-steward' ); ?></label>
+			<label for="wpcc-aic-rv-kind"><?php esc_html_e( 'Generate:', 'siteradian' ); ?></label>
 			<select id="wpcc-aic-rv-kind">
-				<option value="title"><?php esc_html_e( 'Titles', 'action-steward' ); ?></option>
-				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'action-steward' ); ?></option>
+				<option value="title"><?php esc_html_e( 'Titles', 'siteradian' ); ?></option>
+				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'siteradian' ); ?></option>
 			</select>
 
-			<label for="wpcc-aic-rv-type"><?php esc_html_e( 'From:', 'action-steward' ); ?></label>
+			<label for="wpcc-aic-rv-type"><?php esc_html_e( 'From:', 'siteradian' ); ?></label>
 			<select id="wpcc-aic-rv-type">
-				<option value="posts"><?php esc_html_e( 'Posts', 'action-steward' ); ?></option>
-				<option value="pages"><?php esc_html_e( 'Pages', 'action-steward' ); ?></option>
+				<option value="posts"><?php esc_html_e( 'Posts', 'siteradian' ); ?></option>
+				<option value="pages"><?php esc_html_e( 'Pages', 'siteradian' ); ?></option>
 			</select>
 
-			<label><input type="checkbox" id="wpcc-aic-rv-selectall"> <?php esc_html_e( 'Select all on this page', 'action-steward' ); ?></label>
+			<label><input type="checkbox" id="wpcc-aic-rv-selectall"> <?php esc_html_e( 'Select all on this page', 'siteradian' ); ?></label>
 
-			<button type="button" class="button button-primary" id="wpcc-aic-rv-generate" disabled<?php echo $has_provider ? '' : ' title="' . esc_attr__( 'Add a provider key first.', 'action-steward' ) . '"'; ?>><?php esc_html_e( 'Generate suggestions', 'action-steward' ); ?></button>
+			<button type="button" class="button button-primary" id="wpcc-aic-rv-generate" disabled<?php echo $has_provider ? '' : ' title="' . esc_attr__( 'Add a provider key first.', 'siteradian' ) . '"'; ?>><?php esc_html_e( 'Generate suggestions', 'siteradian' ); ?></button>
 			<span class="description"><?php
 				printf(
 					/* translators: %d: maximum items per generation run. */
-					esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'action-steward' ),
+					esc_html__( 'Up to %d at a time. Suggestions are drafts — nothing is applied.', 'siteradian' ),
 					25
 				);
 			?></span>
@@ -141,15 +141,15 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 		<table class="widefat striped wpcc-aic-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:34px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'action-steward' ); ?></span></th>
-					<th scope="col" style="width:30%;"><?php esc_html_e( 'Content', 'action-steward' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Current value', 'action-steward' ); ?></th>
-					<th scope="col" style="width:160px;"><?php esc_html_e( 'Source content', 'action-steward' ); ?></th>
-					<th scope="col" style="width:140px;"><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
+					<th scope="col" style="width:34px;"><span class="screen-reader-text"><?php esc_html_e( 'Select', 'siteradian' ); ?></span></th>
+					<th scope="col" style="width:30%;"><?php esc_html_e( 'Content', 'siteradian' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Current value', 'siteradian' ); ?></th>
+					<th scope="col" style="width:160px;"><?php esc_html_e( 'Source content', 'siteradian' ); ?></th>
+					<th scope="col" style="width:140px;"><?php esc_html_e( 'Status', 'siteradian' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-aic-rv-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'siteradian' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-aic-rv-pager" class="wpcc-aic-pager"></div>
@@ -158,29 +158,29 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 	<!-- ============ SUGGESTIONS TAB ============ -->
 	<div id="wpcc-aic-panel-suggestions" style="display:none;">
 		<div class="wpcc-aic-filters">
-			<label for="wpcc-aic-kind"><?php esc_html_e( 'Show:', 'action-steward' ); ?></label>
+			<label for="wpcc-aic-kind"><?php esc_html_e( 'Show:', 'siteradian' ); ?></label>
 			<select id="wpcc-aic-kind">
-				<option value="all"><?php esc_html_e( 'All', 'action-steward' ); ?></option>
-				<option value="title"><?php esc_html_e( 'Titles', 'action-steward' ); ?></option>
-				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'action-steward' ); ?></option>
+				<option value="all"><?php esc_html_e( 'All', 'siteradian' ); ?></option>
+				<option value="title"><?php esc_html_e( 'Titles', 'siteradian' ); ?></option>
+				<option value="excerpt"><?php esc_html_e( 'Excerpts', 'siteradian' ); ?></option>
 			</select>
 			<span id="wpcc-aic-sg-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</div>
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or excerpt, dismiss a suggestion, or apply it. Nothing is applied to your site until you choose to.', 'action-steward' ); ?></span>
+			<span class="description"><?php esc_html_e( 'AI suggestions awaiting your review. Edit the title or excerpt, dismiss a suggestion, or apply it. Nothing is applied to your site until you choose to.', 'siteradian' ); ?></span>
 		</p>
 		<table class="widefat striped wpcc-aic-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:22%;"><?php esc_html_e( 'Content', 'action-steward' ); ?></th>
-					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'action-steward' ); ?></th>
-					<th scope="col" style="width:26%;"><?php esc_html_e( 'Current', 'action-steward' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Suggested (editable)', 'action-steward' ); ?></th>
-					<th scope="col" style="width:150px;"><?php esc_html_e( 'Actions', 'action-steward' ); ?></th>
+					<th scope="col" style="width:22%;"><?php esc_html_e( 'Content', 'siteradian' ); ?></th>
+					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'siteradian' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Current', 'siteradian' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Suggested (editable)', 'siteradian' ); ?></th>
+					<th scope="col" style="width:150px;"><?php esc_html_e( 'Actions', 'siteradian' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-aic-sg-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'siteradian' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-aic-sg-pager" class="wpcc-aic-pager"></div>
@@ -189,28 +189,28 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 	<!-- ============ APPLIED TAB ============ -->
 	<div id="wpcc-aic-panel-applied" style="display:none;">
 		<p style="margin:12px 0;">
-			<span class="description"><?php esc_html_e( 'Applied titles and excerpts, plus items awaiting approval.', 'action-steward' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Applied titles and excerpts, plus items awaiting approval.', 'siteradian' ); ?></span>
 			<span id="wpcc-aic-ap-status" role="status" aria-live="polite" style="margin-left:12px;color:#646970;"></span>
 		</p>
 		<?php // Segmented, single-status pagination — each segment is one paginated
 		// /admin/proposals read; default = Applied. ?>
-		<div class="wpcc-aic-segbar" id="wpcc-aic-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'action-steward' ); ?>">
-			<button type="button" class="button button-primary wpcc-aic-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'action-steward' ); ?></button>
-			<button type="button" class="button wpcc-aic-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'action-steward' ); ?></button>
-			<button type="button" class="button wpcc-aic-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'action-steward' ); ?></button>
+		<div class="wpcc-aic-segbar" id="wpcc-aic-ap-segbar" role="group" aria-label="<?php esc_attr_e( 'Filter applied items by status', 'siteradian' ); ?>">
+			<button type="button" class="button button-primary wpcc-aic-seg" data-seg="applied"><?php esc_html_e( 'Applied', 'siteradian' ); ?></button>
+			<button type="button" class="button wpcc-aic-seg" data-seg="pending_approval"><?php esc_html_e( 'Awaiting approval', 'siteradian' ); ?></button>
+			<button type="button" class="button wpcc-aic-seg" data-seg="failed"><?php esc_html_e( 'Failed', 'siteradian' ); ?></button>
 		</div>
 		<table class="widefat striped wpcc-aic-sg-table">
 			<thead>
 				<tr>
-					<th scope="col" style="width:26%;"><?php esc_html_e( 'Content', 'action-steward' ); ?></th>
-					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'action-steward' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Applied value', 'action-steward' ); ?></th>
-					<th scope="col" style="width:160px;"><?php esc_html_e( 'Status', 'action-steward' ); ?></th>
-					<th scope="col" style="width:120px;"><?php esc_html_e( 'Actions', 'action-steward' ); ?></th>
+					<th scope="col" style="width:26%;"><?php esc_html_e( 'Content', 'siteradian' ); ?></th>
+					<th scope="col" style="width:14%;"><?php esc_html_e( 'Field', 'siteradian' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Applied value', 'siteradian' ); ?></th>
+					<th scope="col" style="width:160px;"><?php esc_html_e( 'Status', 'siteradian' ); ?></th>
+					<th scope="col" style="width:120px;"><?php esc_html_e( 'Actions', 'siteradian' ); ?></th>
 				</tr>
 			</thead>
 			<tbody id="wpcc-aic-ap-rows">
-				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'action-steward' ); ?></td></tr>
+				<tr><td colspan="5"><?php esc_html_e( 'Loading…', 'siteradian' ); ?></td></tr>
 			</tbody>
 		</table>
 		<div id="wpcc-aic-ap-pager" class="wpcc-aic-pager"></div>
@@ -274,51 +274,51 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 	const OP = 'content_manage';
 	const TT_TITLE = 'content_title', TT_EXCERPT = 'content_excerpt';
 	const STR = {
-		loading:  <?php echo wp_json_encode( esc_html__( 'Loading…', 'action-steward' ) ); ?>,
-		error:    <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'action-steward' ) ); ?>,
-		none:     <?php echo wp_json_encode( esc_html__( '(not set)', 'action-steward' ) ); ?>,
-		fieldTitle:   <?php echo wp_json_encode( esc_html__( 'Title', 'action-steward' ) ); ?>,
-		fieldExcerpt: <?php echo wp_json_encode( esc_html__( 'Excerpt', 'action-steward' ) ); ?>,
-		byAI:     <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'action-steward' ) ); ?>,
-		edited:   <?php echo wp_json_encode( esc_html__( 'Edited', 'action-steward' ) ); ?>,
-		save:     <?php echo wp_json_encode( esc_html__( 'Save', 'action-steward' ) ); ?>,
-		saved:    <?php echo wp_json_encode( esc_html__( 'Saved', 'action-steward' ) ); ?>,
-		dismiss:  <?php echo wp_json_encode( esc_html__( 'Dismiss', 'action-steward' ) ); ?>,
-		reviewApproval: <?php echo wp_json_encode( esc_html__( 'Review approval', 'action-steward' ) ); ?>,
+		loading:  <?php echo wp_json_encode( esc_html__( 'Loading…', 'siteradian' ) ); ?>,
+		error:    <?php echo wp_json_encode( esc_html__( 'Could not load. Please retry.', 'siteradian' ) ); ?>,
+		none:     <?php echo wp_json_encode( esc_html__( '(not set)', 'siteradian' ) ); ?>,
+		fieldTitle:   <?php echo wp_json_encode( esc_html__( 'Title', 'siteradian' ) ); ?>,
+		fieldExcerpt: <?php echo wp_json_encode( esc_html__( 'Excerpt', 'siteradian' ) ); ?>,
+		byAI:     <?php echo wp_json_encode( esc_html__( 'Suggested by AI', 'siteradian' ) ); ?>,
+		edited:   <?php echo wp_json_encode( esc_html__( 'Edited', 'siteradian' ) ); ?>,
+		save:     <?php echo wp_json_encode( esc_html__( 'Save', 'siteradian' ) ); ?>,
+		saved:    <?php echo wp_json_encode( esc_html__( 'Saved', 'siteradian' ) ); ?>,
+		dismiss:  <?php echo wp_json_encode( esc_html__( 'Dismiss', 'siteradian' ) ); ?>,
+		reviewApproval: <?php echo wp_json_encode( esc_html__( 'Review approval', 'siteradian' ) ); ?>,
 		/* translators: %1$s: the reason items were skipped. */
-		skipWhy:      <?php echo wp_json_encode( /* translators: %1$s: value */ esc_html__( 'Skipped because they %1$s.', 'action-steward' ) ); ?>,
-		skHasDraft:   <?php echo wp_json_encode( esc_html__( 'already have a draft waiting for review', 'action-steward' ) ); ?>,
-		skUpToDate:   <?php echo wp_json_encode( esc_html__( 'are already up to date', 'action-steward' ) ); ?>,
-		skStatus:     <?php echo wp_json_encode( esc_html__( 'are trashed or not started yet', 'action-steward' ) ); ?>,
-		skNoProvider: <?php echo wp_json_encode( esc_html__( 'have no provider key', 'action-steward' ) ); ?>,
-		skUnsupported:<?php echo wp_json_encode( esc_html__( 'do not support this kind of suggestion', 'action-steward' ) ); ?>,
-		skNotFound:   <?php echo wp_json_encode( esc_html__( 'no longer exist', 'action-steward' ) ); ?>,
-		skOther:      <?php echo wp_json_encode( esc_html__( 'needed nothing generating', 'action-steward' ) ); ?>,
-		skReview:     <?php echo wp_json_encode( esc_html__( 'Open Suggestions to review the drafts already waiting.', 'action-steward' ) ); ?>,
+		skipWhy:      <?php echo wp_json_encode( /* translators: %1$s: value */ esc_html__( 'Skipped because they %1$s.', 'siteradian' ) ); ?>,
+		skHasDraft:   <?php echo wp_json_encode( esc_html__( 'already have a draft waiting for review', 'siteradian' ) ); ?>,
+		skUpToDate:   <?php echo wp_json_encode( esc_html__( 'are already up to date', 'siteradian' ) ); ?>,
+		skStatus:     <?php echo wp_json_encode( esc_html__( 'are trashed or not started yet', 'siteradian' ) ); ?>,
+		skNoProvider: <?php echo wp_json_encode( esc_html__( 'have no provider key', 'siteradian' ) ); ?>,
+		skUnsupported:<?php echo wp_json_encode( esc_html__( 'do not support this kind of suggestion', 'siteradian' ) ); ?>,
+		skNotFound:   <?php echo wp_json_encode( esc_html__( 'no longer exist', 'siteradian' ) ); ?>,
+		skOther:      <?php echo wp_json_encode( esc_html__( 'needed nothing generating', 'siteradian' ) ); ?>,
+		skReview:     <?php echo wp_json_encode( esc_html__( 'Open Suggestions to review the drafts already waiting.', 'siteradian' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		reviewApprovalFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Review the approval for %s', 'action-steward' ) ); ?>,
+		reviewApprovalFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Review the approval for %s', 'siteradian' ) ); ?>,
 		/* Row-level accessible names — the visible button keeps its short label. */
 		/* translators: %s: the post or page title. */
-		applyDevFor:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Approve and apply suggestion for %s', 'action-steward' ) ); ?>,
+		applyDevFor:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Approve and apply suggestion for %s', 'siteradian' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		applyGateFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Submit suggestion for %s for approval', 'action-steward' ) ); ?>,
+		applyGateFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Submit suggestion for %s for approval', 'siteradian' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		saveFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Save edited suggestion for %s', 'action-steward' ) ); ?>,
+		saveFor:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Save edited suggestion for %s', 'siteradian' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		dismissFor:   <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Dismiss suggestion for %s', 'action-steward' ) ); ?>,
+		dismissFor:   <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Dismiss suggestion for %s', 'siteradian' ) ); ?>,
 		/*
 		 * The old text here was "No suggestions yet. Generate some from a post or page."
 		 * It was true and it was useless: it named no screen, linked nowhere, and the
-		 * thing it was pointing at is a row action labelled "✨ Action Steward AI" that a first-time
+		 * thing it was pointing at is a row action labelled "✨ SiteRadian AI" that a first-time
 		 * customer has no reason to look for. An empty state on the tool's own screen
 		 * should point at the tool's own first step.
 		 */
-		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions waiting. Open the Review tab to pick a post or page and generate one.', 'action-steward' ) ); ?>,
-		noSugGo:  <?php echo wp_json_encode( esc_html__( 'Go to Review', 'action-steward' ) ); ?>,
+		noSug:    <?php echo wp_json_encode( esc_html__( 'No suggestions waiting. Open the Review tab to pick a post or page and generate one.', 'siteradian' ) ); ?>,
+		noSugGo:  <?php echo wp_json_encode( esc_html__( 'Go to Review', 'siteradian' ) ); ?>,
 		/* translators: %1$d current length, %2$d max */
-		ccTitle:  <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'action-steward' ) ); ?>,
+		ccTitle:  <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number */ __( '%1$d / %2$d', 'siteradian' ) ); ?>,
 		/* translators: %1$d current length */
-		ccExcerpt: <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d characters', 'action-steward' ) ); ?>,
+		ccExcerpt: <?php echo wp_json_encode( /* translators: %1$d: number */ __( '%1$d characters', 'siteradian' ) ); ?>,
 		// Apply + Applied tab (mode-aware label; outcome from response).
 		/*
 		 * __() not esc_html__(): every STR value is escaped again by the JS `esc()`
@@ -327,75 +327,75 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 		 * shows it — the button rendered literally as "Approve &amp; Apply" on the
 		 * suggestions table. Anything added here must stay insert-time escaped.
 		 */
-		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'action-steward' ) ); ?>,
-		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'action-steward' ) ); ?>,
-		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'action-steward' ) ); ?>,
-		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'action-steward' ) ); ?>,
-		stAwaiting:<?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'action-steward' ) ); ?>,
-		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'action-steward' ) ); ?>,
-		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'action-steward' ) ); ?>,
-		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'action-steward' ) ); ?>,
+		applyDev:  <?php echo wp_json_encode( __( 'Approve & Apply', 'siteradian' ) ); ?>,
+		applyGate: <?php echo wp_json_encode( esc_html__( 'Submit for approval', 'siteradian' ) ); ?>,
+		cantApply: <?php echo wp_json_encode( esc_html__( 'Couldn’t apply', 'siteradian' ) ); ?>,
+		stApplied: <?php echo wp_json_encode( esc_html__( 'Applied', 'siteradian' ) ); ?>,
+		stAwaiting:<?php echo wp_json_encode( esc_html__( 'Awaiting approval', 'siteradian' ) ); ?>,
+		stFailed:  <?php echo wp_json_encode( esc_html__( 'Failed', 'siteradian' ) ); ?>,
+		stReverted:<?php echo wp_json_encode( esc_html__( 'Reverted', 'siteradian' ) ); ?>,
+		noApplied: <?php echo wp_json_encode( esc_html__( 'Nothing applied yet.', 'siteradian' ) ); ?>,
 		// Per-item Undo (reuses the governed change-history rollback).
-		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'action-steward' ) ); ?>,
-		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'action-steward' ) ); ?>,
-		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'action-steward' ) ); ?>,
-		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'action-steward' ) ); ?>,
-		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'action-steward' ) ); ?>,
+		undo:      <?php echo wp_json_encode( esc_html__( 'Undo', 'siteradian' ) ); ?>,
+		undoSent:  <?php echo wp_json_encode( esc_html__( 'Undo sent for approval', 'siteradian' ) ); ?>,
+		cantUndo:  <?php echo wp_json_encode( esc_html__( 'Couldn’t undo', 'siteradian' ) ); ?>,
+		prev:     <?php echo wp_json_encode( esc_html__( '← Previous', 'siteradian' ) ); ?>,
+		next:     <?php echo wp_json_encode( esc_html__( 'Next →', 'siteradian' ) ); ?>,
 		/* translators: %1$d first row, %2$d last row, %3$d total */
-		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'action-steward' ) ); ?>,
+		pageInfo: <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( 'Showing %1$d–%2$d of %3$d', 'siteradian' ) ); ?>,
 		// Post-apply confirmation toast.
-		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'action-steward' ) ); ?>,
-		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'action-steward' ) ); ?>,
-		chipReversible: <?php echo wp_json_encode( esc_html__( 'Reversible', 'action-steward' ) ); ?>,
-		chipAudited:    <?php echo wp_json_encode( esc_html__( 'Audited', 'action-steward' ) ); ?>,
-		toastView:      <?php echo wp_json_encode( esc_html__( 'View in Applied', 'action-steward' ) ); ?>,
-		toastUndone:    <?php echo wp_json_encode( esc_html__( 'Reverted', 'action-steward' ) ); ?>,
-		toastClose:     <?php echo wp_json_encode( esc_html__( 'Dismiss notification', 'action-steward' ) ); ?>,
+		toastApplied:   <?php echo wp_json_encode( esc_html__( 'Applied successfully', 'siteradian' ) ); ?>,
+		toastSubmitted: <?php echo wp_json_encode( esc_html__( 'Submitted for approval', 'siteradian' ) ); ?>,
+		chipReversible: <?php echo wp_json_encode( esc_html__( 'Reversible', 'siteradian' ) ); ?>,
+		chipAudited:    <?php echo wp_json_encode( esc_html__( 'Audited', 'siteradian' ) ); ?>,
+		toastView:      <?php echo wp_json_encode( esc_html__( 'View in Applied', 'siteradian' ) ); ?>,
+		toastUndone:    <?php echo wp_json_encode( esc_html__( 'Reverted', 'siteradian' ) ); ?>,
+		toastClose:     <?php echo wp_json_encode( esc_html__( 'Dismiss notification', 'siteradian' ) ); ?>,
 		// Contextual entry-point notices (wpcc_content_gen / wpcc_content_bulk).
-		genCreated:    <?php echo wp_json_encode( esc_html__( 'Suggestion created. Review it below and apply when you’re ready.', 'action-steward' ) ); ?>,
-		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'action-steward' ) ); ?>,
-		genNoProvider: <?php echo wp_json_encode( esc_html__( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key on Built-in AI › Providers.', 'action-steward' ) ); ?>,
-		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive suggestions (e.g. trashed or auto-draft) and were skipped.', 'action-steward' ) ); ?>,
-		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'action-steward' ) ); ?>,
-		genSkipped:    <?php echo wp_json_encode( esc_html__( 'Nothing was generated for the selected items.', 'action-steward' ) ); ?>,
-		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open Built-in AI › Providers', 'action-steward' ) ); ?>,
+		genCreated:    <?php echo wp_json_encode( esc_html__( 'Suggestion created. Review it below and apply when you’re ready.', 'siteradian' ) ); ?>,
+		genExists:     <?php echo wp_json_encode( esc_html__( 'This item already has an open suggestion — review it below.', 'siteradian' ) ); ?>,
+		genNoProvider: <?php echo wp_json_encode( esc_html__( 'Built-in AI has no provider key yet, so nothing was generated and nothing on your site changed. Add a key on Built-in AI › Providers.', 'siteradian' ) ); ?>,
+		genUnsupported: <?php echo wp_json_encode( esc_html__( 'Some items have a status that cannot receive suggestions (e.g. trashed or auto-draft) and were skipped.', 'siteradian' ) ); ?>,
+		genFailed:     <?php echo wp_json_encode( esc_html__( 'Couldn’t generate a suggestion. Please try again.', 'siteradian' ) ); ?>,
+		genSkipped:    <?php echo wp_json_encode( esc_html__( 'Nothing was generated for the selected items.', 'siteradian' ) ); ?>,
+		aiIntegrations: <?php echo wp_json_encode( esc_html__( 'Open Built-in AI › Providers', 'siteradian' ) ); ?>,
 		/* translators: %1$d created, %2$d skipped, %3$d failed */
-		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'action-steward' ) ); ?>,
+		bulkSummary:   <?php echo wp_json_encode( /* translators: %1$d: number, %2$d: number, %3$d: number */ __( '%1$d suggestions created · %2$d skipped · %3$d failed. Review and apply below.', 'siteradian' ) ); ?>,
 
 		// ---- Review tab (pick content → generate) ----
-		rvNone:      <?php echo wp_json_encode( esc_html__( 'Nothing here to generate for yet.', 'action-steward' ) ); ?>,
-		rvNoneHint:  <?php echo wp_json_encode( esc_html__( 'Publish or draft a post or page first, then come back.', 'action-steward' ) ); ?>,
-		rvNotSet:    <?php echo wp_json_encode( esc_html__( '(not set)', 'action-steward' ) ); ?>,
-		rvReady:     <?php echo wp_json_encode( esc_html__( 'Ready', 'action-steward' ) ); ?>,
-		rvHasDraft:  <?php echo wp_json_encode( esc_html__( 'Draft waiting', 'action-steward' ) ); ?>,
-		rvHasDraftT: <?php echo wp_json_encode( esc_html__( 'A suggestion for this field is already waiting on the Suggestions tab.', 'action-steward' ) ); ?>,
+		rvNone:      <?php echo wp_json_encode( esc_html__( 'Nothing here to generate for yet.', 'siteradian' ) ); ?>,
+		rvNoneHint:  <?php echo wp_json_encode( esc_html__( 'Publish or draft a post or page first, then come back.', 'siteradian' ) ); ?>,
+		rvNotSet:    <?php echo wp_json_encode( esc_html__( '(not set)', 'siteradian' ) ); ?>,
+		rvReady:     <?php echo wp_json_encode( esc_html__( 'Ready', 'siteradian' ) ); ?>,
+		rvHasDraft:  <?php echo wp_json_encode( esc_html__( 'Draft waiting', 'siteradian' ) ); ?>,
+		rvHasDraftT: <?php echo wp_json_encode( esc_html__( 'A suggestion for this field is already waiting on the Suggestions tab.', 'siteradian' ) ); ?>,
 		/* translators: %s: number of words in the post's content. */
-		rvWords:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s words', 'action-steward' ) ); ?>,
-		rvThin:      <?php echo wp_json_encode( esc_html__( 'Thin', 'action-steward' ) ); ?>,
-		rvThinT:     <?php echo wp_json_encode( esc_html__( 'There is little content here to work from, so a suggestion may stay close to what you already have. It will still generate.', 'action-steward' ) ); ?>,
+		rvWords:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s words', 'siteradian' ) ); ?>,
+		rvThin:      <?php echo wp_json_encode( esc_html__( 'Thin', 'siteradian' ) ); ?>,
+		rvThinT:     <?php echo wp_json_encode( esc_html__( 'There is little content here to work from, so a suggestion may stay close to what you already have. It will still generate.', 'siteradian' ) ); ?>,
 		/* translators: %1$s: number done, %2$s: total to do. */
-		rvProgress:  <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Generating %1$s of %2$s…', 'action-steward' ) ); ?>,
+		rvProgress:  <?php echo wp_json_encode( /* translators: %1$s: value, %2$s: value */ esc_html__( 'Generating %1$s of %2$s…', 'siteradian' ) ); ?>,
 		/* translators: %s: number of suggestions created. */
-		rvDone:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s ready to review.', 'action-steward' ) ); ?>,
-		rvDoneGo:    <?php echo wp_json_encode( esc_html__( 'Review suggestions', 'action-steward' ) ); ?>,
-		rvNothing:   <?php echo wp_json_encode( esc_html__( 'Nothing was generated.', 'action-steward' ) ); ?>,
+		rvDone:      <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s ready to review.', 'siteradian' ) ); ?>,
+		rvDoneGo:    <?php echo wp_json_encode( esc_html__( 'Review suggestions', 'siteradian' ) ); ?>,
+		rvNothing:   <?php echo wp_json_encode( esc_html__( 'Nothing was generated.', 'siteradian' ) ); ?>,
 		/* translators: %s: number of items whose source content was thin. */
-		rvThinNote:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s had little content to work from, so those suggestions may stay close to what is already there. Adding more body content usually produces a stronger suggestion.', 'action-steward' ) ); ?>,
-		rvNoProvider:<?php echo wp_json_encode( esc_html__( 'No provider key, so nothing was generated and nothing on your site changed.', 'action-steward' ) ); ?>,
-		rvGenBusy:   <?php echo wp_json_encode( esc_html__( 'Generating…', 'action-steward' ) ); ?>,
-		rvGenLabel:  <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'action-steward' ) ); ?>,
+		rvThinNote:  <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( '%s had little content to work from, so those suggestions may stay close to what is already there. Adding more body content usually produces a stronger suggestion.', 'siteradian' ) ); ?>,
+		rvNoProvider:<?php echo wp_json_encode( esc_html__( 'No provider key, so nothing was generated and nothing on your site changed.', 'siteradian' ) ); ?>,
+		rvGenBusy:   <?php echo wp_json_encode( esc_html__( 'Generating…', 'siteradian' ) ); ?>,
+		rvGenLabel:  <?php echo wp_json_encode( esc_html__( 'Generate suggestions', 'siteradian' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		rvSelectFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select %s', 'action-steward' ) ); ?>,
+		rvSelectFor: <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Select %s', 'siteradian' ) ); ?>,
 
 		// ---- Regenerate (ask for another draft) ----
-		regen:        <?php echo wp_json_encode( esc_html__( 'Regenerate', 'action-steward' ) ); ?>,
-		regenBusy:    <?php echo wp_json_encode( esc_html__( 'Asking again…', 'action-steward' ) ); ?>,
-		regenOk:      <?php echo wp_json_encode( esc_html__( 'New suggestion ready', 'action-steward' ) ); ?>,
-		regenFail:    <?php echo wp_json_encode( esc_html__( 'Couldn’t get another suggestion — your current one is unchanged.', 'action-steward' ) ); ?>,
+		regen:        <?php echo wp_json_encode( esc_html__( 'Regenerate', 'siteradian' ) ); ?>,
+		regenBusy:    <?php echo wp_json_encode( esc_html__( 'Asking again…', 'siteradian' ) ); ?>,
+		regenOk:      <?php echo wp_json_encode( esc_html__( 'New suggestion ready', 'siteradian' ) ); ?>,
+		regenFail:    <?php echo wp_json_encode( esc_html__( 'Couldn’t get another suggestion — your current one is unchanged.', 'siteradian' ) ); ?>,
 		/* translators: %s: the post or page title. */
-		regenFor:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Ask for a different suggestion for %s', 'action-steward' ) ); ?>,
+		regenFor:     <?php echo wp_json_encode( /* translators: %s: value */ esc_html__( 'Ask for a different suggestion for %s', 'siteradian' ) ); ?>,
 		// Shown when the returned draft simply restates what is already there.
-		echoNote:     <?php echo wp_json_encode( esc_html__( 'This matches your current value. With little content to work from, the AI stays close to what you have rather than inventing something about the page.', 'action-steward' ) ); ?>
+		echoNote:     <?php echo wp_json_encode( esc_html__( 'This matches your current value. With little content to work from, the AI stays close to what you have rather than inventing something about the page.', 'siteradian' ) ); ?>
 	};
 
 	const $ = ( id ) => document.getElementById( id );

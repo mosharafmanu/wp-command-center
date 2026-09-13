@@ -131,7 +131,7 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 		];
 
 		if ( 'never' !== $wpcc_exp_choice && ! isset( $wpcc_exp_map[ $wpcc_exp_choice ] ) ) {
-			$wpcc_token_error = __( 'Choose when this token should stop working, then try again.', 'action-steward' );
+			$wpcc_token_error = __( 'Choose when this token should stop working, then try again.', 'siteradian' );
 			$result           = null;
 		} else {
 			$expires_at = isset( $wpcc_exp_map[ $wpcc_exp_choice ] ) ? time() + $wpcc_exp_map[ $wpcc_exp_choice ] : null;
@@ -148,7 +148,7 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 			// What was created, in the customer's own words, so the reveal card can
 			// say which token this is rather than only that "a token" exists.
 			$wpcc_new_record   = $result['record'];
-			$wpcc_token_message = __( 'Token generated. Copy it now — it will not be shown again.', 'action-steward' );
+			$wpcc_token_message = __( 'Token generated. Copy it now — it will not be shown again.', 'siteradian' );
 
 			// Inject token into config
 			if ( $wpcc_config ) {
@@ -169,9 +169,9 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 		if ( is_wp_error( $wpcc_revoked ) ) {
 			$wpcc_token_error = $wpcc_revoked->get_error_message();
 		} elseif ( true === $wpcc_revoked ) {
-			$wpcc_token_message = __( 'Token revoked. Any assistant using it is disconnected immediately.', 'action-steward' );
+			$wpcc_token_message = __( 'Token revoked. Any assistant using it is disconnected immediately.', 'siteradian' );
 		} else {
-			$wpcc_token_error = __( 'That token could not be found.', 'action-steward' );
+			$wpcc_token_error = __( 'That token could not be found.', 'siteradian' );
 		}
 		$wpcc_all_tokens = $wpcc_tokens->list();
 	}
@@ -203,9 +203,9 @@ $wpcc_tab = sanitize_key( (string) ( $_GET['tab'] ?? 'clients' ) );
 // used elsewhere in the product at a different level, which made the tab bar
 // impossible to place. These read as the steps they actually are.
 $wpcc_tabs = [
-	'configuration' => __( 'Set up', 'action-steward' ),
-	'activity'      => __( 'Recent requests', 'action-steward' ),
-	'security'      => __( 'How access works', 'action-steward' ),
+	'configuration' => __( 'Set up', 'siteradian' ),
+	'activity'      => __( 'Recent requests', 'siteradian' ),
+	'security'      => __( 'How access works', 'siteradian' ),
 ];
 // Arriving here from the Home wizard's single "Connect" button already costs the
 // customer three stacked tab rows. Before a token exists there is nothing to see
@@ -465,6 +465,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-connect-credential strong,.wpcc-connect-credential label { display:block;margin:0 0 3px;font-size:13px;font-weight:650;color:#1d2327; }
 	.wpcc-connect-credential p { margin:0;font-size:12px;line-height:1.5;color:#646970; }
 	.wpcc-connect-credential input { width:100%;max-width:520px;margin:3px 0 5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+	.wpcc-connect-terminal-warning { display:flex;align-items:flex-start;gap:10px;max-width:720px;margin:0 0 var(--wpcc-space-5,20px);padding:12px 14px;border:1px solid #dba617;border-left-width:4px;border-radius:8px;background:#fff8e5;color:#3c434a; }
+	.wpcc-connect-terminal-warning .dashicons { flex:0 0 auto;width:18px;height:18px;font-size:18px;color:#996800; }
+	.wpcc-connect-terminal-warning strong { color:#1d2327; }
 	.wpcc-connect-steps { max-width:820px; }
 	.wpcc-connect-step { position:relative;display:grid;grid-template-columns:34px minmax(0,1fr);column-gap:14px;padding:0 0 var(--wpcc-space-6,24px);margin:0; }
 	.wpcc-connect-step:last-child { padding-bottom:0; }
@@ -625,7 +628,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 <div class="wrap wpcc-ai-wrap">
 	<?php // The tab that leads here is called "Assistants"; a heading naming the same
 	// screen "AI Clients" made the navigation label and the page disagree. ?>
-	<h1><?php esc_html_e( 'Assistants', 'action-steward' ); ?></h1>
+	<h1><?php esc_html_e( 'Assistants', 'siteradian' ); ?></h1>
 
 	<?php
 	// Two paragraphs said the same thing in sequence: name the assistants, then
@@ -652,7 +655,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	?>
 
 	<details class="wpcc-agent-explainer">
-		<summary><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'action-steward' ); ?></summary>
+		<summary><?php esc_html_e( 'New to AI assistants? Read this first (2 min)', 'siteradian' ); ?></summary>
 		<div style="margin-top:12px;display:grid;gap:12px;">
 			<?php foreach ( \WPCommandCenter\Admin\AgentExplainer::faq() as $wpcc_qa ) : ?>
 				<div>
@@ -669,7 +672,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				// needs no key here. Two steps, not three.
 				printf(
 					/* translators: 1: Tokens link open, 2: link close */
-					esc_html__( 'Setup: 1) create an %1$saccess token%2$s, 2) paste the configuration below into your assistant. You do not need an AI provider key — your assistant brings its own AI.', 'action-steward' ),
+					esc_html__( 'Setup: 1) create an %1$saccess token%2$s, 2) paste the configuration below into your assistant. You do not need an AI provider key — your assistant brings its own AI.', 'siteradian' ),
 					'<a href="' . esc_url( admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=tokens' ) ) . '">',
 					'</a>'
 				);
@@ -713,13 +716,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					echo esc_html(
 						sprintf(
 							/* translators: 1: token name chosen by the customer, 2: access level, e.g. "Full access". */
-							__( 'Token “%1$s” created — %2$s', 'action-steward' ),
+							__( 'Token “%1$s” created — %2$s', 'siteradian' ),
 							(string) $wpcc_new_record['label'],
 							AuthTokens::scope_label( (string) $wpcc_new_record['scope'] )
 						)
 					);
 				} else {
-					esc_html_e( 'Your access token is ready', 'action-steward' );
+					esc_html_e( 'Your access token is ready', 'siteradian' );
 				}
 				?>
 			</p>
@@ -734,21 +737,21 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			$wpcc_reveal_client = (string) ( $wpcc_current_client['name'] ?? '' );
 			?>
 			<ol class="wpcc-token-reveal__steps">
-				<li class="is-done"><span class="n" aria-hidden="true">&#10003;</span><?php esc_html_e( 'Assistant chosen', 'action-steward' ); ?></li>
-				<li class="is-done"><span class="n" aria-hidden="true">&#10003;</span><?php esc_html_e( 'Token created', 'action-steward' ); ?></li>
+				<li class="is-done"><span class="n" aria-hidden="true">&#10003;</span><?php esc_html_e( 'Assistant chosen', 'siteradian' ); ?></li>
+				<li class="is-done"><span class="n" aria-hidden="true">&#10003;</span><?php esc_html_e( 'Token created', 'siteradian' ); ?></li>
 				<li class="is-now"><span class="n" aria-hidden="true">3</span><?php
 					echo '' !== $wpcc_reveal_client
 						/* translators: %s: the assistant being connected, e.g. "Claude Desktop". */
-						? esc_html( sprintf( __( 'Set up %s', 'action-steward' ), $wpcc_reveal_client ) )
-						: esc_html__( 'Set up your assistant', 'action-steward' );
+						? esc_html( sprintf( __( 'Set up %s', 'siteradian' ), $wpcc_reveal_client ) )
+						: esc_html__( 'Set up your assistant', 'siteradian' );
 				?></li>
 			</ol>
 			<div class="wpcc-ai-code wpcc-token-reveal__code">
 				<code class="wpcc-ai-code__text" id="wpcc-new-token"><?php echo esc_html( $wpcc_new_token ); ?></code>
-				<button type="button" class="button button-primary wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_new_token ); ?>"><?php esc_html_e( 'Copy', 'action-steward' ); ?></button>
+				<button type="button" class="button button-primary wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_new_token ); ?>"><?php esc_html_e( 'Copy', 'siteradian' ); ?></button>
 			</div>
 			<p class="wpcc-token-reveal__note">
-				<?php esc_html_e( 'Copy and save this token now — it will not be shown again. Your setup steps below already use it where needed. Keep it out of screenshots and shared chats.', 'action-steward' ); ?>
+				<?php esc_html_e( 'Copy and save this token now — it will not be shown again. Your setup steps below already use it where needed. Keep it out of screenshots and shared chats.', 'siteradian' ); ?>
 			</p>
 			<?php
 			/*
@@ -769,8 +772,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<?php
 						echo '' !== $wpcc_reveal_client
 							/* translators: %s: the assistant being connected, e.g. "Claude Desktop". */
-							? esc_html( sprintf( __( 'Next: set up %s', 'action-steward' ), $wpcc_reveal_client ) )
-							: esc_html__( 'Next: open setup', 'action-steward' );
+							? esc_html( sprintf( __( 'Next: set up %s', 'siteradian' ), $wpcc_reveal_client ) )
+							: esc_html__( 'Next: open setup', 'siteradian' );
 						?> &rarr;
 					</a>
 				</p>
@@ -822,9 +825,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			 * tell which card is theirs. Asking which app they are connecting does.
 			 */
 			?>
-				<div class="wpcc-ai-panel__header"><?php esc_html_e( '1. Choose your app', 'action-steward' ); ?></div>
+				<div class="wpcc-ai-panel__header"><?php esc_html_e( '1. Choose your app', 'siteradian' ); ?></div>
 				<div class="wpcc-ai-panel__body">
-					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'Pick the app you already use. Desktop apps, terminal apps, and editor extensions have different setup steps.', 'action-steward' ); ?></p>
+					<p class="wpcc-ai-field__hint" style="margin-top:0;"><?php esc_html_e( 'Pick the app you already use. Desktop apps, terminal apps, and editor extensions have different setup steps.', 'siteradian' ); ?></p>
 					<?php
 					// Mark the final small family so a two-column layout has no empty grid cell.
 					$wpcc_last_compact_family = '';
@@ -841,7 +844,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<?php $wpcc_is_wide = 'Editors & coding assistants' === $wpcc_family; ?>
 						<?php if ( $wpcc_is_other ) : ?>
 						<details class="wpcc-ai-family wpcc-ai-family--other"<?php echo isset( $wpcc_family_clients[ $wpcc_selected_client ] ) ? ' open' : ''; ?>>
-							<summary><?php esc_html_e( 'Other / Experimental', 'action-steward' ); ?></summary>
+							<summary><?php esc_html_e( 'Other / Experimental', 'siteradian' ); ?></summary>
 						<?php else : ?>
 						<section class="wpcc-ai-family <?php echo $wpcc_is_wide ? 'wpcc-ai-family--wide' : 'wpcc-ai-family--compact'; ?><?php echo $wpcc_family === $wpcc_last_compact_family ? ' wpcc-ai-family--compact-last' : ''; ?>" aria-labelledby="wpcc-family-<?php echo esc_attr( sanitize_key( $wpcc_family ) ); ?>">
 							<h3 class="wpcc-ai-family__name" id="wpcc-family-<?php echo esc_attr( sanitize_key( $wpcc_family ) ); ?>"><?php echo esc_html( $wpcc_family ); ?></h3>
@@ -900,16 +903,16 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<?php
 				printf(
 					/* translators: %s: selected assistant application name. */
-					esc_html__( '2. Create access for %s', 'action-steward' ),
+					esc_html__( '2. Create access for %s', 'siteradian' ),
 					esc_html( $wpcc_current_client['name'] )
 				);
 				?>
 			</div>
 			<div class="wpcc-ai-panel__body">
-				<p class="wpcc-ai-field__hint wpcc-create-access__lead"><?php esc_html_e( 'This token lets this app talk to this WordPress site. Read-only can inspect the site; Full access can also request or make changes under your protection settings.', 'action-steward' ); ?></p>
+				<p class="wpcc-ai-field__hint wpcc-create-access__lead"><?php esc_html_e( 'This token lets this app talk to this WordPress site. Read-only can inspect the site; Full access can also request or make changes under your protection settings.', 'siteradian' ); ?></p>
 				<?php if ( in_array( $wpcc_selected_client, [ 'chatgpt', 'codex' ], true ) && ! empty( $wpcc_current_client['surface_note'] ) ) : ?>
 					<p class="wpcc-selected-client-note">
-						<strong><?php esc_html_e( 'Important', 'action-steward' ); ?></strong>
+						<strong><?php esc_html_e( 'Important', 'siteradian' ); ?></strong>
 						<span><?php echo esc_html( $wpcc_current_client['surface_note'] ); ?></span>
 					</p>
 				<?php endif; ?>
@@ -929,27 +932,27 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<?php // Shown only once JS has turned the panel below into a dialog. ?>
 					<p class="wpcc-tokenmake__opener">
 						<button type="button" class="button button-primary" id="wpcc-tokenmake-open" aria-haspopup="dialog">
-							<?php esc_html_e( 'Create access token', 'action-steward' ); ?>
+							<?php esc_html_e( 'Create access token', 'siteradian' ); ?>
 						</button>
 					</p>
 
 					<div class="wpcc-tokenmake__panel" id="wpcc-tokenmake-panel" role="dialog" aria-modal="true" aria-labelledby="wpcc-tokenmake-title">
 						<div class="wpcc-tokenmake__box">
-							<h2 class="wpcc-tokenmake__title" id="wpcc-tokenmake-title"><?php esc_html_e( 'Create an access token', 'action-steward' ); ?></h2>
+							<h2 class="wpcc-tokenmake__title" id="wpcc-tokenmake-title"><?php esc_html_e( 'Create an access token', 'siteradian' ); ?></h2>
 							<p class="wpcc-tokenmake__lead">
-								<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'action-steward' ); ?>
+								<?php esc_html_e( 'This creates one key for one assistant. You will see it once, and you can revoke it at any time.', 'siteradian' ); ?>
 							</p>
 
 							<div class="wpcc-tokenmake__field">
 								<label class="wpcc-tokenmake__label" for="wpcc-tokenmake-label">
-									<?php esc_html_e( 'Name this token', 'action-steward' ); ?>
+									<?php esc_html_e( 'Name this token', 'siteradian' ); ?>
 								</label>
 								<input type="text" id="wpcc-tokenmake-label" name="wpcc_token_label" class="regular-text"
 									required maxlength="120" autocomplete="off" spellcheck="false"
 									value="<?php echo esc_attr( $wpcc_label_hint ); ?>"
 									aria-describedby="wpcc-tokenmake-label-hint" />
 								<p class="wpcc-tokenmake__hint" id="wpcc-tokenmake-label-hint">
-									<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'action-steward' ); ?>
+									<?php esc_html_e( 'Use a name you will recognise months from now — usually the assistant you are connecting, or the person using it.', 'siteradian' ); ?>
 								</p>
 								<p class="wpcc-tokenmake__dupe" id="wpcc-tokenmake-dupe" role="status" hidden></p>
 							</div>
@@ -965,28 +968,28 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							 */
 							?>
 							<fieldset class="wpcc-tokenmake__field wpcc-tokenmake__scopes">
-								<legend class="wpcc-tokenmake__label"><?php esc_html_e( 'What this assistant may do', 'action-steward' ); ?></legend>
+								<legend class="wpcc-tokenmake__label"><?php esc_html_e( 'What this assistant may do', 'siteradian' ); ?></legend>
 
 								<label class="wpcc-tokenmake__choice">
 									<input type="radio" name="wpcc_token_scope" value="read_only" checked />
 									<span>
-										<strong><?php esc_html_e( 'Read-only', 'action-steward' ); ?></strong>
-										<em><?php esc_html_e( 'Read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'action-steward' ); ?></em>
+										<strong><?php esc_html_e( 'Read-only', 'siteradian' ); ?></strong>
+										<em><?php esc_html_e( 'Read site information, diagnostics, and supported list/get actions. Cannot change data, submit changes for approval, or approve them.', 'siteradian' ); ?></em>
 									</span>
 								</label>
 
 								<label class="wpcc-tokenmake__choice">
 									<input type="radio" name="wpcc_token_scope" value="full" />
 									<span>
-										<strong><?php esc_html_e( 'Full access', 'action-steward' ); ?></strong>
-										<em><?php esc_html_e( 'May request or perform changes according to the active protection mode. Choose this if you want the assistant to work across the whole site.', 'action-steward' ); ?></em>
+										<strong><?php esc_html_e( 'Full access', 'siteradian' ); ?></strong>
+										<em><?php esc_html_e( 'May request or perform changes according to the active protection mode. Choose this if you want the assistant to work across the whole site.', 'siteradian' ); ?></em>
 									</span>
 								</label>
 							</fieldset>
 
 							<div class="wpcc-tokenmake__field">
 								<label class="wpcc-tokenmake__label" for="wpcc-tokenmake-expires">
-									<?php esc_html_e( 'Stop working after', 'action-steward' ); ?>
+									<?php esc_html_e( 'Stop working after', 'siteradian' ); ?>
 								</label>
 								<?php
 								// 30 days is the default. A key that expires on its own is
@@ -996,13 +999,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 								// now a choice someone makes rather than one they inherit.
 								?>
 								<select id="wpcc-tokenmake-expires" name="wpcc_token_expires">
-									<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'action-steward' ); ?></option>
-									<option value="90d"><?php esc_html_e( '90 days', 'action-steward' ); ?></option>
-									<option value="1y"><?php esc_html_e( '1 year', 'action-steward' ); ?></option>
-									<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'action-steward' ); ?></option>
+									<option value="30d" selected><?php esc_html_e( '30 days (recommended)', 'siteradian' ); ?></option>
+									<option value="90d"><?php esc_html_e( '90 days', 'siteradian' ); ?></option>
+									<option value="1y"><?php esc_html_e( '1 year', 'siteradian' ); ?></option>
+									<option value="never"><?php esc_html_e( 'Never — until I revoke it', 'siteradian' ); ?></option>
 								</select>
 								<p class="wpcc-tokenmake__hint">
-									<?php esc_html_e( 'An expiring token stops working on its own. Pick one if this is for a temporary job or someone else’s computer.', 'action-steward' ); ?>
+									<?php esc_html_e( 'An expiring token stops working on its own. Pick one if this is for a temporary job or someone else’s computer.', 'siteradian' ); ?>
 								</p>
 							</div>
 
@@ -1032,7 +1035,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							 */
 							?>
 							<p class="wpcc-tokenmake__note wpcc-tokenmake__note--warn" id="wpcc-tokenmake-longlived" hidden>
-								<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'action-steward' ); ?>
+								<?php esc_html_e( 'Heads up: full access that never expires is a permanent key to everything on this site. If it is ever copied or leaked there is no expiry to fall back on — you would have to notice and revoke it. Pick an expiry unless you have a reason not to.', 'siteradian' ); ?>
 							</p>
 
 							<p class="wpcc-tokenmake__note<?php echo esc_attr( $wpcc_protected ? '' : ' wpcc-tokenmake__note--warn' ); ?>" id="wpcc-tokenmake-note" data-protected="<?php echo esc_attr( $wpcc_protected ? '1' : '0' ); ?>" hidden>
@@ -1041,13 +1044,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 									echo esc_html(
 										sprintf(
 											/* translators: %s: the site's protection mode, e.g. "Standard protection". */
-											__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'action-steward' ),
+											__( 'Full access lets this token ask to change anything on the site. Requests follow %s; full access does not bypass required human approval.', 'siteradian' ),
 											$wpcc_mode_label
 										)
 									);
 									?>
 								<?php else : ?>
-									<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'action-steward' ); ?>
+									<?php esc_html_e( 'Warning: this site is in Developer mode, so a full-access token can change your site straight away, without asking you first. Change this under Settings › Protection.', 'siteradian' ); ?>
 								<?php endif; ?>
 							</p>
 
@@ -1064,9 +1067,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 							<p class="wpcc-tokenmake__actions">
 								<button type="submit" class="button button-primary" id="wpcc-tokenmake-submit">
-									<?php esc_html_e( 'Create token', 'action-steward' ); ?>
+									<?php esc_html_e( 'Create token', 'siteradian' ); ?>
 								</button>
-								<button type="button" class="button" id="wpcc-tokenmake-cancel"><?php esc_html_e( 'Cancel', 'action-steward' ); ?></button>
+								<button type="button" class="button" id="wpcc-tokenmake-cancel"><?php esc_html_e( 'Cancel', 'siteradian' ); ?></button>
 							</p>
 						</div>
 					</div>
@@ -1091,11 +1094,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<summary>
 							<?php
 							/* translators: %d: number of usable access tokens. */
-							printf( esc_html( _n( 'Use or manage %d existing token', 'Use or manage %d existing tokens', count( $wpcc_usable_tokens ), 'action-steward' ) ), count( $wpcc_usable_tokens ) );
+							printf( esc_html( _n( 'Use or manage %d existing token', 'Use or manage %d existing tokens', count( $wpcc_usable_tokens ), 'siteradian' ) ), count( $wpcc_usable_tokens ) );
 							?>
 						</summary>
 					<table class="wpcc-ai-token-table">
-						<thead><tr><th><?php esc_html_e( 'Label', 'action-steward' ); ?></th><th><?php esc_html_e( 'Scope', 'action-steward' ); ?></th><th><?php esc_html_e( 'Status', 'action-steward' ); ?></th><th></th></tr></thead>
+						<thead><tr><th><?php esc_html_e( 'Label', 'siteradian' ); ?></th><th><?php esc_html_e( 'Scope', 'siteradian' ); ?></th><th><?php esc_html_e( 'Status', 'siteradian' ); ?></th><th></th></tr></thead>
 						<tbody>
 						<?php foreach ( $wpcc_usable_tokens as $t ) : ?>
 							<tr>
@@ -1103,12 +1106,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 								<td><?php echo esc_html( AuthTokens::scope_label( $t['scope'] ) ); ?></td>
 								<td><?php echo AuthTokens::status_badge( $t ); // phpcs:ignore ?></td>
 								<td style="white-space:nowrap;">
-								<button type="button" class="button button-small wpcc-select-token-btn" data-token-id="<?php echo esc_attr( $t['id'] ); ?>"><?php esc_html_e( 'Use in config', 'action-steward' ); ?></button>
+								<button type="button" class="button button-small wpcc-select-token-btn" data-token-id="<?php echo esc_attr( $t['id'] ); ?>"><?php esc_html_e( 'Use in config', 'siteradian' ); ?></button>
 								<?php if ( 'active' === ( $t['status'] ?? '' ) ) : ?>
-									<form method="post" style="display:inline;" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Revoke this token? Any assistant using it loses access immediately.', 'action-steward' ) ) ); ?>);">
+									<form method="post" style="display:inline;" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( __( 'Revoke this token? Any assistant using it loses access immediately.', 'siteradian' ) ) ); ?>);">
 										<?php wp_nonce_field( 'wpcc_ai_integrations' ); ?>
 										<input type="hidden" name="wpcc_token_id" value="<?php echo esc_attr( $t['id'] ); ?>" />
-										<button type="submit" name="wpcc_token_action" value="revoke" class="button button-small button-link-delete"><?php esc_html_e( 'Revoke', 'action-steward' ); ?></button>
+										<button type="submit" name="wpcc_token_action" value="revoke" class="button button-small button-link-delete"><?php esc_html_e( 'Revoke', 'siteradian' ); ?></button>
 									</form>
 								<?php endif; ?>
 							</td>
@@ -1116,10 +1119,10 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<?php endforeach; ?>
 						</tbody>
 					</table>
-					<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'A token is shown in full only once, when you create it. Manage or revoke tokens anytime in Settings → Connections.', 'action-steward' ); ?></p>
+					<p class="wpcc-ai-panel__hint"><?php esc_html_e( 'A token is shown in full only once, when you create it. Manage or revoke tokens anytime in Settings → Connections.', 'siteradian' ); ?></p>
 					</details>
 				<?php else : ?>
-					<p class="wpcc-create-access__state"><?php esc_html_e( 'No active tokens yet.', 'action-steward' ); ?></p>
+					<p class="wpcc-create-access__state"><?php esc_html_e( 'No active tokens yet.', 'siteradian' ); ?></p>
 				<?php endif; ?>
 			</div>
 		</div>
@@ -1199,15 +1202,15 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		$wpcc_has_guided  = true;
 		$wpcc_command_code_manual = 'command_code' === $wpcc_selected_client;
 		$wpcc_os_labels   = [
-			'macos'   => __( 'macOS', 'action-steward' ),
-			'windows' => __( 'Windows', 'action-steward' ),
-			'linux'   => __( 'Linux', 'action-steward' ),
+			'macos'   => __( 'macOS', 'siteradian' ),
+			'windows' => __( 'Windows', 'siteradian' ),
+			'linux'   => __( 'Linux', 'siteradian' ),
 		];
 		?>
 		<?php if ( $wpcc_cfg_tok_count > 0 && $wpcc_has_guided ) : ?>
 			<div class="wpcc-ai-panel" id="wpcc-guided-setup">
 				<div class="wpcc-ai-panel__header">
-					<?php printf( /* translators: %s: client name */ esc_html__( '3. Connect %s', 'action-steward' ), esc_html( $wpcc_current_client['name'] ) ); ?>
+					<?php printf( /* translators: %s: client name */ esc_html__( '3. Connect %s', 'siteradian' ), esc_html( $wpcc_current_client['name'] ) ); ?>
 				</div>
 				<div class="wpcc-ai-panel__body">
 					<?php require __DIR__ . '/partials/assistant-connect.php'; ?>
@@ -1215,7 +1218,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			</div>
 
 			<div class="wpcc-ai-panel" id="wpcc-verify-client">
-				<div class="wpcc-ai-panel__header"><?php esc_html_e( '4. Test your connection', 'action-steward' ); ?></div>
+				<div class="wpcc-ai-panel__header"><?php esc_html_e( '4. Test your connection', 'siteradian' ); ?></div>
 				<div class="wpcc-ai-panel__body">
 					<?php require __DIR__ . '/partials/assistant-verify.php'; ?>
 				</div>
@@ -1230,7 +1233,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<summary>
 					<?php
 					/* translators: %s: selected assistant or coding client name. */
-					printf( esc_html__( 'Advanced: manual configuration for %s', 'action-steward' ), esc_html( $wpcc_current_client['name'] ) );
+					printf( esc_html__( 'Advanced: manual configuration for %s', 'siteradian' ), esc_html( $wpcc_current_client['name'] ) );
 					?>
 				</summary>
 				<div class="wpcc-ai-panel" style="margin:0;border:0;border-top:1px solid #eef0f4;border-radius:0;box-shadow:none;">
@@ -1247,19 +1250,19 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					 * longer presents itself as the way to do this.
 					 */
 					if ( $wpcc_has_guided ) {
-						printf( /* translators: %s: client name */ esc_html__( 'Manual setup for %s (advanced)', 'action-steward' ), esc_html( $wpcc_current_client['name'] ) );
+						printf( /* translators: %s: client name */ esc_html__( 'Manual setup for %s (advanced)', 'siteradian' ), esc_html( $wpcc_current_client['name'] ) );
 					} else {
-						printf( /* translators: %s: value */ esc_html__( 'Your %s configuration', 'action-steward' ), esc_html( $wpcc_current_client['name'] ) );
+						printf( /* translators: %s: value */ esc_html__( 'Your %s configuration', 'siteradian' ), esc_html( $wpcc_current_client['name'] ) );
 					}
 					?>
 					<button type="button" class="button wpcc-copy-btn" id="wpcc-copy-config" data-copy-target="wpcc-config-block"<?php $wpcc_token_gate_control( $wpcc_setup_requires_token, $wpcc_token_ready ); ?>>
 						<?php
 						echo 'gemini' === $wpcc_selected_client || $wpcc_command_code_manual
-							? esc_html__( 'Copy empty-file example', 'action-steward' )
-							: esc_html__( 'Copy configuration', 'action-steward' );
+							? esc_html__( 'Copy empty-file example', 'siteradian' )
+							: esc_html__( 'Copy configuration', 'siteradian' );
 						?>
 					</button>
-					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'action-steward' ); ?></span>
+					<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'siteradian' ); ?></span>
 				</div>
 				<div class="wpcc-ai-panel__body">
 					<?php
@@ -1275,17 +1278,17 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						?>
 						<div class="wpcc-ai-summary">
 							<span class="wpcc-ai-summary__item">
-								<span class="wpcc-ai-summary__k"><?php esc_html_e( 'Connects via', 'action-steward' ); ?></span>
-								<span class="wpcc-ai-summary__v"><?php echo $wpcc_sel_http ? esc_html__( 'Direct HTTP', 'action-steward' ) : esc_html__( 'Connector script', 'action-steward' ); ?></span>
+								<span class="wpcc-ai-summary__k"><?php esc_html_e( 'Connects via', 'siteradian' ); ?></span>
+								<span class="wpcc-ai-summary__v"><?php echo $wpcc_sel_http ? esc_html__( 'Direct HTTP', 'siteradian' ) : esc_html__( 'Connector script', 'siteradian' ); ?></span>
 							</span>
 							<span class="wpcc-ai-summary__item">
-								<span class="wpcc-ai-summary__k"><?php esc_html_e( 'Node.js', 'action-steward' ); ?></span>
-								<span class="wpcc-ai-summary__v<?php echo $wpcc_sel_http ? '' : ' wpcc-ai-summary__v--muted'; ?>"><?php echo $wpcc_sel_http ? esc_html__( 'Not required', 'action-steward' ) : esc_html__( 'Required', 'action-steward' ); ?></span>
+								<span class="wpcc-ai-summary__k"><?php esc_html_e( 'Node.js', 'siteradian' ); ?></span>
+								<span class="wpcc-ai-summary__v<?php echo $wpcc_sel_http ? '' : ' wpcc-ai-summary__v--muted'; ?>"><?php echo $wpcc_sel_http ? esc_html__( 'Not required', 'siteradian' ) : esc_html__( 'Required', 'siteradian' ); ?></span>
 							</span>
 							<?php foreach ( $wpcc_sel_badges as $wpcc_b ) : ?>
 								<?php if ( 'secondary' === $wpcc_b['rank'] && ( 'info' === $wpcc_b['tone'] || 'neutral' === $wpcc_b['tone'] ) ) { continue; } // transport is already spelled out above ?>
 								<span class="wpcc-ai-summary__item">
-									<span class="wpcc-ai-summary__k"><?php echo 'primary' === $wpcc_b['rank'] && 'rec' === $wpcc_b['tone'] ? esc_html__( 'Status', 'action-steward' ) : esc_html__( 'Certification', 'action-steward' ); ?></span>
+									<span class="wpcc-ai-summary__k"><?php echo 'primary' === $wpcc_b['rank'] && 'rec' === $wpcc_b['tone'] ? esc_html__( 'Status', 'siteradian' ) : esc_html__( 'Certification', 'siteradian' ); ?></span>
 									<span class="wpcc-ai-badge wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['rank'] ); ?> wpcc-ai-badge--<?php echo esc_attr( $wpcc_b['tone'] ); ?>" title="<?php echo esc_attr( $wpcc_b['title'] ); ?>"><?php echo esc_html( $wpcc_b['label'] ); ?></span>
 								</span>
 							<?php endforeach; ?>
@@ -1310,24 +1313,24 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						if ( $wpcc_sel_uses_env ) {
 							printf(
 								/* translators: 1: client name, 2: environment variable name */
-								esc_html__( 'This is the file %1$s reads. There is deliberately no token in it — it names the %2$s environment variable instead, and the token goes there. Setting it up with the command above does all of this for you.', 'action-steward' ),
+								esc_html__( 'This is the file %1$s reads. There is deliberately no token in it — it names the %2$s environment variable instead, and the token goes there. Setting it up with the command above does all of this for you.', 'siteradian' ),
 								esc_html( $wpcc_current_client['name'] ),
 								esc_html( $wpcc_sel_env_var )
 							);
 						} elseif ( 'prompt' === $wpcc_sel_cred_mode ) {
 							printf(
 								/* translators: %s: client name */
-								esc_html__( 'Copy this into %s. It is complete as it stands — there is no token in it, and none needs to be added: it asks for your token the first time it connects and keeps it in its own secure storage. That also makes this file safe to commit to a repository.', 'action-steward' ),
+								esc_html__( 'Copy this into %s. It is complete as it stands — there is no token in it, and none needs to be added: it asks for your token the first time it connects and keeps it in its own secure storage. That also makes this file safe to commit to a repository.', 'siteradian' ),
 								esc_html( $wpcc_current_client['name'] )
 							);
 						} elseif ( 'gemini' === $wpcc_selected_client ) {
-							esc_html_e( 'This is the advanced fallback. The native gemini mcp add command above is recommended because it preserves your existing Gemini settings. If you continue manually, fill in the token and follow the merge instructions below — do not replace settings.json.', 'action-steward' );
+							esc_html_e( 'This is the advanced fallback. The native gemini mcp add command above is recommended because it preserves your existing Gemini settings. If you continue manually, fill in the token and follow the merge instructions below — do not replace settings.json.', 'siteradian' );
 						} elseif ( $wpcc_command_code_manual ) {
-							esc_html_e( 'This is the advanced fallback. The native cmd mcp add command above is recommended. If you deliberately edit ~/.commandcode/mcp.json instead, fill in the token and merge only the Action Steward server entry without replacing the file or its existing servers.', 'action-steward' );
+							esc_html_e( 'This is the advanced fallback. The native cmd mcp add command above is recommended. If you deliberately edit ~/.commandcode/mcp.json instead, fill in the token and merge only the SiteRadian AI server entry without replacing the file or its existing servers.', 'siteradian' );
 						} else {
 							echo $wpcc_new_token
-								? sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s. It is complete — your connection address and your access token are both in it.', 'action-steward' ), esc_html( $wpcc_current_client['name'] ) )
-								: esc_html__( 'Paste your saved token in the browser-only field below to unlock a complete configuration. If you did not save it, create a new access token. Action Steward never reconstructs a stored token.', 'action-steward' );
+								? sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s. It is complete — your connection address and your access token are both in it.', 'siteradian' ), esc_html( $wpcc_current_client['name'] ) )
+								: esc_html__( 'Paste your saved token in the browser-only field below to unlock a complete configuration. If you did not save it, create a new access token. SiteRadian AI never reconstructs a stored token.', 'siteradian' );
 						}
 					?></p>
 					<?php if ( ! empty( $wpcc_selected_token ) ) : ?>
@@ -1336,7 +1339,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 								<?php
 								printf(
 									/* translators: 1: token label, 2: token preview prefix */
-									esc_html__( 'Using “%1$s” (starts with %2$s…). Paste that saved token in the field below to drop it straight into the configuration. For security, a token is shown in full only once — if you didn’t save it, create a new token below.', 'action-steward' ),
+									esc_html__( 'Using “%1$s” (starts with %2$s…). Paste that saved token in the field below to drop it straight into the configuration. For security, a token is shown in full only once — if you didn’t save it, create a new token below.', 'siteradian' ),
 									esc_html( $wpcc_selected_token['label'] ),
 									esc_html( $wpcc_selected_token['token_preview'] )
 								);
@@ -1347,10 +1350,10 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 					<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 						<p class="wpcc-ai-field__status wpcc-ai-field__status--ok" style="margin:0 0 12px;">&#10003; <?php
 							/* translators: %d: number of access tokens */
-							printf( esc_html( _n( '%d access token ready.', '%d access tokens ready.', $wpcc_cfg_tok_count, 'action-steward' ) ), (int) $wpcc_cfg_tok_count );
+							printf( esc_html( _n( '%d access token ready.', '%d access tokens ready.', $wpcc_cfg_tok_count, 'siteradian' ) ), (int) $wpcc_cfg_tok_count );
 						?></p>
 					<?php else : ?>
-						<p class="wpcc-ai-field__status" style="margin:0 0 12px;"><?php esc_html_e( 'No access token yet — create one in “Access tokens” above, then it appears in this configuration.', 'action-steward' ); ?></p>
+						<p class="wpcc-ai-field__status" style="margin:0 0 12px;"><?php esc_html_e( 'No access token yet — create one in “Access tokens” above, then it appears in this configuration.', 'siteradian' ); ?></p>
 					<?php endif; ?>
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding:0;">
@@ -1375,24 +1378,24 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 									// COMMANDS above, not the configuration below — the
 									// configuration has no token slot to complete.
 									echo $wpcc_new_token
-										? esc_html__( 'Access token (already filled into the setup steps above)', 'action-steward' )
-										: esc_html__( 'Paste your access token to complete the setup steps above', 'action-steward' );
+										? esc_html__( 'Access token (already filled into the setup steps above)', 'siteradian' )
+										: esc_html__( 'Paste your access token to complete the setup steps above', 'siteradian' );
 								} else {
 									echo $wpcc_new_token
-										? esc_html__( 'Access token (already filled in below)', 'action-steward' )
-										: esc_html__( 'Paste your access token to complete the configuration', 'action-steward' );
+										? esc_html__( 'Access token (already filled in below)', 'siteradian' )
+										: esc_html__( 'Paste your access token to complete the configuration', 'siteradian' );
 								}
 							?></label>
 							<input type="text" id="wpcc-token-fill" class="regular-text" placeholder="wpcc_..." autocomplete="off" spellcheck="false" style="width:100%;max-width:520px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;" value="<?php echo esc_attr( $wpcc_new_token ); ?>">
 							<p class="wpcc-ai-field__hint" style="margin:6px 0 0;"><?php
 								echo $wpcc_new_token
-									? esc_html__( 'Nothing more to fill in — the configuration below is ready to copy. Your token stays in this browser; it is never sent back to the server.', 'action-steward' )
-									: esc_html__( 'Your token is inserted into the configuration below right here in your browser — it is never sent back to the server or stored. Then click “Copy configuration” to copy the complete, ready-to-use config.', 'action-steward' );
+									? esc_html__( 'Nothing more to fill in — the configuration below is ready to copy. Your token stays in this browser; it is never sent back to the server.', 'siteradian' )
+									: esc_html__( 'Your token is inserted into the configuration below right here in your browser — it is never sent back to the server or stored. Then click “Copy configuration” to copy the complete, ready-to-use config.', 'siteradian' );
 							?></p>
 						</div>
 						<?php endif; // guided panel owns the token field ?>
 						<?php if ( $wpcc_sel_uses_env ) : ?>
-							<p class="wpcc-ai-field__hint"><?php esc_html_e( 'Manual setup replaces only Step 2. Complete Step 1 above, add this block to ~/.codex/config.toml without replacing existing settings, then follow Step 3 for your selected client. Keep bearer_token_env_var = "WPCC_TOKEN": WPCC_TOKEN is the variable name, never replace it with your token.', 'action-steward' ); ?></p>
+							<p class="wpcc-ai-field__hint"><?php esc_html_e( 'Manual setup replaces only Step 2. Complete Step 1 above, add this block to ~/.codex/config.toml without replacing existing settings, then follow Step 3 for your selected client. Keep bearer_token_env_var = "WPCC_TOKEN": WPCC_TOKEN is the variable name, never replace it with your token.', 'siteradian' ); ?></p>
 						<?php endif; ?>
 						<?php
 						$wpcc_vscode_input_snippet = '';
@@ -1415,14 +1418,14 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						?>
 						<?php if ( $wpcc_gemini_manual ) : ?>
 							<div class="notice inline notice-warning" style="margin:0 22px 14px;padding:10px 12px;">
-								<p style="margin:0 0 6px;"><strong><?php esc_html_e( 'Merge this server into your existing Gemini settings. Do not replace the whole settings.json file.', 'action-steward' ); ?></strong></p>
-								<p style="margin:0;"><?php esc_html_e( 'Add only the “wp-command-center” entry inside the existing “mcpServers” object. Keep every other server and every unrelated top-level setting, including any IDE, security, UI or account settings. If “mcpServers” does not exist, add that object without removing the other settings.', 'action-steward' ); ?></p>
+								<p style="margin:0 0 6px;"><strong><?php esc_html_e( 'Merge this server into your existing Gemini settings. Do not replace the whole settings.json file.', 'siteradian' ); ?></strong></p>
+								<p style="margin:0;"><?php esc_html_e( 'Add only the “wp-command-center” entry inside the existing “mcpServers” object. Keep every other server and every unrelated top-level setting, including any IDE, security, UI or account settings. If “mcpServers” does not exist, add that object without removing the other settings.', 'siteradian' ); ?></p>
 							</div>
-							<span class="wpcc-ai-field__label" style="display:block;padding:0 22px;"><?php esc_html_e( 'Empty-file example', 'action-steward' ); ?></span>
+							<span class="wpcc-ai-field__label" style="display:block;padding:0 22px;"><?php esc_html_e( 'Empty-file example', 'siteradian' ); ?></span>
 						<?php elseif ( $wpcc_command_code_manual ) : ?>
-							<span class="wpcc-ai-field__label" style="display:block;padding:0 22px;"><?php esc_html_e( 'Empty-file example for ~/.commandcode/mcp.json', 'action-steward' ); ?></span>
+							<span class="wpcc-ai-field__label" style="display:block;padding:0 22px;"><?php esc_html_e( 'Empty-file example for ~/.commandcode/mcp.json', 'siteradian' ); ?></span>
 						<?php endif; ?>
-						<p class="wpcc-ai-field__hint" data-wpcc-token-needed<?php echo $wpcc_token_ready || ! $wpcc_setup_requires_token ? ' hidden' : ''; ?>><?php esc_html_e( 'Create an access token first, or paste a saved token above, before copying this setup.', 'action-steward' ); ?></p>
+						<p class="wpcc-ai-field__hint" data-wpcc-token-needed<?php echo $wpcc_token_ready || ! $wpcc_setup_requires_token ? ' hidden' : ''; ?>><?php esc_html_e( 'Create an access token first, or paste a saved token above, before copying this setup.', 'siteradian' ); ?></p>
 						<pre class="wpcc-ai-config" id="wpcc-config-block"<?php echo $wpcc_setup_requires_token ? ' data-wpcc-token-slot data-wpcc-requires-token-payload' : ''; ?><?php echo $wpcc_setup_requires_token && ! $wpcc_token_ready ? ' hidden' : ''; ?>><?php echo esc_html( $wpcc_config_json ); ?></pre>
 						<?php
 						// This config asks the user's machine to fetch a small relay
@@ -1444,13 +1447,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<p class="wpcc-ai-field__hint" style="padding:0 22px 14px;margin:8px 0 0;">
 							<?php
 							if ( 'gemini' === $wpcc_selected_client ) {
-								esc_html_e( 'What this does: Gemini CLI connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Gemini setting.', 'action-steward' );
+								esc_html_e( 'What this does: Gemini CLI connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Gemini setting.', 'siteradian' );
 							} elseif ( $wpcc_command_code_manual ) {
-								esc_html_e( 'What this does: Command Code connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Command Code MCP server.', 'action-steward' );
+								esc_html_e( 'What this does: Command Code connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Command Code MCP server.', 'siteradian' );
 							} elseif ( $wpcc_sel_http ) {
-								esc_html_e( 'What this does: your assistant connects straight to this site over the web using the address and token above. Nothing is installed or run on your computer, and no other service is involved. Remove the configuration and the connection is gone.', 'action-steward' );
+								esc_html_e( 'What this does: your assistant connects straight to this site over the web using the address and token above. Nothing is installed or run on your computer, and no other service is involved. Remove the configuration and the connection is gone.', 'siteradian' );
 							} else {
-								esc_html_e( 'What this does: your assistant runs a small connector script on your computer, downloaded from this site, which passes requests to WordPress. It runs locally under your own account, sends nothing anywhere except to this site, and can be removed by deleting the configuration. The connector is part of this plugin and is served from your own domain.', 'action-steward' );
+								esc_html_e( 'What this does: your assistant runs a small connector script on your computer, downloaded from this site, which passes requests to WordPress. It runs locally under your own account, sends nothing anywhere except to this site, and can be removed by deleting the configuration. The connector is part of this plugin and is served from your own domain.', 'siteradian' );
 							}
 							?>
 						</p>
@@ -1458,7 +1461,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						/*
 						 * MERGE, do not replace — stated as two concrete cases.
 						 *
-						 * These configuration files are not Action Steward's to own. A Gemini CLI
+						 * These configuration files are not SiteRadian AI's to own. A Gemini CLI
 						 * settings.json holds authentication, IDE and UI preferences; a
 						 * Cursor mcp.json holds every other MCP server the developer uses.
 						 * "Paste this into <file>" is ambiguous between adding to it and
@@ -1480,12 +1483,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<?php if ( '' !== $wpcc_entry_snippet && ! $wpcc_gemini_manual ) : ?>
 							<div class="notice inline notice-warning" style="margin:0 22px 14px;padding:10px 12px;">
 								<p style="margin:0 0 6px;">
-									<strong><?php esc_html_e( 'If this file already exists, do not replace it.', 'action-steward' ); ?></strong>
+									<strong><?php esc_html_e( 'If this file already exists, do not replace it.', 'siteradian' ); ?></strong>
 								</p>
 								<p style="margin:0;">
 									<?php echo 'vscode' === $wpcc_selected_client
-										? esc_html__( 'The block above is only for an empty file. In an existing VS Code user mcp.json, add the server entry inside “servers” and add the token-input item inside “inputs”. Keep every other server and input.', 'action-steward' )
-										: esc_html__( 'The block above is the whole file, and is only right when you are creating it for the first time. If you already have this file — for example because you use other MCP servers — it will contain settings that replacing it would delete. Add just this entry inside the “mcpServers” braces you already have, alongside anything else in there:', 'action-steward' ); ?>
+										? esc_html__( 'The block above is only for an empty file. In an existing VS Code user mcp.json, add the server entry inside “servers” and add the token-input item inside “inputs”. Keep every other server and input.', 'siteradian' )
+										: esc_html__( 'The block above is the whole file, and is only right when you are creating it for the first time. If you already have this file — for example because you use other MCP servers — it will contain settings that replacing it would delete. Add just this entry inside the “mcpServers” braces you already have, alongside anything else in there:', 'siteradian' ); ?>
 								</p>
 							</div>
 						<?php endif; ?>
@@ -1493,22 +1496,22 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 							<div class="wpcc-ai-field" style="padding:0 22px 14px;margin:0;">
 								<span class="wpcc-ai-field__label"><?php
 									echo 'vscode' === $wpcc_selected_client
-										? esc_html__( 'Add inside servers', 'action-steward' )
+										? esc_html__( 'Add inside servers', 'siteradian' )
 										: ( $wpcc_gemini_manual
-										? esc_html__( 'Entry to merge into mcpServers', 'action-steward' )
-										: esc_html__( 'Add to an existing file', 'action-steward' ) );
+										? esc_html__( 'Entry to merge into mcpServers', 'siteradian' )
+										: esc_html__( 'Add to an existing file', 'siteradian' ) );
 								?></span>
 								<pre class="wpcc-ai-config" id="wpcc-entry-block" data-wpcc-token-slot<?php echo $wpcc_setup_requires_token ? ' data-wpcc-requires-token-payload' : ''; ?><?php echo $wpcc_setup_requires_token && ! $wpcc_token_ready ? ' hidden' : ''; ?>><?php echo esc_html( $wpcc_entry_snippet ); ?></pre>
-								<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-entry-block"<?php $wpcc_token_gate_control( $wpcc_setup_requires_token, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy this entry only', 'action-steward' ); ?></button>
-								<p class="wpcc-ai-field__hint" style="margin:8px 0 0;"><?php esc_html_e( 'Remember the comma: entries inside the braces are separated by commas, and a missing or trailing one is the usual reason the file stops working.', 'action-steward' ); ?></p>
+								<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-entry-block"<?php $wpcc_token_gate_control( $wpcc_setup_requires_token, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy this entry only', 'siteradian' ); ?></button>
+								<p class="wpcc-ai-field__hint" style="margin:8px 0 0;"><?php esc_html_e( 'Remember the comma: entries inside the braces are separated by commas, and a missing or trailing one is the usual reason the file stops working.', 'siteradian' ); ?></p>
 							</div>
 						<?php endif; ?>
 						<?php if ( '' !== $wpcc_vscode_input_snippet ) : ?>
 							<div class="wpcc-ai-field" style="padding:0 22px 14px;margin:0;">
-								<span class="wpcc-ai-field__label"><?php esc_html_e( 'Add as an item inside inputs', 'action-steward' ); ?></span>
+								<span class="wpcc-ai-field__label"><?php esc_html_e( 'Add as an item inside inputs', 'siteradian' ); ?></span>
 								<pre class="wpcc-ai-config" id="wpcc-vscode-input-block"><?php echo esc_html( $wpcc_vscode_input_snippet ); ?></pre>
-								<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-vscode-input-block"><?php esc_html_e( 'Copy secure input item', 'action-steward' ); ?></button>
-								<p class="wpcc-ai-field__hint" style="margin:8px 0 0;"><?php esc_html_e( 'Items in inputs are separated by commas. The id here must match the ${input:…} reference in the server entry above.', 'action-steward' ); ?></p>
+								<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-vscode-input-block"><?php esc_html_e( 'Copy secure input item', 'siteradian' ); ?></button>
+								<p class="wpcc-ai-field__hint" style="margin:8px 0 0;"><?php esc_html_e( 'Items in inputs are separated by commas. The id here must match the ${input:…} reference in the server entry above.', 'siteradian' ); ?></p>
 							</div>
 						<?php endif; ?>
 						<?php
@@ -1526,18 +1529,18 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				</div>
 				<div class="wpcc-ai-panel__body" style="padding-top:14px;">
 					<details class="wpcc-ai-advanced" style="margin:0;">
-						<summary><?php esc_html_e( 'Connection address & where to paste', 'action-steward' ); ?></summary>
+						<summary><?php esc_html_e( 'Connection address & where to paste', 'siteradian' ); ?></summary>
 						<div class="wpcc-ai-advanced__body">
 							<div class="wpcc-ai-field">
-								<span class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'action-steward' ); ?></span>
+								<span class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'siteradian' ); ?></span>
 								<div class="wpcc-ai-url">
 									<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_cfg_mcp_url ); ?></code>
-									<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'action-steward' ); ?></button>
+									<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'siteradian' ); ?></button>
 								</div>
 							</div>
 							<?php if ( ! empty( $wpcc_current_client['config_paths'] ) ) : ?>
 								<div class="wpcc-ai-field">
-									<span class="wpcc-ai-field__label"><?php esc_html_e( 'Where to paste this', 'action-steward' ); ?></span>
+									<span class="wpcc-ai-field__label"><?php esc_html_e( 'Where to paste this', 'siteradian' ); ?></span>
 									<table class="widefat" style="border:none;">
 										<?php foreach ( $wpcc_current_client['config_paths'] as $os => $path ) : ?>
 											<tr><td style="padding:6px 0;width:80px;"><strong><?php echo esc_html( ucfirst( $os ) ); ?></strong></td><td style="padding:6px 0;"><code><?php echo esc_html( $path ); ?></code></td></tr>
@@ -1553,15 +1556,15 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<?php else : ?>
 			<?php // Same target id on the manual fallback: the "Next" control must land somewhere for every assistant. ?>
 			<div class="wpcc-ai-panel" id="wpcc-config-panel">
-				<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Your configuration', 'action-steward' ); ?></div>
+				<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Your configuration', 'siteradian' ); ?></div>
 				<div class="wpcc-ai-panel__body">
-					<p style="color:#646970;"><?php esc_html_e( 'A ready-made configuration isn’t available for this assistant yet. You can still connect it manually using the connection address and an access token below.', 'action-steward' ); ?></p>
+					<p style="color:#646970;"><?php esc_html_e( 'A ready-made configuration isn’t available for this assistant yet. You can still connect it manually using the connection address and an access token below.', 'siteradian' ); ?></p>
 					<div class="wpcc-ai-field" style="margin-top:14px;">
-						<span class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'action-steward' ); ?></span>
+						<span class="wpcc-ai-field__label"><?php esc_html_e( 'Connection URL', 'siteradian' ); ?></span>
 						<div class="wpcc-ai-url">
 							<code class="wpcc-ai-url__text"><?php echo esc_html( $wpcc_cfg_mcp_url ); ?></code>
-							<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'action-steward' ); ?></button>
-							<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'action-steward' ); ?></span>
+							<button type="button" class="button wpcc-copy-btn" data-copy="<?php echo esc_attr( $wpcc_cfg_mcp_url ); ?>"><?php esc_html_e( 'Copy', 'siteradian' ); ?></button>
+							<span class="wpcc-ai-copied" id="wpcc-copy-feedback">&#10003; <?php esc_html_e( 'Copied!', 'siteradian' ); ?></span>
 						</div>
 					</div>
 				</div>
@@ -1581,13 +1584,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<?php if ( $wpcc_cfg_tok_count > 0 ) : ?>
 		<!-- Test the connection safely -->
 		<details class="wpcc-ai-advanced">
-			<summary><?php esc_html_e( 'Advanced: test the site endpoint in this browser', 'action-steward' ); ?></summary>
+			<summary><?php esc_html_e( 'Advanced: test the site endpoint in this browser', 'siteradian' ); ?></summary>
 		<div class="wpcc-ai-panel" style="margin:0;border:0;border-top:1px solid #eef0f4;border-radius:0;box-shadow:none;">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Browser-only endpoint test', 'action-steward' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Browser-only endpoint test', 'siteradian' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Test Action Steward endpoints and token authentication from this browser, including the MCP handshake, tools and resources. This does not test whether your assistant loaded the server. Confirm that inside your selected client. No content is changed; authentication activity may be recorded.', 'action-steward' ); ?></p>
+				<p><?php esc_html_e( 'Test SiteRadian AI endpoints and token authentication from this browser, including the MCP handshake, tools and resources. This does not test whether your assistant loaded the server. Confirm that inside your selected client. No content is changed; authentication activity may be recorded.', 'siteradian' ); ?></p>
 				<div style="margin-bottom: 12px;">
-					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'Access token', 'action-steward' ); ?></label>
+					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'Access token', 'siteradian' ); ?></label>
 					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="wpcc_..." style="width: 100%; max-width: 500px; font-family: monospace;"
 						value="<?php echo esc_attr( $wpcc_new_token ); ?>">
 					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php
@@ -1599,11 +1602,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						 * the two is actually true.
 						 */
 						echo $wpcc_new_token
-							? esc_html__( 'Your new token is already filled in — just run the test.', 'action-steward' )
-							: esc_html__( 'Paste an access token, or create one in “Access tokens” above.', 'action-steward' );
+							? esc_html__( 'Your new token is already filled in — just run the test.', 'siteradian' )
+							: esc_html__( 'Paste an access token, or create one in “Access tokens” above.', 'siteradian' );
 					?></p>
 				</div>
-				<button type="button" class="button" id="wpcc-test-connection"><?php esc_html_e( 'Run read-only test', 'action-steward' ); ?></button>
+				<button type="button" class="button" id="wpcc-test-connection"><?php esc_html_e( 'Run read-only test', 'siteradian' ); ?></button>
 				<div class="wpcc-ai-verify-result" id="wpcc-verify-result"></div>
 			</div>
 		</div>
@@ -1615,13 +1618,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<div class="wpcc-ai-safe-note" role="note">
 			<span class="wpcc-ai-safe-note__icon" aria-hidden="true">&#128274;</span>
 			<div>
-				<strong><?php esc_html_e( 'Connecting an assistant is safe by design.', 'action-steward' ); ?></strong>
+				<strong><?php esc_html_e( 'Connecting an assistant is safe by design.', 'siteradian' ); ?></strong>
 				<ul>
 					<li><?php echo esc_html( SecurityModeManager::is_protected()
 						? SecurityModeManager::approval_step()
-						: __( 'This site is in Development mode, so your assistant’s changes apply immediately — no approval step.', 'action-steward' ) ); ?></li>
-					<li><?php esc_html_e( 'Every action is recorded under Changes.', 'action-steward' ); ?></li>
-					<li><?php esc_html_e( 'Reversible changes can be undone from the Changes screen.', 'action-steward' ); ?></li>
+						: __( 'This site is in Development mode, so your assistant’s changes apply immediately — no approval step.', 'siteradian' ) ); ?></li>
+					<li><?php esc_html_e( 'Every action is recorded under Changes.', 'siteradian' ); ?></li>
+					<li><?php esc_html_e( 'Reversible changes can be undone from the Changes screen.', 'siteradian' ); ?></li>
 				</ul>
 			</div>
 		</div>
@@ -1630,13 +1633,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<!-- ===== ACTIVITY TAB ===== -->
 
 		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Recent assistant activity', 'action-steward' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Recent assistant activity', 'siteradian' ); ?></div>
 			<div class="wpcc-ai-panel__body">
 				<?php if ( empty( $wpcc_ai_activity ) ) : ?>
-					<p style="color:#646970;"><?php esc_html_e( 'No assistant activity recorded yet. It appears here once an assistant connects to this site.', 'action-steward' ); ?></p>
+					<p style="color:#646970;"><?php esc_html_e( 'No assistant activity recorded yet. It appears here once an assistant connects to this site.', 'siteradian' ); ?></p>
 				<?php else : ?>
 					<table class="wpcc-ai-token-table">
-						<thead><tr><th><?php esc_html_e( 'Time', 'action-steward' ); ?></th><th><?php esc_html_e( 'Event', 'action-steward' ); ?></th></tr></thead>
+						<thead><tr><th><?php esc_html_e( 'Time', 'siteradian' ); ?></th><th><?php esc_html_e( 'Event', 'siteradian' ); ?></th></tr></thead>
 						<tbody>
 						<?php foreach ( $wpcc_ai_activity as $entry ) : ?>
 							<tr>
@@ -1654,40 +1657,40 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<!-- ===== SECURITY TAB ===== -->
 
 		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'How assistant access is controlled', 'action-steward' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'How assistant access is controlled', 'siteradian' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Every assistant connects through the same endpoint and is held to the same rules. No assistant gets extra privileges, and none can bypass required human approval, recording or the limits on its access token.', 'action-steward' ); ?></p>
+				<p><?php esc_html_e( 'Every assistant connects through the same endpoint and is held to the same rules. No assistant gets extra privileges, and none can bypass required human approval, recording or the limits on its access token.', 'siteradian' ); ?></p>
 				<ul class="wpcc-ai-security-list">
 					<li>
-						<strong><?php esc_html_e( 'Capabilities', 'action-steward' ); ?></strong>
-						<span><?php esc_html_e( 'Every tool requires a specific capability assigned to the API token. No client can bypass capability enforcement.', 'action-steward' ); ?></span>
+						<strong><?php esc_html_e( 'Capabilities', 'siteradian' ); ?></strong>
+						<span><?php esc_html_e( 'Every tool requires a specific capability assigned to the API token. No client can bypass capability enforcement.', 'siteradian' ); ?></span>
 					</li>
 					<li>
-						<strong><?php esc_html_e( 'Approvals', 'action-steward' ); ?></strong>
-						<span><?php esc_html_e( 'Operations requiring human approval must go through the request-approve-execute workflow. No client can auto-approve.', 'action-steward' ); ?></span>
+						<strong><?php esc_html_e( 'Approvals', 'siteradian' ); ?></strong>
+						<span><?php esc_html_e( 'Operations requiring human approval must go through the request-approve-execute workflow. No client can auto-approve.', 'siteradian' ); ?></span>
 					</li>
 					<li>
-						<strong><?php esc_html_e( 'Queue', 'action-steward' ); ?></strong>
-						<span><?php esc_html_e( 'All operations follow the same queuing and execution flow. No client can bypass the queue or execute directly.', 'action-steward' ); ?></span>
+						<strong><?php esc_html_e( 'Queue', 'siteradian' ); ?></strong>
+						<span><?php esc_html_e( 'All operations follow the same queuing and execution flow. No client can bypass the queue or execute directly.', 'siteradian' ); ?></span>
 					</li>
 					<li>
-						<strong><?php esc_html_e( 'Audit', 'action-steward' ); ?></strong>
-						<span><?php esc_html_e( 'Every action is logged with the client source, actor context, and timestamp. Full traceability for all clients.', 'action-steward' ); ?></span>
+						<strong><?php esc_html_e( 'Audit', 'siteradian' ); ?></strong>
+						<span><?php esc_html_e( 'Every action is logged with the client source, actor context, and timestamp. Full traceability for all clients.', 'siteradian' ); ?></span>
 					</li>
 					<li>
-						<strong><?php esc_html_e( 'Rollback', 'action-steward' ); ?></strong>
-						<span><?php esc_html_e( 'Every modification is snapshotted before execution. All clients inherit the same rollback protection.', 'action-steward' ); ?></span>
+						<strong><?php esc_html_e( 'Rollback', 'siteradian' ); ?></strong>
+						<span><?php esc_html_e( 'Every modification is snapshotted before execution. All clients inherit the same rollback protection.', 'siteradian' ); ?></span>
 					</li>
 				</ul>
 			</div>
 		</div>
 
 		<div class="wpcc-ai-panel">
-			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Architecture', 'action-steward' ); ?></div>
+			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Architecture', 'siteradian' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Every assistant follows the same path through the plugin:', 'action-steward' ); ?></p>
-				<pre style="background:#f6f7f7;padding:14px;border-radius:4px;font-size:13px;line-height:1.8;overflow-x:auto;">AI Client &rarr; MCP &rarr; Action Steward &rarr; Capability Runtime &rarr; Approval Runtime &rarr; Queue Runtime &rarr; OperationExecutor &rarr; Verification &rarr; Audit &rarr; Rollback</pre>
-				<p style="color:#646970;font-size:12px;"><?php esc_html_e( 'There are no per-client runtimes, no special execution paths, and no vendor-specific privileges.', 'action-steward' ); ?></p>
+				<p><?php esc_html_e( 'Every assistant follows the same path through the plugin:', 'siteradian' ); ?></p>
+				<pre style="background:#f6f7f7;padding:14px;border-radius:4px;font-size:13px;line-height:1.8;overflow-x:auto;">AI Client &rarr; MCP &rarr; SiteRadian AI &rarr; Capability Runtime &rarr; Approval Runtime &rarr; Queue Runtime &rarr; OperationExecutor &rarr; Verification &rarr; Audit &rarr; Rollback</pre>
+				<p style="color:#646970;font-size:12px;"><?php esc_html_e( 'There are no per-client runtimes, no special execution paths, and no vendor-specific privileges.', 'siteradian' ); ?></p>
 			</div>
 		</div>
 
@@ -1749,7 +1752,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		// Active token labels, lowercased — used only to warn about a name that is
 		// already in use. Labels are not secrets; no token value is exposed here.
 		var mkExisting = <?php echo wp_json_encode( array_values( array_map( static fn( $t ) => (string) $t['label'], $wpcc_usable_tokens ?? [] ) ) ); ?>;
-		var mkDupeTpl  = <?php echo wp_json_encode( /* translators: %s: the name of an access token that already exists. */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'action-steward' ) ); ?>;
+		var mkDupeTpl  = <?php echo wp_json_encode( /* translators: %s: the name of an access token that already exists. */ __( 'You already have an active token called “%s”. You can still create this one, but you will not be able to tell them apart later.', 'siteradian' ) ); ?>;
 
 		mkForm.classList.add('wpcc-tokenmake--js');
 
@@ -1843,7 +1846,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			if (mkSent) { e.preventDefault(); return; }
 			mkSent = true;
 			mkSubmit.disabled = true;
-			mkSubmit.textContent = <?php echo wp_json_encode( __( 'Creating…', 'action-steward' ) ); ?>;
+			mkSubmit.textContent = <?php echo wp_json_encode( __( 'Creating…', 'siteradian' ) ); ?>;
 		});
 	}
 
@@ -1962,7 +1965,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			var fill = document.getElementById('wpcc-token-fill');
 			var token = fill ? fill.value.trim() : '';
 			if (!token) {
-				cursorInstall.textContent = <?php echo wp_json_encode( __( 'Paste your token first', 'action-steward' ) ); ?>;
+				cursorInstall.textContent = <?php echo wp_json_encode( __( 'Paste your token first', 'siteradian' ) ); ?>;
 				if (fill) { fill.focus(); }
 				return;
 			}
@@ -2008,8 +2011,8 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	 * the answer is the truth rather than an optimistic guess.
 	 */
 		document.querySelectorAll('.wpcc-copy-btn').forEach(function(btn) {
-		var COPIED = <?php echo wp_json_encode( __( 'Copied', 'action-steward' ) ); ?>;
-		var FAILED = <?php echo wp_json_encode( __( 'Press Ctrl/Cmd+C', 'action-steward' ) ); ?>;
+		var COPIED = <?php echo wp_json_encode( __( 'Copied', 'siteradian' ) ); ?>;
+		var FAILED = <?php echo wp_json_encode( __( 'Press Ctrl/Cmd+C', 'siteradian' ) ); ?>;
 
 		// Deprecated, still synchronous, still the only call here that answers.
 		function legacyCopy(text) {
@@ -2097,12 +2100,12 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 			if (!token) {
 				resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--fail';
-				resultEl.innerHTML = '<p><strong>&#10007; No token:</strong> <?php esc_html_e( 'Paste an API token above or generate one in the Configuration tab.', 'action-steward' ); ?></p>';
+				resultEl.innerHTML = '<p><strong>&#10007; No token:</strong> <?php esc_html_e( 'Paste an API token above or generate one in the Configuration tab.', 'siteradian' ); ?></p>';
 				return;
 			}
 
 			resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--loading';
-			resultEl.innerHTML = '<p><span class="spinner is-active" style="float:none;margin:0 10px 0 0;"></span><?php esc_html_e( 'Testing connection...', 'action-steward' ); ?></p>';
+			resultEl.innerHTML = '<p><span class="spinner is-active" style="float:none;margin:0 10px 0 0;"></span><?php esc_html_e( 'Testing connection...', 'siteradian' ); ?></p>';
 			var authHeader = { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
 			var authHeaderGet = { 'Authorization': 'Bearer ' + token };
 			var baseUrl = <?php echo wp_json_encode( rest_url( \WPCommandCenter\Mcp\McpServerRuntime::NAMESPACE ) ); ?>;
@@ -2128,13 +2131,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			// while the connector's label beside them was translated, so a translated
 			// site rendered a half-translated results table.
 			var L = {
-				relay:     <?php echo wp_json_encode( __( 'Connector script', 'action-steward' ) ); ?>,
-				health:    <?php echo wp_json_encode( __( 'Health endpoint', 'action-steward' ) ); ?>,
-				manifest:  <?php echo wp_json_encode( __( 'Agent manifest', 'action-steward' ) ); ?>,
-				initialize:<?php echo wp_json_encode( __( 'MCP handshake', 'action-steward' ) ); ?>,
-				resources: <?php echo wp_json_encode( __( 'MCP resources', 'action-steward' ) ); ?>,
-				tools:     <?php echo wp_json_encode( __( 'MCP tools', 'action-steward' ) ); ?>,
-				relay404:  <?php echo wp_json_encode( __( 'Not found on this site — your assistant cannot start the connector.', 'action-steward' ) ); ?>
+				relay:     <?php echo wp_json_encode( __( 'Connector script', 'siteradian' ) ); ?>,
+				health:    <?php echo wp_json_encode( __( 'Health endpoint', 'siteradian' ) ); ?>,
+				manifest:  <?php echo wp_json_encode( __( 'Agent manifest', 'siteradian' ) ); ?>,
+				initialize:<?php echo wp_json_encode( __( 'MCP handshake', 'siteradian' ) ); ?>,
+				resources: <?php echo wp_json_encode( __( 'MCP resources', 'siteradian' ) ); ?>,
+				tools:     <?php echo wp_json_encode( __( 'MCP tools', 'siteradian' ) ); ?>,
+				relay404:  <?php echo wp_json_encode( __( 'Not found on this site — your assistant cannot start the connector.', 'siteradian' ) ); ?>
 			};
 
 			function record(name, pass, detail) {
@@ -2188,7 +2191,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 					var allPass = checks.every(function(c) { return c.pass; });
 					resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--' + (allPass ? 'success' : 'fail');
-					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; <?php esc_html_e( 'Action Steward can authenticate this token. Server checks passed; verify the connection inside your client.', 'action-steward' ); ?></h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; <?php esc_html_e( 'Some checks failed.', 'action-steward' ); ?></h3>';
+					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; <?php esc_html_e( 'SiteRadian AI can authenticate this token. Server checks passed; verify the connection inside your client.', 'siteradian' ); ?></h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; <?php esc_html_e( 'Some checks failed.', 'siteradian' ); ?></h3>';
 					html += '<table style="border-collapse:collapse;width:100%;">';
 					checks.forEach(function(c) {
 						html += '<tr><td style="padding:4px 8px;">' + (c.pass ? '&#10003;' : '&#10007;') + '</td><td style="padding:4px 8px;font-weight:600;">' + c.name + '</td>';
@@ -2200,7 +2203,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				})
 				.catch(function(err) {
 					resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--fail';
-					resultEl.innerHTML = '<p><strong>&#10007; <?php esc_html_e( 'Connection test failed:', 'action-steward' ); ?></strong> ' + err.message + '</p><p style="color:#646970;font-size:12px;"><?php esc_html_e( 'Check that your site is reachable and the token is valid.', 'action-steward' ); ?></p>';
+					resultEl.innerHTML = '<p><strong>&#10007; <?php esc_html_e( 'Connection test failed:', 'siteradian' ); ?></strong> ' + err.message + '</p><p style="color:#646970;font-size:12px;"><?php esc_html_e( 'Check that your site is reachable and the token is valid.', 'siteradian' ); ?></p>';
 				});
 		});
 	}

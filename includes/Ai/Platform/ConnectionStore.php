@@ -60,7 +60,7 @@ final class ConnectionStore {
 		// exists and nothing is stored yet. Not persisted until the user acts on it.
 		if ( empty( $out ) && ( new AnthropicClient() )->is_configured() ) {
 			$out[ self::LEGACY_ID ] = $this->normalize( self::LEGACY_ID, [
-				'name'          => __( 'Anthropic (existing)', 'action-steward' ),
+				'name'          => __( 'Anthropic (existing)', 'siteradian' ),
 				'provider'      => 'anthropic',
 				'bridge_legacy' => true,
 				'model'         => (string) get_option( self::ANTHROPIC_MODEL_OPTION, '' ),
@@ -178,7 +178,7 @@ final class ConnectionStore {
 			return '';
 		}
 		$new = $this->create( $conn['provider'], [
-			'name'       => $conn['name'] . ' ' . __( '(copy)', 'action-steward' ),
+			'name'       => $conn['name'] . ' ' . __( '(copy)', 'siteradian' ),
 			'endpoint'   => $conn['endpoint'],
 			'model'      => $conn['model'],
 			'deployment' => $conn['deployment'],

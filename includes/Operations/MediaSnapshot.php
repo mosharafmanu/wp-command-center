@@ -42,12 +42,12 @@ final class MediaSnapshot {
 	public function capture( int $attachment_id, string $label = '' ) {
 		$post = get_post( $attachment_id );
 		if ( ! $post || 'attachment' !== $post->post_type ) {
-			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_media_not_found', __( 'Media not found.', 'siteradian' ) );
 		}
 
 		$files = $this->attachment_files( $attachment_id );
 		if ( empty( $files ) ) {
-			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no files on disk to snapshot.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_media_no_files', __( 'Attachment has no files on disk to snapshot.', 'siteradian' ) );
 		}
 
 		$id  = wp_generate_uuid4();
@@ -63,7 +63,7 @@ final class MediaSnapshot {
 			$dest       = trailingslashit( $dir ) . $store_name;
 			if ( ! @copy( $abs, $dest ) ) {
 				$this->rmdir_recursive( $dir );
-				return new \WP_Error( 'wpcc_media_snapshot_copy_failed', __( 'Failed to copy a media file into the snapshot store.', 'action-steward' ) );
+				return new \WP_Error( 'wpcc_media_snapshot_copy_failed', __( 'Failed to copy a media file into the snapshot store.', 'siteradian' ) );
 			}
 			$captured[] = [
 				'rel_path'   => $this->to_relative( $abs ),
@@ -246,11 +246,11 @@ final class MediaSnapshot {
 		// PrivateStore creates and hardens the store; '' means uploads is unusable.
 		$base = $this->store_basedir();
 		if ( '' === $base ) {
-			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot store.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot store.', 'siteradian' ) );
 		}
 		$dir = trailingslashit( $base ) . $id;
 		if ( ! wp_mkdir_p( $dir ) ) {
-			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot directory.', 'action-steward' ) );
+			return new \WP_Error( 'wpcc_media_snapshot_mkdir_failed', __( 'Failed to create the media snapshot directory.', 'siteradian' ) );
 		}
 		return $dir;
 	}
@@ -291,6 +291,6 @@ final class MediaSnapshot {
 				return $r;
 			}
 		}
-		return new \WP_Error( 'wpcc_media_snapshot_not_found', __( 'Media snapshot not found.', 'action-steward' ) );
+		return new \WP_Error( 'wpcc_media_snapshot_not_found', __( 'Media snapshot not found.', 'siteradian' ) );
 	}
 }

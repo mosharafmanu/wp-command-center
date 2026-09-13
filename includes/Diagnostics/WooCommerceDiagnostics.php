@@ -15,9 +15,9 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 			return [
 				$this->check(
 					'woocommerce_inactive',
-					__( 'WooCommerce', 'action-steward' ),
+					__( 'WooCommerce', 'siteradian' ),
 					self::STATUS_INFO,
-					__( 'WooCommerce is not active on this site.', 'action-steward' )
+					__( 'WooCommerce is not active on this site.', 'siteradian' )
 				),
 			];
 		}
@@ -37,19 +37,19 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'woocommerce_db_version',
-			__( 'WooCommerce Database Version', 'action-steward' ),
+			__( 'WooCommerce Database Version', 'siteradian' ),
 			$up_to_date ? self::STATUS_GOOD : self::STATUS_RECOMMENDED,
 			$up_to_date
 				? sprintf(
 					/* translators: %s: database version */
-					__( 'WooCommerce database schema is up to date (%s).', 'action-steward' ),
+					__( 'WooCommerce database schema is up to date (%s).', 'siteradian' ),
 					$db_version
 				)
 				: sprintf(
 					/* translators: 1: database version, 2: plugin version */
-					__( 'WooCommerce database version (%1$s) does not match the plugin version (%2$s). A database update may be pending.', 'action-steward' ),
-					$db_version ?: __( 'unknown', 'action-steward' ),
-					$wc_version ?: __( 'unknown', 'action-steward' )
+					__( 'WooCommerce database version (%1$s) does not match the plugin version (%2$s). A database update may be pending.', 'siteradian' ),
+					$db_version ?: __( 'unknown', 'siteradian' ),
+					$wc_version ?: __( 'unknown', 'siteradian' )
 				)
 		);
 	}
@@ -61,9 +61,9 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 		if ( 0 === $count ) {
 			return $this->check(
 				'woocommerce_payment_gateways',
-				__( 'Payment Gateways', 'action-steward' ),
+				__( 'Payment Gateways', 'siteradian' ),
 				self::STATUS_CRITICAL,
-				__( 'No payment gateways are enabled. Customers will not be able to complete checkout.', 'action-steward' )
+				__( 'No payment gateways are enabled. Customers will not be able to complete checkout.', 'siteradian' )
 			);
 		}
 
@@ -71,11 +71,11 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'woocommerce_payment_gateways',
-			__( 'Payment Gateways', 'action-steward' ),
+			__( 'Payment Gateways', 'siteradian' ),
 			self::STATUS_GOOD,
 			sprintf(
 				/* translators: %s: comma-separated list of enabled payment gateways */
-				__( 'Enabled payment gateways: %s.', 'action-steward' ),
+				__( 'Enabled payment gateways: %s.', 'siteradian' ),
 				implode( ', ', array_map( 'wp_strip_all_tags', $names ) )
 			)
 		);
@@ -85,9 +85,9 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 		if ( ! class_exists( 'ActionScheduler_Store' ) ) {
 			return $this->check(
 				'woocommerce_scheduled_actions',
-				__( 'Scheduled Actions', 'action-steward' ),
+				__( 'Scheduled Actions', 'siteradian' ),
 				self::STATUS_INFO,
-				__( 'Action Scheduler is not available.', 'action-steward' )
+				__( 'Action Scheduler is not available.', 'siteradian' )
 			);
 		}
 
@@ -99,11 +99,11 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 		if ( $failed > 0 ) {
 			return $this->check(
 				'woocommerce_scheduled_actions',
-				__( 'Scheduled Actions', 'action-steward' ),
+				__( 'Scheduled Actions', 'siteradian' ),
 				self::STATUS_RECOMMENDED,
 				sprintf(
 					/* translators: 1: number of failed actions, 2: number of pending actions */
-					__( '%1$d scheduled action(s) have failed, %2$d are pending. Failed actions may indicate a recurring error.', 'action-steward' ),
+					__( '%1$d scheduled action(s) have failed, %2$d are pending. Failed actions may indicate a recurring error.', 'siteradian' ),
 					$failed,
 					$pending
 				)
@@ -112,11 +112,11 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'woocommerce_scheduled_actions',
-			__( 'Scheduled Actions', 'action-steward' ),
+			__( 'Scheduled Actions', 'siteradian' ),
 			self::STATUS_GOOD,
 			sprintf(
 				/* translators: %d: number of pending actions */
-				__( 'No failed scheduled actions. %d pending.', 'action-steward' ),
+				__( 'No failed scheduled actions. %d pending.', 'siteradian' ),
 				$pending
 			)
 		);
@@ -128,9 +128,9 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 		if ( empty( $overrides ) ) {
 			return $this->check(
 				'woocommerce_template_overrides',
-				__( 'Template Overrides', 'action-steward' ),
+				__( 'Template Overrides', 'siteradian' ),
 				self::STATUS_GOOD,
-				__( 'No theme template overrides found.', 'action-steward' )
+				__( 'No theme template overrides found.', 'siteradian' )
 			);
 		}
 
@@ -139,11 +139,11 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 		if ( ! empty( $outdated ) ) {
 			return $this->check(
 				'woocommerce_template_overrides',
-				__( 'Template Overrides', 'action-steward' ),
+				__( 'Template Overrides', 'siteradian' ),
 				self::STATUS_RECOMMENDED,
 				sprintf(
 					/* translators: 1: number of outdated overrides, 2: total number of overrides */
-					__( '%1$d of %2$d overridden WooCommerce template(s) are outdated compared to the installed plugin version.', 'action-steward' ),
+					__( '%1$d of %2$d overridden WooCommerce template(s) are outdated compared to the installed plugin version.', 'siteradian' ),
 					count( $outdated ),
 					count( $overrides )
 				)
@@ -152,11 +152,11 @@ final class WooCommerceDiagnostics extends AbstractDiagnostics {
 
 		return $this->check(
 			'woocommerce_template_overrides',
-			__( 'Template Overrides', 'action-steward' ),
+			__( 'Template Overrides', 'siteradian' ),
 			self::STATUS_INFO,
 			sprintf(
 				/* translators: %d: number of overridden templates */
-				_n( '%d theme template override found, all up to date.', '%d theme template overrides found, all up to date.', count( $overrides ), 'action-steward' ),
+				_n( '%d theme template override found, all up to date.', '%d theme template overrides found, all up to date.', count( $overrides ), 'siteradian' ),
 				count( $overrides )
 			)
 		);

@@ -24,8 +24,8 @@ final class Activator {
 		 */
 		if ( $network_wide || ( function_exists( 'is_multisite' ) && is_multisite() && is_network_admin() ) ) {
 			wp_die(
-				esc_html__( 'Action Steward is a single-site plugin and cannot be network activated. Activate it on each site that should have a Command Center, from that site\'s own Plugins screen. Network activation would create its tables and settings on one site only, while showing the Command Center on all of them.', 'action-steward' ),
-				esc_html__( 'Network activation is not supported', 'action-steward' ),
+				esc_html__( 'SiteRadian AI is a single-site plugin and cannot be network activated. Activate it on each site that should use SiteRadian AI, from that site\'s own Plugins screen. Network activation would create its tables and settings on one site only, while showing SiteRadian AI on all of them.', 'siteradian' ),
+				esc_html__( 'Network activation is not supported', 'siteradian' ),
 				[ 'back_link' => true ]
 			);
 		}
