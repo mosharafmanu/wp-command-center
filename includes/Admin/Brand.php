@@ -9,10 +9,10 @@
  * and the asset directory, never the twenty views that display it.
  *
  * Sizing follows the standard's small-size system:
- *   16 px  -> wpcc-admin-16.svg   (integer coordinates, simplified radii, monochrome)
- *   20 px  -> wpcc-admin-20.svg   (ditto; this is the WordPress admin menu size)
- *   24-48  -> the master mark
- *   64 px  -> the light container
+ *   16 px  -> wpcc-admin-16.svg   (simplified monochrome geometry)
+ *   20 px  -> wpcc-admin-20.svg   (the WordPress admin menu size)
+ *   24-96  -> the 32-unit master mark
+ *   190x36 -> the horizontal wordmark lockup
  *
  * @package WPCommandCenter
  */
@@ -62,18 +62,23 @@ final class Brand {
 		return $url . '?ver=' . rawurlencode( $version );
 	}
 
-	/** The 24x24 master mark for light surfaces (navy blocks, Execute Blue core). */
+	/** The 32x32 master mark for light surfaces (navy boundary, indigo radius). */
 	public static function mark(): string {
 		return self::url( 'wpcc-mark.svg' );
 	}
 
-	/** The 24x24 master mark for dark surfaces (white blocks, Signal Blue core). */
+	/** The 32x32 master mark for dark surfaces (white boundary, signal-indigo radius). */
 	public static function mark_dark(): string {
 		return self::url( 'wpcc-mark-dark.svg' );
 	}
 
+	/** The one-colour master for print, masks, and constrained integrations. */
+	public static function mark_mono(): string {
+		return self::url( 'wpcc-mark-mono.svg' );
+	}
+
 	/**
-	 * The horizontal lockup for hero use — mark + "SiteRadian AI" — light surfaces.
+	 * The horizontal lockup for hero use — mark + "SiteRadian" — light surfaces.
 	 *
 	 * Symbol and wordmark only. The lockup used to carry the tagline "AI-POWERED
 	 * WORDPRESS OPERATIONS PLATFORM" set at 10.5px inside a 456x72 viewBox; because
@@ -81,7 +86,7 @@ final class Brand {
 	 * at a sane size scaled the whole thing down and the tagline arrived at ~5.7px —
 	 * a grey smudge, unreadable at any real viewing size, that also dragged the
 	 * product name down to 12px. Removing it lets the viewBox tighten to 244x32, so
-	 * the wordmark renders at its intended size. The symbol itself is untouched.
+	 * the wordmark renders at its intended 190x36 display size.
 	 */
 	public static function logo(): string {
 		return self::url( 'wpcc-logo.svg' );
@@ -115,9 +120,11 @@ final class Brand {
 	 * verbatim copy of it — `tests/test-branding-assets.sh` asserts the two never drift.
 	 */
 	public static function menu_icon(): string {
-		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-label="SiteRadian AI">'
-			. '<path fill="#a7aaad" d="M3 2h6v3H5v4H2V3a1 1 0 0 1 1-1Zm8 0h6a1 1 0 0 1 1 1v6h-3V5h-4V2ZM2 11h3v4h4v3H3a1 1 0 0 1-1-1v-6Zm13 0h3v6a1 1 0 0 1-1 1h-6v-3h4v-4Z"/>'
-			. '<path fill="#a7aaad" fill-rule="evenodd" d="m10 6 4 4-4 4-4-4 4-4Zm0 2.5L8.5 10l1.5 1.5 1.5-1.5-1.5-1.5Z"/>'
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-label="SiteRadian">'
+			. '<path d="M10 2a8 8 0 1 1-8 8" fill="none" stroke="#a7aaad" stroke-width="2.4" stroke-linecap="round"/>'
+			. '<path d="m10 10 5.5-5.5" fill="none" stroke="#a7aaad" stroke-width="2" stroke-linecap="round"/>'
+			. '<circle cx="10" cy="10" r="2" fill="#a7aaad"/>'
+			. '<circle cx="15.6" cy="4.4" r="1.5" fill="#a7aaad"/>'
 			. '</svg>';
 
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
@@ -161,7 +168,7 @@ final class Brand {
 	 * Returned as markup rather than two stacked <img>s toggled by CSS so assistive
 	 * technology encounters exactly one image with one accessible name, whichever scheme
 	 * is active. `$alt` is intentionally allowed to be empty: a mark sitting beside the
-	 * product name it depicts is decorative, and announcing "SiteRadian AI" twice is
+	 * product name it depicts is decorative, and announcing "SiteRadian" twice is
 	 * worse than announcing it once.
 	 *
 	 * @param string $light Light-surface asset URL.

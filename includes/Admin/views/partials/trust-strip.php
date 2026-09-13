@@ -3,7 +3,7 @@
  * Shared trust strip (Phase 2.5A → generalized in 2.5B).
  *
  * The single, canonical presentation of the Four Guarantees, surfaced on every write
- * screen so the customer always sees how SiteRadian AI stays safe — Reviewed ·
+ * screen so the customer always sees how SiteRadian stays safe — Reviewed ·
  * Requires approval · Audited · Reversible. Pure presentation: reuses CDS chip tokens,
  * states only real guarantees, implies no autonomous execution and no metrics. Include via:
  *   require WPCC_PLUGIN_DIR . 'includes/Admin/views/partials/trust-strip.php';
@@ -41,7 +41,7 @@ $wpcc_ts_warning    = SecurityModeManager::dev_warning();
 $wpcc_ts_reversible = ! isset( $wpcc_trust_reversible ) || (bool) $wpcc_trust_reversible;
 $wpcc_trust_reversible = null;
 ?>
-<div class="wpcc-bai-trust" role="note" aria-label="<?php esc_attr_e( 'How SiteRadian AI keeps changes safe', 'siteradian' ); ?>">
+<div class="wpcc-bai-trust" role="note" aria-label="<?php esc_attr_e( 'How SiteRadian keeps changes safe', 'siteradian' ); ?>">
 	<span class="wpcc-bai-trust__label"><?php esc_html_e( 'Every change is', 'siteradian' ); ?></span>
 	<span class="wpcc-cds-chip <?php echo $wpcc_ts_protected ? 'wpcc-cds-chip--audited' : 'wpcc-cds-chip--irreversible'; ?>">
 		<?php echo esc_html( SecurityModeManager::review_chip() ); ?>

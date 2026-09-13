@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Human Review Layer test suite for SiteRadian AI (Step 14).
+# Human Review Layer test suite for SiteRadian (Step 14).
 #
 # Verifies the full hierarchy visibility:
 #   Session -> Task -> Action -> Plan -> Patch

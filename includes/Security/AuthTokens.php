@@ -25,7 +25,14 @@ final class AuthTokens {
 
 	private const DIR_NAME       = 'wpcc-tokens';
 	private const MANIFEST_FILE  = 'manifest.json';
-	private const TOKEN_PREFIX   = 'wpcc_';
+	/**
+	 * Prefix for credentials created by the current public product.
+	 *
+	 * Validation deliberately does not inspect a prefix: it hashes the complete
+	 * bearer token and compares it with the stored hash. That keeps every existing
+	 * `wpcc_` credential valid while new one-time credentials use the public brand.
+	 */
+	private const TOKEN_PREFIX   = 'siteradian_';
 	private const PREVIEW_LENGTH = 12;
 
 	public static function scope_label( string $scope ): string {
@@ -263,7 +270,7 @@ final class AuthTokens {
 		$raw_token = trim( $raw_token );
 
 		if ( '' === $raw_token ) {
-			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in SiteRadian AI → Settings → Connections.', 'siteradian' ), [ 'status' => 401 ] );
+			return new \WP_Error( 'wpcc_missing_token', __( 'No access token was sent. Add your token to the assistant configuration — you can create one in SiteRadian → Settings → Connections.', 'siteradian' ), [ 'status' => 401 ] );
 		}
 
 		$dir = $this->get_storage_dir();
@@ -281,7 +288,7 @@ final class AuthTokens {
 			}
 
 			if ( self::STATUS_ACTIVE !== $record['status'] ) {
-				return new \WP_Error( 'wpcc_token_revoked', __( 'This access token was revoked, so it no longer works. Create a new one in SiteRadian AI → Settings → Connections and update your assistant configuration.', 'siteradian' ), [ 'status' => 401 ] );
+				return new \WP_Error( 'wpcc_token_revoked', __( 'This access token was revoked, so it no longer works. Create a new one in SiteRadian → Settings → Connections and update your assistant configuration.', 'siteradian' ), [ 'status' => 401 ] );
 			}
 
 			if ( null !== $record['expires_at'] && $record['expires_at'] < time() ) {
@@ -295,7 +302,7 @@ final class AuthTokens {
 		}
 		unset( $record );
 
-		return new \WP_Error( 'wpcc_invalid_token', __( 'This access token was not recognised by this site. Check it was copied in full and belongs to this site, or create a new one in SiteRadian AI → Settings → Connections.', 'siteradian' ), [ 'status' => 401 ] );
+		return new \WP_Error( 'wpcc_invalid_token', __( 'This access token was not recognised by this site. Check it was copied in full and belongs to this site, or create a new one in SiteRadian → Settings → Connections.', 'siteradian' ), [ 'status' => 401 ] );
 	}
 
 	/**

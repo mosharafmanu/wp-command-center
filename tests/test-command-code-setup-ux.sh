@@ -99,7 +99,7 @@ for NEEDLE in \
 done
 assert_contains "Command Code OAuth false-positive remains explained" "$CLIENT_NOTES" "There is no OAuth sign-in to complete"
 assert_contains "Command Code note confirms token header is authoritative" "$CLIENT_NOTES" "access token in the header above is the whole of it"
-assert_contains "reload explains one-time secret loss" "$VIEW_TEXT" "SiteRadian AI cannot reconstruct an existing token"
+assert_contains "reload explains one-time secret loss" "$VIEW_TEXT" "SiteRadian cannot reconstruct an existing token"
 assert_contains "reload offers saved token or a new token" "$VIEW_TEXT" "Paste your saved access token"
 assert_contains "reload command uses the shared real-token gate" "$VIEW_TEXT" "data-wpcc-requires-token-control"
 assert_contains "reload copy control starts disabled" "$VIEW_TEXT" "disabled aria-disabled=\"true\""
@@ -114,7 +114,7 @@ assert_contains "manual setup preserves other servers" "$VIEW_TEXT" "Add just th
 assert_contains "manual disconnect removes only WPCC" "$VIEW_TEXT" "remove only the “wp-command-center” entry"
 assert_not_contains "old unknown-file guidance removed from Command Code metadata" "$(wpe '$c=WPCommandCenter\Integration\AIClientRegistry::get_client("command_code"); echo implode(" ",$c["config_paths"]);')" "no file to edit"
 assert_contains "browser test disclaims client loading" "$VIEW_TEXT" "This does not test whether your assistant loaded the server"
-assert_contains "browser result remains scoped to SiteRadian AI authentication" "$VIEW_TEXT" "SiteRadian AI can authenticate this token. Server checks passed; verify the connection inside your client."
+assert_contains "browser result remains scoped to SiteRadian authentication" "$VIEW_TEXT" "SiteRadian can authenticate this token. Server checks passed; verify the connection inside your client."
 
 echo "== Real no-secret reload rendering =="
 RELOAD_STATE="$(wpe '

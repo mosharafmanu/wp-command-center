@@ -14,7 +14,7 @@
  *   gemini            → Google Generative Language API
  *
  * `runtime_supported` is honest: as of Phase D the Anthropic and OpenAI-compatible
- * dialects are wired to SiteRadian AI's feature generators. Gemini is CONFIGURABLE +
+ * dialects are wired to SiteRadian's feature generators. Gemini is CONFIGURABLE +
  * TESTABLE, but not used by the runtime — never faked.
  */
 

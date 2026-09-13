@@ -23,11 +23,11 @@ final class AgentExplainer {
 		return [
 			[
 				'q' => __( 'What is an AI agent?', 'siteradian' ),
-				'a' => __( 'An AI assistant — like Claude — running in a separate app on your computer (for example the Claude desktop app). It is the thing that actually reads your site and suggests changes. SiteRadian AI does not include the AI itself; it safely connects one to your site.', 'siteradian' ),
+				'a' => __( 'An AI assistant — like Claude — running in a separate app on your computer (for example the Claude desktop app). It is the thing that actually reads your site and suggests changes. SiteRadian does not include the AI itself; it safely connects one to your site.', 'siteradian' ),
 			],
 			[
 				'q' => __( 'Why do I need one?', 'siteradian' ),
-				'a' => __( 'SiteRadian AI is the safe doorway between an AI assistant and your WordPress site. Without an assistant connected, there is nothing to send work to. With one connected, it can do tasks like writing SEO titles or image alt text — and you stay in control of every change.', 'siteradian' ),
+				'a' => __( 'SiteRadian is the safe doorway between an AI assistant and your WordPress site. Without an assistant connected, there is nothing to send work to. With one connected, it can do tasks like writing SEO titles or image alt text — and you stay in control of every change.', 'siteradian' ),
 			],
 			[
 				'q' => __( 'What does the access token do?', 'siteradian' ),
@@ -35,7 +35,7 @@ final class AgentExplainer {
 			],
 			[
 				'q' => __( 'What talks to what?', 'siteradian' ),
-				'a' => __( 'Your AI assistant (on your computer) talks to SiteRadian AI (on this site) using the access token. SiteRadian AI then makes the change on WordPress — with approval when your protection mode requires it and a full record — and supported changes can be undone. You bring your own AI key for the assistant; this site never sends your content anywhere except the AI provider you chose.', 'siteradian' ),
+				'a' => __( 'Your AI assistant (on your computer) talks to SiteRadian (on this site) using the access token. SiteRadian then makes the change on WordPress — with approval when your protection mode requires it and a full record — and supported changes can be undone. You bring your own AI key for the assistant; this site never sends your content anywhere except the AI provider you chose.', 'siteradian' ),
 			],
 		];
 	}
@@ -44,6 +44,6 @@ final class AgentExplainer {
 	 * A one-line "picture" of the flow, jargon-free.
 	 */
 	public static function flow_line(): string {
-		return __( 'Your AI assistant  →  (access token)  →  SiteRadian AI  →  approval when required  →  WordPress  →  recorded & undoable', 'siteradian' );
+		return __( 'Your AI assistant  →  (access token)  →  SiteRadian  →  approval when required  →  WordPress  →  recorded & undoable', 'siteradian' );
 	}
 }

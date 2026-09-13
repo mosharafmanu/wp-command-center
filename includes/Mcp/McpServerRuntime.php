@@ -205,7 +205,7 @@ final class McpServerRuntime {
 			 * very first impression of this server was an error message, which is a poor
 			 * trade for a method whose honest answer is "none".
 			 *
-			 * SiteRadian AI's resources are fixed URIs (wpcc://…) with no URI templates among
+			 * SiteRadian's resources are fixed URIs (wpcc://…) with no URI templates among
 			 * them, so the correct response is an empty list — not an error. A client
 			 * asking what templates exist is entitled to be told "no templates" rather
 			 * than "no such question".
@@ -243,10 +243,10 @@ final class McpServerRuntime {
 					'prompts'   => new \stdClass(),
 				],
 				'serverInfo'      => [
-					'name'    => 'SiteRadian AI',
+					'name'    => 'SiteRadian',
 					'version' => WPCC_VERSION,
 				],
-				'instructions'    => 'SiteRadian AI provides WordPress site management tools for AI agents. Use tools/list to discover available operations (plugin management, content creation, database inspection, etc.) and resources/list to browse site intelligence data. All operations respect WordPress capability enforcement and approval gates.',
+				'instructions'    => 'SiteRadian provides WordPress site management tools for AI agents. Use tools/list to discover available operations (plugin management, content creation, database inspection, etc.) and resources/list to browse site intelligence data. All operations respect WordPress capability enforcement and approval gates.',
 			],
 		];
 	}

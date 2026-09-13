@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Safe Search & Replace Operation test suite for SiteRadian AI (Step 26).
+# Safe Search & Replace Operation test suite for SiteRadian (Step 26).
 #
 # Verifies:
 #   - dry run works

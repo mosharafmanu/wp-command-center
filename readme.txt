@@ -1,4 +1,4 @@
-=== SiteRadian AI ===
+=== SiteRadian ===
 Contributors: mosharafmanu
 Tags: ai, mcp, automation, approvals, security
 Requires at least: 6.4
@@ -8,13 +8,15 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Safe, governed AI operations for WordPress.
+The AI Command Center for WordPress.
 
 == Description ==
 
-SiteRadian AI connects AI assistants to your WordPress site with scoped access, approvals, audit trails, and rollback. Connect Claude, Cursor, Codex, ChatGPT, Gemini, or another MCP-compatible client, then ask for changes in your own words — in whatever language you and your assistant use.
+**Give AI a safer way to work on your site.**
 
-Give AI access to your site—precisely within scope.
+SiteRadian connects assistants such as Claude, Codex, ChatGPT, Cursor, and Gemini to WordPress with scoped access, approvals, audit trails, and rollback. You decide what an assistant can reach. Higher-impact work can wait for your approval, every change is recorded, and supported changes can be undone.
+
+Ask in your own words and language. SiteRadian is the control layer around the assistant—not another AI model or provider.
 
 The point of the plugin is not the AI. It is the control around it:
 
@@ -25,15 +27,15 @@ The point of the plugin is not the AI. It is the control around it:
 
 = How it works =
 
-1. Install and activate. The site starts in **Standard protection** — higher-impact changes need your approval; low-risk operations run immediately.
-2. Go to **SiteRadian AI → Settings → Connections**, pick your assistant, and create an access token.
-3. Copy the generated setup into your assistant.
-4. Ask your assistant to do something on the site.
-5. Approve it under **Approvals**, then review or undo it under **Changes**.
+1. **Create access.** Pick your assistant and create a scoped token. Start with read-only if you only want it to inspect the site. Standard protection is already on: higher-impact changes wait for approval, while low-risk operations can run immediately.
+2. **Connect an assistant.** Follow the copy-ready setup shown for your app.
+3. **Ask it to inspect the site.** Try: “Inspect my site and tell me what needs attention.”
+
+The site starts in **Standard protection**. Higher-impact changes wait for your approval, while low-risk operations can run immediately. Review decisions under **Approvals**, then see or undo supported work under **Changes**.
 
 = You do not need an AI provider API key =
 
-Connecting an assistant over MCP uses *your assistant's* AI. SiteRadian AI does not need an API key of its own for this, and does not call any AI service.
+Connecting an assistant over MCP uses *your assistant's* AI. SiteRadian does not need an API key of its own for this, and does not call any AI service.
 
 There is a separate, entirely optional "Built-in AI" section where you can add your own provider key if you want the plugin itself to generate content for you. It is off unless you configure it.
 
@@ -101,7 +103,7 @@ If you add an AI provider key, it is stored in the WordPress options table on yo
 
 = When you delete the plugin =
 
-By default your data is **kept**, so an audit trail is not destroyed just because the plugin was removed. If you want everything erased instead, tick *"Also delete all SiteRadian AI data when the plugin is deleted"* under **Settings → Protection** before deleting. With that set, uninstalling removes all of the plugin's tables, options, user settings, and upload directories. Scheduled jobs are always removed.
+By default your data is **kept**, so an audit trail is not destroyed just because the plugin was removed. If you want everything erased instead, tick *"Also delete all SiteRadian data when the plugin is deleted"* under **Settings → Protection** before deleting. With that set, uninstalling removes all of the plugin's tables, options, user settings, and upload directories. Scheduled jobs are always removed.
 
 == Frequently Asked Questions ==
 
@@ -151,7 +153,7 @@ Everything except the WP-CLI bridge keeps working. That one operation needs the 
 allow proc_open and a reachable WP-CLI binary; where a host disables it — which is
 common on shared hosting — the operation reports itself as unavailable instead of
 failing halfway, and the rest of the plugin is unaffected. You can see exactly what your
-host allows under SiteRadian AI -> Settings -> Advanced -> Diagnostics.
+host allows under SiteRadian -> Settings -> Advanced -> Diagnostics.
 
 = Does it need SSH, WP-CLI, or file permissions? =
 
@@ -180,12 +182,21 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 
 1. Upload the plugin to `/wp-content/plugins/siteradian`, or install it from the Plugins screen.
 2. Activate it through the **Plugins** menu.
-3. Open **SiteRadian AI** in the admin sidebar and follow the single next step shown on the Home screen.
+3. Open **SiteRadian** in the admin sidebar and follow the single next step shown on the Home screen.
+
+== Screenshots ==
+
+1. SiteRadian Home shows protection, connections, pending approvals, recent changes, and the three-step beginner journey.
+2. Connections provides a clear assistant picker and copy-ready setup for supported apps.
+3. Access setup creates a scoped token and reveals the credential only once.
+4. Approvals explains higher-impact work before it runs so the site owner can decide.
+5. Changes records what happened and offers rollback where the operation supports it.
+6. Protection makes approval behavior explicit for Standard, Strict, and Development modes.
 
 == Changelog ==
 
 = 1.0.0 =
-* Initial public release of SiteRadian AI.
+* Initial public release of SiteRadian.
 * Connect any MCP-compatible AI assistant to a single WordPress site.
 * Ready-made setup for supported AI assistants and coding clients, each in its own configuration format, over either a direct HTTPS connection (nothing installed) or a small local connector.
 * Approval workflow with Standard protection and Strict approval settings; safe default that preserves approval for higher-impact changes.
@@ -198,4 +209,4 @@ Not by this plugin, unless you configure the optional Built-in AI with your own 
 == Upgrade Notice ==
 
 = 1.0.0 =
-Initial public release of SiteRadian AI.
+Initial public release of SiteRadian.

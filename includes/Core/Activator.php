@@ -24,7 +24,7 @@ final class Activator {
 		 */
 		if ( $network_wide || ( function_exists( 'is_multisite' ) && is_multisite() && is_network_admin() ) ) {
 			wp_die(
-				esc_html__( 'SiteRadian AI is a single-site plugin and cannot be network activated. Activate it on each site that should use SiteRadian AI, from that site\'s own Plugins screen. Network activation would create its tables and settings on one site only, while showing SiteRadian AI on all of them.', 'siteradian' ),
+				esc_html__( 'SiteRadian is a single-site plugin and cannot be network activated. Activate it on each site that should use SiteRadian, from that site\'s own Plugins screen. Network activation would create its tables and settings on one site only, while showing SiteRadian on all of them.', 'siteradian' ),
 				esc_html__( 'Network activation is not supported', 'siteradian' ),
 				[ 'back_link' => true ]
 			);

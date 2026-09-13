@@ -1,6 +1,6 @@
-# RELEASE HANDOFF — SiteRadian AI v1.0.0
+# RELEASE HANDOFF — SiteRadian v1.0.0
 
-> **Authoritative release identity — 2026-09-13:** Product **SiteRadian AI**; public
+> **Authoritative release identity — 2026-09-13:** Product **SiteRadian**; public
 > version/stable tag **1.0.0**; requested WordPress.org slug and package folder
 > `siteradian`; main file `siteradian.php`; text domain `siteradian`; database version
 > **2.6.0**. The authoritative artifact is `build/siteradian-1.0.0.zip`. Do not upload
@@ -8,9 +8,11 @@
 > been checked.
 >
 > **Git release contract:** preserve `v1.0.0`, `v1.0.1`, and `v1.0.2` exactly as
-> historical pre-public tags. The SiteRadian source tag is the annotated,
-> collision-free `siteradian-v1.0.0`. Push only `release/v1-security-recut` and that
-> tag, without force; do not push or merge `main`.
+> historical pre-public tags, and preserve the earlier `siteradian-v1.0.0`
+> preparation tag at its original commit. Post-tag brand/UX hardening is recorded by
+> the annotated, collision-free `siteradian-v1.0.0-wporg-rc1` tag. Push only
+> `release/v1-security-recut` and that new tag, without force; do not push or merge
+> `main`.
 >
 > **Codex same-terminal release closure:** the primary flow visibly requires Steps 1–3
 > in one terminal and explains that MCP registration persists while `WPCC_TOKEN` does

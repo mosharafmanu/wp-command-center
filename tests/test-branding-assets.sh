@@ -31,7 +31,7 @@ echo "== 1. Every shipped brand asset exists and is real SVG =="
 BRAND_DIR="assets/brand"
 assert_eq "brand directory ships" "yes" "$( [ -d "$BRAND_DIR" ] && echo yes || echo no )"
 
-EXPECTED="wpcc-admin-16.svg wpcc-admin-20.svg wpcc-logo-dark.svg wpcc-logo.svg wpcc-mark-dark.svg wpcc-mark.svg"
+EXPECTED="wpcc-admin-16.svg wpcc-admin-20.svg wpcc-logo-dark.svg wpcc-logo.svg wpcc-mark-dark.svg wpcc-mark-mono.svg wpcc-mark.svg"
 ACTUAL="$( ls "$BRAND_DIR" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//' )"
 assert_eq "exactly the expected assets ship (no strays, none missing)" "$EXPECTED" "$ACTUAL"
 
@@ -121,18 +121,24 @@ for f in wpcc-logo.svg wpcc-logo-dark.svg; do
   TAG="$( grep -c 'AI-POWERED\|AI-powered' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
   assert_eq "$f carries no tagline" "0" "$TAG"
   # The wordmark itself must still be there — this is a lockup, not a bare mark.
-  WORD="$( grep -c 'SiteRadian AI' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
+  WORD="$( grep -c 'SiteRadian' "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
   [ "$WORD" -ge 1 ] && pass "$f still carries the wordmark" || fail "$f lost the wordmark"
 done
 
-# The approved symbol is untouched by that edit: the lockups must still use the exact
-# command-block path and the Execute Blue core from the master mark.
-BLOCK_PATH='M4 2h5.25c.41 0 .75.34.75.75v1.5c0 .41-.34.75-.75.75H5v4.25c0 .41-.34.75-.75.75h-1.5A.75.75 0 0 1 2 9.25V4a2 2 0 0 1 2-2Z'
+# The approved symbol is the measured-radius geometry: an open control boundary,
+# a bounded inner arc, a radius path, and two command nodes. Lockups and marks
+# must share that exact core so the identity does not drift between surfaces.
+RADIUS_PATH='m16 16 8.7-8.7'
 for f in wpcc-mark.svg wpcc-logo.svg wpcc-mark-dark.svg wpcc-logo-dark.svg; do
-  HAS="$( grep -cF "$BLOCK_PATH" "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
-  [ "$HAS" -ge 1 ] && pass "$f uses the approved command-block geometry" \
-    || fail "$f no longer uses the approved command-block geometry"
+  HAS="$( grep -ciF "$RADIUS_PATH" "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
+  [ "$HAS" -ge 1 ] && pass "$f uses the approved measured-radius geometry" \
+    || fail "$f no longer uses the approved measured-radius geometry"
 done
+
+assert_eq "light mark uses the SiteRadian indigo" "1" "$( grep -ci '#4055D5' "$BRAND_DIR/wpcc-mark.svg" | tr -d ' ' )"
+assert_eq "dark mark uses the accessible signal indigo" "1" "$( grep -ci '#8B9BFF' "$BRAND_DIR/wpcc-mark-dark.svg" | tr -d ' ' )"
+assert_eq "monochrome mark uses currentColor" "1" "$( grep -ci 'currentColor' "$BRAND_DIR/wpcc-mark-mono.svg" | tr -d ' ' )"
+assert_eq "public lockups do not append AI to the brand" "0" "$( rg -l -F 'SiteRadian AI' "$BRAND_DIR" | wc -l | tr -d ' ' )"
 
 echo
 echo "== 7. Brand asset URLs are cache-keyed to the artwork, not to the release =="
@@ -163,6 +169,33 @@ BARE_URL="$( "$PHP_BIN" -r '
 ' 2>/dev/null )"
 assert_eq "falls back to a bare URL when the plugin dir is unknown" \
   "https://example.test/wp-content/plugins/siteradian/assets/brand/wpcc-logo.svg" "$BARE_URL"
+
+echo
+echo "== 8. WordPress.org directory assets are complete and correctly sized =="
+
+ORG_DIR="wordpress-org-assets"
+ORG_EXPECTED="banner-1544x500.png banner-772x250.png icon-128x128.png icon-256x256.png icon.svg screenshot-1.png screenshot-2.png screenshot-3.png screenshot-4.png screenshot-5.png screenshot-6.png"
+ORG_ACTUAL="$( ls "$ORG_DIR" 2>/dev/null | sort | tr '\n' ' ' | sed 's/ $//' )"
+assert_eq "exact directory asset set" "$ORG_EXPECTED" "$ORG_ACTUAL"
+
+check_png_size() {
+	local file="$1" expected="$2"
+	local actual
+	actual="$( "$PHP_BIN" -r '$s=getimagesize($argv[1]); echo $s[0]."x".$s[1];' "$ORG_DIR/$file" 2>/dev/null )"
+	assert_eq "$file dimensions" "$expected" "$actual"
+}
+check_png_size icon-128x128.png 128x128
+check_png_size icon-256x256.png 256x256
+check_png_size banner-772x250.png 772x250
+check_png_size banner-1544x500.png 1544x500
+for n in 1 2 3 4 5 6; do check_png_size "screenshot-$n.png" 1440x1000; done
+
+assert_eq "directory SVG uses the measured-radius mark" "yes" \
+  "$( rg -q -F 'M128 128l53-53' "$ORG_DIR/icon.svg" && echo yes || echo no )"
+assert_eq "readme has six screenshot captions" "6" \
+  "$( sed -n '/^== Screenshots ==/,/^== /p' readme.txt | rg -c '^[1-6]\.' )"
+assert_eq "WordPress.org assets stay outside the runtime build allowlist" "0" \
+  "$( rg -c 'copy "wordpress-org-assets"|copy "design"' scripts/build-release.sh || echo 0 )"
 
 echo
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

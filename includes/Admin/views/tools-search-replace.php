@@ -53,7 +53,7 @@ $wpcc_classify_table = function ( string $suffix ): string {
 		return 'users';
 	}
 	// Auth / session / secret surfaces, including third-party ones this install
-	// may have that SiteRadian AI knows nothing about.
+	// may have that SiteRadian knows nothing about.
 	if ( preg_match( '/(session|token|oauth|auth|login|password|secret|api_key|apikey|nonce|credential|2fa|totp)/i', $suffix ) ) {
 		return 'security';
 	}
@@ -395,7 +395,7 @@ $sr_preview_js = $sr_preview ? [
 								<details class="wpcc-sr-sensitive" id="wpcc-sr-sensitive">
 									<summary><?php esc_html_e( 'Show sensitive tables (accounts, sessions, security, plugin internals)', 'siteradian' ); ?></summary>
 									<p class="wpcc-sr-sensitive__warn" role="note">
-										<?php esc_html_e( 'These tables hold account records, sign-in sessions, access tokens and SiteRadian AI’s own approval and audit history. A text replace here can lock people out of the site or damage the record of what happened on it. Selecting any of them makes this a critical-risk run.', 'siteradian' ); ?>
+										<?php esc_html_e( 'These tables hold account records, sign-in sessions, access tokens and SiteRadian’s own approval and audit history. A text replace here can lock people out of the site or damage the record of what happened on it. Selecting any of them makes this a critical-risk run.', 'siteradian' ); ?>
 									</p>
 									<div class="wpcc-sr-tables">
 										<?php foreach ( $wpcc_sensitive_tables as $table ) :

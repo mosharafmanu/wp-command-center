@@ -6,7 +6,7 @@
 #   1. WordPress's own, in the admin bar, on every screen. It filters by loose
 #      subsequence — a query matches if its characters appear in order ANYWHERE in
 #      a label — and it does not rank: matches come back in registration order.
-#      SiteRadian AI registered nothing with it, so it had no answer of ours
+#      SiteRadian registered nothing with it, so it had no answer of ours
 #      to return and filled the list with whatever the subsequence caught:
 #      "token" → Go to: Marketing · Marketing > Coupons · Rank Math SEO > …
 #      "protection" → nothing at all.
@@ -137,7 +137,7 @@ assert_eq "undo — an alias, not a visible name" "Changes" "$(r undo)"
 echo ""
 echo "== 2. Nothing irrelevant, and nothing scattered =="
 # The exact failures the finding reports, from the other palette. Whatever else
-# these words do, they must not return a SiteRadian AI screen here.
+# these words do, they must not return a SiteRadian screen here.
 assert_eq "marketing returns nothing"  "0" "$(n marketing)"
 assert_eq "rank math returns nothing"  "0" "$(n 'rank math')"
 assert_eq "coupons returns nothing"    "0" "$(n coupons)"

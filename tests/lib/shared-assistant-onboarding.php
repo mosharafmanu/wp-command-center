@@ -39,7 +39,9 @@ $expected_payload_hashes = [
 	'gemini'       => '97c715dea6157c6398791381bac39a948378c16790930efe7f2639f0d20d0117',
 	'cursor'       => '854963c5bebd6f8a646117dfa51c0545ba8c882779fd7f000ec719688997746d',
 	'continue'     => '6d09c6c7a3d9dae4a60516a6824c09f9a82dc3c22305d17dfadbfd2cc44eab22',
-	'vscode'       => 'ce1f781fb6aeafce4e5171bf14340e3c2d8d79539b03f0014babc558508587bd',
+	// Intentional public-brand update: only the secure prompt's visible label
+	// changed from the pre-launch product name to SiteRadian.
+	'vscode'       => '6dd1134afb525f94dda818bef84c08b1f411a63546812124275453ca859dc6c8',
 	'opencode'     => '88d6d8dd915ee667ba0eea8c0a938d57b342a530215c4c880834febfdd531bad',
 	'command_code' => 'd0f1bf76b40a3b7bbb117b471cdaa0023b94ab996ddc9c25cf0e958f023fdea1',
 	'muse_code'    => '708f238ad69ccae297856dbb2e957a8f049b6badaa4a35138be0b741686f5d1b',

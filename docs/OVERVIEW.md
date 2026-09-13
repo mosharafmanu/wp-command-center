@@ -1,6 +1,6 @@
-# SiteRadian AI — Overview
+# SiteRadian — Overview
 
-SiteRadian AI connects an AI assistant to a WordPress site through the
+SiteRadian connects an AI assistant to a WordPress site through the
 Model Context Protocol (MCP), and puts a governance layer between the assistant and
 the database.
 

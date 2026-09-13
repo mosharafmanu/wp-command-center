@@ -11,7 +11,7 @@ if ( in_array( $wpcc_selected_client, [ 'codex', 'claude_code', 'antigravity', '
 	$wpcc_verify_first = __( 'Run MCP: List Servers in VS Code and confirm wp-command-center is running.', 'siteradian' );
 } else {
 	/* translators: %s: selected assistant or coding client name. */
-	$wpcc_verify_first = sprintf( __( 'Open %s and confirm SiteRadian AI appears in its tools or connections.', 'siteradian' ), $wpcc_current_client['name'] );
+	$wpcc_verify_first = sprintf( __( 'Open %s and confirm SiteRadian appears in its tools or connections.', 'siteradian' ), $wpcc_current_client['name'] );
 }
 ?>
 
@@ -27,7 +27,7 @@ Read-only only.</code>
 	<div class="wpcc-verify-success" aria-label="<?php esc_attr_e( 'Success looks like', 'siteradian' ); ?>">
 		<strong><?php esc_html_e( 'Success looks like', 'siteradian' ); ?></strong>
 		<ul>
-			<li><?php esc_html_e( 'SiteRadian AI responds.', 'siteradian' ); ?></li>
+			<li><?php esc_html_e( 'SiteRadian responds.', 'siteradian' ); ?></li>
 			<li><?php esc_html_e( 'system_info returns details from this WordPress site.', 'siteradian' ); ?></li>
 			<li><?php esc_html_e( 'No site content or settings are changed.', 'siteradian' ); ?></li>
 		</ul>

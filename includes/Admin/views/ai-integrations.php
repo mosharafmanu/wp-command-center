@@ -1326,11 +1326,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						} elseif ( 'gemini' === $wpcc_selected_client ) {
 							esc_html_e( 'This is the advanced fallback. The native gemini mcp add command above is recommended because it preserves your existing Gemini settings. If you continue manually, fill in the token and follow the merge instructions below — do not replace settings.json.', 'siteradian' );
 						} elseif ( $wpcc_command_code_manual ) {
-							esc_html_e( 'This is the advanced fallback. The native cmd mcp add command above is recommended. If you deliberately edit ~/.commandcode/mcp.json instead, fill in the token and merge only the SiteRadian AI server entry without replacing the file or its existing servers.', 'siteradian' );
+							esc_html_e( 'This is the advanced fallback. The native cmd mcp add command above is recommended. If you deliberately edit ~/.commandcode/mcp.json instead, fill in the token and merge only the SiteRadian server entry without replacing the file or its existing servers.', 'siteradian' );
 						} else {
 							echo $wpcc_new_token
 								? sprintf( /* translators: %s: value */ esc_html__( 'Copy this and paste it into %s. It is complete — your connection address and your access token are both in it.', 'siteradian' ), esc_html( $wpcc_current_client['name'] ) )
-								: esc_html__( 'Paste your saved token in the browser-only field below to unlock a complete configuration. If you did not save it, create a new access token. SiteRadian AI never reconstructs a stored token.', 'siteradian' );
+								: esc_html__( 'Paste your saved token in the browser-only field below to unlock a complete configuration. If you did not save it, create a new access token. SiteRadian never reconstructs a stored token.', 'siteradian' );
 						}
 					?></p>
 					<?php if ( ! empty( $wpcc_selected_token ) ) : ?>
@@ -1461,7 +1461,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						/*
 						 * MERGE, do not replace — stated as two concrete cases.
 						 *
-						 * These configuration files are not SiteRadian AI's to own. A Gemini CLI
+						 * These configuration files are not SiteRadian's to own. A Gemini CLI
 						 * settings.json holds authentication, IDE and UI preferences; a
 						 * Cursor mcp.json holds every other MCP server the developer uses.
 						 * "Paste this into <file>" is ambiguous between adding to it and
@@ -1588,7 +1588,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		<div class="wpcc-ai-panel" style="margin:0;border:0;border-top:1px solid #eef0f4;border-radius:0;box-shadow:none;">
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Browser-only endpoint test', 'siteradian' ); ?></div>
 			<div class="wpcc-ai-panel__body">
-				<p><?php esc_html_e( 'Test SiteRadian AI endpoints and token authentication from this browser, including the MCP handshake, tools and resources. This does not test whether your assistant loaded the server. Confirm that inside your selected client. No content is changed; authentication activity may be recorded.', 'siteradian' ); ?></p>
+				<p><?php esc_html_e( 'Test SiteRadian endpoints and token authentication from this browser, including the MCP handshake, tools and resources. This does not test whether your assistant loaded the server. Confirm that inside your selected client. No content is changed; authentication activity may be recorded.', 'siteradian' ); ?></p>
 				<div style="margin-bottom: 12px;">
 					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'Access token', 'siteradian' ); ?></label>
 					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="wpcc_..." style="width: 100%; max-width: 500px; font-family: monospace;"
@@ -1689,7 +1689,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			<div class="wpcc-ai-panel__header"><?php esc_html_e( 'Architecture', 'siteradian' ); ?></div>
 			<div class="wpcc-ai-panel__body">
 				<p><?php esc_html_e( 'Every assistant follows the same path through the plugin:', 'siteradian' ); ?></p>
-				<pre style="background:#f6f7f7;padding:14px;border-radius:4px;font-size:13px;line-height:1.8;overflow-x:auto;">AI Client &rarr; MCP &rarr; SiteRadian AI &rarr; Capability Runtime &rarr; Approval Runtime &rarr; Queue Runtime &rarr; OperationExecutor &rarr; Verification &rarr; Audit &rarr; Rollback</pre>
+				<pre style="background:#f6f7f7;padding:14px;border-radius:4px;font-size:13px;line-height:1.8;overflow-x:auto;">AI Client &rarr; MCP &rarr; SiteRadian &rarr; Capability Runtime &rarr; Approval Runtime &rarr; Queue Runtime &rarr; OperationExecutor &rarr; Verification &rarr; Audit &rarr; Rollback</pre>
 				<p style="color:#646970;font-size:12px;"><?php esc_html_e( 'There are no per-client runtimes, no special execution paths, and no vendor-specific privileges.', 'siteradian' ); ?></p>
 			</div>
 		</div>
@@ -2191,7 +2191,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 
 					var allPass = checks.every(function(c) { return c.pass; });
 					resultEl.className = 'wpcc-ai-verify-result wpcc-ai-verify-result--' + (allPass ? 'success' : 'fail');
-					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; <?php esc_html_e( 'SiteRadian AI can authenticate this token. Server checks passed; verify the connection inside your client.', 'siteradian' ); ?></h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; <?php esc_html_e( 'Some checks failed.', 'siteradian' ); ?></h3>';
+					var html = allPass ? '<h3 style="margin:0 0 10px;color:#00a32a;">&#10003; <?php esc_html_e( 'SiteRadian can authenticate this token. Server checks passed; verify the connection inside your client.', 'siteradian' ); ?></h3>' : '<h3 style="margin:0 0 10px;color:#d63638;">&#10007; <?php esc_html_e( 'Some checks failed.', 'siteradian' ); ?></h3>';
 					html += '<table style="border-collapse:collapse;width:100%;">';
 					checks.forEach(function(c) {
 						html += '<tr><td style="padding:4px 8px;">' + (c.pass ? '&#10003;' : '&#10007;') + '</td><td style="padding:4px 8px;font-weight:600;">' + c.name + '</td>';

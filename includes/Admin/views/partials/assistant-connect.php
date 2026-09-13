@@ -67,7 +67,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 			<input type="hidden" id="wpcc-token-fill" value="<?php echo esc_attr( (string) $wpcc_new_token ); ?>" />
 			<div class="wpcc-connect-credential" role="status">
 				<span class="dashicons dashicons-lock" aria-hidden="true"></span>
-				<div><strong><?php esc_html_e( 'Access token ready', 'siteradian' ); ?></strong><p><?php esc_html_e( 'The copy action below is already filled with the one-time token shown above. SiteRadian AI stores only its hash.', 'siteradian' ); ?></p></div>
+				<div><strong><?php esc_html_e( 'Access token ready', 'siteradian' ); ?></strong><p><?php esc_html_e( 'The copy action below is already filled with the one-time token shown above. SiteRadian stores only its hash.', 'siteradian' ); ?></p></div>
 			</div>
 		<?php else : ?>
 			<div class="wpcc-connect-credential">
@@ -75,14 +75,14 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 				<div class="wpcc-connect-credential__content">
 					<label for="wpcc-token-fill"><?php esc_html_e( 'Paste your saved access token', 'siteradian' ); ?></label>
 					<input type="password" id="wpcc-token-fill" class="regular-text" placeholder="wpcc_..." autocomplete="off" spellcheck="false" />
-					<p><?php esc_html_e( 'It fills the copy action in this browser only. SiteRadian AI cannot reconstruct an existing token; create a new one if you did not save it.', 'siteradian' ); ?></p>
+					<p><?php esc_html_e( 'It fills the copy action in this browser only. SiteRadian cannot reconstruct an existing token; create a new one if you did not save it.', 'siteradian' ); ?></p>
 				</div>
 			</div>
 		<?php endif; ?>
 	<?php elseif ( 'prompt' === $wpcc_sel_cred_mode ) : ?>
 		<div class="wpcc-connect-credential">
 			<span class="dashicons dashicons-lock" aria-hidden="true"></span>
-			<div><strong><?php esc_html_e( 'Your token stays in VS Code', 'siteradian' ); ?></strong><p><?php echo esc_html( $wpcc_new_token ? __( 'VS Code asks for the SiteRadian AI token when the server starts and stores it securely. After copying the setup, use the final Copy token button before you start the server.', 'siteradian' ) : __( 'VS Code asks for the SiteRadian AI token when the server starts and stores it securely. Have your saved token ready, and do not add OAuth or client-registration details.', 'siteradian' ) ); ?></p></div>
+			<div><strong><?php esc_html_e( 'Your token stays in VS Code', 'siteradian' ); ?></strong><p><?php echo esc_html( $wpcc_new_token ? __( 'VS Code asks for the SiteRadian token when the server starts and stores it securely. After copying the setup, use the final Copy token button before you start the server.', 'siteradian' ) : __( 'VS Code asks for the SiteRadian token when the server starts and stores it securely. Have your saved token ready, and do not add OAuth or client-registration details.', 'siteradian' ) ); ?></p></div>
 		</div>
 	<?php endif; ?>
 
@@ -106,7 +106,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Open Continue’s Local Config', 'siteradian' ), __( 'In the Continue sidebar in VS Code, open the Agent selector and choose the gear beside Local Config. This opens ~/.continue/config.yaml.', 'siteradian' ) ); ?>
 			<?php $wpcc_connect_step_end(); ?>
 
-			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian AI', 'siteradian' ), __( 'Keep the existing file. Choose the option that matches your Local Config; both preserve your existing models and settings.', 'siteradian' ) ); ?>
+			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian', 'siteradian' ), __( 'Keep the existing file. Choose the option that matches your Local Config; both preserve your existing models and settings.', 'siteradian' ) ); ?>
 				<div class="wpcc-setup-choice-grid">
 					<div class="wpcc-setup-choice">
 						<strong><?php esc_html_e( 'No MCP servers yet', 'siteradian' ); ?></strong>
@@ -120,9 +120,9 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 						<strong><?php esc_html_e( 'Already have mcpServers', 'siteradian' ); ?></strong>
 						<p><?php esc_html_e( 'Add this as another indented list item beneath the existing mcpServers key. Do not add a second key.', 'siteradian' ); ?></p>
 						<div class="wpcc-connect-step__actions">
-							<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-continue-entry"<?php $wpcc_token_gate_control( true, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy SiteRadian AI entry only', 'siteradian' ); ?></button>
+							<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-continue-entry"<?php $wpcc_token_gate_control( true, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy SiteRadian entry only', 'siteradian' ); ?></button>
 						</div>
-						<?php $wpcc_payload_preview( __( 'Preview SiteRadian AI entry', 'siteradian' ), 'wpcc-continue-entry', $wpcc_primary_config, true, true, $wpcc_token_ready ); ?>
+						<?php $wpcc_payload_preview( __( 'Preview SiteRadian entry', 'siteradian' ), 'wpcc-continue-entry', $wpcc_primary_config, true, true, $wpcc_token_ready ); ?>
 					</div>
 				</div>
 			<?php $wpcc_connect_step_end(); ?>
@@ -138,7 +138,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 				<?php $wpcc_payload_preview( __( 'Show create-file command', 'siteradian' ), 'wpcc-muse-prepare', $wpcc_prepare_config_cmd ); ?>
 			<?php $wpcc_connect_step_end(); ?>
 
-			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian AI', 'siteradian' ), __( 'Choose the option that matches your settings file. Never replace existing Muse settings.', 'siteradian' ) ); ?>
+			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian', 'siteradian' ), __( 'Choose the option that matches your settings file. Never replace existing Muse settings.', 'siteradian' ) ); ?>
 				<div class="wpcc-setup-choice-grid">
 					<div class="wpcc-setup-choice">
 						<strong><?php esc_html_e( 'New or empty settings file', 'siteradian' ); ?></strong>
@@ -152,9 +152,9 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 						<strong><?php esc_html_e( 'Existing settings file', 'siteradian' ); ?></strong>
 						<p><?php esc_html_e( 'Add only this entry inside the existing mcp_servers object. Keep schema_version and every other setting.', 'siteradian' ); ?></p>
 						<div class="wpcc-connect-step__actions">
-							<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-muse-entry"<?php $wpcc_token_gate_control( true, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy SiteRadian AI entry only', 'siteradian' ); ?></button>
+							<button type="button" class="button wpcc-copy-btn" data-copy-target="wpcc-muse-entry"<?php $wpcc_token_gate_control( true, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy SiteRadian entry only', 'siteradian' ); ?></button>
 						</div>
-						<?php $wpcc_payload_preview( __( 'Preview SiteRadian AI entry', 'siteradian' ), 'wpcc-muse-entry', $wpcc_primary_config, true, true, $wpcc_token_ready ); ?>
+						<?php $wpcc_payload_preview( __( 'Preview SiteRadian entry', 'siteradian' ), 'wpcc-muse-entry', $wpcc_primary_config, true, true, $wpcc_token_ready ); ?>
 					</div>
 				</div>
 			<?php $wpcc_connect_step_end(); ?>
@@ -179,14 +179,14 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 			$wpcc_connect_step_end();
 
 			$wpcc_file_copy_label = 'claude' === $wpcc_selected_client
-				? __( 'Copy SiteRadian AI entry', 'siteradian' )
-				: ( 'vscode_config' === $wpcc_setup_kind ? __( 'Copy VS Code setup', 'siteradian' ) : __( 'Copy SiteRadian AI setup', 'siteradian' ) );
+				? __( 'Copy SiteRadian entry', 'siteradian' )
+				: ( 'vscode_config' === $wpcc_setup_kind ? __( 'Copy VS Code setup', 'siteradian' ) : __( 'Copy SiteRadian setup', 'siteradian' ) );
 			$wpcc_file_desc = 'claude' === $wpcc_selected_client
 				? __( 'Paste this entry inside the existing mcpServers braces and keep every other entry. Use the whole-file example under Advanced only when the file is empty.', 'siteradian' )
 				: ( 'vscode_config' === $wpcc_setup_kind
 					? __( 'Use this block for an empty user mcp.json. If it already contains settings, use the merge instructions under Advanced and preserve every server and input.', 'siteradian' )
 					: __( 'Use this block only for an empty file. If the file already has settings, use the entry-only merge instructions under Advanced.', 'siteradian' ) );
-			$wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian AI', 'siteradian' ), $wpcc_file_desc );
+			$wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian', 'siteradian' ), $wpcc_file_desc );
 			?>
 				<div class="wpcc-connect-step__actions">
 					<button type="button" class="button button-primary wpcc-copy-btn" data-copy-target="wpcc-primary-config"<?php $wpcc_token_gate_control( $wpcc_setup_requires_token, $wpcc_token_ready ); ?>><?php echo esc_html( $wpcc_file_copy_label ); ?></button>
@@ -197,8 +197,8 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 			<?php
 			$wpcc_finish_desc = 'vscode_config' === $wpcc_setup_kind
 				? ( $wpcc_new_token
-					? __( 'Save the file. Copy your token again here because copying the setup replaced your clipboard. Then run MCP: List Servers, start wp-command-center, approve trust, and paste the SiteRadian AI token when VS Code asks.', 'siteradian' )
-					: __( 'Save the file, have your saved SiteRadian AI token ready, then run MCP: List Servers, start wp-command-center, approve trust, and paste the SiteRadian AI token when VS Code asks.', 'siteradian' ) )
+					? __( 'Save the file. Copy your token again here because copying the setup replaced your clipboard. Then run MCP: List Servers, start wp-command-center, approve trust, and paste the SiteRadian token when VS Code asks.', 'siteradian' )
+					: __( 'Save the file, have your saved SiteRadian token ready, then run MCP: List Servers, start wp-command-center, approve trust, and paste the SiteRadian token when VS Code asks.', 'siteradian' ) )
 					: __( 'Save the file, fully quit the app, and open it again so it loads the connection.', 'siteradian' );
 			/* translators: %s: selected assistant or coding client name. */
 			$wpcc_connect_step( ++$wpcc_step_number, 'vscode_config' === $wpcc_setup_kind ? __( 'Save and start the server', 'siteradian' ) : sprintf( __( 'Save and restart %s', 'siteradian' ), $wpcc_current_client['name'] ), $wpcc_finish_desc );
@@ -244,7 +244,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 				</details>
 			<?php $wpcc_connect_step_end(); ?>
 
-			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian AI', 'siteradian' ), __( 'Run this registration command. It stores the server address and credential variable name, not the raw token.', 'siteradian' ) ); ?>
+			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian', 'siteradian' ), __( 'Run this registration command. It stores the server address and credential variable name, not the raw token.', 'siteradian' ) ); ?>
 				<div class="wpcc-connect-step__actions">
 					<button type="button" class="button button-primary wpcc-copy-btn" id="wpcc-setup-command-copy" data-copy-target="wpcc-setup-command"><?php esc_html_e( 'Copy setup command', 'siteradian' ); ?></button>
 				</div>
@@ -271,7 +271,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 			?>
 			<?php $wpcc_connect_step_end(); ?>
 
-			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian AI', 'siteradian' ), __( 'Run the generated command. It registers this WordPress site without making you edit a configuration file.', 'siteradian' ) ); ?>
+			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Add SiteRadian', 'siteradian' ), __( 'Run the generated command. It registers this WordPress site without making you edit a configuration file.', 'siteradian' ) ); ?>
 				<p class="wpcc-connect-note"><strong><?php esc_html_e( 'Keep this private.', 'siteradian' ); ?></strong> <?php esc_html_e( 'The setup command contains your access token. Keep it out of shared history, screenshots, chats and logs.', 'siteradian' ); ?></p>
 				<div class="wpcc-connect-step__actions">
 					<button type="button" class="button button-primary wpcc-copy-btn" id="wpcc-setup-command-copy" data-copy-target="wpcc-setup-command"<?php $wpcc_token_gate_control( $wpcc_setup_requires_token, $wpcc_token_ready ); ?>><?php esc_html_e( 'Copy setup command', 'siteradian' ); ?></button>

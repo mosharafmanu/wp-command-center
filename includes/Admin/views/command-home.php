@@ -107,48 +107,42 @@ $wpcc_home_ai_key = AdoptionStatus::ai_configured();
  * tell a new customer nothing and ask nothing of them. Home is therefore the
  * setup flow until setup is done, and the command view forever after.
  *
- * The three steps are the real dependency chain, in order:
- *   1. Protect  — decide what AI may do before granting any access at all
- *   2. Connect  — token + configuration, pasted into the assistant
- *   3. Try it   — the assistant actually reaches the site, which we can prove
+ * The three steps are the real beginner journey, in order:
+ *   1. Create access — choose an assistant and issue a scoped token
+ *   2. Connect       — copy the generated setup into that assistant
+ *   3. Inspect       — prove the connection with a safe read-only request
  *
  * Step 3 completes on evidence (a real authenticated request), never on a
  * checkbox the user ticks themselves.
  */
-/*
- * TWO steps, not three.
- *
- * Protection used to be step 1, pre-ticked. But a fresh install seeds Standard
- * protection automatically — so the customer arrived to a checkmark beside
- * "Choose how much AI can change", a thing they had not chosen. Crediting
- * someone for work they did not do makes the whole progress indicator feel
- * decorative, and it padded a two-step journey into "step 2 of 3", inflating
- * the effort before they had done anything.
- *
- * Protection is now stated as a fact above the steps, with a way to change it.
- * What remains is what the customer must genuinely do.
- */
-$wpcc_steps = [
+/* Protection is stated separately as a fact, never claimed as user progress. */
+$wpcc_has_access = (int) $wpcc_conn['active_tokens'] > 0;
+$wpcc_steps      = [
 	[
-		'done'  => ConnectionStatus::STATE_NO_TOKEN !== $wpcc_conn['state'],
-		'title' => __( 'Connect your assistant', 'siteradian' ),
-		'body'  => __( 'Pick Claude, Cursor, Codex, ChatGPT or Gemini, create an access token, and copy the setup. No AI provider key needed.', 'siteradian' ),
-		'cta'   => __( 'Connect', 'siteradian' ),
+		'done'  => $wpcc_has_access,
+		'title' => __( 'Create access', 'siteradian' ),
+		'body'  => __( 'Choose your assistant and create a scoped access token. Start with read-only if you only want it to inspect the site.', 'siteradian' ),
+		'cta'   => __( 'Create access', 'siteradian' ),
 		'url'   => $links['connect'],
-		'donce' => __( 'An access token is ready.', 'siteradian' ),
+		'donce' => __( 'Scoped access is ready.', 'siteradian' ),
+	],
+	[
+		'done'  => ConnectionStatus::ever_connected(),
+		'title' => __( 'Connect an assistant', 'siteradian' ),
+		'body'  => __( 'Follow the copy-ready setup for Claude, Codex, ChatGPT, Cursor, Gemini, or another supported app.', 'siteradian' ),
+		'cta'   => __( 'Finish connection setup', 'siteradian' ),
+		'url'    => $links['connect'],
+		'donce' => __( 'An assistant has securely reached this site.', 'siteradian' ),
 	],
 	[
 		'done'   => ConnectionStatus::ever_connected(),
-		'title'  => __( 'Ask your assistant to do something', 'siteradian' ),
-		'body'   => __( 'Questions are answered straight away.', 'siteradian' ) . ' ' . \WPCommandCenter\Operations\SecurityModeManager::approval_step(),
-		// A step with no action and no completion signal is a dead end. This one
-		// gives the customer the exact words to type, and says plainly how it
-		// finishes — which is by evidence, not by them ticking a box.
-		'prompt' => __( 'What plugins are installed on my site?', 'siteradian' ),
-		'note'   => __( 'This step completes on its own the moment your assistant reaches the site.', 'siteradian' ),
-		'cta'    => __( 'Back to setup', 'siteradian' ),
+		'title'  => __( 'Ask it to inspect the site', 'siteradian' ),
+		'body'   => __( 'Start with a read-only question so you can see the connection work without changing anything.', 'siteradian' ),
+		'prompt' => __( 'Inspect my site and tell me what needs attention.', 'siteradian' ),
+		'note'   => __( 'SiteRadian records the request and applies your access and protection rules automatically.', 'siteradian' ),
+		'cta'    => '',
 		'url'    => $links['connect'],
-		'donce'  => __( 'Your assistant has reached this site.', 'siteradian' ),
+		'donce'  => __( 'Your assistant completed its first site check.', 'siteradian' ),
 	],
 ];
 
@@ -174,6 +168,82 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 }
 ?>
 <div class="wpcc-home">
+	<section class="wpcc-home__hero" aria-labelledby="wpcc-home-brandline">
+		<div class="wpcc-home__hero-copy">
+			<img src="<?php echo esc_url( Brand::logo() ); ?>" alt="<?php esc_attr_e( 'SiteRadian', 'siteradian' ); ?>" class="wpcc-home__logo" width="190" height="36" decoding="async" />
+			<h2 id="wpcc-home-brandline" class="wpcc-home__descriptor"><?php esc_html_e( 'The AI Command Center for WordPress', 'siteradian' ); ?></h2>
+			<p class="wpcc-home__promise"><?php esc_html_e( 'Give AI a safer way to work on your site.', 'siteradian' ); ?></p>
+			<p class="wpcc-home__support"><?php esc_html_e( 'Connect AI assistants to WordPress with scoped access, approvals, audit trails, and rollback.', 'siteradian' ); ?></p>
+		</div>
+		<ol class="wpcc-home__flow" aria-label="<?php esc_attr_e( 'How SiteRadian governs AI operations', 'siteradian' ); ?>">
+			<li><span><?php esc_html_e( 'AI assistant', 'siteradian' ); ?></span></li>
+			<li><span><?php esc_html_e( 'Scope', 'siteradian' ); ?></span></li>
+			<li><span><?php esc_html_e( 'Approval', 'siteradian' ); ?></span></li>
+			<li><span><?php esc_html_e( 'Safe execution', 'siteradian' ); ?></span></li>
+			<li><span><?php esc_html_e( 'Audit / rollback', 'siteradian' ); ?></span></li>
+		</ol>
+	</section>
+
+	<h2 class="screen-reader-text"><?php esc_html_e( 'Site status', 'siteradian' ); ?></h2>
+	<div class="wpcc-home__status">
+		<div class="wpcc-home__stat">
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Protection mode', 'siteradian' ); ?></span>
+			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['security'] ); ?>">
+				<span class="wpcc-home__dot <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
+				<?php echo esc_html( SecurityModeManager::label() ); ?>
+			</a>
+			<span class="wpcc-home__stat-hint"><?php echo esc_html( SecurityModeManager::approval_step() ); ?></span>
+		</div>
+		<div class="wpcc-home__stat">
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'AI connections', 'siteradian' ); ?></span>
+			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['connect'] ); ?>">
+				<span class="wpcc-home__dot <?php echo ConnectionStatus::STATE_CONNECTED === $wpcc_conn['state'] ? 'is-ok' : 'is-idle'; ?>" aria-hidden="true"></span>
+				<?php echo esc_html( ConnectionStatus::STATE_CONNECTED === $wpcc_conn['state'] ? __( 'Connected', 'siteradian' ) : ( $wpcc_has_access ? __( 'Setup not finished', 'siteradian' ) : __( 'None yet', 'siteradian' ) ) ); ?>
+			</a>
+			<span class="wpcc-home__stat-hint">
+				<?php
+				if ( ! empty( $wpcc_conn['last_label'] ) ) {
+					echo esc_html( sprintf(
+						/* translators: %s: label of the most recently used access token. */
+						__( 'Last used: %s', 'siteradian' ),
+						$wpcc_conn['last_label']
+					) );
+				} elseif ( $wpcc_has_access && (int) $wpcc_conn['read_only_tokens'] > 0 ) {
+					echo esc_html( sprintf(
+						/* translators: 1: total active access tokens; 2: read-only access tokens. */
+						_n( '%1$s active token · %2$s read-only', '%1$s active tokens · %2$s read-only', (int) $wpcc_conn['active_tokens'], 'siteradian' ),
+						number_format_i18n( (int) $wpcc_conn['active_tokens'] ),
+						number_format_i18n( (int) $wpcc_conn['read_only_tokens'] )
+					) );
+				} elseif ( $wpcc_has_access ) {
+					echo esc_html( sprintf(
+						/* translators: %s: number of active access tokens, all with full access. */
+						_n( '%s active token · full access', '%s active tokens · all full access', (int) $wpcc_conn['active_tokens'], 'siteradian' ),
+						number_format_i18n( (int) $wpcc_conn['active_tokens'] )
+					) );
+				} else {
+					esc_html_e( 'No access tokens yet', 'siteradian' );
+				}
+				?>
+			</span>
+		</div>
+		<div class="wpcc-home__stat">
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Pending approvals', 'siteradian' ); ?></span>
+			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['approvals'] ); ?>" id="wpcc-home-pending-stat">
+				<span class="wpcc-home__dot is-idle" aria-hidden="true"></span>
+				<span id="wpcc-home-pending-text"><?php esc_html_e( 'Checking…', 'siteradian' ); ?></span>
+			</a>
+			<span class="wpcc-home__stat-hint"><?php esc_html_e( 'Decisions waiting for you', 'siteradian' ); ?></span>
+		</div>
+		<div class="wpcc-home__stat">
+			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Recent changes', 'siteradian' ); ?></span>
+			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['change_history'] ); ?>">
+				<span class="wpcc-home__dot is-idle" id="wpcc-home-changes-dot" aria-hidden="true"></span>
+				<span id="wpcc-home-changes-text"><?php esc_html_e( 'Checking…', 'siteradian' ); ?></span>
+			</a>
+			<span class="wpcc-home__stat-hint"><?php esc_html_e( 'Recorded with undo where supported', 'siteradian' ); ?></span>
+		</div>
+	</div>
 <?php if ( ! $wpcc_setup_done ) : ?>
 	<?php
 	/*
@@ -184,41 +254,8 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 */
 	?>
 	<section class="wpcc-setup" aria-labelledby="wpcc-setup-h">
-		<?php
-		/*
-		 * First run is the one screen that introduces the product, so it gets the full
-		 * lockup rather than the standalone mark — the identity standard reserves the
-		 * lockup for exactly this. It carries a real accessible name here (unlike the
-		 * shell header's decorative mark) because on this screen the lockup IS the
-		 * product's first statement of who it is; the headline below is a promise, not
-		 * a name.
-		 *
-		 * ── LIGHT-SURFACE ARTWORK, UNCONDITIONALLY. Do not use Brand::picture() here.
-		 *
-		 * This lockup sits on the onboarding card — white, on the WordPress admin's
-		 * #f0f0f1 content background. Every core admin colour scheme restyles the sidebar
-		 * and accents but never the content area, so this surface is permanently light.
-		 *
-		 * Brand::picture() picks its variant from `(prefers-color-scheme: dark)`, which
-		 * describes the viewer's OPERATING SYSTEM / browser theme rather than the surface
-		 * the artwork lands on. Using it here served the dark-surface lockup — near-white
-		 * #F8FAFC — onto this light card for every admin running an OS dark theme: 1.09:1
-		 * contrast, invisible. It is the FIRST thing a new user sees, so the product
-		 * appeared to have no logo at all on the one screen that introduces it.
-		 *
-		 * picture() and the *-dark assets are correct and stay available for genuinely
-		 * dark surfaces (the admin sidebar, for instance). This is not one of them.
-		 */
-		printf(
-			'<img src="%1$s" alt="%2$s" class="wpcc-setup__logo" width="244" height="32" decoding="async" />',
-			esc_url( Brand::logo() ),
-			esc_attr__( 'SiteRadian AI', 'siteradian' )
-		);
-		?>
-		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Safe, governed AI operations for WordPress.', 'siteradian' ); ?></h2>
-		<p class="wpcc-setup__lede">
-			<?php esc_html_e( 'Connect AI assistants to your WordPress site with scoped access, approvals, audit trails, and rollback.', 'siteradian' ); ?>
-		</p>
+		<h2 id="wpcc-setup-h" class="wpcc-setup__title"><?php esc_html_e( 'Get started in three steps', 'siteradian' ); ?></h2>
+		<p class="wpcc-setup__lede"><?php esc_html_e( 'You do not need an AI provider key. Use the assistant you already have.', 'siteradian' ); ?></p>
 
 		<?php
 		// Protection stated as fact, not claimed as an achievement. A fresh install
@@ -268,13 +305,13 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 						<p class="wpcc-setup__step-text">
 							<?php echo esc_html( $wpcc_step['done'] ? $wpcc_step['donce'] : $wpcc_step['body'] ); ?>
 						</p>
-						<?php if ( $wpcc_is_active && ! empty( $wpcc_step['prompt'] ) ) : ?>
-							<p class="wpcc-setup__prompt">
-								<span class="wpcc-setup__prompt-label"><?php esc_html_e( 'Try asking:', 'siteradian' ); ?></span>
-								<code>“<?php echo esc_html( $wpcc_step['prompt'] ); ?>”</code>
-							</p>
-							<p class="wpcc-setup__note"><?php echo esc_html( $wpcc_step['note'] ); ?></p>
-						<?php elseif ( $wpcc_is_active ) : ?>
+					<?php if ( ! empty( $wpcc_step['prompt'] ) ) : ?>
+						<p class="wpcc-setup__prompt">
+							<span class="wpcc-setup__prompt-label"><?php esc_html_e( 'Try asking:', 'siteradian' ); ?></span>
+							<code>“<?php echo esc_html( $wpcc_step['prompt'] ); ?>”</code>
+						</p>
+						<?php if ( $wpcc_is_active ) : ?><p class="wpcc-setup__note"><?php echo esc_html( $wpcc_step['note'] ); ?></p><?php endif; ?>
+					<?php elseif ( $wpcc_is_active ) : ?>
 							<a class="button button-primary button-hero wpcc-setup__cta" href="<?php echo esc_url( $wpcc_step['url'] ); ?>">
 								<?php echo esc_html( $wpcc_step['cta'] ); ?>
 							</a>
@@ -313,60 +350,6 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 * puts it, is worth more than two in two styles.
 	 */
 	?>
-	<h2 class="screen-reader-text"><?php esc_html_e( 'Site status', 'siteradian' ); ?></h2>
-	<div class="wpcc-home__status">
-		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Protection', 'siteradian' ); ?></span>
-			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['security'] ); ?>">
-				<span class="wpcc-home__dot <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
-				<?php echo esc_html( SecurityModeManager::label() ); ?>
-			</a>
-		</div>
-		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Assistant', 'siteradian' ); ?></span>
-			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['connect'] ); ?>">
-				<span class="wpcc-home__dot <?php echo ConnectionStatus::STATE_CONNECTED === $wpcc_conn['state'] ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
-				<?php echo esc_html( $wpcc_conn['label'] ); ?>
-			</a>
-			<span class="wpcc-home__stat-hint">
-				<?php
-				/*
-				 * WHICH assistant, not just that there is one.
-				 *
-				 * "Assistant connected · Last request 28 minutes ago" is true and
-				 * still leaves the obvious question unanswered on a site with more
-				 * than one token: connected to *what*? The name of the token that
-				 * last authenticated answers it from data already read — and since
-				 * the token form pre-fills that name with the assistant the
-				 * customer picked, in practice it reads "Claude Desktop".
-				 *
-				 * It is the name they gave, not a detected client. Nothing here
-				 * inspects a user agent, and a customer who named a token "staging
-				 * laptop" sees "staging laptop", which is the truthful answer to
-				 * "which one of mine is that?".
-				 */
-				echo esc_html(
-					'' !== $wpcc_conn['last_label']
-						? sprintf(
-							/* translators: 1: the name the customer gave the token that last connected, e.g. "Claude Desktop"; 2: sentence about when, e.g. "Last request 28 minutes ago." */
-							__( '%1$s · %2$s', 'siteradian' ),
-							$wpcc_conn['last_label'],
-							$wpcc_conn['detail']
-						)
-						: $wpcc_conn['detail']
-				);
-				?>
-			</span>
-		</div>
-		<div class="wpcc-home__stat">
-			<span class="wpcc-home__stat-label"><?php esc_html_e( 'Waiting for you', 'siteradian' ); ?></span>
-			<a class="wpcc-home__stat-value" href="<?php echo esc_url( $links['approvals'] ); ?>" id="wpcc-home-pending-stat">
-				<span class="wpcc-home__dot is-idle" aria-hidden="true"></span>
-				<span id="wpcc-home-pending-text"><?php esc_html_e( 'Checking…', 'siteradian' ); ?></span>
-			</a>
-		</div>
-	</div>
-
 	<?php if ( ! $wpcc_protected ) : ?>
 		<section class="wpcc-home__next" aria-labelledby="wpcc-home-next-h">
 			<div>
@@ -659,7 +642,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	</div>
 
 	<!-- Engineering detail: present, never in the way. -->
-	<div class="wpcc-engineer-only">
+		<div class="wpcc-engineer-only">
 		<h2><?php esc_html_e( 'Platform invariants', 'siteradian' ); ?></h2>
 		<div id="wpcc-home-invariants" class="wpcc-cds-kpis" role="status" aria-live="polite"></div>
 		<p class="wpcc-home__more">
@@ -667,21 +650,46 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 			&nbsp;·&nbsp;
 			<a href="<?php echo esc_url( $links['diagnostics'] ); ?>"><?php esc_html_e( 'Diagnostics →', 'siteradian' ); ?></a>
 		</p>
+		</div>
+		<?php endif; // dashboard (setup complete) ?>
+
+		<section class="wpcc-home__learn" aria-labelledby="wpcc-home-learn-h">
+			<div>
+				<p class="wpcc-home__eyebrow"><?php esc_html_e( 'Learn', 'siteradian' ); ?></p>
+				<h2 id="wpcc-home-learn-h"><?php esc_html_e( 'Use SiteRadian with confidence', 'siteradian' ); ?></h2>
+				<p><?php esc_html_e( 'Short paths to the controls and guidance you are most likely to need.', 'siteradian' ); ?></p>
+			</div>
+			<nav class="wpcc-home__learn-links" aria-label="<?php esc_attr_e( 'SiteRadian help topics', 'siteradian' ); ?>">
+				<a href="<?php echo esc_url( $links['connect'] ); ?>"><strong><?php esc_html_e( 'Quick Start', 'siteradian' ); ?></strong><span><?php esc_html_e( 'Connect your first assistant', 'siteradian' ); ?></span></a>
+				<a href="<?php echo esc_url( $links['access'] ); ?>"><strong><?php esc_html_e( 'Scoped access', 'siteradian' ); ?></strong><span><?php esc_html_e( 'Choose what an assistant can do', 'siteradian' ); ?></span></a>
+				<a href="<?php echo esc_url( $links['approvals'] ); ?>"><strong><?php esc_html_e( 'Understanding approvals', 'siteradian' ); ?></strong><span><?php esc_html_e( 'Review higher-impact work', 'siteradian' ); ?></span></a>
+				<a href="<?php echo esc_url( $links['security'] ); ?>"><strong><?php esc_html_e( 'Protection & rollback', 'siteradian' ); ?></strong><span><?php esc_html_e( 'Set safeguards and understand undo', 'siteradian' ); ?></span></a>
+			</nav>
+		</section>
 	</div>
-	<?php endif; // dashboard (setup complete) ?>
-</div>
 
 <style>
 /* The reading column is capped for line length, but it is centred against the
    full canvas rather than pinned to the left of it. Left-pinned, a 620px setup
    column inside a 900px block inside a 1200px shell left ~500px of dead space on
    one side only, which reads as a layout mistake rather than as composition. */
-.wpcc-home { max-width: 940px; margin-inline: auto; }
+.wpcc-home { max-width: 1120px; margin-inline: auto; color:var(--wpcc-text-primary,#14213d); }
+.wpcc-home__hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr); gap:32px; align-items:center; margin:0 0 18px; padding:30px 32px; background:linear-gradient(135deg,#fff 0%,#f7f8ff 100%); border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:14px; }
+.wpcc-home__hero::after { content:""; position:absolute; right:-110px; top:-150px; width:330px; height:330px; border:1px solid rgba(64,85,213,.12); border-radius:50%; box-shadow:0 0 0 46px rgba(64,85,213,.035),0 0 0 92px rgba(64,85,213,.025); pointer-events:none; }
+.wpcc-home__hero-copy,.wpcc-home__flow { position:relative; z-index:1; }
+.wpcc-home__logo { display:block; width:190px; height:36px; margin:0 0 22px; }
+.wpcc-app .wpcc-home__descriptor { margin:0 0 8px; font-size:13px; line-height:1.4; font-weight:700; letter-spacing:.065em; text-transform:uppercase; color:#4055d5; }
+.wpcc-home__promise { margin:0 0 10px!important; max-width:650px; font-size:26px; line-height:1.22!important; font-weight:650; letter-spacing:-.025em; color:#14213d; }
+.wpcc-home__support { margin:0!important; max-width:620px; font-size:14px; line-height:1.65!important; color:#5d6878; }
+.wpcc-home__flow { list-style:none; margin:0; padding:4px 0; display:grid; gap:7px; }
+.wpcc-home__flow li { position:relative; display:flex; align-items:center; min-height:34px; padding:7px 11px 7px 34px; border:1px solid #dfe4f3; border-radius:8px; background:rgba(255,255,255,.82); color:#344054; font-size:12px; font-weight:600; }
+.wpcc-home__flow li::before { content:""; position:absolute; left:13px; width:8px; height:8px; border:2px solid #4055d5; border-radius:50%; background:#fff; box-sizing:border-box; }
+.wpcc-home__flow li:not(:last-child)::after { content:""; position:absolute; left:16px; top:31px; width:1px; height:11px; background:#aab6ee; }
 /* ── Setup flow (pre-connection Home) ───────────────────────────────────────
  * Deliberately narrow and vertical: one column, one reading path, one button.
  * A grid would invite the eye to wander across choices the customer has not
  * earned yet. */
-.wpcc-setup { max-width: 620px; margin: 24px auto 56px; }
+.wpcc-setup { max-width: 760px; margin: 0 auto 28px; padding:24px 28px; background:#fff; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:12px; }
 .wpcc-setup__prompt { margin: 12px 0 6px; font-size: 13px; }
 .wpcc-setup__prompt-label { color: #646970; margin-right: 6px; }
 .wpcc-setup__prompt code { background: #f0f0f1; padding: 3px 8px; border-radius: 4px; font-size: 13px; }
@@ -689,7 +697,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 /* The first-run lockup, sized by HEIGHT so the wordmark lands at a known size.
    It used to be capped by width (max-width:248px) against an artwork whose 456px
    viewBox was sized by a tagline, not by the name — so the whole lockup rendered
-   at 0.54x and "SiteRadian AI" came out at 12px: smaller than the 13px body
+   at 0.54x and "SiteRadian" came out at 12px: smaller than the 13px body
    text beneath it, and the smallest type on the screen that introduces the
    product. The tagline is gone from the artwork and the viewBox is retightened to
    244x32, so height:32px now renders the wordmark at its intended 20px with the
@@ -699,9 +707,9 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 /* First-run is the one screen that earns a real headline. The CDS type scale
    caps h2 at 16px for dense operator screens, which is right everywhere else
    and wrong here — this is the product introducing itself. Scoped override. */
-.wpcc-app .wpcc-setup__title { font-size: 27px; line-height: 1.22; margin: 0 0 12px; letter-spacing: -0.02em; font-weight: 650; }
+.wpcc-app .wpcc-setup__title { font-size: 20px; line-height: 1.3; margin: 0 0 6px; letter-spacing: -0.015em; font-weight: 650; }
 /* max-width caps the measure so the lede stays readable; the rest is unchanged. */
-.wpcc-setup__lede { font-size: 15px; line-height: 1.6; color: #50575e; margin: 0 0 24px; max-width: 34em; }
+.wpcc-setup__lede { font-size: 14px; line-height: 1.6; color: #5d6878; margin: 0 0 20px; max-width: 48em; }
 .wpcc-setup__protection { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 22px; padding:10px 14px; background:#f6f7f7; border-radius:8px; font-size:13px; color:#1d2327; }
 .wpcc-setup__protection a { margin-left:auto; font-size:12px; }
 .wpcc-setup__protection-dot { width:8px; height:8px; border-radius:50%; background:#c3c4c7; flex:0 0 auto; }
@@ -727,12 +735,11 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
    status cells came out 468/312/312 — an uneven rhythm on the first thing
    anyone looks at. They carry equally important facts; they should read as
    equals. Falls back to stacking below 640px. */
-.wpcc-home__status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: #dcdcde; border: 1px solid #dcdcde; border-radius: 8px; overflow: hidden; margin: 0 0 24px; }
-@media (max-width: 640px) { .wpcc-home__status { grid-template-columns: 1fr; } }
-.wpcc-home__stat { background: #fff; padding: 14px 18px; }
+.wpcc-home__status { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0 0 24px; }
+.wpcc-home__stat { min-width:0; background:#fff; padding:15px 17px; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:10px; }
 .wpcc-home__stat-label { display: block; font-size: 12px; color: #646970; margin-bottom: 4px; }
 .wpcc-home__stat-value { display: block; font-size: 14px; font-weight: 600; color: #1d2327; text-decoration: none; }
-.wpcc-home__stat-value:hover { color: #2271b1; }
+.wpcc-home__stat-value:hover { color: #4055d5; }
 .wpcc-home__stat-hint { display: block; font-size: 12px; color: #646970; margin-top: 3px; }
 .wpcc-home__dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: #c3c4c7; }
 .wpcc-home__dot.is-ok { background: #00a32a; }
@@ -787,6 +794,21 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 .wpcc-home__limits summary { cursor: pointer; font-size: 13px; font-weight: 600; }
 .wpcc-home__limits ul { margin: 10px 0 0 18px; color: #50575e; font-size: 13px; line-height: 1.6; }
 .wpcc-home__dismiss { margin: 14px 0 24px; }
+.wpcc-home__learn { display:grid; grid-template-columns:minmax(220px,.75fr) minmax(0,1.25fr); gap:28px; align-items:start; margin:26px 0 4px; padding:22px 24px; background:#f8fafc; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:12px; }
+.wpcc-home__eyebrow { margin:0 0 4px!important; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#4055d5; }
+.wpcc-home__learn h2 { margin:0 0 6px; }
+.wpcc-home__learn > div > p:last-child { margin:0; color:#5d6878; font-size:13px; }
+.wpcc-home__learn-links { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.wpcc-home__learn-links a { display:block; min-width:0; padding:11px 12px; background:#fff; border:1px solid #e2e7ef; border-radius:8px; text-decoration:none; }
+.wpcc-home__learn-links a:hover { border-color:#aab6ee; background:#fdfdff; }
+.wpcc-home__learn-links strong,.wpcc-home__learn-links span { display:block; }
+.wpcc-home__learn-links strong { color:#14213d; font-size:13px; margin-bottom:2px; }
+.wpcc-home__learn-links span { color:#5d6878; font-size:11.5px; line-height:1.45; }
+@media (max-width:1100px) { .wpcc-home__status { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:900px) { .wpcc-home__hero { grid-template-columns:1fr; gap:20px; } .wpcc-home__flow { grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; } .wpcc-home__flow li { justify-content:center; padding:8px 6px; text-align:center; } .wpcc-home__flow li::before,.wpcc-home__flow li::after { display:none; } }
+@media (max-width:782px) { .wpcc-home__hero { padding:24px; } .wpcc-home__learn { grid-template-columns:1fr; gap:16px; } }
+@media (max-width:640px) { .wpcc-home__status,.wpcc-home__learn-links { grid-template-columns:1fr; } .wpcc-home__flow { grid-template-columns:1fr; } .wpcc-home__flow li { justify-content:flex-start; padding-left:34px; text-align:left; } .wpcc-home__flow li::before { display:block; } .wpcc-home__promise { font-size:22px; } .wpcc-setup { padding:20px; } }
+@media (prefers-reduced-motion:reduce) { .wpcc-home * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
 </style>
 
 <script>
@@ -835,6 +857,9 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		/* translators: %d: number of pending approvals */
 		pendingSome:  <?php echo wp_json_encode( /* translators: %d: number */ __( '%d approvals', 'siteradian' ) ); ?>,
 		pendingSome1: <?php echo wp_json_encode( __( '1 approval', 'siteradian' ) ); ?>,
+		changesNone:  <?php echo wp_json_encode( __( 'No changes yet', 'siteradian' ) ); ?>,
+		changesOne:   <?php echo wp_json_encode( __( '1 recorded change', 'siteradian' ) ); ?>,
+		changesMany:  <?php echo wp_json_encode( /* translators: %s: number of recorded changes. */ __( '%s recorded changes', 'siteradian' ) ); ?>,
 		readyTitle:  <?php echo wp_json_encode( __( 'Your assistant is ready', 'siteradian' ) ); ?>,
 		readyBody:   <?php echo wp_json_encode( __( 'Go back to Claude, Codex, ChatGPT, or whichever assistant you connected, and describe what you want changed on this site — in your own words, in any language your assistant speaks. Requests arrive here under the same protection, approval and undo rules.', 'siteradian' ) ); ?>,
 		readyTryLbl: <?php echo wp_json_encode( __( 'Try asking:', 'siteradian' ) ); ?>,
@@ -984,13 +1009,24 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	 */
 	function renderUndoState( hist ) {
 		var el = document.getElementById( 'wpcc-home-undo-state' );
-		if ( ! el || ! hist || typeof hist.changes !== 'number' ) { return; }
+		if ( ! hist || typeof hist.changes !== 'number' ) { return; }
 		var n = hist.changes;
-		el.textContent = n === 0
-			? i18n.undoNone
-			: ( n === 1 ? i18n.undoOne : i18n.undoMany.replace( '%s', n.toLocaleString() ) );
-		el.classList.toggle( 'is-on', n > 0 );
-		el.hidden = false;
+		if ( el ) {
+			el.textContent = n === 0
+				? i18n.undoNone
+				: ( n === 1 ? i18n.undoOne : i18n.undoMany.replace( '%s', n.toLocaleString() ) );
+			el.classList.toggle( 'is-on', n > 0 );
+			el.hidden = false;
+		}
+
+		var statusText = document.getElementById( 'wpcc-home-changes-text' );
+		if ( statusText ) {
+			statusText.textContent = 0 === n
+				? i18n.changesNone
+				: ( 1 === n ? i18n.changesOne : i18n.changesMany.replace( '%s', n.toLocaleString() ) );
+		}
+		var statusDot = document.getElementById( 'wpcc-home-changes-dot' );
+		if ( statusDot ) { statusDot.className = 'wpcc-home__dot is-ok'; }
 	}
 
 	function renderReady( ap, hist ) {
@@ -1116,12 +1152,13 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 	function showFail() {
 		set( 'wpcc-home-activity', '<div class="wpcc-cds-empty">' + esc( i18n.loadFail ) + '</div>' );
 		set( 'wpcc-home-pending-text', '—' );
+		set( 'wpcc-home-changes-text', '—' );
 	}
 
 	function init() {
-		// Pre-setup Home renders no dashboard, so there is nothing to populate and
-		// no reason to call the admin read at all.
-		if ( ! document.getElementById( 'wpcc-home-activity' ) ) { return; }
+		// Status cards are useful from the first visit, even before setup. The same
+		// read also populates the richer dashboard once an assistant has connected.
+		if ( ! document.getElementById( 'wpcc-home-pending-stat' ) ) { return; }
 		WPCC = window.WPCC || WPCC;
 		if ( ! WPCC.api || ! WPCC.cds ) { showFail(); return; }
 

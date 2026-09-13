@@ -116,7 +116,7 @@ foreach ( \WPCommandCenter\Admin\BuiltinAiSettings::tools() as $wpcc_tk => $wpcc
 }
 
 /*
- * Does the "✨ SiteRadian AI" entry point exist on Posts and Pages right now?
+ * Does the "✨ SiteRadian" entry point exist on Posts and Pages right now?
  *
  * This is the single most undiscoverable thing in the product, and the reason is
  * that it is CONDITIONAL in a way nothing ever states: AiActionRegistry only adds
@@ -124,7 +124,7 @@ foreach ( \WPCommandCenter\Admin\BuiltinAiSettings::tools() as $wpcc_tk => $wpcc
  * Title and Excerpt; SEO carries SEO meta; Alt Text is a Media Library action and
  * deliberately not counted here, because it never appears on a post or page row.
  *
- * So "you will see SiteRadian AI when editing a post" is not a fact about the product —
+ * So "you will see SiteRadian when editing a post" is not a fact about the product —
  * it is a fact about this site's current settings, and on a stock install it is
  * false. Deriving it from the same flags the registry reads means the screen
  * promises the menu only when the menu is genuinely there.
@@ -372,7 +372,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 		} elseif ( ! $wpcc_o_runtime ) {
 			$wpcc_o_step = sprintf(
 				/* translators: %s: provider label, e.g. "Mistral". */
-				__( 'Your key is saved. SiteRadian AI cannot run its own AI features through %s yet, so this connection is stored and testable rather than generating.', 'siteradian' ),
+				__( 'Your key is saved. SiteRadian cannot run its own AI features through %s yet, so this connection is stored and testable rather than generating.', 'siteradian' ),
 				$wpcc_o_provider
 			);
 			$wpcc_o_cta = $wpcc_o_testable ? 'test' : '';
@@ -464,14 +464,14 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 				 *
 				 *   1. Built-in AI  — the SEO / Alt Text / Content tools, which run
 				 *      through this key. Five levels down in the menu.
-				 *   2. "✨ SiteRadian AI" on Posts and Pages — the row action. Nothing
+				 *   2. "✨ SiteRadian" on Posts and Pages — the row action. Nothing
 				 *      anywhere announced it; you found it by hovering a row.
 				 *   3. External assistants — Claude, ChatGPT and the rest, which do
 				 *      NOT use this key and are a genuinely separate path.
 				 *
 				 * Each row states what it is, what state it is in HERE, and carries
 				 * one link. The states are read, never assumed: a row that says the
-				 * SiteRadian AI menu is on your posts says it only when the flags that
+				 * SiteRadian menu is on your posts says it only when the flags that
 				 * put it there are on. That is the difference between telling
 				 * someone where a feature is and sending them to look for one that
 				 * is switched off.
@@ -557,19 +557,19 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 						<div class="wpcc-aip-use">
 							<span class="wpcc-aip-use__icon" aria-hidden="true">✎</span>
 							<div class="wpcc-aip-use__body">
-								<strong><?php esc_html_e( 'SiteRadian AI on your posts and pages', 'siteradian' ); ?></strong>
+								<strong><?php esc_html_e( 'SiteRadian on your posts and pages', 'siteradian' ); ?></strong>
 								<span>
 									<?php
 									if ( $wpcc_editor_actions ) {
 										echo esc_html(
 											sprintf(
 												/* translators: %s: comma-separated list of what can be generated, e.g. "Title, Excerpt, SEO title and description". */
-												__( 'Open Posts or Pages and hover any row — “✨ SiteRadian AI” is now there, and generates: %s. Every suggestion arrives as a draft you review before anything changes.', 'siteradian' ),
+												__( 'Open Posts or Pages and hover any row — “✨ SiteRadian” is now there, and generates: %s. Every suggestion arrives as a draft you review before anything changes.', 'siteradian' ),
 												implode( ', ', $wpcc_editor_actions )
 											)
 										);
 									} else {
-										esc_html_e( 'Hover a row in Posts or Pages for “✨ SiteRadian AI” and generate a title, excerpt or SEO meta in place. It appears once you switch on the Content or SEO tool above — that switch is what puts it there.', 'siteradian' );
+										esc_html_e( 'Hover a row in Posts or Pages for “✨ SiteRadian” and generate a title, excerpt or SEO meta in place. It appears once you switch on the Content or SEO tool above — that switch is what puts it there.', 'siteradian' );
 									}
 									?>
 								</span>
@@ -840,7 +840,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 
 		<div class="wpcc-aip-step active" data-step="1">
 			<h3><?php esc_html_e( 'Step 1 — Choose a provider', 'siteradian' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick the AI service. Cloud = hosted (Claude, GPT, Gemini); Local = a model on your own machine (Ollama, LM Studio); Gateway / Custom = your own endpoint. Only Anthropic powers SiteRadian AI’s features today — each option shows whether SiteRadian AI can use it, test it, or just store it.', 'siteradian' ); ?></p>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Pick the AI service. Cloud = hosted (Claude, GPT, Gemini); Local = a model on your own machine (Ollama, LM Studio); Gateway / Custom = your own endpoint. Only Anthropic powers SiteRadian’s features today — each option shows whether SiteRadian can use it, test it, or just store it.', 'siteradian' ); ?></p>
 			<div class="wpcc-aip-field">
 				<label for="wpcc-w-provider"><?php esc_html_e( 'Provider', 'siteradian' ); ?></label>
 				<select name="wpcc_provider" id="wpcc-w-provider">
@@ -880,7 +880,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 
 		<div class="wpcc-aip-step" data-step="4">
 			<h3><?php esc_html_e( 'Step 4 — Model', 'siteradian' ); ?></h3>
-			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Recommended models are shown during setup. After you save and test this connection, SiteRadian AI automatically adds any other models your account exposes — you’ll find them in this connection’s Model list under “Edit”. Providers that don’t publish a model list simply keep the recommended set. You can change the model any time.', 'siteradian' ); ?></p>
+			<p class="muted" style="font-size:13px;"><?php esc_html_e( 'Recommended models are shown during setup. After you save and test this connection, SiteRadian automatically adds any other models your account exposes — you’ll find them in this connection’s Model list under “Edit”. Providers that don’t publish a model list simply keep the recommended set. You can change the model any time.', 'siteradian' ); ?></p>
 			<div class="wpcc-aip-field">
 				<label for="wpcc-w-model-select"><?php esc_html_e( 'Model', 'siteradian' ); ?></label>
 				<input type="search" id="wpcc-w-model-search" style="display:none;width:100%;margin-bottom:6px;" placeholder="<?php esc_attr_e( 'Filter models…', 'siteradian' ); ?>" aria-label="<?php esc_attr_e( 'Filter models', 'siteradian' ); ?>" />
@@ -893,7 +893,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 				<div class="wpcc-aip-field" style="margin-top:10px;">
 					<label for="wpcc-w-tags"><?php esc_html_e( 'Tags', 'siteradian' ); ?> <span class="muted">(<?php esc_html_e( 'optional', 'siteradian' ); ?>)</span></label>
 					<input type="text" id="wpcc-w-tags" name="wpcc_tags" placeholder="prod, premium" />
-					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Internal labels to organize and route your connections (for example “prod” or “cheap”). Optional, used only inside SiteRadian AI — never sent to the provider.', 'siteradian' ); ?></p>
+					<p class="muted" style="font-size:12px;margin:4px 0 0;"><?php esc_html_e( 'Internal labels to organize and route your connections (for example “prod” or “cheap”). Optional, used only inside SiteRadian — never sent to the provider.', 'siteradian' ); ?></p>
 				</div>
 				<div class="wpcc-aip-field" id="wpcc-w-deployment-field" style="display:none;margin-top:10px;">
 					<label for="wpcc-w-deployment"><?php esc_html_e( 'Deployment name', 'siteradian' ); ?></label>
@@ -924,7 +924,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 	<?php if ( empty( $wpcc_conns ) ) : ?>
 		<div class="wpcc-aip-empty">
 			<h3><?php esc_html_e( 'No AI connections yet', 'siteradian' ); ?></h3>
-			<p class="muted" style="max-width:460px;margin:0 auto 14px;"><?php esc_html_e( 'A connection links an AI provider to this site so SiteRadian AI can do work for you — safely, with your approval, and an undo for supported changes. Add a connection to get started.', 'siteradian' ); ?></p>
+			<p class="muted" style="max-width:460px;margin:0 auto 14px;"><?php esc_html_e( 'A connection links an AI provider to this site so SiteRadian can do work for you — safely, with your approval, and an undo for supported changes. Add a connection to get started.', 'siteradian' ); ?></p>
 			<button type="button" class="button button-primary" id="wpcc-aip-new2">+ <?php esc_html_e( 'Add a connection', 'siteradian' ); ?></button>
 		</div>
 	<?php else : ?>
@@ -992,7 +992,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 					<div>
 						<?php if ( $is_def ) : ?><span class="wpcc-aip-badge" style="background:#e7f0fb;color:#1d62b0;"><?php esc_html_e( 'DEFAULT', 'siteradian' ); ?></span> <?php endif; ?>
 						<?php if ( $runtime ) : ?><span class="wpcc-aip-badge" style="background:#e7f6ec;color:#0a7a33;"><?php esc_html_e( 'USED BY RUNTIME', 'siteradian' ); ?></span>
-						<?php elseif ( $testable ) : ?><span class="wpcc-aip-badge" style="background:#eef4fb;color:#1d62b0;" title="<?php esc_attr_e( 'Configured and testable, but not used by SiteRadian AI’s AI features yet.', 'siteradian' ); ?>"><?php esc_html_e( 'TESTABLE', 'siteradian' ); ?></span>
+						<?php elseif ( $testable ) : ?><span class="wpcc-aip-badge" style="background:#eef4fb;color:#1d62b0;" title="<?php esc_attr_e( 'Configured and testable, but not used by SiteRadian’s AI features yet.', 'siteradian' ); ?>"><?php esc_html_e( 'TESTABLE', 'siteradian' ); ?></span>
 						<?php else : ?><span class="wpcc-aip-badge" style="background:#fcf6e6;color:#8a6a00;"><?php esc_html_e( 'STORED ONLY', 'siteradian' ); ?></span><?php endif; ?>
 						<?php foreach ( $c['tags'] as $tag ) : ?><span class="wpcc-aip-badge" style="background:#f0f0f1;color:#50575e;">#<?php echo esc_html( $tag ); ?></span> <?php endforeach; ?>
 					</div>
@@ -1164,13 +1164,13 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 
 	<!-- ===== Feature routing (visual) ===== -->
 	<h2><?php esc_html_e( 'Feature routing', 'siteradian' ); ?></h2>
-	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers your AI tasks. SiteRadian AI runs generation through the one connection you set as the default — Anthropic (Claude) and OpenAI-compatible providers both work once selected. Other providers can be saved and tested, but only a supported provider that you choose will generate. Nothing is selected automatically, and your content is sent only to the provider you pick.', 'siteradian' ); ?></p>
+	<p class="muted" style="max-width:700px;font-size:13px;"><?php esc_html_e( 'Which connection powers your AI tasks. SiteRadian runs generation through the one connection you set as the default — Anthropic (Claude) and OpenAI-compatible providers both work once selected. Other providers can be saved and tested, but only a supported provider that you choose will generate. Nothing is selected automatically, and your content is sent only to the provider you pick.', 'siteradian' ); ?></p>
 	<?php if ( empty( $wpcc_runtime_conns ) ) : ?>
 		<?php if ( ! empty( $wpcc_ineligible_conns ) ) : ?>
 			<p class="muted" style="font-size:13px;max-width:700px;">
 				<?php
 				/* translators: 1: number of healthy connections, 2: their names. */
-				printf( esc_html__( 'You have %1$d connection(s) that connected and tested fine (%2$s) — but SiteRadian AI can only run AI through Anthropic (Claude) right now, so they can’t power features yet. Add a key to an Anthropic connection to choose routing.', 'siteradian' ), count( $wpcc_ineligible_conns ), esc_html( implode( ', ', $wpcc_ineligible_conns ) ) );
+				printf( esc_html__( 'You have %1$d connection(s) that connected and tested fine (%2$s) — but SiteRadian can only run AI through Anthropic (Claude) right now, so they can’t power features yet. Add a key to an Anthropic connection to choose routing.', 'siteradian' ), count( $wpcc_ineligible_conns ), esc_html( implode( ', ', $wpcc_ineligible_conns ) ) );
 				?>
 			</p>
 		<?php else : ?>
@@ -1192,14 +1192,14 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 							<option value="<?php echo esc_attr( $rid ); ?>" <?php selected( ( $wpcc_routes[ $fk ] ?? '' ) === $rid ); ?>><?php echo esc_html( $rname ); ?></option>
 						<?php endforeach; ?>
 						<?php foreach ( $wpcc_ineligible_conns as $iname ) : ?>
-							<option disabled><?php echo esc_html( sprintf( /* translators: %s: connection label */ __( '%s — healthy, but SiteRadian AI can’t run it yet', 'siteradian' ), $iname ) ); ?></option>
+							<option disabled><?php echo esc_html( sprintf( /* translators: %s: connection label */ __( '%s — healthy, but SiteRadian can’t run it yet', 'siteradian' ), $iname ) ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</div>
 			<?php endforeach; ?>
 			<button type="submit" name="wpcc_conn_action" value="save_routes" class="button" style="margin-top:12px;"><?php esc_html_e( 'Save routing', 'siteradian' ); ?></button>
 			<?php if ( ! empty( $wpcc_ineligible_conns ) ) : ?>
-				<p class="muted" style="font-size:12px;margin:12px 0 0;max-width:520px;"><?php esc_html_e( 'Connections marked “healthy, but SiteRadian AI can’t run it yet” connected and tested successfully — SiteRadian AI simply can’t run AI tasks through them yet (today it runs through Anthropic / Claude only). They’ll appear as selectable the moment that changes. Nothing is hidden or faked.', 'siteradian' ); ?></p>
+				<p class="muted" style="font-size:12px;margin:12px 0 0;max-width:520px;"><?php esc_html_e( 'Connections marked “healthy, but SiteRadian can’t run it yet” connected and tested successfully — SiteRadian simply can’t run AI tasks through them yet (today it runs through Anthropic / Claude only). They’ll appear as selectable the moment that changes. Nothing is hidden or faked.', 'siteradian' ); ?></p>
 			<?php endif; ?>
 		</form>
 	<?php endif; ?>
@@ -1256,7 +1256,7 @@ foreach ( \WPCommandCenter\Ai\Platform\UsageLedger::read()['buckets'] as $wpcc_b
 	<?php endif; ?>
 
 	<p class="muted" style="font-size:12px;max-width:720px;margin-top:20px;">
-		<?php esc_html_e( 'Security: each key is stored in this site’s database (a WordPress option, not auto-loaded), used only for calls to that connection’s endpoint, never shown here, never written to the audit log, and never sent anywhere else. Anyone who can edit plugins could read stored options — use scoped keys. The default Anthropic connection also drives SiteRadian AI’s AI features (a wp-config constant always wins).', 'siteradian' ); ?>
+		<?php esc_html_e( 'Security: each key is stored in this site’s database (a WordPress option, not auto-loaded), used only for calls to that connection’s endpoint, never shown here, never written to the audit log, and never sent anywhere else. Anyone who can edit plugins could read stored options — use scoped keys. The default Anthropic connection also drives SiteRadian’s AI features (a wp-config constant always wins).', 'siteradian' ); ?>
 	</p>
 </div>
 

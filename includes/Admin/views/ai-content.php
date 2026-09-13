@@ -59,7 +59,7 @@ $security_mode = \WPCommandCenter\Operations\SecurityModeManager::current();
  * The Content screen used to consist of two review tabs and nothing else. Its empty
  * state read "No suggestions yet. Generate some from a post or page." — a true sentence
  * that named no page, linked nowhere, and did not mention that the thing to look for is
- * a row action called "✨ SiteRadian AI". SEO and Alt Text both have a Review tab where you
+ * a row action called "✨ SiteRadian". SEO and Alt Text both have a Review tab where you
  * pick items and press Generate; Content was the only built-in tool with no way to start
  * from its own screen, so an independent tester enabled it, opened it, found four stale
  * drafts and concluded there was no generation path at all.
@@ -309,7 +309,7 @@ $thin_words    = \WPCommandCenter\Ai\SourceContentSignal::THIN_BELOW_WORDS;
 		/*
 		 * The old text here was "No suggestions yet. Generate some from a post or page."
 		 * It was true and it was useless: it named no screen, linked nowhere, and the
-		 * thing it was pointing at is a row action labelled "✨ SiteRadian AI" that a first-time
+		 * thing it was pointing at is a row action labelled "✨ SiteRadian" that a first-time
 		 * customer has no reason to look for. An empty state on the tool's own screen
 		 * should point at the tool's own first step.
 		 */

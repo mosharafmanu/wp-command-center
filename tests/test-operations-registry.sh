@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Operations Registry test suite for SiteRadian AI (Step 15).
+# Operations Registry test suite for SiteRadian (Step 15).
 #
 # Verifies:
 #   - registry loads

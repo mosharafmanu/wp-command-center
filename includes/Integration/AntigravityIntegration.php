@@ -63,9 +63,9 @@ final class AntigravityIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'This is Antigravity CLI (agy), not Gemini CLI (gemini) or an IDE setup. agy stores the bearer token in ~/.gemini/config/mcp_config.json. Do not commit or share this file, paste the command into shared chats, or save the token in a shell profile. Revoke the token in SiteRadian AI to remove access.', 'siteradian' ),
-			__( 'Exit any running agy session, then run agy again. Use /mcp to verify wp-command-center is connected and lists 42 tools; ask for system_info and report_manage with action report_site_health. agy mcp list confirms registration only. The SiteRadian AI browser test checks the endpoint, not whether agy connected.', 'siteradian' ),
-			__( 'Antigravity asks your permission the first time it uses a SiteRadian AI tool. That prompt is Antigravity’s own safety check and is separate from this site’s approval rules — approving it lets the assistant ask, it does not bypass this site’s protection mode or any required human approval.', 'siteradian' ),
+			__( 'This is Antigravity CLI (agy), not Gemini CLI (gemini) or an IDE setup. agy stores the bearer token in ~/.gemini/config/mcp_config.json. Do not commit or share this file, paste the command into shared chats, or save the token in a shell profile. Revoke the token in SiteRadian to remove access.', 'siteradian' ),
+			__( 'Exit any running agy session, then run agy again. Use /mcp to verify wp-command-center is connected and lists 42 tools; ask for system_info and report_manage with action report_site_health. agy mcp list confirms registration only. The SiteRadian browser test checks the endpoint, not whether agy connected.', 'siteradian' ),
+			__( 'Antigravity asks your permission the first time it uses a SiteRadian tool. That prompt is Antigravity’s own safety check and is separate from this site’s approval rules — approving it lets the assistant ask, it does not bypass this site’s protection mode or any required human approval.', 'siteradian' ),
 		];
 	}
 }

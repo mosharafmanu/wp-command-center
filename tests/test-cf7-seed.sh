@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CF7 Seeder Operation test suite for SiteRadian AI (Step 18).
+# CF7 Seeder Operation test suite for SiteRadian (Step 18).
 #
 # Verifies:
 #   - operation discovery

@@ -11,7 +11,7 @@ review team can match it to your submission).
 
 ## Paste-ready reply
 
-> Subject: Re: [WordPress Plugin Directory] Plugin Submission — SiteRadian AI
+> Subject: Re: [WordPress Plugin Directory] Plugin Submission — SiteRadian
 >
 > Hello,
 >
@@ -27,9 +27,9 @@ review team can match it to your submission).
 > translations and language packs load correctly.
 >
 > As I understand it the slug is derived automatically from the `Plugin Name:` header, which
-> in our case reads "SiteRadian AI" — the Plugin Developer FAQ notes that the automated
+> in our case reads "SiteRadian" — the Plugin Developer FAQ notes that the automated
 > email's slug is populated from that header. The display name is intentional and we would
-> like to keep it as **SiteRadian AI**, with `siteradian` as the directory slug.
+> like to keep it as **SiteRadian**, with `siteradian` as the directory slug.
 >
 > I am raising this now rather than after review, since I understand slugs cannot be changed
 > once a plugin is approved.
@@ -46,7 +46,7 @@ review team can match it to your submission).
 ## Notes for the sender
 
 - **Requested slug:** `siteradian`
-- **Public plugin name (unchanged):** `SiteRadian AI`
+- **Public plugin name (unchanged):** `SiteRadian`
 - **Why it is safe to ask:** the slug is auto-derived from the `Plugin Name:` header; the
   Plugin Developer FAQ states the automated email's slug comes from that header. Requesting
   a different slug at submission time is a normal, supported request.

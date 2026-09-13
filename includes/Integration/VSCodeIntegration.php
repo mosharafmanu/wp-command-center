@@ -92,7 +92,7 @@ final class VSCodeIntegration extends BaseClientIntegration {
 				[
 					'type'        => 'promptString',
 					'id'          => $input_id,
-					'description' => sprintf( 'SiteRadian AI token for %s', $site_name ),
+					'description' => sprintf( 'SiteRadian token for %s', $site_name ),
 					'password'    => true,
 				],
 			],
@@ -114,7 +114,7 @@ final class VSCodeIntegration extends BaseClientIntegration {
 	public static function post_setup_notes(): array {
 		return [
 			__( 'VS Code asks for your access token the first time it uses this connection and stores it in its own secure storage — it is not saved in the file. That means this file is safe to commit to a repository, and each person who uses it supplies their own token.', 'siteradian' ),
-			__( 'If VS Code opens an OAuth or client-ID screen, cancel it. SiteRadian AI does not use OAuth here. It means the saved SiteRadian AI token was missing or invalid: choose Edit Stored Input beside the token reference, paste a current token from this site, and restart wp-command-center.', 'siteradian' ),
+			__( 'If VS Code opens an OAuth or client-ID screen, cancel it. SiteRadian does not use OAuth here. It means the saved SiteRadian token was missing or invalid: choose Edit Stored Input beside the token reference, paste a current token from this site, and restart wp-command-center.', 'siteradian' ),
 			__( 'The key must be “servers”. Every other assistant uses “mcpServers”, and VS Code simply ignores a file with the wrong key instead of reporting an error — so a config that looks right can do nothing at all.', 'siteradian' ),
 		];
 	}

@@ -64,7 +64,7 @@ foreach (['codex' => 'Codex CLI', 'chatgpt' => 'Codex in ChatGPT Desktop'] as $t
         contract("$test_client manual agrees with guided", str_contains($text, 'Manual setup replaces only Step 2.') && str_contains($text, 'then follow Step 3 for your selected client'));
         contract("$test_client variable is not token", str_contains($text, 'WPCC_TOKEN is the variable name, never replace it with your token'));
         contract("$test_client browser test limitation", str_contains($text, 'This does not test whether your assistant loaded the server'));
-        contract("$test_client test success claim scoped", str_contains($text, 'SiteRadian AI can authenticate this token. Server checks passed; verify the connection inside your client.'));
+        contract("$test_client test success claim scoped", str_contains($text, 'SiteRadian can authenticate this token. Server checks passed; verify the connection inside your client.'));
         $cmds = Registry::credential_commands_for($test_client, 'fixture-not-a-secret');
 		if ($test_client === 'codex') {
             contract('macOS export', $cmds['macos'] === "export WPCC_TOKEN='fixture-not-a-secret'");

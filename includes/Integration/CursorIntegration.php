@@ -91,7 +91,7 @@ final class CursorIntegration extends BaseClientIntegration {
 
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Restart Cursor after saving the file. Then open its MCP settings — SiteRadian AI should be listed as connected, with its tools, prompts and resources counted. If Cursor reports a connection error on every request, including ones that do not touch this site, that is Cursor’s own model connection and not your WordPress setup.', 'siteradian' ),
+			__( 'Restart Cursor after saving the file. Then open its MCP settings — SiteRadian should be listed as connected, with its tools, prompts and resources counted. If Cursor reports a connection error on every request, including ones that do not touch this site, that is Cursor’s own model connection and not your WordPress setup.', 'siteradian' ),
 		];
 	}
 }

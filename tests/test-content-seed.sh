@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Content Seeder Operation test suite for SiteRadian AI (Step 16).
+# Content Seeder Operation test suite for SiteRadian (Step 16).
 #
 # Verifies:
 #   - create posts

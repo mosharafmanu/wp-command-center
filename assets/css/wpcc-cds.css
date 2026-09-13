@@ -1,5 +1,5 @@
 /**
- * SiteRadian AI — Command Design System (CDS) component layer.
+ * SiteRadian — Command Design System (CDS) component layer.
  *
  * The shared, token-driven component substrate for the Experience Layer: the
  * branded App Shell (5-C navigation), cards, KPI tiles, trust chips, risk/status/
@@ -1128,11 +1128,22 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 .wpcc-app {
-	--wpcc-r-card: 8px;
-	--wpcc-r-control: 4px;
+	--wpcc-r-card: 12px;
+	--wpcc-r-control: 6px;
 	--wpcc-r-pill: 999px;
-	--wpcc-elev-overlay: 0 12px 32px rgba( 16, 24, 40, .16 );
+	--wpcc-elev-overlay: 0 18px 48px rgba( 20, 33, 61, .18 );
 	--wpcc-line: 1px solid var( --wpcc-border-subtle );
+}
+
+.wpcc-app .button-primary {
+	background: var( --wpcc-brand-accent );
+	border-color: var( --wpcc-brand-accent );
+	box-shadow: none;
+}
+.wpcc-app .button-primary:hover,
+.wpcc-app .button-primary:focus {
+	background: var( --wpcc-btn-primary-hover-bg );
+	border-color: var( --wpcc-btn-primary-hover-bg );
 }
 
 /* ── Surfaces: one shape, one elevation ─────────────────────────────────── */
@@ -1365,7 +1376,7 @@
 	width: 100%; max-width: 460px; padding: 22px 24px;
 	background: var( --wpcc-surface-card );
 	border-radius: var( --wpcc-r-card );
-	box-shadow: var( --wpcc-shadow-modal ) );
+	box-shadow: var( --wpcc-shadow-modal );
 }
 .wpcc-cds-confirm__title { margin: 0 0 8px; font-size: var( --wpcc-fs-h1 ); line-height: 1.3; }
 .wpcc-cds-confirm__body { margin: 0 0 18px; font-size: var( --wpcc-fs-body ); line-height: 1.5; color: var( --wpcc-text-secondary ); }
@@ -1375,4 +1386,32 @@
 	background: var( --wpcc-btn-danger-bg );
 	border-color: var( --wpcc-btn-danger-border );
 	color: var( --wpcc-btn-danger-fg );
+}
+
+/* Connections keeps its certified interaction model; these rules only align its
+ * visual vocabulary with the shared SiteRadian system. */
+.wpcc-app .wpcc-ai-pick,
+.wpcc-app .wpcc-ai-safe-note,
+.wpcc-app .wpcc-connect-terminal-warning,
+.wpcc-app .wpcc-connect-step {
+	border-radius: var( --wpcc-r-card );
+}
+.wpcc-app .wpcc-ai-pick.is-selected {
+	border-color: var( --wpcc-brand-accent );
+	box-shadow: 0 0 0 1px var( --wpcc-brand-accent );
+}
+.wpcc-app .wpcc-ai-pick.is-selected::after,
+.wpcc-app .wpcc-connect-step__number {
+	background: var( --wpcc-brand-accent );
+	color: var( --wpcc-white );
+}
+.wpcc-app .wpcc-ai-pick:focus-visible,
+.wpcc-app .wpcc-connect-copy:focus-visible {
+	outline: 2px solid var( --wpcc-border-focus );
+	outline-offset: 2px;
+}
+.wpcc-app .wpcc-connect-terminal-warning {
+	border-color: var( --wpcc-state-warning-border );
+	background: var( --wpcc-state-warning-bg );
+	color: var( --wpcc-state-warning-fg );
 }

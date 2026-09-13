@@ -275,7 +275,7 @@ $wpcc_mode_cards = [
 		</p>
 		<label style="display:block;margin:10px 0;">
 			<input type="checkbox" name="wpcc_delete_data_on_uninstall" value="1" <?php checked( (bool) get_option( 'wpcc_delete_data_on_uninstall', false ) ); ?> />
-			<?php esc_html_e( 'Also delete all SiteRadian AI data when the plugin is deleted', 'siteradian' ); ?>
+			<?php esc_html_e( 'Also delete all SiteRadian data when the plugin is deleted', 'siteradian' ); ?>
 		</label>
 		<?php submit_button( __( 'Save', 'siteradian' ), 'secondary', 'submit', false ); ?>
 	</form>

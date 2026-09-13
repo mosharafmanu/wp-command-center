@@ -35,7 +35,7 @@
  * server to whatever directory the user happened to be standing in.
  *
  * OAUTH PROBE. On registration Command Code inspects the endpoint and reports "Server
- * requires OAuth authentication" — it reads SiteRadian AI's 401 as an OAuth challenge. The server
+ * requires OAuth authentication" — it reads SiteRadian's 401 as an OAuth challenge. The server
  * is still added and the bearer header still authenticates it, but the message invites
  * someone to go looking for an OAuth flow that does not exist here, so post_setup_notes()
  * says so plainly.

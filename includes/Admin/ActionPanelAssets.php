@@ -118,7 +118,7 @@ final class ActionPanelAssets {
 	private function shared_i18n(): array {
 		return [
 			'title'            => __( 'Generate Suggestion', 'siteradian' ),
-			'chooserTitle'     => __( 'SiteRadian AI', 'siteradian' ),
+			'chooserTitle'     => __( 'SiteRadian', 'siteradian' ),
 			'chooserIntro'     => __( 'Choose what to generate for this item.', 'siteradian' ),
 			/* translators: %1$s: what is being generated, e.g. "title" or "SEO details". */
 			'generatingFor'    => /* translators: %1$s: value */ __( 'Generating a %1$s…', 'siteradian' ),

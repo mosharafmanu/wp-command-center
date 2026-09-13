@@ -1,6 +1,6 @@
 {
 	"name": "mosharafmanu/siteradian",
-	"description": "Safe, governed AI operations for WordPress.",
+	"description": "The AI Command Center for WordPress. Govern assistant access, approvals, audit trails, and rollback.",
 	"type": "wordpress-plugin",
 	"authors": [
 		{

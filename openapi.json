@@ -1,11 +1,11 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "SiteRadian AI REST API",
+    "title": "SiteRadian REST API",
     "description": "REST API for managing WordPress sites — Site Intelligence, Diagnostics, File Access, Patch Engine, Operations, MCP, and Agent orchestration.",
     "version": "1.0.0",
     "contact": {
-      "name": "SiteRadian AI",
+      "name": "SiteRadian",
       "url": "https://github.com/mosharafmanu/wp-command-center"
     },
     "license": {
@@ -29,8 +29,8 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "bearerFormat": "WPCC API Token",
-        "description": "SiteRadian AI API token created from Settings → API Tokens. Read-only tokens access GET routes; full-access tokens are required for POST/PATCH/DELETE write actions."
+        "bearerFormat": "SiteRadian access token",
+        "description": "SiteRadian API token created from Settings → API Tokens. Read-only tokens access GET routes; full-access tokens are required for POST/PATCH/DELETE write actions."
       }
     },
     "schemas": {
@@ -124,7 +124,7 @@
     "/system/environment": {
       "get": {
         "tags": ["System"],
-        "summary": "Get the current SiteRadian AI environment mode",
+        "summary": "Get the current SiteRadian environment mode",
         "security": [{ "bearerAuth": [] }],
         "responses": {
           "200": {

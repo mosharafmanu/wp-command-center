@@ -183,7 +183,7 @@ assert_true "perf: <3s" "$( [ "$PMS" -lt 3000 ] && echo true || echo false )"
 echo "  INFO: ${PMS}ms"
 
 echo "== 30. MCP Initialize =="
-assert_contains "mcp: init" "$(mcp '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}')" "SiteRadian AI"
+assert_contains "mcp: init" "$(mcp '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05"},"id":1}')" "SiteRadian"
 
 echo "== 31. Field Get =="
 FIRST_FKEY=$(echo "$FLIST"|jq -r '.fields[0].key // ""')

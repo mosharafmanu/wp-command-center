@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SiteRadian AI public-release identity contract. Internal WPCC and
+# SiteRadian public-release identity contract. Internal WPCC and
 # wp-command-center protocol identifiers are intentionally preserved.
 
 set -uo pipefail
@@ -11,16 +11,16 @@ pass() { PASS=$((PASS+1)); echo "  PASS: $1"; }
 fail() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 assert_eq() { local d="$1" e="$2" a="$3"; [ "$e" = "$a" ] && pass "$d" || fail "$d (expected '$e', got '$a')"; }
 
-echo "Release identity — SiteRadian AI v1.0.0"
+echo "Release identity — SiteRadian v1.0.0"
 
 assert_eq "new main plugin file exists" "yes" "$( [ -f siteradian.php ] && echo yes || echo no )"
 assert_eq "legacy main plugin file is absent" "no" "$( [ -e ai-command-center.php ] && echo yes || echo no )"
 assert_eq "pre-public main plugin file is absent" "no" "$( [ -e action-steward.php ] && echo yes || echo no )"
-assert_eq "plugin display name" "SiteRadian AI" "$(sed -n 's/^ \* Plugin Name:[[:space:]]*//p' siteradian.php | head -1)"
+assert_eq "plugin display name" "SiteRadian" "$(sed -n 's/^ \* Plugin Name:[[:space:]]*//p' siteradian.php | head -1)"
 assert_eq "plugin version" "1.0.0" "$(sed -n 's/^ \* Version:[[:space:]]*//p' siteradian.php | head -1)"
 assert_eq "plugin text domain" "siteradian" "$(sed -n 's/^ \* Text Domain:[[:space:]]*//p' siteradian.php | head -1)"
 assert_eq "runtime version constant" "1.0.0" "$(sed -n "s/^define( 'WPCC_VERSION', '\([^']*\)' );/\1/p" siteradian.php)"
-assert_eq "readme display name" "=== SiteRadian AI ===" "$(head -1 readme.txt)"
+assert_eq "readme display name" "=== SiteRadian ===" "$(head -1 readme.txt)"
 assert_eq "readme stable tag" "1.0.0" "$(sed -n 's/^Stable tag:[[:space:]]*//p' readme.txt)"
 assert_eq "readme tested through WordPress 7.1" "7.1" "$(sed -n 's/^Tested up to:[[:space:]]*//p' readme.txt)"
 assert_eq "readme minimum WordPress" "6.4" "$(sed -n 's/^Requires at least:[[:space:]]*//p' readme.txt)"
@@ -38,6 +38,10 @@ assert_eq "new text domain is used" "yes" "$(rg -q -F "'siteradian'" includes &&
 assert_eq "MCP server key remains compatible" "yes" "$(rg -q "return 'wp-command-center';" includes/Integration/BaseClientIntegration.php && echo yes || echo no)"
 assert_eq "REST namespace remains compatible" "yes" "$(rg -q "NAMESPACE = 'wp-command-center/v1'" includes/Mcp/McpServerRuntime.php includes/AiAgent/RestApi.php && echo yes || echo no)"
 assert_eq "internal WPCC prefix remains available" "yes" "$(rg -q "define\( 'WPCC_VERSION'" siteradian.php && echo yes || echo no)"
+assert_eq "SiteRadian AI is absent from current shipping identity" "0" "$(rg -F -l 'SiteRadian AI' "${SHIPPING[@]}" 2>/dev/null | wc -l | tr -d ' ')"
+assert_eq "admin menu uses the master brand" "yes" "$(rg -q "__\( 'SiteRadian', 'siteradian' \)" includes/Admin/AdminMenu.php && echo yes || echo no)"
+assert_eq "dashboard carries the category descriptor" "yes" "$(rg -q -F 'The AI Command Center for WordPress' includes/Admin/views/command-home.php && echo yes || echo no)"
+assert_eq "dashboard carries the primary value proposition" "yes" "$(rg -q -F 'Give AI a safer way to work on your site.' includes/Admin/views/command-home.php && echo yes || echo no)"
 
 echo
 echo "RESULT: ${PASS} passed, ${FAIL} failed"

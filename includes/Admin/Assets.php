@@ -66,7 +66,7 @@ final class Assets {
 			'nav'  => AppShell::nav_map(),
 			'i18n' => [
 				'section'         => __( 'Section', 'siteradian' ),
-				'paletteLabel'    => __( 'Search SiteRadian AI', 'siteradian' ),
+				'paletteLabel'    => __( 'Search SiteRadian', 'siteradian' ),
 				// The palette reaches every screen, not just the four top sections
 				// — "Jump to a section…" described a smaller product than the one
 				// the customer is searching.

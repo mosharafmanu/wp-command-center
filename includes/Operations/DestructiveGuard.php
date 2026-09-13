@@ -102,7 +102,7 @@ final class DestructiveGuard {
 				// STEP 100.9 — usage-driven cleanup. Trash-only and reversible, but
 				// still requires explicit confirmation in EVERY mode because it acts
 				// on "unused" media inferred from a scan (false-unused is possible for
-				// references SiteRadian AI cannot see). There is no permanent-delete path.
+				// references SiteRadian cannot see). There is no permanent-delete path.
 				if ( 'unused_media_cleanup' === $action ) {
 					return self::descriptor(
 						self::PHRASE_CLEANUP,

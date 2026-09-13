@@ -1,4 +1,4 @@
-# SiteRadian AI — Documentation
+# SiteRadian — Documentation
 
 Documentation for **version 1.0.0**. Every document here describes the shipped product and
 is verified against it; where a number appears (42 tools, 23 capabilities, 3 protection
@@ -28,6 +28,8 @@ modes) it was read from the running plugin, not from memory.
 | [CAPABILITIES.md](CAPABILITIES.md) | The 23 capabilities and how to scope a token |
 | [AI-INTEGRATIONS.md](AI-INTEGRATIONS.md) | Supported clients and their configuration |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Symptoms and fixes |
+| [BRAND-SYSTEM.md](BRAND-SYSTEM.md) | SiteRadian identity, color, type, spacing, components, and logo use |
+| [WORDPRESS-ORG-ASSETS.md](WORDPRESS-ORG-ASSETS.md) | Directory asset inventory, screenshot strategy, and SVN placement |
 | [RELEASE.md](RELEASE.md) | Current v1.0.0 release process, package identity, gates, and lifecycle checks |
 
 ## Certification

@@ -422,9 +422,9 @@ final class RestApi {
 	 */
 	private const ROUTE_MANIFEST = [
 		[ 'method' => 'GET', 'path' => '/health', 'scope' => 'read_only', 'description' => 'Health check for the API gateway.' ],
-		[ 'method' => 'POST', 'path' => '/health/verify', 'scope' => 'full', 'description' => 'Run read-only frontend, admin, REST, SiteRadian AI, WooCommerce, plugin, and theme health checks.' ],
+		[ 'method' => 'POST', 'path' => '/health/verify', 'scope' => 'full', 'description' => 'Run read-only frontend, admin, REST, SiteRadian, WooCommerce, plugin, and theme health checks.' ],
 		[ 'method' => 'GET', 'path' => '/health/results', 'scope' => 'read_only', 'description' => 'List persisted health verification results. Filters: status, limit, offset.' ],
-		[ 'method' => 'GET', 'path' => '/system/environment', 'scope' => 'read_only', 'description' => 'Get the current SiteRadian AI environment mode.' ],
+		[ 'method' => 'GET', 'path' => '/system/environment', 'scope' => 'read_only', 'description' => 'Get the current SiteRadian environment mode.' ],
 		[ 'method' => 'POST', 'path' => '/system/environment', 'scope' => 'full', 'description' => 'Set environment mode: development, staging, or production.' ],
 		[ 'method' => 'POST', 'path' => '/system/cleanup', 'scope' => 'full', 'description' => 'Dry-run or delete age-qualified terminal runtime records with environment-aware safeguards.' ],
 		[ 'method' => 'GET', 'path' => '/capabilities', 'scope' => 'read_only', 'description' => 'Capabilities of this API and the current token (file/patch/rollback access, server execution features).' ],
@@ -1575,7 +1575,7 @@ final class RestApi {
 
 	public function get_manifest(): \WP_REST_Response {
 		return new \WP_REST_Response( [
-			'name'        => 'SiteRadian AI',
+			'name'        => 'SiteRadian',
 			'version'     => WPCC_VERSION,
 			'api_version' => 'v1',
 			'namespace'   => self::NAMESPACE,
@@ -1620,7 +1620,7 @@ final class RestApi {
 
 		return [
 			'plugin'                 => [
-				'name'        => 'SiteRadian AI',
+				'name'        => 'SiteRadian',
 				'version'     => WPCC_VERSION,
 				'api_version' => 'v1',
 				'db_version'  => Schema::DB_VERSION,

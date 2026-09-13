@@ -61,11 +61,11 @@ final class AdminMenu {
 
 	public function register_menu(): void {
 		add_menu_page(
-			__( 'SiteRadian AI', 'siteradian' ),
+			__( 'SiteRadian', 'siteradian' ),
 			// The sidebar is where the product is identified globally, among every
 			// other plugin's menu, so it carries the full name. The shell header no
 			// longer repeats it — it names the area you are on instead.
-			__( 'SiteRadian AI', 'siteradian' ),
+			__( 'SiteRadian', 'siteradian' ),
 			self::CAPABILITY,
 			AppShell::HOME_SLUG,
 			[ $this, 'render_overview' ],

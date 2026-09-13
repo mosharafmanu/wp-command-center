@@ -123,7 +123,7 @@ final class CodexIntegration extends BaseClientIntegration {
 		return [
 			__( '“Environment variable WPCC_TOKEN is not set” means Codex started outside the terminal session that received the token. The MCP registration persists, but the WPCC_TOKEN value in that terminal environment does not persist after the session is gone. Return to the original terminal, or set a valid token again in a new terminal before starting Codex. You do not need to recreate the MCP registration.', 'siteradian' ),
 			__( 'Why the launch command: the current codex mcp add command can register the URL and token-variable name, but it cannot safely set or merge Codex’s server-specific approval mode. The copy-ready on-request launch keeps client approvals available without changing your global Codex settings.', 'siteradian' ),
-			__( 'Advanced persistent option: Codex supports default_tools_approval_mode = "writes" inside [mcp_servers.wp-command-center]. It skips the client prompt only for tools SiteRadian AI truthfully marks read-only and prompts for other SiteRadian AI tools. Add it manually only if you are comfortable merging TOML; SiteRadian AI never edits the file itself.', 'siteradian' ),
+			__( 'Advanced persistent option: Codex supports default_tools_approval_mode = "writes" inside [mcp_servers.wp-command-center]. It skips the client prompt only for tools SiteRadian truthfully marks read-only and prompts for other SiteRadian tools. Add it manually only if you are comfortable merging TOML; SiteRadian never edits the file itself.', 'siteradian' ),
 		];
 	}
 }

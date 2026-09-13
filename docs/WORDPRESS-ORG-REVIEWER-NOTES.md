@@ -1,6 +1,6 @@
 # Notes for the WordPress.org Plugin Review Team
 
-SiteRadian AI 1.0.0. These are the four things in this plugin that reasonably prompt a
+SiteRadian 1.0.0. These are the four things in this plugin that reasonably prompt a
 reviewer question, stated plainly with where to look.
 
 ---

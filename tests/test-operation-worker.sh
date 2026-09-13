@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Background Worker Using WP-Cron test suite for SiteRadian AI (Step 25).
+# Background Worker Using WP-Cron test suite for SiteRadian (Step 25).
 #
 # Verifies:
 #   - worker processes queued item

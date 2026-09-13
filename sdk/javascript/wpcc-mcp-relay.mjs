@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * SiteRadian AI — MCP stdio↔HTTP Relay
+ * SiteRadian — MCP stdio↔HTTP Relay
  *
  * Bridges Claude Desktop and other stdio-based MCP clients to the WPCC
  * HTTP MCP endpoint.
@@ -30,12 +30,12 @@ const TIMEOUT_MS    = Number(process.env.WPCC_RELAY_TIMEOUT_MS) || 120000;
 const MAX_ATTEMPTS  = 2;
 
 if (!MCP_URL || !TOKEN) {
-	process.stderr.write('SiteRadian AI MCP Relay: WPCC_MCP_URL and WPCC_TOKEN must be set\n');
+	process.stderr.write('SiteRadian MCP Relay: WPCC_MCP_URL and WPCC_TOKEN must be set\n');
 	process.exit(1);
 }
 
-process.stderr.write(`SiteRadian AI MCP Relay v${RELAY_VERSION} starting\n`);
-process.stderr.write(`SiteRadian AI MCP Relay: endpoint ${MCP_URL}\n`);
+process.stderr.write(`SiteRadian MCP Relay v${RELAY_VERSION} starting\n`);
+process.stderr.write(`SiteRadian MCP Relay: endpoint ${MCP_URL}\n`);
 
 const rl = createInterface({ input: process.stdin, terminal: false });
 
@@ -126,7 +126,7 @@ rl.on('line', async (line) => {
 	try {
 		request = JSON.parse(line);
 	} catch {
-		process.stderr.write('SiteRadian AI relay: invalid JSON on stdin\n');
+		process.stderr.write('SiteRadian relay: invalid JSON on stdin\n');
 		return;
 	}
 

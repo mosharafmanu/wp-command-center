@@ -379,7 +379,11 @@ $tab_url = static function ( string $t ) use ( $page ): string {
 		opts = opts || {};
 		var headers = { 'X-WP-Nonce': nonce };
 		if ( opts.body ) { headers['Content-Type'] = 'application/json'; }
-		return fetch( apiBase + path, Object.assign( { headers: headers }, opts ) ).then( function(r) {
+		var queryAt = path.indexOf( '?' );
+		var url = queryAt !== -1 && apiBase.indexOf( '?' ) !== -1
+			? apiBase + path.slice( 0, queryAt ) + '&' + path.slice( queryAt + 1 )
+			: apiBase + path;
+		return fetch( url, Object.assign( { headers: headers }, opts ) ).then( function(r) {
 			return r.json().then(
 				function(j) { return { ok: r.ok, status: r.status, body: j }; },
 				function()  { return { ok: r.ok, status: r.status, body: {} }; }

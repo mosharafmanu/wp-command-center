@@ -103,7 +103,7 @@ foreach ($bad as $location) echo "    Contradictory copy at $location\n";
 $readme = file_get_contents($root . '/readme.txt');
 preg_match('/= Can the AI change my site without asking\? =\s*(.*?)(?=\n=)/s', $readme, $faq);
 check('Published FAQ does not deny Standard low-risk execution', !str_contains($faq[1] ?? '', 'Not in the default setting') && str_contains($faq[1] ?? '', 'low-risk'));
-check('Published install step states the low-risk exception', (bool) preg_match('/1\. Install and activate\.[^\n]*low-risk[^\n]*immediately/', $readme));
+check('Published setup flow states the low-risk exception', (bool) preg_match('/= How it works =.*?low-risk[^\n]*immediately/s', $readme));
 check('Published FAQ preserves Strict and Development distinction', str_contains($faq[1] ?? '', 'Strict approval gates every change') && str_contains($faq[1] ?? '', 'Development setting that removes the approval step'));
 $explainer = WPCommandCenter\Admin\AgentExplainer::faq();
 check('General assistant explanation makes approval conditional on policy', str_contains($explainer[3]['a'], 'when your protection mode requires it'));

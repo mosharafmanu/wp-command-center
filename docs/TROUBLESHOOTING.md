@@ -26,7 +26,7 @@ recommended steps in that same terminal window.
 **Cause:** some server configurations (commonly Apache with CGI/FastCGI) never populate
 `$_SERVER['HTTP_AUTHORIZATION']`, so WordPress's own header lookup sees nothing.
 
-SiteRadian AI already checks the alternative sources core and the ecosystem use, so this usually
+SiteRadian already checks the alternative sources core and the ecosystem use, so this usually
 resolves itself. If it persists, add to `.htaccess`:
 
 ```apache
@@ -55,7 +55,7 @@ not resolve.
 https://example.com/index.php?rest_route=/wp-command-center/v1/health
 ```
 
-Configurations SiteRadian AI generates already use whichever form is correct for your site.
+Configurations SiteRadian generates already use whichever form is correct for your site.
 
 ---
 
@@ -84,7 +84,7 @@ Work through these in order:
 
 Working as designed. Standard protection gates every medium-risk or higher change.
 
-- Approve at **SiteRadian AI → Approvals**.
+- Approve at **SiteRadian → Approvals**.
 - To let low-risk writes through automatically, that is already Standard protection's
   behaviour; Strict approval gates those too.
 - Development mode removes approval entirely — **local and staging only**.
@@ -142,7 +142,7 @@ current values) so you can decide what to do about each.
 
 ## Network activation is refused
 
-Intentional. SiteRadian AI 1.0.0 is single-site: tokens, protection mode, approvals and history are
+Intentional. SiteRadian 1.0.0 is single-site: tokens, protection mode, approvals and history are
 per-site. Activate it on individual sites within the network instead. See
 [ARCHITECTURE.md](ARCHITECTURE.md#multisite).
 

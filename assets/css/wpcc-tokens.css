@@ -1,5 +1,5 @@
 /**
- * SiteRadian AI — thin design tokens.
+ * SiteRadian — thin design tokens.
  *
  * The minimal, reusable token foundation for the AI Content Platform surfaces.
  * NOT the full Command Design System (CDS #20) — only the primitives → semantic →
@@ -19,20 +19,21 @@
 :root {
 	/* ── Tier 1 — Primitives (WP-admin-native palette) ───────────────────────── */
 	--wpcc-white: #fff;
-	--wpcc-gray-0: #f6f7f7;
-	--wpcc-gray-50: #f0f0f1;
-	--wpcc-gray-100: #dcdcde;
-	--wpcc-gray-300: #c3c4c7;
-	--wpcc-gray-500: #8c8f94;
-	--wpcc-gray-600: #646970;
-	--wpcc-gray-700: #50575e;
-	--wpcc-gray-900: #1d2327;
-	--wpcc-blue-600: #2271b1;
-	--wpcc-blue-soft: #f0f6fc;
-	--wpcc-blue-border: #c5d9ed;
-	--wpcc-green-600: #00a32a;
-	--wpcc-green-700: #0a7c2f;
-	--wpcc-green-soft: #edfaef;
+	--wpcc-gray-0: #f8fafc;
+	--wpcc-gray-50: #f4f6fa;
+	--wpcc-gray-100: #e2e7ef;
+	--wpcc-gray-300: #c7cfdb;
+	--wpcc-gray-500: #7a8596;
+	--wpcc-gray-600: #5d6878;
+	--wpcc-gray-700: #445064;
+	--wpcc-gray-900: #14213d;
+	--wpcc-blue-600: #4055d5;
+	--wpcc-blue-700: #3448c5;
+	--wpcc-blue-soft: #eef1ff;
+	--wpcc-blue-border: #cbd3ff;
+	--wpcc-green-600: #16803a;
+	--wpcc-green-700: #11662f;
+	--wpcc-green-soft: #edf8f1;
 	--wpcc-amber-600: #dba617;
 	--wpcc-amber-700: #996800;
 	--wpcc-amber-soft: #fcf3e6;
@@ -50,19 +51,19 @@
 	--wpcc-purple-soft: #f4ecfc;
 
 	/* Spacing — 4pt base. */
-	--wpcc-space-1: 2px;
-	--wpcc-space-2: 4px;
-	--wpcc-space-3: 8px;
-	--wpcc-space-4: 10px;
-	--wpcc-space-5: 12px;
-	--wpcc-space-6: 16px;
-	--wpcc-space-7: 20px;
-	--wpcc-space-8: 24px;
+	--wpcc-space-1: 4px;
+	--wpcc-space-2: 8px;
+	--wpcc-space-3: 12px;
+	--wpcc-space-4: 16px;
+	--wpcc-space-5: 20px;
+	--wpcc-space-6: 24px;
+	--wpcc-space-7: 32px;
+	--wpcc-space-8: 40px;
 
 	/* Radius. */
-	--wpcc-radius-sm: 4px;
-	--wpcc-radius-md: 6px;
-	--wpcc-radius-pill: 10px;
+	--wpcc-radius-sm: 6px;
+	--wpcc-radius-md: 10px;
+	--wpcc-radius-pill: 999px;
 
 	/* Type scale (operator-dense). */
 	--wpcc-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -75,7 +76,7 @@
 	--wpcc-fs-x: 24px;
 
 	/* Elevation + motion + layering. */
-	--wpcc-shadow-modal: 0 8px 30px rgba( 0, 0, 0, 0.25 );
+	--wpcc-shadow-modal: 0 18px 48px rgba( 20, 33, 61, 0.2 );
 	--wpcc-overlay-scrim: rgba( 0, 0, 0, 0.5 );
 	--wpcc-motion-fast: 120ms;
 	--wpcc-motion-panel: 160ms;
@@ -107,7 +108,7 @@
 	--wpcc-state-danger-fg: var( --wpcc-red-600 );
 	--wpcc-state-danger-bg: var( --wpcc-red-soft );
 
-	/* Risk tiers — semantic, NOT decorative (SiteRadian AI's signature). fg/bg/border per tier. */
+	/* Risk tiers — semantic, NOT decorative (SiteRadian's signature). fg/bg/border per tier. */
 	--wpcc-risk-diagnostic-fg: var( --wpcc-green-700 );
 	--wpcc-risk-diagnostic-bg: var( --wpcc-green-soft );
 	--wpcc-risk-low-fg: var( --wpcc-teal-700 );
@@ -163,6 +164,7 @@
 	--wpcc-btn-primary-bg: var( --wpcc-brand-accent );
 	--wpcc-btn-primary-fg: var( --wpcc-white );
 	--wpcc-btn-primary-border: var( --wpcc-brand-accent );
+	--wpcc-btn-primary-hover-bg: var( --wpcc-blue-700 );
 	--wpcc-btn-secondary-bg: var( --wpcc-surface-card );
 	--wpcc-btn-secondary-fg: var( --wpcc-text-accent );
 	--wpcc-btn-secondary-border: var( --wpcc-border-strong );

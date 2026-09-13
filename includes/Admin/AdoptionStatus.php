@@ -23,7 +23,7 @@ defined( 'ABSPATH' ) || exit;
 final class AdoptionStatus {
 
 	/**
-	 * Whether SiteRadian AI's outbound AI is configured (a key is present from any source).
+	 * Whether SiteRadian's outbound AI is configured (a key is present from any source).
 	 * Delegates to the single transport; no network call.
 	 */
 	public static function ai_configured(): bool {
@@ -127,7 +127,7 @@ final class AdoptionStatus {
 				'done'  => $ai_configured,
 				'hint'  => $ai_configured
 					? __( 'An Anthropic key is configured. AI features can be used once their surface is enabled.', 'siteradian' )
-					: __( 'No key yet. AI stays off until you add one — SiteRadian AI works without it.', 'siteradian' ),
+					: __( 'No key yet. AI stays off until you add one — SiteRadian works without it.', 'siteradian' ),
 				'url'   => admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=advanced&apane=ai&aipane=providers' ),
 			],
 			[

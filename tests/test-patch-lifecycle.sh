@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# End-to-end integration test for the SiteRadian AI REST API:
+# End-to-end integration test for the SiteRadian REST API:
 #
 #   - the full patch lifecycle (create -> approve -> apply -> rollback),
 #     including status_history growth and rollback verification

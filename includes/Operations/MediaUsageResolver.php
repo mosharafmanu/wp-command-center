@@ -205,7 +205,7 @@ final class MediaUsageResolver {
 			) );
 			foreach ( (array) $names as $name ) {
 				$name = (string) $name;
-				// Skip already-counted options, transients, and SiteRadian AI's OWN internal
+				// Skip already-counted options, transients, and SiteRadian's OWN internal
 				// stores (snapshot/rollback options embed file basenames — counting
 				// them would make any snapshotted attachment look "referenced").
 				if ( in_array( $name, $seen_opts, true )

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Agent Actions Runtime Layer test suite for SiteRadian AI (Step 12).
+# Agent Actions Runtime Layer test suite for SiteRadian (Step 12).
 #
 # Verifies the new Action layer inserted between Task and Plan:
 #

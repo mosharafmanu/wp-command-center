@@ -594,7 +594,7 @@ LRES="$(wpe '
 	$resp = rest_do_request( $req ); $b = $resp->get_data();
 	$out["create_status"]  = $resp->get_status();
 	$out["create_success"] = ! empty( $b["success"] ) ? 1 : 0;
-	$out["raw_token"]      = ( ! empty( $b["token"] ) && str_starts_with( (string) $b["token"], "wpcc_" ) ) ? 1 : 0;
+	$out["raw_token"]      = ( ! empty( $b["token"] ) && str_starts_with( (string) $b["token"], "siteradian_" ) ) ? 1 : 0;
 	$out["resp_no_hash"]   = ( false === strpos( (string) wp_json_encode( $b ), "token_hash" ) ) ? 1 : 0;
 	$id = $b["record"]["id"] ?? "";
 
@@ -639,7 +639,7 @@ getl() { printf '%s' "$LRES" | php -r '$d=json_decode(stream_get_contents(STDIN)
 
 assert_eq "create returns 201"                    "201" "$(getl create_status)"
 assert_eq "create succeeded"                      "1"   "$(getl create_success)"
-assert_eq "raw secret returned once (wpcc_ …)"    "1"   "$(getl raw_token)"
+assert_eq "raw secret returned once (siteradian_ …)" "1" "$(getl raw_token)"
 assert_eq "create response carries NO token_hash" "1"   "$(getl resp_no_hash)"
 assert_eq "AuthTokens reuse: caps auto-bootstrapped" "1" "$(getl bootstrapped)"
 assert_eq "new token appears in list"             "1"   "$(getl in_list)"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Widgets & Sidebars Runtime test suite for SiteRadian AI (Step 73).
+# Widgets & Sidebars Runtime test suite for SiteRadian (Step 73).
 #
 # Verifies:
 #   - registry discovery (manifest / context)

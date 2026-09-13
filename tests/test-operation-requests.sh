@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Operation Requests test suite for SiteRadian AI (Step 20).
+# Operation Requests test suite for SiteRadian (Step 20).
 #
 # Verifies:
 #   - create request

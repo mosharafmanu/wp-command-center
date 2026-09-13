@@ -5,7 +5,7 @@
  * No per-client execution logic.
  *
  * Generates a working config that bridges the client's stdio MCP transport
- * to SiteRadian AI's HTTP MCP endpoint via the built-in wpcc-mcp-relay.mjs script.
+ * to SiteRadian's HTTP MCP endpoint via the built-in wpcc-mcp-relay.mjs script.
  */
 
 namespace WPCommandCenter\Integration;

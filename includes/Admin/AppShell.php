@@ -2,7 +2,7 @@
 /**
  * Experience Layer — App Shell + the "Three Doors, One Engine" information architecture.
  *
- * The single source of truth for SiteRadian AI's navigation. It presents FIVE
+ * The single source of truth for SiteRadian's navigation. It presents FIVE
  * product-language sections — Home · Connect · Activity · History · Settings —
  * each rendered as a branded shell (header + sub-tab bar) hosting the EXISTING view
  * files in a content canvas. It adds no REST routes, operations, capabilities, MCP
@@ -570,7 +570,7 @@ final class AppShell {
 	 * fuzzily: the longer and more varied a searchable string, the more likely some
 	 * unrelated query's letters appear across it in order. Feeding it the inherited
 	 * words was enough to make "protection" rank Changes above Protection — Changes
-	 * does not contain the word at all, but "SiteRadian AI: Changes … rollback
+	 * does not contain the word at all, but "SiteRadian: Changes … rollback
 	 * revert restore …" contains its letters in sequence. The plugin's own palette
 	 * matches contiguously and is unaffected, so it keeps using `keywords`; see
 	 * CommandPaletteIntegration for the other consumer.
@@ -801,16 +801,16 @@ final class AppShell {
 						printf(
 							'<img src="%1$s" alt="%2$s" class="wpcc-shell__brand-mark" width="26" height="26" decoding="async" />',
 							esc_url( Brand::mark() ),
-							esc_attr__( 'SiteRadian AI', 'siteradian' )
+							esc_attr__( 'SiteRadian', 'siteradian' )
 						);
 						?>
 						<?php
 						/*
 						 * NAMING HIERARCHY — each surface names one thing, once.
 						 *
-						 *   admin menu       -> "SiteRadian AI"  (which product, globally)
+						 *   admin menu       -> "SiteRadian"  (which product, globally)
 						 *   shell header     -> the current area     (where you are, now)
-						 *   first-run lockup -> "SiteRadian AI"  (the introduction)
+						 *   first-run lockup -> "SiteRadian"  (the introduction)
 						 *
 						 * This heading used to read "Command Center / Approvals": a third spelling
 						 * of the product name, repeated on every screen at 18px, with the one word
@@ -903,7 +903,7 @@ final class AppShell {
 		?>
 		<div class="wpcc-cds-empty" role="status">
 			<p><strong><?php echo esc_html( sprintf( /* translators: %s: section name */ __( '%s is not available in this edition.', 'siteradian' ), $label ) ); ?></strong></p>
-			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in SiteRadian AI stays available.', 'siteradian' ); ?></p>
+			<p class="description"><?php esc_html_e( 'This area is gated by your current plan. Everything else in SiteRadian stays available.', 'siteradian' ); ?></p>
 			<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::HOME_SLUG ) ); ?>"><?php esc_html_e( 'Back to Home', 'siteradian' ); ?></a></p>
 		</div>
 		<?php

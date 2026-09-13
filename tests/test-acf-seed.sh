@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# ACF Seeder Operation test suite for SiteRadian AI (Step 17).
+# ACF Seeder Operation test suite for SiteRadian (Step 17).
 #
 # Verifies:
 #   - ACF inactive (simulated if possible, but here it's active)

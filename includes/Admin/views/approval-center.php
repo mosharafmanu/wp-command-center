@@ -589,7 +589,11 @@ if ( ! preg_match( '/^[a-f0-9-]{36}$/', $detail_id ) ) {
 
 	function apiFetch( path, opts ) {
 		opts = opts || {};
-		return fetch( apiBase + path, Object.assign( {
+		var queryAt = path.indexOf( '?' );
+		var url = queryAt !== -1 && apiBase.indexOf( '?' ) !== -1
+			? apiBase + path.slice( 0, queryAt ) + '&' + path.slice( queryAt + 1 )
+			: apiBase + path;
+		return fetch( url, Object.assign( {
 			headers: { 'X-WP-Nonce': nonce, 'Content-Type': 'application/json' }
 		}, opts ) ).then( function(r) {
 			var status = r.status;

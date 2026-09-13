@@ -27,7 +27,7 @@ final class HealthVerificationEngine {
 				$this->http_check( 'frontend_health', 'Frontend health', home_url( '/' ) ),
 				$this->http_check( 'admin_health', 'wp-admin health', admin_url() ),
 				$this->http_check( 'rest_api_health', 'REST API health', rest_url() ),
-				$this->http_check( 'wpcc_api_health', 'SiteRadian AI API health', rest_url( 'wp-command-center/v1/health' ), true ),
+				$this->http_check( 'wpcc_api_health', 'SiteRadian API health', rest_url( 'wp-command-center/v1/health' ), true ),
 				$this->woocommerce_check(),
 				$this->plugin_integrity_check(),
 				$this->theme_integrity_check(),

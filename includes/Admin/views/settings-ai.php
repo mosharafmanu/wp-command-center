@@ -5,7 +5,7 @@
  * V1 refinement: Built-in AI is no longer a primary section. It is optional —
  * its generation tools are build-flagged OFF by default — while the core V1
  * journey (connect an MCP assistant) needs no provider key at all. Promoting it
- * to the top level made users believe SiteRadian AI could not talk to Claude
+ * to the top level made users believe SiteRadian could not talk to Claude
  * or Cursor until they had pasted an API key into WordPress. It could.
  *
  * This hub hosts the EXISTING views unchanged (Providers · SEO · Alt Text ·
@@ -51,7 +51,7 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 		// promise the readme makes to WordPress.org reviewers, so it has to be on
 		// the screen where a key is entered. It previously lived in the provider
 		// hero that this refinement removed.
-		esc_html_e( 'Optional. Add your own AI provider key here if you want SiteRadian AI itself to generate content for you. AI stays off until you turn a feature on — adding a key alone changes nothing. You do not need this to connect Claude, Cursor, or any other AI assistant; that works without a key.', 'siteradian' );
+		esc_html_e( 'Optional. Add your own AI provider key here if you want SiteRadian itself to generate content for you. AI stays off until you turn a feature on — adding a key alone changes nothing. You do not need this to connect Claude, Cursor, or any other AI assistant; that works without a key.', 'siteradian' );
 		?>
 	</p>
 
@@ -62,7 +62,7 @@ $wpcc_ai_tools_off = ( 1 === count( $wpcc_ai_panes ) );
 	 * Everything on this screen assumed the reader already knew that "AI assistant" and
 	 * "AI provider" are different things. They are the most confusable pair of words in
 	 * the product: both contain "AI", both involve a key-like value, and only one of
-	 * them is needed to use SiteRadian AI at all. Someone who conflates them
+	 * them is needed to use SiteRadian at all. Someone who conflates them
 	 * concludes they must buy an API key before they can connect Claude — which is the
 	 * exact opposite of true, and an expensive misunderstanding to leave in place.
 	 *

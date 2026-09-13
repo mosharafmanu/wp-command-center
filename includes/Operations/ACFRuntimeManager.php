@@ -325,7 +325,7 @@ final class ACFRuntimeManager {
 	 * enough. When a site has ACF local JSON enabled — standard practice for
 	 * agencies, and the case on the site this was found on — those functions
 	 * return the JSON copy, whose `ID` is 0. The old guard tested `$grp['ID']`,
-	 * got 0, fell through, and stored the key. Every field created through SiteRadian AI on
+	 * got 0, fell through, and stored the key. Every field created through SiteRadian on
 	 * such a site was therefore orphaned: acf_get_fields() returned the same flat
 	 * pile of parentless fields for every group, wp-admin showed the group empty,
 	 * and the acf-json file kept "fields": [].
@@ -928,7 +928,7 @@ final class ACFRuntimeManager {
 		 * database that is correct and a file that is stale.
 		 *
 		 * `direction` defaults to db_to_json, the repair an operator actually needs
-		 * after making changes through SiteRadian AI. json_to_db remains available and is what
+		 * after making changes through SiteRadian. json_to_db remains available and is what
 		 * ACF's own "Sync available" means.
 		 */
 		$direction = sanitize_key( (string) ( $p['direction'] ?? 'db_to_json' ) );

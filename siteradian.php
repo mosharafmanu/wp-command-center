@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       SiteRadian AI
- * Description:       Safe, governed AI operations for WordPress.
+ * Plugin Name:       SiteRadian
+ * Description:       The AI Command Center for WordPress. Connect assistants with scoped access, approvals, audit trails, and rollback.
  * Version:           1.0.0
  * Requires at least: 6.4
  * Requires PHP:      8.0

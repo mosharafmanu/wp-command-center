@@ -42,7 +42,7 @@ final class AIClientRegistry {
 	const CERT_DESCRIPTIONS = [
 		self::CERT_PLANNED   => 'Not yet validated or implemented.',
 		self::CERT_COMPATIBLE => 'Connects successfully via MCP.',
-		self::CERT_ACTIVE     => 'Actual client connection and a benign SiteRadian AI read were validated; retained limits are recorded per client.',
+		self::CERT_ACTIVE     => 'Actual client connection and a benign SiteRadian read were validated; retained limits are recorded per client.',
 		self::CERT_BRONZE     => 'Discovery validated (resources + tools).',
 		self::CERT_SILVER     => 'Bronze + capabilities, approvals, and queue validated.',
 		self::CERT_GOLD       => 'Silver + rollback, audit, timeline, security, and stress testing.',
@@ -217,7 +217,7 @@ final class AIClientRegistry {
 
 	/**
 	 * Client-side behaviour that a correctly configured user will otherwise mistake for a
-	 * broken SiteRadian AI connection — a workspace-trust rule that shows the server as "Disabled",
+	 * broken SiteRadian connection — a workspace-trust rule that shows the server as "Disabled",
 	 * a permission prompt on first tool use, and so on.
 	 *
 	 * These are the notes that turn a support ticket into a sentence someone already read.
@@ -236,11 +236,11 @@ final class AIClientRegistry {
 	 * Drives the difference between "create this file" and "merge this INTO your file".
 	 * Real cost of getting it wrong, from this finding's testing: a Gemini CLI user whose
 	 * settings.json already held authentication, IDE and UI preferences hand-merged
-	 * SiteRadian AI's block into it and produced a JSON syntax error. Someone who instead read
+	 * SiteRadian's block into it and produced a JSON syntax error. Someone who instead read
 	 * "paste this into settings.json" as "replace settings.json" would have silently
 	 * discarded all of it.
 	 *
-	 * True for every file-configured client here: none of these files are SiteRadian AI's to own.
+	 * True for every file-configured client here: none of these files are SiteRadian's to own.
 	 * A native command makes the recommended path safe, but a separately displayed manual
 	 * fallback still needs the warning because that fallback edits the shared file by hand.
 	 */
@@ -378,7 +378,7 @@ final class AIClientRegistry {
 		 *
 		 * So the claim is positive now. `Certified` remains reserved for a Gold client
 		 * whose full twelve-step run is recorded in docs/ASSISTANT-CERTIFICATION.md §7.
-		 * `Pass` means the actual client connected and completed a benign SiteRadian AI read, with
+		 * `Pass` means the actual client connected and completed a benign SiteRadian read, with
 		 * any narrower retained evidence spelled out in that client's validation notes.
 		 * A compatible client with no certification badge makes no execution claim.
 		 */
@@ -395,7 +395,7 @@ final class AIClientRegistry {
 				'label' => __( 'Pass', 'siteradian' ),
 				'tone'  => 'ok',
 				'rank'  => 'secondary',
-				'title' => __( 'This actual client connected to SiteRadian AI and completed a benign read. See the validation notes for the exact retained scope.', 'siteradian' ),
+				'title' => __( 'This actual client connected to SiteRadian and completed a benign read. See the validation notes for the exact retained scope.', 'siteradian' ),
 			];
 		} elseif ( in_array( $status, [ self::CERT_BRONZE, self::CERT_SILVER ], true ) ) {
 			$badges[] = [
@@ -431,7 +431,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-08',
-				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). The actual Claude Desktop client loaded SiteRadian AI, discovered 42 tools and completed system_info. This is desktop-client evidence and is not borrowed from Claude Code; the full governed write/undo lifecycle was not repeated.',
+				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). The actual Claude Desktop client loaded SiteRadian, discovered 42 tools and completed system_info. This is desktop-client evidence and is not borrowed from Claude Code; the full governed write/undo lifecycle was not repeated.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,
@@ -477,7 +477,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-08',
-				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). OWNER RETEST PASS on codex-cli 0.153.4: the generated same-terminal credential and native registration flow authenticated, discovered 42 tools and 7 resources, and system_info completed through the approval-aware interactive launch. SiteRadian AI publishes truthful read-only MCP annotations and retains its own scope, capability and human-approval governance. The full governed write/undo lifecycle was not repeated.',
+				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). OWNER RETEST PASS on codex-cli 0.153.4: the generated same-terminal credential and native registration flow authenticated, discovered 42 tools and 7 resources, and system_info completed through the approval-aware interactive launch. SiteRadian publishes truthful read-only MCP annotations and retains its own scope, capability and human-approval governance. The full governed write/undo lifecycle was not repeated.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,
@@ -500,7 +500,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_COMPATIBLE,
 				'certification_level' => self::CERT_COMPATIBLE,
 				'last_validated_at'  => '2026-09-06',
-				'validation_notes'   => 'FINAL VERDICT: BLOCKED — EXTERNAL ACCOUNT/PROVIDER. Gemini CLI 0.46.0 and the generated native setup/configuration contract were structurally verified, including preservation of unrelated settings. The owner’s individual Gemini Code Assist account now reports that this client is no longer supported for individuals and directs the user to Antigravity. This is an external Google account/client eligibility limitation, not an SiteRadian AI runtime failure.',
+				'validation_notes'   => 'FINAL VERDICT: BLOCKED — EXTERNAL ACCOUNT/PROVIDER. Gemini CLI 0.46.0 and the generated native setup/configuration contract were structurally verified, including preservation of unrelated settings. The owner’s individual Gemini Code Assist account now reports that this client is no longer supported for individuals and directs the user to Antigravity. This is an external Google account/client eligibility limitation, not an SiteRadian runtime failure.',
 				'status_label'       => 'Account unavailable',
 				'status_tone'        => 'warn',
 				'compatible'         => true,
@@ -534,7 +534,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-06',
-				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). LIVE READ-ONLY CLIENT TEST on Antigravity CLI (agy) 1.1.27, 2026-09-06: normal SiteRadian AI token flow and generated native agy mcp add command accepted; initialize, 42 tools, seven resources and fresh-process reconnect confirmed. system_info and report_site_health succeeded with a Read-only token; content_update was denied by scope without site/approval/queue/change-history mutation. Inline header stored in the native global MCP config with 0600 permissions, temporary registration/token cleaned after the run. The governed write/undo checklist was intentionally not repeated.',
+				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). LIVE READ-ONLY CLIENT TEST on Antigravity CLI (agy) 1.1.27, 2026-09-06: normal SiteRadian token flow and generated native agy mcp add command accepted; initialize, 42 tools, seven resources and fresh-process reconnect confirmed. system_info and report_site_health succeeded with a Read-only token; content_update was denied by scope without site/approval/queue/change-history mutation. Inline header stored in the native global MCP config with 0600 permissions, temporary registration/token cleaned after the run. The governed write/undo checklist was intentionally not repeated.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,
@@ -556,7 +556,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-06',
-				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). Retained actual-client evidence authenticated, initialized, discovered 42 tools and 7 resources, completed system_info, and reloaded successfully. During the latest onboarding retest the SiteRadian AI connection loaded, but Cursor reported High Load and account model availability prevented another benign read. That external model/account limitation is not an SiteRadian AI defect and does not upgrade this evidence.',
+				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). Retained actual-client evidence authenticated, initialized, discovered 42 tools and 7 resources, completed system_info, and reloaded successfully. During the latest onboarding retest the SiteRadian connection loaded, but Cursor reported High Load and account model availability prevented another benign read. That external model/account limitation is not an SiteRadian defect and does not upgrade this evidence.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,
@@ -575,7 +575,7 @@ final class AIClientRegistry {
 				'name'               => 'Continue for VS Code',
 				'type'               => 'ide_plugin',
 				'vendor'             => 'Continue Dev',
-				'surface_note'       => 'This setup is for the Continue extension inside VS Code, the surface used for SiteRadian AI’s retained client test. Continue also needs its own tool-capable AI model.',
+				'surface_note'       => 'This setup is for the Continue extension inside VS Code, the surface used for SiteRadian’s retained client test. Continue also needs its own tool-capable AI model.',
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-06',
@@ -608,7 +608,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-09',
-				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). The official Muse Code 1.0.3 client first authenticated and requested tools, resources, resource templates and prompts successfully. OWNER MANUAL TEST after Meta authentication and activation of a usable plan: the actual muse client connected to SiteRadian AI and invoked system_info once in read-only mode. It returned the correct local site plus credible WordPress 7.1, PHP 8.2.27, MySQL 8.0.39, theme, plugin and environment details. No mutation was requested and the full governed write/undo lifecycle was not run.',
+				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). The official Muse Code 1.0.3 client first authenticated and requested tools, resources, resource templates and prompts successfully. OWNER MANUAL TEST after Meta authentication and activation of a usable plan: the actual muse client connected to SiteRadian and invoked system_info once in read-only mode. It returned the correct local site plus credible WordPress 7.1, PHP 8.2.27, MySQL 8.0.39, theme, plugin and environment details. No mutation was requested and the full governed write/undo lifecycle was not run.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,
@@ -665,7 +665,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-09',
-				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). OWNER MANUAL TEST on Command Code 1.51.0: the actual client completed the SiteRadian AI connection and invoked system_info successfully in read-only mode. No governed write was attempted and the full approval/apply/undo lifecycle was not run.',
+				'validation_notes'   => 'FINAL VERDICT: CERT_PASS (not CERT_GOLD). OWNER MANUAL TEST on Command Code 1.51.0: the actual client completed the SiteRadian connection and invoked system_info successfully in read-only mode. No governed write was attempted and the full approval/apply/undo lifecycle was not run.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,
@@ -686,7 +686,7 @@ final class AIClientRegistry {
 				'status'             => self::CERT_ACTIVE,
 				'certification_level' => self::CERT_ACTIVE,
 				'last_validated_at'  => '2026-09-09',
-				'validation_notes'   => 'FINAL VERDICT: CERT_PASS — fresh actual VS Code 1.136.2 with built-in GitHub Copilot 0.64.1 reproduced the reported failure and proved its cause. A missing/invalid secure-input value produced a Bearer header, SiteRadian AI returned its ordinary JSON 401 with no WWW-Authenticate header, and VS Code automatically entered OAuth discovery/DCR while still displaying cached 42-tool/6-prompt counts. With a fresh credential-scoped input holding the correct read-only token, the same supported headers.Authorization configuration authenticated, exposed 42 tools and 6 prompts, and Copilot Agent completed system_info exactly once with credible WordPress 7.1, PHP 8.2.27, MySQL 8.0.39 and site-URL data without OAuth/DCR. Restart reconnected and rediscovered 42 tools. Posts, operation requests, queue and change history were unchanged; the expected read-only result record was created. The temporary token was revoked/deleted and the original VS Code configuration restored.',
+				'validation_notes'   => 'FINAL VERDICT: CERT_PASS — fresh actual VS Code 1.136.2 with built-in GitHub Copilot 0.64.1 reproduced the reported failure and proved its cause. A missing/invalid secure-input value produced a Bearer header, SiteRadian returned its ordinary JSON 401 with no WWW-Authenticate header, and VS Code automatically entered OAuth discovery/DCR while still displaying cached 42-tool/6-prompt counts. With a fresh credential-scoped input holding the correct read-only token, the same supported headers.Authorization configuration authenticated, exposed 42 tools and 6 prompts, and Copilot Agent completed system_info exactly once with credible WordPress 7.1, PHP 8.2.27, MySQL 8.0.39 and site-URL data without OAuth/DCR. Restart reconnected and rediscovered 42 tools. Posts, operation requests, queue and change history were unchanged; the expected read-only result record was created. The temporary token was revoked/deleted and the original VS Code configuration restored.',
 				'compatible'         => true,
 				'discovery_support'  => true,
 				'mcp_support'        => true,

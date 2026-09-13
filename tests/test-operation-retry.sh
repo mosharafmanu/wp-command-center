@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Operation Retry Engine test suite for SiteRadian AI (Step 24).
+# Operation Retry Engine test suite for SiteRadian (Step 24).
 #
 # Verifies:
 #   - failed item can retry

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Security hardening test suite for SiteRadian AI (Step 10).
+# Security hardening test suite for SiteRadian (Step 10).
 #
 # Verifies the credential protection & redaction layer:
 #

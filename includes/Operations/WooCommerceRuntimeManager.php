@@ -762,7 +762,7 @@ final class WooCommerceRuntimeManager {
 				}
 				elseif ( 'order_status_change' === $action ) {
 					$o = wc_get_order( $entity_id );
-					if ( $o && isset( $before['status'] ) ) $o->update_status( (string) $before['status'], __( 'Rolled back by SiteRadian AI.', 'siteradian' ), true );
+					if ( $o && isset( $before['status'] ) ) $o->update_status( (string) $before['status'], __( 'Rolled back by SiteRadian.', 'siteradian' ), true );
 				}
 				elseif ( 'order_note_add' === $action ) {
 					if ( ! empty( $before['note_id'] ) ) wp_delete_comment( (int) $before['note_id'], true );

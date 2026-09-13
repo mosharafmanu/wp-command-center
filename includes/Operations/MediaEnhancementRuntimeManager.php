@@ -2034,7 +2034,7 @@ final class MediaEnhancementRuntimeManager {
 	 * and revision references), WooCommerce product images (by parent), theme
 	 * assets (custom_logo / site_icon / site_logo), and anything an operator
 	 * protects via the `wpcc_media_cleanup_protected` filter (the escape hatch for
-	 * references SiteRadian AI cannot see — code/CSS/unknown storage).
+	 * references SiteRadian cannot see — code/CSS/unknown storage).
 	 */
 	private function cleanup_exclusion( int $id, array $classification ): ?string {
 		if ( 'unused' !== ( $classification['status'] ?? '' ) ) {
@@ -2054,7 +2054,7 @@ final class MediaEnhancementRuntimeManager {
 		if ( $id === (int) get_option( 'site_logo' ) ) {
 			return 'theme asset (site_logo)';
 		}
-		/** Operator/agent escape hatch to protect IDs SiteRadian AI cannot see references for. */
+		/** Operator/agent escape hatch to protect IDs SiteRadian cannot see references for. */
 		if ( (bool) apply_filters( 'wpcc_media_cleanup_protected', false, $id, $classification ) ) {
 			return 'protected by wpcc_media_cleanup_protected filter';
 		}

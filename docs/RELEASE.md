@@ -1,6 +1,6 @@
-# SiteRadian AI release process
+# SiteRadian release process
 
-This is the current release procedure for SiteRadian AI v1.0.0. Pre-public WP Command
+This is the current release procedure for SiteRadian v1.0.0. Pre-public WP Command
 Center and Action Steward release evidence is retained unchanged in Git history and the
 historical release report.
 
@@ -31,7 +31,7 @@ WordPress.org release.
 | | Value | Why |
 |---|---|---|
 | WordPress.org slug | `siteradian` | The slug is derived from the plugin at submission and **cannot be changed after approval**. A `wp-` prefixed slug is flagged by WordPress.org's automated checks — not because "WP" is trademarked (it is not) but to close a rename loophole. Spending a rename before submission was cheaper than discovering it in review. |
-| Product / display name | **SiteRadian AI** | It is the brand, and it appears in the plugin header, `readme.txt`, and every customer-facing surface. |
+| Product / display name | **SiteRadian** | It is the brand, and it appears in the plugin header, `readme.txt`, and every customer-facing surface. |
 | Text domain | `siteradian` | Must equal the slug, or wordpress.org language packs will not load. |
 
 The name does not begin with `WP` or `WordPress`, and it is not based on another software
@@ -129,7 +129,9 @@ in Standard protection returns `pending_approval` **and writes nothing** until a
 3. Build, verify contents, run Plugin Check on the artifact.
 4. Run the change-selected T0/T1 gates and any broader gate required by the actual diff.
 5. Certify the lifecycle on a clean install.
-6. Create the collision-free annotated source tag `siteradian-v1.0.0`.
+6. If post-tag launch hardening follows the immutable `siteradian-v1.0.0`
+   preparation tag, create the collision-free annotated release-candidate tag
+   `siteradian-v1.0.0-wporg-rc1` without moving the preparation tag.
 7. Submit the ZIP to WordPress.org.
 
 `main` auto-deploys. Release work happens on a release branch and is merged deliberately.

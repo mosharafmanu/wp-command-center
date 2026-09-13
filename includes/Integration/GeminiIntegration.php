@@ -58,7 +58,7 @@ final class GeminiIntegration extends BaseClientIntegration {
 	 *
 	 * This is the answer to the merge hazard in this finding. Gemini CLI users already
 	 * have a settings.json holding authentication, IDE and UI preferences; during real
-	 * testing, hand-merging SiteRadian AI's block into it produced a JSON syntax error. The
+	 * testing, hand-merging SiteRadian's block into it produced a JSON syntax error. The
 	 * command edits the file correctly and leaves every unrelated key untouched — which
 	 * was confirmed here, not assumed.
 	 *
@@ -110,9 +110,9 @@ final class GeminiIntegration extends BaseClientIntegration {
 	 */
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Use the native gemini mcp add command above when possible. It is the recommended path because it adds only SiteRadian AI and preserves every existing Gemini setting.', 'siteradian' ),
-			__( 'Gemini CLI stores the bearer token inline in ~/.gemini/settings.json for both native and manual setup. Do not commit or share that file, and keep the token-bearing setup command out of terminal history and shared logs. Revoke the token in SiteRadian AI to remove access.', 'siteradian' ),
-			__( 'Gemini CLI turns MCP servers off in a folder it has not been told to trust. If it lists SiteRadian AI as “Disabled”, that is the folder’s trust setting, not a failed connection — trust the folder in Gemini CLI and it will come back. Do not turn the trust check off globally.', 'siteradian' ),
+			__( 'Use the native gemini mcp add command above when possible. It is the recommended path because it adds only SiteRadian and preserves every existing Gemini setting.', 'siteradian' ),
+			__( 'Gemini CLI stores the bearer token inline in ~/.gemini/settings.json for both native and manual setup. Do not commit or share that file, and keep the token-bearing setup command out of terminal history and shared logs. Revoke the token in SiteRadian to remove access.', 'siteradian' ),
+			__( 'Gemini CLI turns MCP servers off in a folder it has not been told to trust. If it lists SiteRadian as “Disabled”, that is the folder’s trust setting, not a failed connection — trust the folder in Gemini CLI and it will come back. Do not turn the trust check off globally.', 'siteradian' ),
 		];
 	}
 }

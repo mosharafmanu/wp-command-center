@@ -1,8 +1,8 @@
 <?php
 /**
- * SiteRadian AI PHP SDK
+ * SiteRadian PHP SDK
  *
- * Lightweight REST client for the SiteRadian AI API.
+ * Lightweight REST client for the SiteRadian API.
  *
  * @example
  * ```php

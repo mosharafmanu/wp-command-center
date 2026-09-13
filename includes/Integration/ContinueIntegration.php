@@ -19,7 +19,7 @@
  *            - name: wp-command-center
  *              command: bash
  *
- *      A config translated faithfully from SiteRadian AI's JSON into YAML would still have been
+ *      A config translated faithfully from SiteRadian's JSON into YAML would still have been
  *      the wrong shape. Confirmed against a config.yaml that Continue was actually
  *      reading, not from a translation of our own output.
  *
@@ -123,15 +123,15 @@ final class ContinueIntegration extends BaseClientIntegration {
 	/**
 	 * The two things that made a correct configuration look broken during real testing.
 	 *
-	 * The first is not SiteRadian AI's problem to solve but is absolutely SiteRadian AI's problem to state:
+	 * The first is not SiteRadian's problem to solve but is absolutely SiteRadian's problem to state:
 	 * Continue cannot invoke ANY MCP tool until a tool-capable chat model is configured
 	 * and selected, and until then the agent simply refuses to act. Someone who has just
 	 * pasted this configuration will read that as "the WordPress connection failed".
 	 */
 	public static function post_setup_notes(): array {
 		return [
-			__( 'Continue needs its own AI model set up before it can use any of these tools — that is separate from connecting to this site. If Continue shows “Select model” or “Setup Chat model”, finish that first, and choose a model that supports tool calling. Connecting SiteRadian AI does not give Continue a model.', 'siteradian' ),
-			__( 'Use the complete MCP block when mcpServers is missing. If it already exists, add only the indented SiteRadian AI list item beneath it and do not create a second mcpServers key.', 'siteradian' ),
+			__( 'Continue needs its own AI model set up before it can use any of these tools — that is separate from connecting to this site. If Continue shows “Select model” or “Setup Chat model”, finish that first, and choose a model that supports tool calling. Connecting SiteRadian does not give Continue a model.', 'siteradian' ),
+			__( 'Use the complete MCP block when mcpServers is missing. If it already exists, add only the indented SiteRadian list item beneath it and do not create a second mcpServers key.', 'siteradian' ),
 		];
 	}
 }

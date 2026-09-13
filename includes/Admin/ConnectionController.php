@@ -138,7 +138,7 @@ final class ConnectionController {
 
 	private function set_default( string $id ): array {
 		if ( ! $this->store->set_default( $id ) ) {
-			return $this->n( 'error', __( 'This connection cannot be the default — SiteRadian AI cannot use its provider for AI features yet.', 'siteradian' ) );
+			return $this->n( 'error', __( 'This connection cannot be the default — SiteRadian cannot use its provider for AI features yet.', 'siteradian' ) );
 		}
 		$this->audit( 'ai.connection.default.set', [ 'connection' => $id ] );
 		return $this->n( 'success', __( 'Default connection updated.', 'siteradian' ), 'set_default', $id );

@@ -15,7 +15,7 @@ to configure anything to be protected.
 
 ## 2. Create a token
 
-**SiteRadian AI → Settings → Connections → Tokens → Add token.**
+**SiteRadian → Settings → Connections → Tokens → Add token.**
 
 Choose a scope:
 
@@ -76,7 +76,7 @@ It should call `system_info` and answer immediately — reads are never gated.
 > "Create a draft post titled 'Hello from my assistant'."
 
 In Standard protection the assistant will report that the change is **waiting for
-approval** and give you a link. Open **SiteRadian AI → Approvals**, review exactly
+approval** and give you a link. Open **SiteRadian → Approvals**, review exactly
 what will change, and approve it.
 
 The queue worker runs on WP-Cron every five minutes; approving from the admin executes
@@ -84,7 +84,7 @@ the change immediately.
 
 ## 6. Undo it
 
-Open **SiteRadian AI → Changes**, find the entry, and choose **Undo**. An undo is
+Open **SiteRadian → Changes**, find the entry, and choose **Undo**. An undo is
 itself a governed change and follows the same approval rules.
 
 ---

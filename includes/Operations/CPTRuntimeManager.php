@@ -150,7 +150,7 @@ final class CPTRuntimeManager {
 
 		$configs = get_option( 'wpcc_cpt_configs', [] );
 		if ( ! isset( $configs[ $name ] ) ) {
-			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in SiteRadian AI configuration.', 'siteradian' ) );
+			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in SiteRadian configuration.', 'siteradian' ) );
 		}
 
 		$old_config = $configs[ $name ]['config'];
@@ -181,7 +181,7 @@ final class CPTRuntimeManager {
 
 		$configs = get_option( 'wpcc_cpt_configs', [] );
 		if ( ! isset( $configs[ $name ] ) ) {
-			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in SiteRadian AI configuration.', 'siteradian' ) );
+			return new \WP_Error( 'wpcc_cpt_not_found', __( 'Post type not found in SiteRadian configuration.', 'siteradian' ) );
 		}
 
 		$old_config = $configs[ $name ];

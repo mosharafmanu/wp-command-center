@@ -38,7 +38,7 @@ $wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \
 <div class="wpcc-apiint" style="max-width:880px;">
 	<h1><?php esc_html_e( 'API & Integrations', 'siteradian' ); ?></h1>
 	<p class="description" style="max-width:680px;font-size:14px;">
-		<?php esc_html_e( 'Let your own app, service, or automation drive this WordPress site over a governed REST API. Your software sends requests with an access token; reads are instant, and changes follow your selected approval policy, are audited, and can be undone where supported — exactly like every other door into SiteRadian AI.', 'siteradian' ); ?>
+		<?php esc_html_e( 'Let your own app, service, or automation drive this WordPress site over a governed REST API. Your software sends requests with an access token; reads are instant, and changes follow your selected approval policy, are audited, and can be undone where supported — exactly like every other door into SiteRadian.', 'siteradian' ); ?>
 	</p>
 
 	<?php if ( ! $wpcc_have_tok ) : ?>
