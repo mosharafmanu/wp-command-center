@@ -79,17 +79,48 @@ const waitForSettledProduct = async selector => {
 	}
 };
 
-const assertAdminMark = async () => {
-	const mark = page.locator('#toplevel_page_wp-command-center .wp-menu-image.svg').first();
+const assertAdminMark = async (targetPage, { selected = null, collapsed = null } = {}) => {
+	const menu = targetPage.locator('#toplevel_page_wp-command-center').first();
+	const mark = menu.locator('.wp-menu-image.svg').first();
 	await mark.waitFor({ state: 'attached', timeout: 10000 });
+	const details = await menu.evaluate(element => {
+		const markElement = element.querySelector('.wp-menu-image.svg');
+		const markStyle = getComputedStyle(markElement);
+		const rect = markElement.getBoundingClientRect();
+		return {
+			background: markStyle.backgroundImage,
+			backgroundSize: markStyle.backgroundSize,
+			width: rect.width,
+			height: rect.height,
+			selected: element.classList.contains('wp-has-current-submenu') || element.classList.contains('current'),
+			collapsed: document.body.classList.contains('folded'),
+			label: element.querySelector('.wp-menu-name')?.textContent?.trim(),
+		};
+	});
+	const menuIsVisible = (await targetPage.viewportSize()).width >= 783;
+	if (!details.background.includes('data:image/svg+xml') || (menuIsVisible && (details.width < 16 || details.height < 16)) || details.label !== 'SiteRadian') {
+		throw new Error(`Admin menu mark is not a usable labelled inline SVG: ${JSON.stringify(details)}`);
+	}
+	if (selected !== null && details.selected !== selected) {
+		throw new Error(`Admin menu selected-state mismatch: ${JSON.stringify(details)}`);
+	}
+	if (collapsed !== null && menuIsVisible && details.collapsed !== collapsed) {
+		throw new Error(`Admin menu collapsed-state mismatch: ${JSON.stringify(details)}`);
+	}
+};
+
+const assertHeaderMark = async targetPage => {
+	const mark = targetPage.locator('.wpcc-shell__brand-mark').first();
+	await mark.waitFor({ state: 'visible', timeout: 10000 });
 	const details = await mark.evaluate(element => ({
-		background: getComputedStyle(element).backgroundImage,
+		src: element.currentSrc || element.src,
+		loaded: Boolean(element.complete && element.naturalWidth > 0 && element.naturalHeight > 0),
 		width: element.getBoundingClientRect().width,
 		height: element.getBoundingClientRect().height,
+		alt: element.getAttribute('alt'),
 	}));
-	const menuIsVisible = (await page.viewportSize()).width >= 783;
-	if (!details.background.includes('data:image/svg+xml') || (menuIsVisible && (details.width < 16 || details.height < 16))) {
-		throw new Error(`Admin menu mark is not a usable inline SVG: ${JSON.stringify(details)}`);
+	if (!details.loaded || !details.src.includes('/assets/brand/wpcc-mark.svg') || details.width < 24 || details.height < 24 || details.alt !== 'SiteRadian') {
+		throw new Error(`Page header is not using the full decorative SiteRadian mark: ${JSON.stringify(details)}`);
 	}
 };
 
@@ -117,11 +148,14 @@ const assertConnectionIcons = async targetPage => {
 
 	const details = await cards.evaluateAll(nodes => nodes.map(card => {
 		const icon = card.querySelector('.wpcc-ai-pick__icon');
+		const name = card.querySelector('.wpcc-ai-pick__name');
 		const badge = card.querySelector('.wpcc-ai-badge');
 		const iconRect = icon?.getBoundingClientRect();
+		const nameRect = name?.getBoundingClientRect();
 		const badgeRect = badge?.getBoundingClientRect();
+		const nameStyle = name ? getComputedStyle(name) : null;
 		return {
-			name: card.querySelector('.wpcc-ai-pick__name')?.textContent?.trim(),
+			name: name?.textContent?.trim(),
 			selected: card.classList.contains('is-selected'),
 			ariaCurrent: card.getAttribute('aria-current'),
 			iconSrc: icon?.src,
@@ -130,6 +164,9 @@ const assertConnectionIcons = async targetPage => {
 			iconLoaded: Boolean(icon?.complete && icon.naturalWidth > 0 && icon.naturalHeight > 0),
 			iconWidth: iconRect?.width,
 			iconHeight: iconRect?.height,
+			iconContentWidth: icon ? parseFloat(getComputedStyle(icon).width) : 0,
+			nameLines: nameRect && nameStyle ? Math.round(nameRect.height / parseFloat(nameStyle.lineHeight)) : 0,
+			cardWidth: card.getBoundingClientRect().width,
 			overlapsBadge: Boolean(iconRect && badgeRect && !(iconRect.right <= badgeRect.left || badgeRect.right <= iconRect.left || iconRect.bottom <= badgeRect.top || badgeRect.bottom <= iconRect.top)),
 		};
 	}));
@@ -147,8 +184,12 @@ const assertConnectionIcons = async targetPage => {
 	})) {
 		throw new Error(`Connections icon is not package-local: ${JSON.stringify(details.map(item => item.iconSrc))}`);
 	}
-	if (details.some(item => Math.abs(item.iconWidth - 24) > 0.5 || Math.abs(item.iconHeight - 24) > 0.5 || item.overlapsBadge)) {
+	if (details.some(item => Math.abs(item.iconWidth - 36) > 0.5 || Math.abs(item.iconHeight - 36) > 0.5 || Math.abs(item.iconContentWidth - 22) > 0.5 || item.overlapsBadge)) {
 		throw new Error(`Connections icon sizing/overlap failure: ${JSON.stringify(details)}`);
+	}
+	const longNames = new Set(['Codex in ChatGPT Desktop', 'Continue for VS Code', 'GitHub Copilot in VS Code']);
+	if (details.some(item => longNames.has(item.name) && item.nameLines > 2)) {
+		throw new Error(`Long integration names exceed the deliberate two-line limit: ${JSON.stringify(details.filter(item => longNames.has(item.name)))}`);
 	}
 	const selected = details.filter(item => item.selected);
 	if (selected.length !== 1 || selected[0].ariaCurrent !== 'page') {
@@ -159,17 +200,18 @@ const assertConnectionIcons = async targetPage => {
 	await selectedCard.focus();
 	const focusAndSelection = await selectedCard.evaluate(card => {
 		const style = getComputedStyle(card);
-		const accent = getComputedStyle(card, '::after');
+		const confirmation = getComputedStyle(card, '::after');
 		return {
 			outline: style.outlineStyle,
 			outlineWidth: style.outlineWidth,
 			borderColor: style.borderColor,
-			accentWidth: accent.width,
-			accentColor: accent.backgroundColor,
+			confirmationContent: confirmation.content,
+			confirmationWidth: confirmation.width,
+			confirmationColor: confirmation.backgroundColor,
 		};
 	});
-	if (focusAndSelection.outline === 'none' || focusAndSelection.outlineWidth === '0px' || focusAndSelection.accentWidth === '0px' || focusAndSelection.accentColor === 'rgba(0, 0, 0, 0)') {
-		throw new Error(`Keyboard focus or selected accent is not visible: ${JSON.stringify(focusAndSelection)}`);
+	if (focusAndSelection.outline === 'none' || focusAndSelection.outlineWidth === '0px' || focusAndSelection.confirmationWidth !== '18px' || !focusAndSelection.confirmationContent.includes('✓') || focusAndSelection.confirmationColor === 'rgba(0, 0, 0, 0)') {
+		throw new Error(`Keyboard focus or selected confirmation is not visible: ${JSON.stringify(focusAndSelection)}`);
 	}
 
 	const other = targetPage.locator('.wpcc-ai-family--other');
@@ -194,14 +236,31 @@ const assertConnectionIcons = async targetPage => {
 	if (familyRhythm.some(delta => delta > 1)) {
 		throw new Error(`Connections cards lost equal row rhythm: ${JSON.stringify(familyRhythm)}`);
 	}
+	const grid = await targetPage.locator('.wpcc-ai-family-grid').evaluate(element => ({
+		columns: getComputedStyle(element).gridTemplateColumns.split(' ').length,
+		width: element.getBoundingClientRect().width,
+	}));
+	const editorGrid = await targetPage.locator('.wpcc-ai-family--wide .wpcc-ai-picks').evaluate(element => ({
+		columns: getComputedStyle(element).gridTemplateColumns.split(' ').length,
+		width: element.getBoundingClientRect().width,
+	}));
+	if (grid.width >= 900 && (grid.columns !== 3 || editorGrid.columns !== 4)) {
+		throw new Error(`Wide Connections grid lost its 3-family/4-editor rhythm: ${JSON.stringify({ grid, editorGrid })}`);
+	}
+	if (grid.width < 560 && (grid.columns !== 1 || editorGrid.columns !== 1)) {
+		throw new Error(`Narrow Connections grid must be single-column: ${JSON.stringify({ grid, editorGrid })}`);
+	}
 	await targetPage.evaluate(() => document.activeElement?.blur());
 };
 
 for (const [number, name, url, selector] of screens) {
 	await page.goto(`${base}${url}`, { waitUntil: 'networkidle' });
 	await waitForSettledProduct(selector);
-	await assertAdminMark();
+	await assertAdminMark(page, { selected: true });
+	await assertHeaderMark(page);
 	if (name === 'Connections') await assertConnectionIcons(page);
+	await page.evaluate(() => window.scrollTo(0, 0));
+	await page.waitForTimeout(100);
 	await page.screenshot({ path: path.join(out, `screenshot-${number}.png`) });
 	console.log(`PASS screenshot-${number}: ${name}`);
 }
@@ -229,7 +288,8 @@ for (const width of widths) {
 	]) {
 		await page.goto(`${base}${url}`, { waitUntil: 'networkidle' });
 		await waitForSettledProduct(selector);
-		await assertAdminMark();
+		await assertAdminMark(page, { selected: true });
+		await assertHeaderMark(page);
 		if (surface === 'Connections') await assertConnectionIcons(page);
 		const layout = await page.evaluate(expected => ({
 			viewport: document.documentElement.clientWidth,
@@ -243,6 +303,28 @@ for (const width of widths) {
 		console.log(`PASS responsive: ${surface} ${width}px`);
 	}
 }
+
+// The responsive menu glyph is checked in all real wp-admin modes. The full mark
+// remains reserved for page headers; the optical 20px drawing belongs only in nav.
+await page.setViewportSize({ width: 1440, height: 1000 });
+await page.goto(`${base}/wp-admin/admin.php?page=wp-command-center`, { waitUntil: 'networkidle' });
+await waitForSettledProduct('#wpcc-home-brandline');
+await assertAdminMark(page, { selected: true, collapsed: false });
+await assertHeaderMark(page);
+await page.locator('#toplevel_page_wp-command-center .wp-menu-image').screenshot({ path: path.join(out, 'qa-admin-selected.png') });
+
+await page.goto(`${base}/wp-admin/index.php`, { waitUntil: 'networkidle' });
+await page.locator('#dashboard-widgets-wrap').waitFor({ state: 'attached', timeout: 10000 });
+await assertAdminMark(page, { selected: false, collapsed: false });
+await page.locator('#toplevel_page_wp-command-center .wp-menu-image').screenshot({ path: path.join(out, 'qa-admin-unselected.png') });
+
+await page.locator('#collapse-button').click();
+await page.waitForTimeout(180);
+await assertAdminMark(page, { selected: false, collapsed: true });
+await page.locator('#toplevel_page_wp-command-center .wp-menu-image').screenshot({ path: path.join(out, 'qa-admin-collapsed.png') });
+await page.locator('#collapse-button').click();
+await page.waitForTimeout(180);
+console.log('PASS admin: selected, unselected, collapsed, and full header marks');
 
 // A separate high-density context verifies that SVG and raster marks stay crisp
 // at their actual 24px CSS size rather than relying on source dimensions alone.
@@ -265,8 +347,11 @@ retinaPage.on('response', response => {
 await retinaPage.goto(`${base}/wp-admin/admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants`, { waitUntil: 'networkidle' });
 await retinaPage.locator('#wpcc-choose-app').waitFor({ state: 'visible' });
 await assertConnectionIcons(retinaPage);
+await assertAdminMark(retinaPage, { selected: true });
+await assertHeaderMark(retinaPage);
+await retinaPage.locator('#toplevel_page_wp-command-center .wp-menu-image').screenshot({ path: path.join(out, 'qa-admin-retina.png') });
 await retinaContext.close();
-console.log('PASS retina: Connections icons at 2x density');
+console.log('PASS retina: Connections icons and admin mark at 2x density');
 
 if (browserErrors.length) {
 	throw new Error(`Browser errors:\n${browserErrors.join('\n')}`);

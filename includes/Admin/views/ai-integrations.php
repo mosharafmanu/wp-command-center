@@ -341,71 +341,63 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	 * this decides how loudly each one speaks, not what any of them say.
 	 * ──────────────────────────────────────────────────────────────────────── */
 
-	/* Families share the available row before their cards do. This keeps the small
-	   two-client families compact instead of making auto-fill reserve two empty card
-	   columns beside them. Container queries follow the actual wp-admin content width,
-	   including the admin menu, rather than assuming a particular browser width. */
+	/* Provider families share a row only when each card can stay comfortably wide.
+	   Their two cards stack inside the family at larger sizes, which keeps long product
+	   names readable instead of reproducing a six-column marketplace. Container queries
+	   follow the actual wp-admin content width, including the admin menu. */
 	.wpcc-ai-family-layout { container-type:inline-size; }
-	.wpcc-ai-family-grid { display:grid;grid-template-columns:minmax(0,1fr);gap:18px 20px;margin-top:16px; }
+	.wpcc-ai-family-grid { display:grid;grid-template-columns:minmax(0,1fr);gap:24px 22px;margin-top:20px; }
 	.wpcc-ai-family { min-width:0;margin:0; }
 	.wpcc-ai-family--compact { display:flex;flex-direction:column; }
-	.wpcc-ai-picks { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:1fr;align-items:stretch;gap:11px;margin-top:5px; }
+	.wpcc-ai-picks { display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:1fr;align-items:stretch;gap:12px;margin-top:8px; }
 	.wpcc-ai-family--compact .wpcc-ai-picks { flex:1; }
 	.wpcc-ai-family--wide,
 	.wpcc-ai-family--other { grid-column:1 / -1; }
-	.wpcc-ai-family--wide .wpcc-ai-picks { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
-	.wpcc-ai-family__name { margin:0 0 9px;font-size:12px;line-height:1.3;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#646970; }
-	.wpcc-ai-family--other { border-top:1px solid #eef0f4;padding-top:14px; }
-	.wpcc-ai-family--other > summary { cursor:pointer;font-weight:600;color:#50575e; }
-	.wpcc-ai-family--other .wpcc-ai-picks { grid-template-columns:repeat(auto-fit,minmax(220px,280px)); }
-	@container (min-width: 760px) {
+	.wpcc-ai-family__name { margin:0;font-size:11.5px;line-height:1.3;font-weight:700;letter-spacing:.055em;text-transform:uppercase;color:#646970; }
+	.wpcc-ai-family--other { border-top:1px solid #e6e8ed;padding-top:18px; }
+	.wpcc-ai-family--other > summary { cursor:pointer;font-weight:600;color:#50575e;padding:2px 0; }
+	.wpcc-ai-family--other .wpcc-ai-picks { max-width:360px; }
+	@container (min-width: 560px) {
+		.wpcc-ai-picks { grid-template-columns:repeat(2,minmax(0,1fr)); }
+		.wpcc-ai-family--other .wpcc-ai-picks { grid-template-columns:minmax(0,1fr); }
+	}
+	@container (min-width: 720px) {
 		.wpcc-ai-family-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+		.wpcc-ai-family--compact .wpcc-ai-picks { grid-template-columns:minmax(0,1fr); }
 		.wpcc-ai-family--compact-last { grid-column:1 / -1; }
-		.wpcc-ai-family--compact-last .wpcc-ai-picks { grid-template-columns:repeat(2,minmax(0,280px)); }
+		.wpcc-ai-family--compact-last .wpcc-ai-picks { grid-template-columns:repeat(2,minmax(0,1fr)); }
+		.wpcc-ai-family--wide .wpcc-ai-picks { grid-template-columns:repeat(3,minmax(0,1fr)); }
 	}
 	@container (min-width: 900px) {
 		.wpcc-ai-family-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
 		.wpcc-ai-family--compact-last { grid-column:auto; }
-		.wpcc-ai-family--compact-last .wpcc-ai-picks { grid-template-columns:repeat(2,minmax(0,1fr)); }
-	}
-	@container (max-width: 559px) {
-		.wpcc-ai-picks,
-		.wpcc-ai-family--wide .wpcc-ai-picks,
-		.wpcc-ai-family--other .wpcc-ai-picks { grid-template-columns:minmax(0,1fr); }
+		.wpcc-ai-family--compact-last .wpcc-ai-picks { grid-template-columns:minmax(0,1fr); }
+		.wpcc-ai-family--wide .wpcc-ai-picks { grid-template-columns:repeat(4,minmax(0,1fr)); }
 	}
 
-	.wpcc-ai-pick { position: relative; height: 100% !important; min-height:104px;display:flex !important;flex-direction:column;
-		align-items:flex-start !important;gap:8px;padding:14px 15px 15px !important;line-height:1.4 !important;
-		border: 1px solid #e3e5ec !important; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.03);
-		min-width:0;white-space:normal !important;overflow-wrap:anywhere;text-decoration:none;
-		transition: border-color .13s ease, box-shadow .13s ease, transform .13s ease, background-color .13s ease; }
-	.wpcc-ai-pick__identity { display:flex;align-items:flex-start;gap:9px;max-width:100%;min-width:0; }
-	.wpcc-ai-pick__icon { width:24px;height:24px;flex:0 0 24px;display:block;object-fit:contain; }
-	.wpcc-ai-pick__copy { display:flex;flex-direction:column;gap:1px;min-width:0;padding-top:1px; }
-	.wpcc-ai-pick__name { max-width:100%;font-size:13.5px;line-height:1.3;font-weight:600;color:#1d2327;letter-spacing:-.01em; }
-	.wpcc-ai-pick__surface { max-width:100%;font-size:11.5px;line-height:1.35;color:#646970; }
+	.wpcc-ai-pick { position:relative;height:100% !important;min-height:126px;display:flex !important;flex-direction:column;
+		align-items:flex-start !important;gap:14px;padding:16px !important;line-height:1.4 !important;
+		border:1px solid #dfe3e8 !important;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(16,24,40,.025);
+		min-width:0;white-space:normal !important;overflow-wrap:break-word;text-decoration:none;
+		transition:border-color .13s ease,box-shadow .13s ease,background-color .13s ease; }
+	.wpcc-ai-pick__identity { display:flex;align-items:flex-start;gap:12px;width:100%;max-width:100%;min-width:0; }
+	.wpcc-ai-pick__icon { width:22px;height:22px;flex:0 0 22px;display:block;box-sizing:content-box;padding:6px;
+		object-fit:contain;border:1px solid #e4e7eb;border-radius:9px;background:#f7f8fa; }
+	.wpcc-ai-pick__copy { display:flex;flex-direction:column;gap:4px;min-width:0;padding-top:1px; }
+	.wpcc-ai-pick__name { max-width:100%;font-size:14.5px;line-height:1.28;font-weight:650;color:#172033;letter-spacing:-.012em;text-wrap:balance; }
+	.wpcc-ai-pick__surface { max-width:100%;font-size:12px;line-height:1.4;color:#6b7280; }
 
-	.wpcc-ai-pick:hover { border-color: #c8ccd4 !important; background: #fff; transform: translateY(-1px);
-		box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(16,24,40,.06); }
+	.wpcc-ai-pick:hover { border-color:#bcc4d0 !important;background:#fff;box-shadow:0 4px 12px rgba(16,24,40,.07); }
 	/* Keyboard focus must be at least as visible as hover — these are links. */
 	.wpcc-ai-pick:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
 
-	/* Selected: a quiet raised panel, not a filled blue button. Weight comes from an
-	   inset accent rule, a slightly stronger border and real elevation — the same way
-	   an enterprise settings list marks the active row. The old treatment flooded the
-	   card with #f0f6fc, which shouted louder than the assistant's own name. */
-	.wpcc-ai-pick.is-selected { border-color:#aeb4bd !important;background:#fff;padding-left:19px !important;
-		box-shadow: 0 0 0 1px #c4c9d2, 0 2px 4px rgba(16,24,40,.05), 0 10px 24px rgba(16,24,40,.08); }
-	/* One accent, and it is the only colour on the card. An earlier pass drew this rule
-	   in the same blue as the selected border, so a 3px sliver sat against a blue edge
-	   and read as nothing at all. The border is neutral now and the rule carries the
-	   selection on its own — the way an active row is marked in a settings panel. */
-	.wpcc-ai-pick.is-selected::after { content: ""; position: absolute; left: -1px; top: 9px; bottom: 9px;
-		width: 3px; border-radius: 3px; background: #2271b1; }
-	.wpcc-ai-pick.is-selected .wpcc-ai-pick__name { color: #0f1c2e; font-weight: 650; }
-	/* The tick reads as confirmation of the current choice; it replaces the ::before
-	   glyph that used to push the label off its own baseline. */
-	.wpcc-ai-pick.is-selected .wpcc-ai-pick__name::after { content: "\2713"; margin-left: 7px; color: #2271b1; font-weight: 700; font-size: 12px; }
+	/* Selection is deliberately calmer than focus: a brand border, a whisper of tint,
+	   and one compact confirmation mark. No competing accent rail or title glyph. */
+	.wpcc-ai-pick.is-selected { border-color:#4055d5 !important;background:#fafbff;padding:16px 44px 16px 16px !important;
+		box-shadow:0 0 0 1px rgba(64,85,213,.12),0 4px 14px rgba(35,49,115,.09); }
+	.wpcc-ai-pick.is-selected::after { content:"\2713";position:absolute;right:14px;top:14px;width:18px;height:18px;
+		display:grid;place-items:center;border-radius:50%;background:#4055d5;color:#fff;font-size:11px;line-height:1;font-weight:700; }
+	.wpcc-ai-pick.is-selected .wpcc-ai-pick__name { color:#111a35;font-weight:675; }
 
 	/* Badges: three ranks, three deliberately different weights. */
 	.wpcc-ai-badges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -435,8 +427,13 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 	.wpcc-ai-badge--tertiary::before { content: ""; width: 4px; height: 4px; border-radius: 50%;
 		background: #c3c4c7; margin-right: 5px; flex: 0 0 auto; }
 
-	.wpcc-ai-pick .wpcc-ai-badges { pointer-events: none; }
-	.wpcc-ai-pick .wpcc-ai-badge { margin-top:auto;font-size:10px; }
+	.wpcc-ai-pick .wpcc-ai-badges { pointer-events:none; }
+	.wpcc-ai-pick .wpcc-ai-badge { margin-top:auto;padding:0;border:0;background:transparent;font-size:11px;line-height:1.45;
+		font-weight:600;color:#646970; }
+	.wpcc-ai-pick .wpcc-ai-badge::before { content:"";width:6px;height:6px;margin-right:6px;border-radius:50%;background:#8c939d; }
+	.wpcc-ai-pick .wpcc-ai-badge--ok::before { background:#2e9b51; }
+	.wpcc-ai-pick .wpcc-ai-badge--warn::before { background:#c88719; }
+	.wpcc-ai-pick .wpcc-ai-badge--bad::before { background:#d63638; }
 	.wpcc-selected-client-note { display:flex;align-items:flex-start;gap:7px;margin:12px 0 14px;padding:8px 11px;
 		border-left:3px solid #72aee6;border-radius:0 6px 6px 0;background:#f6f9fc;color:#50575e;font-size:12.5px;line-height:1.45; }
 	.wpcc-selected-client-note strong { flex:0 0 auto;color:#1d2327; }

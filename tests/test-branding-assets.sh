@@ -7,7 +7,7 @@
 # artwork. This suite holds that line, and holds the one place where the artwork is
 # necessarily duplicated: the admin menu icon is inlined in Brand::menu_icon() as a
 # base64 data URI (WordPress requires a data URI there, and reading the file on every
-# admin page load to rebuild a fixed 364-byte string would be waste). The inlined copy
+# admin page load to rebuild fixed artwork would be waste). The inlined copy
 # and assets/brand/wpcc-admin-20.svg must therefore never drift apart.
 #
 # Requires: nothing but the checkout.
@@ -144,9 +144,19 @@ assert_eq "mark contains one command-origin diamond" "1" \
 assert_eq "mark has no circular-arrow arc command" "0" \
   "$( rg -c '<circle|A12\.5|a12\.5' "$BRAND_DIR/wpcc-mark.svg" || echo 0 )"
 assert_eq "16px menu asset uses the bounded-R silhouette" "yes" \
-  "$( rg -q -F 'M3.3 13.8V2.2h5' "$BRAND_DIR/wpcc-admin-16.svg" && echo yes || echo no )"
+  "$( rg -q -F 'M3.7 13.8V2.4h4.7' "$BRAND_DIR/wpcc-admin-16.svg" && echo yes || echo no )"
 assert_eq "20px menu asset uses the bounded-R silhouette" "yes" \
-  "$( rg -q -F 'M4 17V3h6.2' "$BRAND_DIR/wpcc-admin-20.svg" && echo yes || echo no )"
+  "$( rg -q -F 'M4.6 17.2V2.8h5.7' "$BRAND_DIR/wpcc-admin-20.svg" && echo yes || echo no )"
+for f in wpcc-admin-16.svg wpcc-admin-20.svg; do
+  assert_eq "$f is decorative beside the menu label" "1" \
+    "$( rg -c 'aria-hidden="true" focusable="false"' "$BRAND_DIR/$f" | tr -d ' ' )"
+  assert_eq "$f carries no redundant accessible name" "0" \
+    "$( rg -c 'aria-label=' "$BRAND_DIR/$f" || echo 0 )"
+done
+assert_eq "16px optical mark has one enlarged command origin" "1" \
+  "$( rg -co 'm7.2 5.8 1 1-1 1-1-1z' "$BRAND_DIR/wpcc-admin-16.svg" | tr -d ' ' )"
+assert_eq "20px optical mark has one enlarged command origin" "1" \
+  "$( rg -co 'm8.9 7.1 1.2 1.2-1.2 1.2-1.2-1.2z' "$BRAND_DIR/wpcc-admin-20.svg" | tr -d ' ' )"
 
 assert_eq "light mark uses the SiteRadian indigo" "1" "$( grep -ci '#4055D5' "$BRAND_DIR/wpcc-mark.svg" | tr -d ' ' )"
 assert_eq "dark mark uses the accessible signal indigo" "1" "$( grep -ci '#8B9BFF' "$BRAND_DIR/wpcc-mark-dark.svg" | tr -d ' ' )"

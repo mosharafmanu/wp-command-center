@@ -58,12 +58,20 @@ for contract in \
 	'alt="" aria-hidden="true" width="24" height="24" decoding="async"' \
 	"WPCC_PLUGIN_URL . 'assets/integrations/'" \
 	'object-fit:contain' \
+	'box-sizing:content-box;padding:6px' \
+	'grid-template-columns:repeat(4,minmax(0,1fr))' \
 	'.wpcc-ai-pick:focus-visible' \
 	"'aria-current=\"page\"'" \
 	'wpcc-ai-pick.is-selected::after' \
-	'wpcc-ai-pick.is-selected .wpcc-ai-pick__name::after'; do
+	'content:"\2713"' \
+	'margin-top:auto;padding:0;border:0;background:transparent'; do
 	assert_contains "view retains $contract" "$VIEW_TEXT" "$contract"
 done
+if [[ "$VIEW_TEXT" != *'wpcc-ai-pick.is-selected .wpcc-ai-pick__name::after'* ]]; then
+	pass "selected state no longer adds a competing title glyph"
+else
+	fail "selected state still adds a competing title glyph"
+fi
 
 echo "== Registry and status invariants =="
 ROSTER="$(wpe '

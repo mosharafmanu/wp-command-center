@@ -115,15 +115,15 @@ final class Brand {
 	 * dedicated 20 px master rather than the display mark scaled down.
 	 *
 	 * The markup is inline rather than read from disk because this runs on every admin
-	 * page load; a file read per request to produce a fixed 364-byte string would be
+	 * page load; a file read per request to reproduce fixed artwork would be
 	 * waste. `assets/brand/wpcc-admin-20.svg` is the canonical source and this is a
 	 * verbatim copy of it — `tests/test-branding-assets.sh` asserts the two never drift.
 	 */
 	public static function menu_icon(): string {
-		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-label="SiteRadian">'
-			. '<path d="M4 17V3h6.2c3.9 0 6.2 2.1 6.2 5.2s-2.3 5.2-6.2 5.2H4m6.3 0L16.5 17" fill="none" stroke="#a7aaad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
-			. '<path d="M8.8 9.1l4.9-3.3" fill="none" stroke="#a7aaad" stroke-width="1.6" stroke-linecap="round"/>'
-			. '<path d="m8.8 8 1.1 1.1-1.1 1.1-1.1-1.1z" fill="#a7aaad"/>'
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-hidden="true" focusable="false">'
+			. '<path d="M4.6 17.2V2.8h5.7c3.7 0 5.8 2 5.8 5.1S14 13 10.3 13H4.6m6 0 5.1 4.2" fill="none" stroke="#a7aaad" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+			. '<path d="m8.9 8.3 4.6-3.1" fill="none" stroke="#a7aaad" stroke-width="1.45" stroke-linecap="round"/>'
+			. '<path d="m8.9 7.1 1.2 1.2-1.2 1.2-1.2-1.2z" fill="#a7aaad"/>'
 			. '</svg>';
 
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
