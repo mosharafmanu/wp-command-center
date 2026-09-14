@@ -18,6 +18,28 @@ $wpcc_all_tokens   = $wpcc_tokens->list();
 $wpcc_clients      = AIClientRegistry::get_clients();
 $wpcc_active_clients = AIClientRegistry::get_active_clients();
 $wpcc_client_groups = AIClientRegistry::get_client_groups();
+
+/*
+ * Presentation-only product marks for the app picker.
+ *
+ * Client behavior and ordering continue to come exclusively from
+ * AIClientRegistry. Shared product families intentionally share one trusted
+ * mark; the adjacent name and surface text carry the variant distinction.
+ */
+$wpcc_client_icons = [
+	'chatgpt'      => 'openai.svg',
+	'codex'        => 'openai.svg',
+	'claude'       => 'claude.svg',
+	'claude_code'  => 'claude.svg',
+	'antigravity'  => 'antigravity.png',
+	'gemini'       => 'gemini.svg',
+	'cursor'       => 'cursor.svg',
+	'continue'     => 'continue.svg',
+	'vscode'       => 'github-copilot.svg',
+	'opencode'     => 'opencode.svg',
+	'command_code' => 'command-code.svg',
+	'muse_code'    => 'muse-code.svg',
+];
 $wpcc_counts       = AIClientRegistry::get_counts();
 $wpcc_matrix       = AIClientRegistry::get_compatibility_matrix();
 $wpcc_ops          = ( new OperationRegistry() )->get_operations();
@@ -357,8 +379,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		border: 1px solid #e3e5ec !important; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(16,24,40,.03);
 		min-width:0;white-space:normal !important;overflow-wrap:anywhere;text-decoration:none;
 		transition: border-color .13s ease, box-shadow .13s ease, transform .13s ease, background-color .13s ease; }
+	.wpcc-ai-pick__identity { display:flex;align-items:flex-start;gap:9px;max-width:100%;min-width:0; }
+	.wpcc-ai-pick__icon { width:24px;height:24px;flex:0 0 24px;display:block;object-fit:contain; }
+	.wpcc-ai-pick__copy { display:flex;flex-direction:column;gap:1px;min-width:0;padding-top:1px; }
 	.wpcc-ai-pick__name { max-width:100%;font-size:13.5px;line-height:1.3;font-weight:600;color:#1d2327;letter-spacing:-.01em; }
-	.wpcc-ai-pick__surface { max-width:100%;font-size:11.5px;line-height:1.35;color:#646970;margin-top:-4px; }
+	.wpcc-ai-pick__surface { max-width:100%;font-size:11.5px;line-height:1.35;color:#646970; }
 
 	.wpcc-ai-pick:hover { border-color: #c8ccd4 !important; background: #fff; transform: translateY(-1px);
 		box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 6px 16px rgba(16,24,40,.06); }
@@ -852,11 +877,19 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<?php endif; ?>
 						<div class="wpcc-ai-picks">
 						<?php foreach ( $wpcc_family_clients as $id => $client ) : ?>
+							<?php $wpcc_pick_icon = $wpcc_client_icons[ $id ] ?? ''; ?>
 							<a href="<?php echo esc_url( add_query_arg( [ 'tab' => 'configuration', 'client' => $id, 'wpcc_next' => 'access' ], admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' ) ) ); ?>"
 							   class="button wpcc-ai-pick<?php echo $id === $wpcc_selected_client ? ' is-selected' : ''; ?>"
 						   <?php echo $id === $wpcc_selected_client ? 'aria-current="page"' : ''; ?>>
-								<span class="wpcc-ai-pick__name"><?php echo esc_html( $client['name'] ); ?></span>
-								<span class="wpcc-ai-pick__surface"><?php echo esc_html( $client['surface'] ?? '' ); ?></span>
+								<span class="wpcc-ai-pick__identity">
+									<?php if ( $wpcc_pick_icon ) : ?>
+										<img class="wpcc-ai-pick__icon" src="<?php echo esc_url( WPCC_PLUGIN_URL . 'assets/integrations/' . $wpcc_pick_icon ); ?>" alt="" aria-hidden="true" width="24" height="24" decoding="async">
+									<?php endif; ?>
+									<span class="wpcc-ai-pick__copy">
+										<span class="wpcc-ai-pick__name"><?php echo esc_html( $client['name'] ); ?></span>
+										<span class="wpcc-ai-pick__surface"><?php echo esc_html( $client['surface'] ?? '' ); ?></span>
+									</span>
+								</span>
 								<?php $wpcc_pick_badge = AIClientRegistry::selector_badge_for( $id ); ?>
 								<?php if ( $wpcc_pick_badge ) : ?>
 									<span class="wpcc-ai-badge wpcc-ai-badge--secondary wpcc-ai-badge--<?php echo esc_attr( $wpcc_pick_badge['tone'] ); ?>"><?php echo esc_html( $wpcc_pick_badge['label'] ); ?></span>

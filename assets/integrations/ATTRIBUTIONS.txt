@@ -1,0 +1,42 @@
+SiteRadian Connections integration icons
+========================================
+
+These third-party marks are used only to identify supported products in the
+Connections selector. Their use does not imply endorsement or partnership.
+All trademarks remain the property of their respective owners.
+
+OpenAI / Codex
+Source: https://developers.openai.com/favicon.svg
+Brand guidance: https://openai.com/brand/
+
+Claude
+Source: https://claude.com/favicon.svg
+
+Google Antigravity
+Source: https://antigravity.google/press
+
+Google Gemini
+Source: https://gemini.google.com/app
+
+Cursor
+Source: https://cursor.com/marketing-static/favicon.svg
+
+Continue
+Source: https://github.com/continuedev/continue/blob/main/extensions/intellij/src/main/resources/META-INF/pluginIcon.svg
+Repository license: Apache-2.0
+
+GitHub Copilot / VS Code Codicons
+Source: https://github.com/microsoft/vscode-codicons/blob/main/src/icons/copilot.svg
+License: CC BY 4.0
+Attribution: Microsoft Corporation, VS Code Codicons project.
+
+OpenCode
+Source: https://github.com/anomalyco/opencode/blob/dev/packages/ui/src/assets/favicon/favicon.svg
+Repository license: MIT
+
+Command Code
+Source: https://github.com/CommandCodeAI/command-code/blob/main/.github/commandcode/symbols/symbol.svg
+
+Muse Code
+The packaged muse-code.svg is a neutral terminal glyph created for SiteRadian,
+not a Meta or Muse Code logo.

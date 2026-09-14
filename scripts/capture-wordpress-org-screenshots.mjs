@@ -93,10 +93,115 @@ const assertAdminMark = async () => {
 	}
 };
 
+const expectedConnectionNames = [
+	'Codex in ChatGPT Desktop',
+	'Codex CLI',
+	'Claude Desktop',
+	'Claude Code',
+	'Antigravity CLI',
+	'Gemini CLI',
+	'Cursor',
+	'Continue for VS Code',
+	'GitHub Copilot in VS Code',
+	'OpenCode',
+	'Command Code',
+	'Muse Code',
+];
+
+const assertConnectionIcons = async targetPage => {
+	const cards = targetPage.locator('.wpcc-ai-pick');
+	const icons = targetPage.locator('.wpcc-ai-pick__icon');
+	if (await cards.count() !== 12 || await icons.count() !== 12) {
+		throw new Error(`Connections must render 12 cards and icons; got ${await cards.count()} cards / ${await icons.count()} icons.`);
+	}
+
+	const details = await cards.evaluateAll(nodes => nodes.map(card => {
+		const icon = card.querySelector('.wpcc-ai-pick__icon');
+		const badge = card.querySelector('.wpcc-ai-badge');
+		const iconRect = icon?.getBoundingClientRect();
+		const badgeRect = badge?.getBoundingClientRect();
+		return {
+			name: card.querySelector('.wpcc-ai-pick__name')?.textContent?.trim(),
+			selected: card.classList.contains('is-selected'),
+			ariaCurrent: card.getAttribute('aria-current'),
+			iconSrc: icon?.src,
+			iconAlt: icon?.getAttribute('alt'),
+			iconHidden: icon?.getAttribute('aria-hidden'),
+			iconLoaded: Boolean(icon?.complete && icon.naturalWidth > 0 && icon.naturalHeight > 0),
+			iconWidth: iconRect?.width,
+			iconHeight: iconRect?.height,
+			overlapsBadge: Boolean(iconRect && badgeRect && !(iconRect.right <= badgeRect.left || badgeRect.right <= iconRect.left || iconRect.bottom <= badgeRect.top || badgeRect.bottom <= iconRect.top)),
+		};
+	}));
+
+	if (JSON.stringify(details.map(item => item.name)) !== JSON.stringify(expectedConnectionNames)) {
+		throw new Error(`Connections identity/order changed: ${JSON.stringify(details.map(item => item.name))}`);
+	}
+	if (details.some(item => !item.iconLoaded || item.iconAlt !== '' || item.iconHidden !== 'true')) {
+		throw new Error(`Connections icon loading/accessibility failure: ${JSON.stringify(details)}`);
+	}
+	const baseUrl = new URL(base);
+	if (details.some(item => {
+		const iconUrl = new URL(item.iconSrc);
+		return iconUrl.origin !== baseUrl.origin || !/^\/(?:.*\/)?wp-content\/plugins\/[^/]+\/assets\/integrations\/[^/]+$/.test(iconUrl.pathname);
+	})) {
+		throw new Error(`Connections icon is not package-local: ${JSON.stringify(details.map(item => item.iconSrc))}`);
+	}
+	if (details.some(item => Math.abs(item.iconWidth - 24) > 0.5 || Math.abs(item.iconHeight - 24) > 0.5 || item.overlapsBadge)) {
+		throw new Error(`Connections icon sizing/overlap failure: ${JSON.stringify(details)}`);
+	}
+	const selected = details.filter(item => item.selected);
+	if (selected.length !== 1 || selected[0].ariaCurrent !== 'page') {
+		throw new Error(`Selected card contract changed: ${JSON.stringify(selected)}`);
+	}
+
+	const selectedCard = cards.filter({ hasText: selected[0].name }).first();
+	await selectedCard.focus();
+	const focusAndSelection = await selectedCard.evaluate(card => {
+		const style = getComputedStyle(card);
+		const accent = getComputedStyle(card, '::after');
+		return {
+			outline: style.outlineStyle,
+			outlineWidth: style.outlineWidth,
+			borderColor: style.borderColor,
+			accentWidth: accent.width,
+			accentColor: accent.backgroundColor,
+		};
+	});
+	if (focusAndSelection.outline === 'none' || focusAndSelection.outlineWidth === '0px' || focusAndSelection.accentWidth === '0px' || focusAndSelection.accentColor === 'rgba(0, 0, 0, 0)') {
+		throw new Error(`Keyboard focus or selected accent is not visible: ${JSON.stringify(focusAndSelection)}`);
+	}
+
+	const other = targetPage.locator('.wpcc-ai-family--other');
+	const summary = other.locator('summary');
+	if (await other.getAttribute('open') !== null) {
+		throw new Error('Other / Experimental should start collapsed for the default client.');
+	}
+	await summary.focus();
+	await targetPage.keyboard.press('Enter');
+	if (await other.getAttribute('open') === null || !await other.locator('.wpcc-ai-pick__name', { hasText: 'Muse Code' }).isVisible()) {
+		throw new Error('Other / Experimental did not expand from the keyboard.');
+	}
+	await targetPage.keyboard.press('Enter');
+	if (await other.getAttribute('open') !== null) {
+		throw new Error('Other / Experimental did not collapse from the keyboard.');
+	}
+
+	const familyRhythm = await targetPage.locator('.wpcc-ai-family:not(.wpcc-ai-family--other) .wpcc-ai-picks').evaluateAll(groups => groups.map(group => {
+		const heights = Array.from(group.querySelectorAll('.wpcc-ai-pick')).map(card => card.getBoundingClientRect().height);
+		return heights.length ? Math.max(...heights) - Math.min(...heights) : 0;
+	}));
+	if (familyRhythm.some(delta => delta > 1)) {
+		throw new Error(`Connections cards lost equal row rhythm: ${JSON.stringify(familyRhythm)}`);
+	}
+	await targetPage.evaluate(() => document.activeElement?.blur());
+};
+
 for (const [number, name, url, selector] of screens) {
 	await page.goto(`${base}${url}`, { waitUntil: 'networkidle' });
 	await waitForSettledProduct(selector);
 	await assertAdminMark();
+	if (name === 'Connections') await assertConnectionIcons(page);
 	await page.screenshot({ path: path.join(out, `screenshot-${number}.png`) });
 	console.log(`PASS screenshot-${number}: ${name}`);
 }
@@ -125,6 +230,7 @@ for (const width of widths) {
 		await page.goto(`${base}${url}`, { waitUntil: 'networkidle' });
 		await waitForSettledProduct(selector);
 		await assertAdminMark();
+		if (surface === 'Connections') await assertConnectionIcons(page);
 		const layout = await page.evaluate(expected => ({
 			viewport: document.documentElement.clientWidth,
 			scroll: document.documentElement.scrollWidth,
@@ -137,6 +243,30 @@ for (const width of widths) {
 		console.log(`PASS responsive: ${surface} ${width}px`);
 	}
 }
+
+// A separate high-density context verifies that SVG and raster marks stay crisp
+// at their actual 24px CSS size rather than relying on source dimensions alone.
+const storageState = await page.context().storageState();
+const retinaContext = await browser.newContext({
+	viewport: { width: 1180, height: 900 },
+	deviceScaleFactor: 2,
+	storageState,
+});
+const retinaPage = await retinaContext.newPage();
+retinaPage.on('pageerror', error => browserErrors.push(`retina page: ${error.message}`));
+retinaPage.on('console', message => {
+	if (message.type() === 'error') browserErrors.push(`retina console: ${message.text()}`);
+});
+retinaPage.on('response', response => {
+	if (response.status() >= 400 && response.url().startsWith(base)) {
+		localNetworkIssues.push(`retina ${response.status()} ${response.url()}`);
+	}
+});
+await retinaPage.goto(`${base}/wp-admin/admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants`, { waitUntil: 'networkidle' });
+await retinaPage.locator('#wpcc-choose-app').waitFor({ state: 'visible' });
+await assertConnectionIcons(retinaPage);
+await retinaContext.close();
+console.log('PASS retina: Connections icons at 2x density');
 
 if (browserErrors.length) {
 	throw new Error(`Browser errors:\n${browserErrors.join('\n')}`);
