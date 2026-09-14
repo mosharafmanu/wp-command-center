@@ -262,7 +262,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 		// is already protected; the customer should know that and be able to change
 		// it, without being told they did it.
 		?>
-		<p class="wpcc-setup__protection">
+		<p class="wpcc-setup__protection <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>">
 			<span class="wpcc-setup__protection-dot <?php echo $wpcc_protected ? 'is-ok' : 'is-warn'; ?>" aria-hidden="true"></span>
 			<?php
 			if ( $wpcc_protected ) {
@@ -673,29 +673,34 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
    full canvas rather than pinned to the left of it. Left-pinned, a 620px setup
    column inside a 900px block inside a 1200px shell left ~500px of dead space on
    one side only, which reads as a layout mistake rather than as composition. */
-.wpcc-home { max-width: 1120px; margin-inline: auto; color:var(--wpcc-text-primary,#14213d); }
-.wpcc-home__hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.16fr) minmax(300px,.84fr); gap:28px; align-items:center; margin:0 0 18px; padding:24px 28px; background:linear-gradient(135deg,#fff 0%,#f8f9ff 100%); border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:14px; box-shadow:0 1px 2px rgba(16,24,40,.025); }
+.wpcc-home { max-width:1120px; margin-inline:auto; color:var(--wpcc-text-primary,#14213d); }
+/* Home has no tabs or subtitle, so the shared shell can be optically tighter here
+   without changing the header on any other SiteRadian screen. */
+body.toplevel_page_wp-command-center .wpcc-shell__bar { align-items:center; margin-top:16px; padding:16px 20px; }
+body.toplevel_page_wp-command-center .wpcc-shell__tools { align-items:center; }
+body.toplevel_page_wp-command-center .wpcc-shell__posture { gap:6px; padding:5px 11px; font-size:11.5px; }
+body.toplevel_page_wp-command-center .wpcc-shell__posture::before { width:7px; height:7px; }
+.wpcc-home__hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(292px,.8fr); gap:24px; align-items:center; margin:0 0 12px; padding:20px 28px; background:linear-gradient(135deg,#fff 0%,#f8f9ff 100%); border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:14px; box-shadow:0 1px 2px rgba(16,24,40,.025); }
 /* A bounded radius, not a decorative bullseye: one measured arc and its command
    origin echo the mark without turning the dashboard into a marketing page. */
-.wpcc-home__hero::after { content:""; position:absolute; right:-68px; top:-96px; width:250px; height:250px; border:1px solid rgba(64,85,213,.11); border-left-color:transparent; border-bottom-color:transparent; border-radius:50%; box-shadow:32px 32px 0 -31px rgba(64,85,213,.09); transform:rotate(-12deg); pointer-events:none; }
+.wpcc-home__hero::after { content:""; position:absolute; right:-58px; top:-102px; width:238px; height:238px; border:1px solid rgba(64,85,213,.11); border-left-color:transparent; border-bottom-color:transparent; border-radius:50%; box-shadow:28px 28px 0 -27px rgba(64,85,213,.08); transform:rotate(-12deg); pointer-events:none; }
 .wpcc-home__hero-copy,.wpcc-home__flow { position:relative; z-index:1; }
-.wpcc-home__logo { display:block; width:198px; height:auto; margin:0 0 15px; }
+.wpcc-home__logo { display:block; width:190px; height:auto; margin:0 0 12px; }
 .wpcc-app .wpcc-home__descriptor { margin:0 0 6px; font-size:12px; line-height:1.4; font-weight:700; letter-spacing:.075em; text-transform:uppercase; color:#4055d5; }
-.wpcc-home__promise { margin:0 0 8px!important; max-width:650px; font-size:25px; line-height:1.2!important; font-weight:650; letter-spacing:-.025em; color:#14213d; }
+.wpcc-home__promise { margin:0 0 7px!important; max-width:650px; font-size:25px; line-height:1.18!important; font-weight:650; letter-spacing:-.025em; color:#14213d; }
 .wpcc-home__support { margin:0!important; max-width:620px; font-size:14px; line-height:1.55!important; color:#5d6878; }
-.wpcc-home__flow { list-style:none; margin:0; padding:2px 0; display:grid; gap:5px; }
-.wpcc-home__flow li { position:relative; display:flex; align-items:center; min-height:30px; padding:5px 10px 5px 32px; border:1px solid #dfe4f3; border-radius:8px; background:rgba(255,255,255,.88); color:#344054; font-size:12px; font-weight:600; }
-.wpcc-home__flow li::before { content:""; position:absolute; left:13px; width:7px; height:7px; border:1.5px solid #4055d5; border-radius:1px; background:#fff; box-sizing:border-box; transform:rotate(45deg); }
+.wpcc-home__flow { list-style:none; margin:0; padding:0; display:grid; gap:4px; }
+.wpcc-home__flow li { position:relative; display:flex; align-items:center; min-height:29px; padding:3px 10px 3px 31px; border:1px solid #dfe4f3; border-radius:8px; background:rgba(255,255,255,.9); color:#344054; font-size:12px; line-height:1.4; font-weight:600; }
+.wpcc-home__flow li::before { content:""; position:absolute; left:12px; width:7px; height:7px; border:1.5px solid #4055d5; border-radius:1px; background:#fff; box-sizing:border-box; transform:rotate(45deg); }
 .wpcc-home__flow li:first-child::before,.wpcc-home__flow li:last-child::before { background:#4055d5; }
-.wpcc-home__flow li:not(:last-child)::after { content:""; position:absolute; left:16px; top:27px; width:1px; height:9px; background:#aab6ee; }
+.wpcc-home__flow li:not(:last-child)::after { content:""; position:absolute; left:15px; top:25px; width:1px; height:8px; background:#aab6ee; }
 /* ── Setup flow (pre-connection Home) ───────────────────────────────────────
- * Deliberately narrow and vertical: one column, one reading path, one button.
- * A grid would invite the eye to wander across choices the customer has not
- * earned yet. */
-.wpcc-setup { max-width: 760px; margin: 0 auto 28px; padding:24px 28px; background:#fff; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:12px; }
-.wpcc-setup__prompt { margin: 12px 0 6px; font-size: 13px; }
-.wpcc-setup__prompt-label { color: #646970; margin-right: 6px; }
-.wpcc-setup__prompt code { background: #f0f0f1; padding: 3px 8px; border-radius: 4px; font-size: 13px; }
+ * One compact three-step rail keeps the active task prominent while showing
+ * the complete beginner journey; narrower screens restore one reading path. */
+.wpcc-setup { position:relative; max-width:none; margin:0 0 18px; padding:19px 22px 16px; background:#fff; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:12px; }
+.wpcc-setup__prompt { margin:10px 0 5px; font-size:12px; }
+.wpcc-setup__prompt-label { display:block; margin:0 0 4px; color:#707784; }
+.wpcc-setup__prompt code { display:block; padding:6px 8px; white-space:normal; overflow-wrap:anywhere; background:#fff; border:1px solid #e2e5ea; border-radius:5px; font-size:12px; line-height:1.4; }
 .wpcc-setup__note { margin: 6px 0 0; font-size: 12px; color: #646970; }
 /* The first-run lockup, sized by HEIGHT so the wordmark lands at a known size.
    It used to be capped by width (max-width:248px) against an artwork whose 456px
@@ -710,41 +715,45 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 /* First-run is the one screen that earns a real headline. The CDS type scale
    caps h2 at 16px for dense operator screens, which is right everywhere else
    and wrong here — this is the product introducing itself. Scoped override. */
-.wpcc-app .wpcc-setup__title { font-size: 20px; line-height: 1.3; margin: 0 0 6px; letter-spacing: -0.015em; font-weight: 650; }
+.wpcc-app .wpcc-setup__title { font-size:18px; line-height:1.3; margin:0 110px 4px 0; letter-spacing:-.015em; font-weight:650; }
 /* max-width caps the measure so the lede stays readable; the rest is unchanged. */
-.wpcc-setup__lede { font-size: 14px; line-height: 1.6; color: #5d6878; margin: 0 0 20px; max-width: 48em; }
-.wpcc-setup__protection { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 22px; padding:10px 14px; background:#f6f7f7; border-radius:8px; font-size:13px; color:#1d2327; }
+.wpcc-setup__lede { font-size:13.5px; line-height:1.55; color:#5d6878; margin:0 110px 13px 0; max-width:48em; }
+.wpcc-setup__protection { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 11px; padding:8px 11px; background:#f6f8f7; border:1px solid #e5e9e6; border-radius:8px; font-size:12.5px; color:#344054; }
+.wpcc-setup__protection.is-warn { background:#fff9ec; border-color:#ecd69f; color:#5f4712; }
 .wpcc-setup__protection a { margin-left:auto; font-size:12px; }
 .wpcc-setup__protection-dot { width:8px; height:8px; border-radius:50%; background:#c3c4c7; flex:0 0 auto; }
 .wpcc-setup__protection-dot.is-ok { background:#00a32a; }
 .wpcc-setup__protection-dot.is-warn { background:#dba617; }
-.wpcc-setup__progress { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #646970; margin: 0 0 12px; }
-.wpcc-setup__steps { list-style: none; margin: 0; padding: 0; counter-reset: none; }
-.wpcc-setup__step { position: relative; display: flex; gap: 14px; padding: 18px 0; border-top: 1px solid #dcdcde; }
-.wpcc-setup__step:last-child { border-bottom: 1px solid #dcdcde; }
-.wpcc-setup__marker { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; font-size: 13px; font-weight: 600; background: #f0f0f1; color: #646970; }
+.wpcc-setup__progress { position:absolute; top:20px; right:22px; margin:0; padding:4px 8px; border-radius:999px; background:#f1f3f7; font-size:10.5px; line-height:1.4; font-weight:700; letter-spacing:.065em; text-transform:uppercase; color:#646970; }
+.wpcc-setup__steps { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; align-items:stretch; counter-reset:none; }
+.wpcc-setup__step { position:relative; display:flex; gap:11px; min-width:0; min-height:148px; padding:13px 14px; border:1px solid transparent; border-radius:9px; background:#fafbfc; }
+.wpcc-setup__step.is-active { background:#f8f9ff; border-color:#cfd5fa; box-shadow:inset 3px 0 0 #4055d5; }
+.wpcc-setup__step.is-done { background:#f8fbf9; }
+.wpcc-setup__marker { flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; font-size:12px; font-weight:650; background:#eef0f3; color:#646970; }
 .wpcc-setup__step.is-done .wpcc-setup__marker { background: #edfaef; color: #00a32a; }
 .wpcc-setup__step.is-active .wpcc-setup__marker { background: #2271b1; color: #fff; }
 .wpcc-setup__body { flex: 1; min-width: 0; }
-.wpcc-setup__step-title { margin: 2px 0 4px; font-size: 15px; font-weight: 600; }
+.wpcc-setup__step-title { margin:1px 0 4px; font-size:14px; line-height:1.35; font-weight:650; }
 .wpcc-setup__step.is-todo .wpcc-setup__step-title { color: #646970; font-weight: 500; }
-.wpcc-setup__step-text { margin: 0; font-size: 13px; line-height: 1.6; color: #50575e; }
-.wpcc-setup__step.is-done .wpcc-setup__step-text { color: #00a32a; }
-.wpcc-setup__cta { margin-top: 14px; }
-.wpcc-setup__limits { margin-top: 24px; }
+.wpcc-setup__step-text { margin:0; font-size:12.5px; line-height:1.5; color:#5d6878; }
+.wpcc-setup__step.is-done .wpcc-setup__step-text { color:#52665a; }
+.wpcc-setup__cta { margin-top:11px; }
+.wpcc-setup__cta.button-hero { min-height:36px; padding:4px 14px; font-size:13px; line-height:1.8; }
+.wpcc-setup__limits { margin-top:13px; }
 
 .wpcc-home__lede { max-width: 640px; margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #1d2327; }
 /* Equal thirds. auto-fit let the first tile absorb the slack, so the three
    status cells came out 468/312/312 — an uneven rhythm on the first thing
    anyone looks at. They carry equally important facts; they should read as
    equals. Falls back to stacking below 640px. */
-.wpcc-home__status { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:0 0 24px; }
-.wpcc-home__stat { min-width:0; background:#fff; padding:15px 17px; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:10px; }
-.wpcc-home__stat-label { display: block; font-size: 12px; color: #646970; margin-bottom: 4px; }
-.wpcc-home__stat-value { display: block; font-size: 14px; font-weight: 600; color: #1d2327; text-decoration: none; }
+.wpcc-home__status { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); grid-auto-rows:1fr; gap:10px; margin:0 0 16px; }
+.wpcc-home__stat { min-width:0; min-height:105px; display:flex; flex-direction:column; background:#fff; padding:13px 15px; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:10px; box-shadow:inset 0 2px 0 rgba(64,85,213,.07); }
+.wpcc-home__stat-label { display:block; margin-bottom:5px; font-size:10.5px; line-height:1.35; font-weight:700; letter-spacing:.045em; text-transform:uppercase; color:#707784; }
+.wpcc-home__stat-value { display:flex; align-items:center; gap:7px; font-size:14px; line-height:1.35; font-weight:650; color:#1d2327; text-decoration:none; }
 .wpcc-home__stat-value:hover { color: #4055d5; }
-.wpcc-home__stat-hint { display: block; font-size: 12px; color: #646970; margin-top: 3px; }
-.wpcc-home__dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: #c3c4c7; }
+.wpcc-home__stat-value:focus-visible { outline:2px solid #2271b1; outline-offset:3px; border-radius:2px; }
+.wpcc-home__stat-hint { display:block; margin-top:auto; padding-top:5px; font-size:11.5px; line-height:1.4; color:#707784; }
+.wpcc-home__dot { display:inline-block; flex:0 0 auto; width:7px; height:7px; border-radius:50%; margin:0; background:#c3c4c7; }
 .wpcc-home__dot.is-ok { background: #00a32a; }
 .wpcc-home__dot.is-warn { background: #dba617; }
 .wpcc-home__dot.is-idle { background: #c3c4c7; }
@@ -793,24 +802,27 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 .wpcc-home__steps li { font-size: 13px; color: #50575e; line-height: 1.5; counter-increment: wpcc-step; }
 .wpcc-home__steps strong { display: block; color: #1d2327; margin-bottom: 2px; }
 .wpcc-home__steps strong::before { content: counter(wpcc-step) ". "; color: #2271b1; }
-.wpcc-home__limits { margin-top: 16px; border-top: 1px solid #f0f0f1; padding-top: 12px; }
+.wpcc-home__limits { margin-top:14px; border-top:1px solid #eceef1; padding-top:10px; }
 .wpcc-home__limits summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.wpcc-home__limits summary:focus-visible { outline:2px solid #2271b1; outline-offset:3px; border-radius:2px; }
 .wpcc-home__limits ul { margin: 10px 0 0 18px; color: #50575e; font-size: 13px; line-height: 1.6; }
 .wpcc-home__dismiss { margin: 14px 0 24px; }
-.wpcc-home__learn { display:grid; grid-template-columns:minmax(220px,.75fr) minmax(0,1.25fr); gap:28px; align-items:start; margin:26px 0 4px; padding:22px 24px; background:#f8fafc; border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:12px; }
+.wpcc-home__learn { display:grid; grid-template-columns:230px minmax(0,1fr); gap:22px; align-items:center; margin:18px 0 4px; padding:16px 0 0; background:transparent; border:0; border-top:1px solid var(--wpcc-border-subtle,#e2e7ef); }
 .wpcc-home__eyebrow { margin:0 0 4px!important; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#4055d5; }
-.wpcc-home__learn h2 { margin:0 0 6px; }
-.wpcc-home__learn > div > p:last-child { margin:0; color:#5d6878; font-size:13px; }
-.wpcc-home__learn-links { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.wpcc-home__learn-links a { display:block; min-width:0; padding:11px 12px; background:#fff; border:1px solid #e2e7ef; border-radius:8px; text-decoration:none; }
-.wpcc-home__learn-links a:hover { border-color:#aab6ee; background:#fdfdff; }
+.wpcc-home__learn h2 { margin:0 0 4px; font-size:15px; }
+.wpcc-home__learn > div > p:last-child { margin:0; color:#707784; font-size:12px; line-height:1.45; }
+.wpcc-home__learn-links { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; }
+.wpcc-home__learn-links a { display:block; min-width:0; min-height:56px; padding:5px 12px; background:transparent; border:0; border-left:1px solid #e2e7ef; border-radius:0; text-decoration:none; }
+.wpcc-home__learn-links a:hover { background:#f8f9ff; }
+.wpcc-home__learn-links a:focus-visible { outline:2px solid #2271b1; outline-offset:2px; border-radius:4px; }
 .wpcc-home__learn-links strong,.wpcc-home__learn-links span { display:block; }
 .wpcc-home__learn-links strong { color:#14213d; font-size:13px; margin-bottom:2px; }
 .wpcc-home__learn-links span { color:#5d6878; font-size:11.5px; line-height:1.45; }
-@media (max-width:1100px) { .wpcc-home__status { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media (max-width:900px) { .wpcc-home__hero { grid-template-columns:1fr; gap:20px; } .wpcc-home__flow { grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; } .wpcc-home__flow li { justify-content:center; padding:8px 6px; text-align:center; } .wpcc-home__flow li::before,.wpcc-home__flow li::after { display:none; } }
-@media (max-width:782px) { .wpcc-home__hero { padding:22px; } .wpcc-home__learn { grid-template-columns:1fr; gap:16px; } }
-@media (max-width:640px) { .wpcc-home__status,.wpcc-home__learn-links { grid-template-columns:1fr; } .wpcc-home__flow { grid-template-columns:1fr; } .wpcc-home__flow li { justify-content:flex-start; padding-left:34px; text-align:left; } .wpcc-home__flow li::before { display:block; } .wpcc-home__promise { font-size:22px; } .wpcc-setup { padding:20px; } }
+@media (max-width:1100px) { .wpcc-home__status { grid-template-columns:repeat(2,minmax(0,1fr)); } .wpcc-home__learn { grid-template-columns:1fr; gap:12px; } .wpcc-home__learn-links { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .wpcc-home__learn-links a { padding:9px 11px; border:1px solid #e2e7ef; border-radius:8px; } }
+@media (max-width:960px) { .wpcc-setup__steps { grid-template-columns:1fr; gap:0; } .wpcc-setup__step { min-height:0; padding:12px 2px; background:transparent; border:0; border-top:1px solid #e3e5e8; border-radius:0; } .wpcc-setup__step:last-child { border-bottom:1px solid #e3e5e8; } .wpcc-setup__step.is-active { margin:0 -9px; padding:12px 11px; background:#f8f9ff; border:1px solid #cfd5fa; border-radius:8px; } }
+@media (max-width:900px) { .wpcc-home__hero { grid-template-columns:1fr; gap:17px; } .wpcc-home__flow { grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; } .wpcc-home__flow li { justify-content:center; padding:7px 6px; text-align:center; } .wpcc-home__flow li::before,.wpcc-home__flow li::after { display:none; } }
+@media (max-width:782px) { body.toplevel_page_wp-command-center .wpcc-shell__bar { margin-top:10px; padding:14px 16px; } body.toplevel_page_wp-command-center .wpcc-shell__tools { width:auto; margin-left:auto; } .wpcc-home__hero { padding:19px 20px; } }
+@media (max-width:640px) { .wpcc-home__status,.wpcc-home__learn-links { grid-template-columns:1fr; } .wpcc-home__flow { grid-template-columns:1fr; } .wpcc-home__flow li { justify-content:flex-start; padding-left:34px; text-align:left; } .wpcc-home__flow li::before { display:block; } .wpcc-home__promise { font-size:22px; } .wpcc-setup { padding:17px 16px 14px; } .wpcc-app .wpcc-setup__title,.wpcc-setup__lede { margin-right:0; } .wpcc-setup__progress { position:static; display:inline-block; margin:0 0 10px; } .wpcc-setup__protection a { margin-left:0; } }
 @media (prefers-reduced-motion:reduce) { .wpcc-home * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
 </style>
 

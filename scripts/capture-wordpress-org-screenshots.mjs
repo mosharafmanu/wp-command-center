@@ -18,6 +18,7 @@ const base = String(process.env.SR_QA_BASE || '').replace(/\/$/, '');
 const user = process.env.SR_QA_USER || '';
 const password = process.env.SR_QA_PASSWORD || '';
 const out = process.env.SR_ASSET_DIR || path.join(root, 'wordpress-org-assets');
+const diagnostics = process.env.SR_QA_DIAGNOSTICS === '1';
 
 if (!base || !user || !password) {
 	throw new Error('Set SR_QA_BASE, SR_QA_USER, and SR_QA_PASSWORD.');
@@ -122,6 +123,108 @@ const assertHeaderMark = async targetPage => {
 	if (!details.loaded || !details.src.includes('/assets/brand/wpcc-mark.svg') || details.width < 24 || details.height < 24 || details.alt !== 'SiteRadian') {
 		throw new Error(`Page header is not using the full decorative SiteRadian mark: ${JSON.stringify(details)}`);
 	}
+};
+
+const expectedWorkflow = ['AI assistant', 'Scope', 'Approval', 'Safe execution', 'Audit / rollback'];
+const expectedLearn = ['Quick Start', 'Scoped access', 'Understanding approvals', 'Protection & rollback'];
+
+const assertHomeDashboard = async targetPage => {
+	const stats = targetPage.locator('.wpcc-home__stat');
+	const workflow = await targetPage.locator('.wpcc-home__flow li').allTextContents();
+	const learnLinks = targetPage.locator('.wpcc-home__learn-links a');
+	if (await stats.count() !== 4 || JSON.stringify(workflow.map(value => value.trim())) !== JSON.stringify(expectedWorkflow) || await learnLinks.count() !== 4) {
+		throw new Error(`Home architecture changed: ${JSON.stringify({ stats: await stats.count(), workflow, learn: await learnLinks.count() })}`);
+	}
+	const values = await targetPage.locator('.wpcc-home__stat-value').allTextContents();
+	if (values.some(value => !value.trim())) {
+		throw new Error(`Home status text must carry every state independently of colour: ${JSON.stringify(values)}`);
+	}
+	const statusRects = await stats.evaluateAll(nodes => nodes.map(node => {
+		const rect = node.getBoundingClientRect();
+		return { top: Math.round(rect.top), height: rect.height };
+	}));
+	const rows = new Map();
+	for (const rect of statusRects) {
+		const heights = rows.get(rect.top) || [];
+		heights.push(rect.height);
+		rows.set(rect.top, heights);
+	}
+	if ([...rows.values()].some(heights => Math.max(...heights) - Math.min(...heights) > 1)) {
+		throw new Error(`Home status cards lost equal row height: ${JSON.stringify(statusRects)}`);
+	}
+
+	const learnDetails = await learnLinks.evaluateAll(nodes => nodes.map(node => ({
+		name: node.querySelector('strong')?.textContent?.trim(),
+		href: node.href,
+	})));
+	if (JSON.stringify(learnDetails.map(item => item.name)) !== JSON.stringify(expectedLearn) || learnDetails.some(item => new URL(item.href).origin !== new URL(base).origin || !new URL(item.href).pathname.includes('/wp-admin/admin.php'))) {
+		throw new Error(`Home Learn destinations changed or stopped being internal: ${JSON.stringify(learnDetails)}`);
+	}
+	const learnColumns = await targetPage.locator('.wpcc-home__learn-links').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+	const currentViewportWidth = (await targetPage.viewportSize()).width;
+	const expectedLearnColumns = currentViewportWidth > 1100 ? 4 : (currentViewportWidth > 640 ? 2 : 1);
+	if (learnColumns !== expectedLearnColumns) {
+		throw new Error(`Home Learn hierarchy is not responsive: ${JSON.stringify({ currentViewportWidth, learnColumns, expectedLearnColumns })}`);
+	}
+
+	const setup = targetPage.locator('.wpcc-setup');
+	if (await setup.count()) {
+		const steps = setup.locator('.wpcc-setup__step');
+		const active = setup.locator('.wpcc-setup__step.is-active');
+		if (await steps.count() !== 3 || await active.count() !== 1) {
+			throw new Error(`Home first-run state hierarchy changed: ${await steps.count()} steps / ${await active.count()} active.`);
+		}
+		const layout = await setup.evaluate(element => {
+			const stepGrid = element.querySelector('.wpcc-setup__steps');
+			const activeStep = element.querySelector('.wpcc-setup__step.is-active');
+			const todoStep = element.querySelector('.wpcc-setup__step.is-todo');
+			return {
+				columns: getComputedStyle(stepGrid).gridTemplateColumns.split(' ').length,
+				activeBorder: getComputedStyle(activeStep).borderColor,
+				activeBackground: getComputedStyle(activeStep).backgroundColor,
+				todoBackground: todoStep ? getComputedStyle(todoStep).backgroundColor : null,
+			};
+		});
+		const viewportWidth = (await targetPage.viewportSize()).width;
+		if ((viewportWidth > 960 && layout.columns !== 3) || (viewportWidth <= 960 && layout.columns !== 1) || layout.activeBackground === layout.todoBackground || layout.activeBorder === 'rgba(0, 0, 0, 0)') {
+			throw new Error(`Home setup hierarchy is not visually deliberate: ${JSON.stringify({ viewportWidth, ...layout })}`);
+		}
+		const details = setup.locator('.wpcc-setup__limits');
+		if (await details.getAttribute('open') !== null) throw new Error('Home trust disclosure must start collapsed.');
+		const summary = details.locator('summary');
+		await summary.focus();
+		await targetPage.keyboard.press('Enter');
+		if (await details.getAttribute('open') === null) throw new Error('Home trust disclosure did not open from the keyboard.');
+		await targetPage.keyboard.press('Enter');
+		if (await details.getAttribute('open') !== null) throw new Error('Home trust disclosure did not close from the keyboard.');
+		const cta = active.locator('.wpcc-setup__cta');
+		if (await cta.count()) {
+			await cta.focus();
+			const focus = await cta.evaluate(element => ({ outline: getComputedStyle(element).outlineStyle, width: getComputedStyle(element).outlineWidth }));
+			if (focus.outline === 'none' || focus.width === '0px') throw new Error(`Home primary CTA focus is not visible: ${JSON.stringify(focus)}`);
+		}
+	}
+
+	const geometry = await targetPage.evaluate(() => {
+		const shell = document.querySelector('.wpcc-shell__bar')?.getBoundingClientRect();
+		const hero = document.querySelector('.wpcc-home__hero')?.getBoundingClientRect();
+		const status = document.querySelector('.wpcc-home__status')?.getBoundingClientRect();
+		const setupElement = document.querySelector('.wpcc-setup')?.getBoundingClientRect();
+		return {
+			shellHeight: shell?.height,
+			heroHeight: hero?.height,
+			statusBottom: status?.bottom,
+			setupTop: setupElement?.top,
+		};
+	});
+	const viewportWidth = (await targetPage.viewportSize()).width;
+	if (viewportWidth >= 1180 && (geometry.shellHeight > 74 || geometry.heroHeight > 285 || (geometry.setupTop && geometry.setupTop > 610))) {
+		throw new Error(`Home first viewport is no longer compact: ${JSON.stringify(geometry)}`);
+	}
+	if (viewportWidth <= 782 && geometry.shellHeight > 76) {
+		throw new Error(`Home mobile header is no longer compact: ${JSON.stringify(geometry)}`);
+	}
+	await targetPage.evaluate(() => document.activeElement?.blur());
 };
 
 const expectedConnectionNames = [
@@ -258,10 +361,12 @@ for (const [number, name, url, selector] of screens) {
 	await waitForSettledProduct(selector);
 	await assertAdminMark(page, { selected: true });
 	await assertHeaderMark(page);
+	if (name === 'Home') await assertHomeDashboard(page);
 	if (name === 'Connections') await assertConnectionIcons(page);
 	await page.evaluate(() => window.scrollTo(0, 0));
 	await page.waitForTimeout(100);
 	await page.screenshot({ path: path.join(out, `screenshot-${number}.png`) });
+	if (name === 'Home' && diagnostics) await page.screenshot({ path: path.join(out, 'qa-home-full.png'), fullPage: true });
 	console.log(`PASS screenshot-${number}: ${name}`);
 }
 
@@ -290,6 +395,7 @@ for (const width of widths) {
 		await waitForSettledProduct(selector);
 		await assertAdminMark(page, { selected: true });
 		await assertHeaderMark(page);
+		if (surface === 'Home') await assertHomeDashboard(page);
 		if (surface === 'Connections') await assertConnectionIcons(page);
 		const layout = await page.evaluate(expected => ({
 			viewport: document.documentElement.clientWidth,
@@ -299,6 +405,10 @@ for (const width of widths) {
 		}), selector);
 		if (!layout.surfaceVisible || layout.scroll > layout.viewport + 1 || layout.clippedCode) {
 			throw new Error(`${surface} overflow at ${width}px: ${JSON.stringify(layout)}`);
+		}
+		if (surface === 'Home' && diagnostics) {
+			await page.evaluate(() => window.scrollTo(0, 0));
+			await page.screenshot({ path: path.join(out, `qa-home-${width}.png`) });
 		}
 		console.log(`PASS responsive: ${surface} ${width}px`);
 	}
