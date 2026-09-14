@@ -15,9 +15,9 @@
  *
  * `--header` takes KEY=VALUE, NOT the "Key: Value" wire form. That single detail is the
  * difference between a working registration and a header named "Authorization: Bearer
- * wpcc_..." with an empty value. Running the command wrote exactly:
+ * siteradian_..." with an empty value. Running the command wrote exactly:
  *
- *   "wp-command-center": {
+ *   "siteradian": {
  *     "type": "remote",
  *     "url": "...",
  *     "headers": { "Authorization": "Bearer ..." }
@@ -27,7 +27,7 @@
  *
  * NOT `opencode mcp auth`. That command starts an OAuth browser flow, and WPCC
  * authenticates with its own bearer tokens. Real testing hit this: registering without a
- * header produced "wp-command-center needs authentication", and `mcp auth` then failed
+ * header produced a misleading authentication prompt, and `mcp auth` then failed
  * because it was looking for an OAuth provider that does not exist here. The header is
  * the whole authentication story for this client.
  *

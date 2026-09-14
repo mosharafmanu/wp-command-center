@@ -74,7 +74,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 				<span class="dashicons dashicons-lock" aria-hidden="true"></span>
 				<div class="wpcc-connect-credential__content">
 					<label for="wpcc-token-fill"><?php esc_html_e( 'Paste your saved access token', 'siteradian' ); ?></label>
-					<input type="password" id="wpcc-token-fill" class="regular-text" placeholder="wpcc_..." autocomplete="off" spellcheck="false" />
+					<input type="password" id="wpcc-token-fill" class="regular-text" placeholder="siteradian_..." autocomplete="off" spellcheck="false" />
 					<p><?php esc_html_e( 'It fills the copy action in this browser only. SiteRadian cannot reconstruct an existing token; create a new one if you did not save it.', 'siteradian' ); ?></p>
 				</div>
 			</div>
@@ -99,7 +99,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 				<p class="wpcc-connect-note"><?php esc_html_e( 'The private install link is created only when you click. Do not copy or share it.', 'siteradian' ); ?></p>
 			<?php $wpcc_connect_step_end(); ?>
 
-			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Confirm and reload Cursor', 'siteradian' ), __( 'Choose Install, then open Customize → MCPs and confirm wp-command-center is enabled. If needed, run Developer: Reload Window.', 'siteradian' ) ); ?>
+			<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Confirm and reload Cursor', 'siteradian' ), sprintf( /* translators: %s: generated MCP server alias. */ __( 'Choose Install, then open Customize → MCPs and confirm %s is enabled. If needed, run Developer: Reload Window.', 'siteradian' ), $wpcc_sel_server_key ) ); ?>
 			<?php $wpcc_connect_step_end(); ?>
 
 		<?php elseif ( 'continue_config' === $wpcc_setup_kind ) : ?>
@@ -197,8 +197,8 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 			<?php
 			$wpcc_finish_desc = 'vscode_config' === $wpcc_setup_kind
 				? ( $wpcc_new_token
-					? __( 'Save the file. Copy your token again here because copying the setup replaced your clipboard. Then run MCP: List Servers, start wp-command-center, approve trust, and paste the SiteRadian token when VS Code asks.', 'siteradian' )
-					: __( 'Save the file, have your saved SiteRadian token ready, then run MCP: List Servers, start wp-command-center, approve trust, and paste the SiteRadian token when VS Code asks.', 'siteradian' ) )
+					? sprintf( /* translators: %s: generated MCP server alias. */ __( 'Save the file. Copy your token again here because copying the setup replaced your clipboard. Then run MCP: List Servers, start %s, approve trust, and paste the SiteRadian token when VS Code asks.', 'siteradian' ), $wpcc_sel_server_key )
+					: sprintf( /* translators: %s: generated MCP server alias. */ __( 'Save the file, have your saved SiteRadian token ready, then run MCP: List Servers, start %s, approve trust, and paste the SiteRadian token when VS Code asks.', 'siteradian' ), $wpcc_sel_server_key ) )
 					: __( 'Save the file, fully quit the app, and open it again so it loads the connection.', 'siteradian' );
 			/* translators: %s: selected assistant or coding client name. */
 			$wpcc_connect_step( ++$wpcc_step_number, 'vscode_config' === $wpcc_setup_kind ? __( 'Save and start the server', 'siteradian' ) : sprintf( __( 'Save and restart %s', 'siteradian' ), $wpcc_current_client['name'] ), $wpcc_finish_desc );
@@ -235,10 +235,10 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 					<summary><?php esc_html_e( 'Why this step?', 'siteradian' ); ?></summary>
 					<div>
 						<?php if ( 'codex' === $wpcc_selected_client ) : ?>
-							<p><?php esc_html_e( 'WPCC_TOKEN keeps the raw token out of ~/.codex/config.toml. On macOS and Linux, every Codex setup action must run from this terminal; a new terminal needs this action again. Never replace the variable name with the token.', 'siteradian' ); ?></p>
-							<p><?php esc_html_e( 'Optional presence check:', 'siteradian' ); ?> <code>printenv WPCC_TOKEN &gt;/dev/null</code></p>
+							<p><?php echo esc_html( sprintf( /* translators: %s: environment-variable name used by Codex. */ __( '%s keeps the raw token out of ~/.codex/config.toml. On macOS and Linux, every Codex setup action must run from this terminal; a new terminal needs this action again. Never replace the variable name with the token.', 'siteradian' ), $wpcc_sel_env_var ) ); ?></p>
+							<p><?php esc_html_e( 'Optional presence check:', 'siteradian' ); ?> <code>printenv <?php echo esc_html( $wpcc_sel_env_var ); ?> &gt;/dev/null</code></p>
 						<?php else : ?>
-							<p><?php esc_html_e( 'The Codex setting stores the variable name WPCC_TOKEN, not the token itself. Dock- or Finder-launched apps need the GUI-session command above and a full restart.', 'siteradian' ); ?></p>
+							<p><?php echo esc_html( sprintf( /* translators: %s: environment-variable name used by Codex. */ __( 'The Codex setting stores the variable name %s, not the token itself. Dock- or Finder-launched apps need the GUI-session command above and a full restart.', 'siteradian' ), $wpcc_sel_env_var ) ); ?></p>
 						<?php endif; ?>
 					</div>
 				</details>
@@ -252,7 +252,7 @@ $wpcc_inline_token_waiting = $wpcc_setup_requires_token && ! $wpcc_token_ready;
 			<?php $wpcc_connect_step_end(); ?>
 
 			<?php if ( 'codex' === $wpcc_selected_client ) : ?>
-				<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Start Codex in this same terminal', 'siteradian' ), __( 'Run the command here—not in a different Terminal, Warp, or PowerShell window—so Codex receives WPCC_TOKEN and can request approval when needed.', 'siteradian' ) ); ?>
+				<?php $wpcc_connect_step( ++$wpcc_step_number, __( 'Start Codex in this same terminal', 'siteradian' ), sprintf( /* translators: %s: environment-variable name used by Codex. */ __( 'Run the command here—not in a different Terminal, Warp, or PowerShell window—so Codex receives %s and can request approval when needed.', 'siteradian' ), $wpcc_sel_env_var ) ); ?>
 					<div class="wpcc-connect-step__actions">
 						<button type="button" class="button button-primary wpcc-copy-btn" data-copy-target="wpcc-codex-launch"><?php esc_html_e( 'Copy start command', 'siteradian' ); ?></button>
 					</div>
@@ -291,7 +291,7 @@ if [ -f ~/.gemini/config/mcp_config.json ]; then chmod 600 ~/.gemini/config/mcp_
 			/* translators: %s: selected assistant or coding client name. */
 			$wpcc_start_title = sprintf( __( 'Start %s', 'siteradian' ), $wpcc_current_client['name'] );
 			/* translators: %s: selected assistant or coding client name. */
-			$wpcc_start_desc = sprintf( __( 'Open %s so it loads the new wp-command-center registration.', 'siteradian' ), $wpcc_current_client['name'] );
+			$wpcc_start_desc = sprintf( /* translators: 1: selected client name; 2: generated MCP server alias. */ __( 'Open %1$s so it loads the new %2$s registration.', 'siteradian' ), $wpcc_current_client['name'], $wpcc_sel_server_key );
 			$wpcc_connect_step( ++$wpcc_step_number, $wpcc_start_title, $wpcc_start_desc );
 			?>
 			<?php $wpcc_connect_step_end(); ?>

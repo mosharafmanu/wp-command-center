@@ -334,7 +334,7 @@ assert_true "ai: codex config accessible" "$( [ "$CODEX_CODE" = "200" ] && echo 
 # client in the registry that takes no JSON at all. Demanding `mcpServers` here asserted
 # the very shape that could never have worked for it.
 assert_eq "ai: codex config is TOML" "toml" "$(echo "$CODEX_CFG" | jq -r '.config.__format // "json"')"
-assert_contains "ai: codex config keys the TOML mcp_servers table" "$(echo "$CODEX_CFG" | jq -r '.config.__raw // ""')" "[mcp_servers.wp-command-center]"
+assert_contains "ai: codex config keys the TOML mcp_servers table" "$(echo "$CODEX_CFG" | jq -r '.config.__raw // ""')" "[mcp_servers.siteradian]"
 
 # Non-existent client
 UNK_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/nonexistent/config")

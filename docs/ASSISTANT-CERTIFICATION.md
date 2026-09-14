@@ -47,7 +47,7 @@ verification alone never grants CERT_PASS.
 ## 1. What Claude certified without any third-party account
 
 This is the part that does not depend on any assistant. It was driven through the **shipped
-relay** (`sdk/javascript/wpcc-mcp-relay.mjs`) over stdio JSON-RPC — byte-for-byte the same
+relay** (`sdk/javascript/siteradian-mcp-relay.mjs`) over stdio JSON-RPC — byte-for-byte the same
 path every stdio assistant uses — and separately over **direct HTTP**.
 
 | Check | Result | Evidence |
@@ -85,7 +85,7 @@ Verified by Claude with plain `curl`:
 ```bash
 curl -s -X POST "https://YOUR-SITE/wp-json/wp-command-center/v1/mcp" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_WPCC_TOKEN" \
+  -H "Authorization: Bearer YOUR_SITERADIAN_TOKEN" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"x","version":"1"}}}'
 ```
 
@@ -233,12 +233,12 @@ Replace `YOUR-SITE`, and paste your token where shown. Create the token at
 ```json
 {
   "mcpServers": {
-    "wp-command-center": {
+    "siteradian": {
       "command": "node",
-      "args": ["/absolute/path/to/wpcc-mcp-relay.mjs"],
+      "args": ["/absolute/path/to/siteradian-mcp-relay.mjs"],
       "env": {
-        "WPCC_MCP_URL": "https://YOUR-SITE/wp-json/wp-command-center/v1/mcp",
-        "WPCC_TOKEN": "wpcc_YOUR_TOKEN"
+        "SITERADIAN_MCP_URL": "https://YOUR-SITE/wp-json/wp-command-center/v1/mcp",
+        "SITERADIAN_TOKEN": "siteradian_YOUR_TOKEN"
       }
     }
   }
@@ -247,7 +247,7 @@ Replace `YOUR-SITE`, and paste your token where shown. Create the token at
 
 ### 6.2 Claude Code — transport B
 ```bash
-claude mcp add wp-command-center \
+claude mcp add siteradian \
   --transport http \
   --url https://YOUR-SITE/wp-json/wp-command-center/v1/mcp \
   --header "Authorization: Bearer wpcc_YOUR_TOKEN"
@@ -261,7 +261,7 @@ claude mcp add wp-command-center \
 ```json
 {
   "servers": {
-    "wp-command-center": {
+    "siteradian": {
       "type": "http",
       "url": "https://YOUR-SITE/wp-json/wp-command-center/v1/mcp",
       "headers": { "Authorization": "Bearer wpcc_YOUR_TOKEN" }
@@ -273,7 +273,7 @@ claude mcp add wp-command-center \
 ### 6.5 Codex CLI (and ChatGPT desktop) — transport B
 `~/.codex/config.toml` — **TOML, not JSON:**
 ```toml
-[mcp_servers.wp-command-center]
+[mcp_servers.siteradian]
 url = "https://YOUR-SITE/wp-json/wp-command-center/v1/mcp"
 bearer_token = "wpcc_YOUR_TOKEN"
 ```
@@ -284,7 +284,7 @@ Or `codex mcp add`. ChatGPT desktop reads this same file.
 ```json
 {
   "mcpServers": {
-    "wp-command-center": {
+    "siteradian": {
       "httpUrl": "https://YOUR-SITE/wp-json/wp-command-center/v1/mcp",
       "headers": { "Authorization": "Bearer wpcc_YOUR_TOKEN" }
     }
@@ -308,7 +308,7 @@ protection before starting** (Settings → Protection).
 
 | # | Step | Ask the assistant | Pass criteria |
 |---|---|---|---|
-| 1 | **Connect** | — | Assistant lists `wp-command-center` as connected |
+| 1 | **Connect** | — | Assistant lists `siteradian` as connected |
 | 2 | **Tool discovery** | "What WordPress tools do you have?" | **42 tools** visible |
 | 3 | **Resource discovery** | "List available resources." | **7 resources** |
 | 4 | **Read** | "What plugins are installed on my site?" | Real plugin list, no approval prompt |
@@ -333,7 +333,7 @@ against a live site (WordPress 6.9.5, PHP 8.3.30, Standard protection), not simu
 
 | # | Step | Observed |
 |---|---|---|
-| 1 | Connect | `claude mcp list` → `wp-command-center … ✔ Connected`, using the command this plugin generates, verbatim |
+| 1 | Connect | `claude mcp list` → `siteradian … ✔ Connected`, using the command this plugin generates, verbatim |
 | 2 | Tool discovery | 42 tools, listed by name |
 | 3 | Resource discovery | 7 resources |
 | 4 | Read | Full 15-plugin list returned, no approval prompt |

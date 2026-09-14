@@ -23,10 +23,10 @@ for (const client of ['codex', 'chatgpt']) {
   const context = {document, window: {location: {hash:''}, matchMedia: () => ({matches:true})}};
   vm.runInNewContext(script.slice(script.indexOf('var tokenFill ='), script.indexOf('\n\t/*\n\t * Copy buttons')), context);
   assert.equal(config.textContent, original);
-  assert(!slots.some(s => s.textContent.includes('export WPCC_TOKEN') || s.textContent.includes('launchctl setenv')));
+  assert(!slots.some(s => s.textContent.includes('export SITERADIAN_TOKEN') || s.textContent.includes('launchctl setenv')));
   const copied = await copyCredential(html);
   assert(copied.includes('REDACTED_ONE_TIME_TOKEN'));
-  assert(!copied.includes('${WPCC_TOKEN}'));
+  assert(!copied.includes('${SITERADIAN_TOKEN}'));
   assert(!slots.some(s => s.textContent.includes('codex mcp add') && s.textContent.includes('REDACTED_ONE_TIME_TOKEN')));
   passed += 5;
 

@@ -674,17 +674,20 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
    column inside a 900px block inside a 1200px shell left ~500px of dead space on
    one side only, which reads as a layout mistake rather than as composition. */
 .wpcc-home { max-width: 1120px; margin-inline: auto; color:var(--wpcc-text-primary,#14213d); }
-.wpcc-home__hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr); gap:32px; align-items:center; margin:0 0 18px; padding:30px 32px; background:linear-gradient(135deg,#fff 0%,#f7f8ff 100%); border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:14px; }
-.wpcc-home__hero::after { content:""; position:absolute; right:-110px; top:-150px; width:330px; height:330px; border:1px solid rgba(64,85,213,.12); border-radius:50%; box-shadow:0 0 0 46px rgba(64,85,213,.035),0 0 0 92px rgba(64,85,213,.025); pointer-events:none; }
+.wpcc-home__hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0,1.16fr) minmax(300px,.84fr); gap:28px; align-items:center; margin:0 0 18px; padding:24px 28px; background:linear-gradient(135deg,#fff 0%,#f8f9ff 100%); border:1px solid var(--wpcc-border-subtle,#e2e7ef); border-radius:14px; box-shadow:0 1px 2px rgba(16,24,40,.025); }
+/* A bounded radius, not a decorative bullseye: one measured arc and its command
+   origin echo the mark without turning the dashboard into a marketing page. */
+.wpcc-home__hero::after { content:""; position:absolute; right:-68px; top:-96px; width:250px; height:250px; border:1px solid rgba(64,85,213,.11); border-left-color:transparent; border-bottom-color:transparent; border-radius:50%; box-shadow:32px 32px 0 -31px rgba(64,85,213,.09); transform:rotate(-12deg); pointer-events:none; }
 .wpcc-home__hero-copy,.wpcc-home__flow { position:relative; z-index:1; }
-.wpcc-home__logo { display:block; width:190px; height:36px; margin:0 0 22px; }
-.wpcc-app .wpcc-home__descriptor { margin:0 0 8px; font-size:13px; line-height:1.4; font-weight:700; letter-spacing:.065em; text-transform:uppercase; color:#4055d5; }
-.wpcc-home__promise { margin:0 0 10px!important; max-width:650px; font-size:26px; line-height:1.22!important; font-weight:650; letter-spacing:-.025em; color:#14213d; }
-.wpcc-home__support { margin:0!important; max-width:620px; font-size:14px; line-height:1.65!important; color:#5d6878; }
-.wpcc-home__flow { list-style:none; margin:0; padding:4px 0; display:grid; gap:7px; }
-.wpcc-home__flow li { position:relative; display:flex; align-items:center; min-height:34px; padding:7px 11px 7px 34px; border:1px solid #dfe4f3; border-radius:8px; background:rgba(255,255,255,.82); color:#344054; font-size:12px; font-weight:600; }
-.wpcc-home__flow li::before { content:""; position:absolute; left:13px; width:8px; height:8px; border:2px solid #4055d5; border-radius:50%; background:#fff; box-sizing:border-box; }
-.wpcc-home__flow li:not(:last-child)::after { content:""; position:absolute; left:16px; top:31px; width:1px; height:11px; background:#aab6ee; }
+.wpcc-home__logo { display:block; width:198px; height:auto; margin:0 0 15px; }
+.wpcc-app .wpcc-home__descriptor { margin:0 0 6px; font-size:12px; line-height:1.4; font-weight:700; letter-spacing:.075em; text-transform:uppercase; color:#4055d5; }
+.wpcc-home__promise { margin:0 0 8px!important; max-width:650px; font-size:25px; line-height:1.2!important; font-weight:650; letter-spacing:-.025em; color:#14213d; }
+.wpcc-home__support { margin:0!important; max-width:620px; font-size:14px; line-height:1.55!important; color:#5d6878; }
+.wpcc-home__flow { list-style:none; margin:0; padding:2px 0; display:grid; gap:5px; }
+.wpcc-home__flow li { position:relative; display:flex; align-items:center; min-height:30px; padding:5px 10px 5px 32px; border:1px solid #dfe4f3; border-radius:8px; background:rgba(255,255,255,.88); color:#344054; font-size:12px; font-weight:600; }
+.wpcc-home__flow li::before { content:""; position:absolute; left:13px; width:7px; height:7px; border:1.5px solid #4055d5; border-radius:1px; background:#fff; box-sizing:border-box; transform:rotate(45deg); }
+.wpcc-home__flow li:first-child::before,.wpcc-home__flow li:last-child::before { background:#4055d5; }
+.wpcc-home__flow li:not(:last-child)::after { content:""; position:absolute; left:16px; top:27px; width:1px; height:9px; background:#aab6ee; }
 /* ── Setup flow (pre-connection Home) ───────────────────────────────────────
  * Deliberately narrow and vertical: one column, one reading path, one button.
  * A grid would invite the eye to wander across choices the customer has not
@@ -806,7 +809,7 @@ foreach ( $wpcc_steps as $wpcc_i => $wpcc_s ) {
 .wpcc-home__learn-links span { color:#5d6878; font-size:11.5px; line-height:1.45; }
 @media (max-width:1100px) { .wpcc-home__status { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:900px) { .wpcc-home__hero { grid-template-columns:1fr; gap:20px; } .wpcc-home__flow { grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; } .wpcc-home__flow li { justify-content:center; padding:8px 6px; text-align:center; } .wpcc-home__flow li::before,.wpcc-home__flow li::after { display:none; } }
-@media (max-width:782px) { .wpcc-home__hero { padding:24px; } .wpcc-home__learn { grid-template-columns:1fr; gap:16px; } }
+@media (max-width:782px) { .wpcc-home__hero { padding:22px; } .wpcc-home__learn { grid-template-columns:1fr; gap:16px; } }
 @media (max-width:640px) { .wpcc-home__status,.wpcc-home__learn-links { grid-template-columns:1fr; } .wpcc-home__flow { grid-template-columns:1fr; } .wpcc-home__flow li { justify-content:flex-start; padding-left:34px; text-align:left; } .wpcc-home__flow li::before { display:block; } .wpcc-home__promise { font-size:22px; } .wpcc-setup { padding:20px; } }
 @media (prefers-reduced-motion:reduce) { .wpcc-home * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
 </style>

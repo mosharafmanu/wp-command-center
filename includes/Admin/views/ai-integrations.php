@@ -59,6 +59,7 @@ $wpcc_sel_http = 'http' === AIClientRegistry::transport_for( $wpcc_selected_clie
  */
 $wpcc_sel_cred_mode = AIClientRegistry::credential_mode_for( $wpcc_selected_client );
 $wpcc_sel_env_var   = AIClientRegistry::credential_env_var_for( $wpcc_selected_client );
+$wpcc_sel_server_key = AIClientRegistry::server_key_for( $wpcc_selected_client );
 $wpcc_sel_uses_env  = 'env_var' === $wpcc_sel_cred_mode;
 
 // All AI client activity from audit log
@@ -184,7 +185,7 @@ if ( isset( $_POST['wpcc_token_action'] ) && check_admin_referer( 'wpcc_ai_integ
 // re-injected into the config here. Rather than silently leaving the placeholder
 // (which makes "Use in config" look like it did nothing), we resolve the selected
 // token's metadata so the Configuration tab can show a clear note telling the user
-// exactly which saved token to paste in place of the WPCC_TOKEN placeholder.
+// exactly which saved token to paste in place of the generated placeholder.
 $wpcc_selected_token_id = sanitize_text_field( (string) ( $_GET['token_id'] ?? '' ) );
 $wpcc_selected_token    = null;
 if ( $wpcc_selected_token_id ) {
@@ -1152,9 +1153,9 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 		 * returned 401 from a server that was in perfect health — 42 tools, valid token,
 		 * everything. Two separate causes, both invisible from the screen:
 		 *
-		 *   1. The generated TOML said `bearer_token = "${WPCC_TOKEN}"`. TOML has no
+		 *   1. The generated TOML used a shell-style interpolated token placeholder. TOML has no
 		 *      string interpolation and Codex performs none, so the literal characters
-		 *      `${WPCC_TOKEN}` were sent as the bearer token. (Fixed in
+		 *      the placeholder text was sent as the bearer token. (Fixed in
 		 *      CodexIntegration; the config now names an environment variable.)
 		 *
 		 *   2. The client's own field is labelled "Bearer token env var" and wants the
@@ -1306,7 +1307,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						 *
 						 * Third case, and the one that was actively wrong: an env_var
 						 * client's configuration contains NO token and must not. Telling
-						 * that user to "put your access token in place of ${WPCC_TOKEN}"
+					 * that user to replace a symbolic placeholder with the access token
 						 * describes the exact edit that produces a 401 — the client would
 						 * then treat the token as the name of an environment variable.
 						 */
@@ -1386,7 +1387,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 										: esc_html__( 'Paste your access token to complete the configuration', 'siteradian' );
 								}
 							?></label>
-							<input type="text" id="wpcc-token-fill" class="regular-text" placeholder="wpcc_..." autocomplete="off" spellcheck="false" style="width:100%;max-width:520px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;" value="<?php echo esc_attr( $wpcc_new_token ); ?>">
+							<input type="text" id="wpcc-token-fill" class="regular-text" placeholder="siteradian_..." autocomplete="off" spellcheck="false" style="width:100%;max-width:520px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;" value="<?php echo esc_attr( $wpcc_new_token ); ?>">
 							<p class="wpcc-ai-field__hint" style="margin:6px 0 0;"><?php
 								echo $wpcc_new_token
 									? esc_html__( 'Nothing more to fill in — the configuration below is ready to copy. Your token stays in this browser; it is never sent back to the server.', 'siteradian' )
@@ -1395,16 +1396,20 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						</div>
 						<?php endif; // guided panel owns the token field ?>
 						<?php if ( $wpcc_sel_uses_env ) : ?>
-							<p class="wpcc-ai-field__hint"><?php esc_html_e( 'Manual setup replaces only Step 2. Complete Step 1 above, add this block to ~/.codex/config.toml without replacing existing settings, then follow Step 3 for your selected client. Keep bearer_token_env_var = "WPCC_TOKEN": WPCC_TOKEN is the variable name, never replace it with your token.', 'siteradian' ); ?></p>
+							<p class="wpcc-ai-field__hint"><?php echo esc_html( sprintf(
+								/* translators: %s: environment-variable name used by Codex. */
+								__( 'Manual setup replaces only Step 2. Complete Step 1 above, add this block to ~/.codex/config.toml without replacing existing settings, then follow Step 3 for your selected client. Keep bearer_token_env_var = "%1$s": %1$s is the variable name, never replace it with your token.', 'siteradian' ),
+								$wpcc_sel_env_var
+							) ); ?></p>
 						<?php endif; ?>
 						<?php
 						$wpcc_vscode_input_snippet = '';
 						if ( 'vscode' === $wpcc_selected_client ) {
 							$wpcc_vscode_config = json_decode( $wpcc_primary_config, true );
-							$wpcc_vscode_server = is_array( $wpcc_vscode_config ) ? ( $wpcc_vscode_config['servers']['wp-command-center'] ?? null ) : null;
+							$wpcc_vscode_server = is_array( $wpcc_vscode_config ) ? ( $wpcc_vscode_config['servers'][ $wpcc_sel_server_key ] ?? null ) : null;
 							$wpcc_vscode_input  = is_array( $wpcc_vscode_config ) ? ( $wpcc_vscode_config['inputs'][0] ?? null ) : null;
 							$wpcc_entry_snippet = is_array( $wpcc_vscode_server )
-								? '"wp-command-center": ' . (string) wp_json_encode( $wpcc_vscode_server, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
+								? '"' . $wpcc_sel_server_key . '": ' . (string) wp_json_encode( $wpcc_vscode_server, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
 								: '';
 							$wpcc_vscode_input_snippet = is_array( $wpcc_vscode_input )
 								? (string) wp_json_encode( $wpcc_vscode_input, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
@@ -1419,7 +1424,11 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<?php if ( $wpcc_gemini_manual ) : ?>
 							<div class="notice inline notice-warning" style="margin:0 22px 14px;padding:10px 12px;">
 								<p style="margin:0 0 6px;"><strong><?php esc_html_e( 'Merge this server into your existing Gemini settings. Do not replace the whole settings.json file.', 'siteradian' ); ?></strong></p>
-								<p style="margin:0;"><?php esc_html_e( 'Add only the “wp-command-center” entry inside the existing “mcpServers” object. Keep every other server and every unrelated top-level setting, including any IDE, security, UI or account settings. If “mcpServers” does not exist, add that object without removing the other settings.', 'siteradian' ); ?></p>
+								<p style="margin:0;"><?php echo esc_html( sprintf(
+									/* translators: %s: generated MCP server alias. */
+									__( 'Add only the “%s” entry inside the existing “mcpServers” object. Keep every other server and every unrelated top-level setting, including any IDE, security, UI or account settings. If “mcpServers” does not exist, add that object without removing the other settings.', 'siteradian' ),
+									$wpcc_sel_server_key
+								) ); ?></p>
 							</div>
 							<span class="wpcc-ai-field__label" style="display:block;padding:0 22px;"><?php esc_html_e( 'Empty-file example', 'siteradian' ); ?></span>
 						<?php elseif ( $wpcc_command_code_manual ) : ?>
@@ -1447,9 +1456,17 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 						<p class="wpcc-ai-field__hint" style="padding:0 22px 14px;margin:8px 0 0;">
 							<?php
 							if ( 'gemini' === $wpcc_selected_client ) {
-								esc_html_e( 'What this does: Gemini CLI connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Gemini setting.', 'siteradian' );
+								echo esc_html( sprintf(
+									/* translators: %s: generated MCP server alias. */
+									__( 'What this does: Gemini CLI connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “%s” entry and keep every other Gemini setting.', 'siteradian' ),
+									$wpcc_sel_server_key
+								) );
 							} elseif ( $wpcc_command_code_manual ) {
-								esc_html_e( 'What this does: Command Code connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “wp-command-center” entry and keep every other Command Code MCP server.', 'siteradian' );
+								echo esc_html( sprintf(
+									/* translators: %s: generated MCP server alias. */
+									__( 'What this does: Command Code connects straight to this site using the address and bearer token above. Nothing is installed or left running. To disconnect a manual setup, remove only the “%s” entry and keep every other Command Code MCP server.', 'siteradian' ),
+									$wpcc_sel_server_key
+								) );
 							} elseif ( $wpcc_sel_http ) {
 								esc_html_e( 'What this does: your assistant connects straight to this site over the web using the address and token above. Nothing is installed or run on your computer, and no other service is involved. Remove the configuration and the connection is gone.', 'siteradian' );
 							} else {
@@ -1591,7 +1608,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				<p><?php esc_html_e( 'Test SiteRadian endpoints and token authentication from this browser, including the MCP handshake, tools and resources. This does not test whether your assistant loaded the server. Confirm that inside your selected client. No content is changed; authentication activity may be recorded.', 'siteradian' ); ?></p>
 				<div style="margin-bottom: 12px;">
 					<label for="wpcc-test-token" style="display: block; font-weight: 600; margin-bottom: 4px;"><?php esc_html_e( 'Access token', 'siteradian' ); ?></label>
-					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="wpcc_..." style="width: 100%; max-width: 500px; font-family: monospace;"
+					<input type="text" id="wpcc-test-token" class="regular-text" placeholder="siteradian_..." style="width: 100%; max-width: 500px; font-family: monospace;"
 						value="<?php echo esc_attr( $wpcc_new_token ); ?>">
 					<p style="color: #646970; font-size: 12px; margin: 4px 0 0;"><?php
 						/*
@@ -1973,7 +1990,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 				url: cursorInstall.getAttribute('data-mcp-url'),
 				headers: { Authorization: 'Bearer ' + token }
 			});
-			var link = 'cursor://anysphere.cursor-deeplink/mcp/install?name=wp-command-center&config=' + encodeURIComponent(window.btoa(config));
+			var link = 'cursor://anysphere.cursor-deeplink/mcp/install?name=' + encodeURIComponent(<?php echo wp_json_encode( $wpcc_sel_server_key ); ?>) + '&config=' + encodeURIComponent(window.btoa(config));
 			window.location.assign(link);
 		});
 	}
@@ -2113,7 +2130,7 @@ if ( ! isset( $wpcc_tabs[ $wpcc_tab ] ) ) {
 			// configuration downloads this file from this site and runs it. If it is not
 			// reachable nothing else matters — every other check below can pass while the
 			// assistant is still unable to connect, so it is checked first and by URL.
-			var relayUrl = <?php echo wp_json_encode( WPCC_PLUGIN_URL . 'sdk/javascript/wpcc-mcp-relay.mjs?v=' . WPCC_VERSION ); ?>;
+			var relayUrl = <?php echo wp_json_encode( WPCC_PLUGIN_URL . 'sdk/javascript/siteradian-mcp-relay.mjs?v=' . WPCC_VERSION ); ?>;
 			/*
 			 * …but ONLY for a relay client. A Direct HTTP assistant never fetches the
 			 * connector, so testing it answers a question that assistant does not ask —

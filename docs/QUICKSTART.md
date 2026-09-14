@@ -37,13 +37,13 @@ configuration. It looks like this:
 ```json
 {
   "mcpServers": {
-    "wp-command-center": {
+    "siteradian": {
       "command": "bash",
-      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/siteradian/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""],
+      "args": ["-c", "RELAY='/tmp/siteradian-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/siteradian/sdk/javascript/siteradian-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""],
       "env": {
-        "WPCC_MCP_URL": "https://example.com/wp-json/wp-command-center/v1/mcp",
+        "SITERADIAN_MCP_URL": "https://example.com/wp-json/wp-command-center/v1/mcp",
         "WPCC_SITE_URL": "https://example.com",
-        "WPCC_TOKEN": "${WPCC_TOKEN}",
+        "SITERADIAN_TOKEN": "${SITERADIAN_TOKEN}",
         "WPCC_CONTEXT_MODE": "compact"
       }
     }
@@ -51,7 +51,7 @@ configuration. It looks like this:
 }
 ```
 
-Replace `${WPCC_TOKEN}` with the token from step 2. The config never contains a live
+Replace `${SITERADIAN_TOKEN}` with the token from step 2. The config never contains a live
 token — you paste it in yourself.
 
 The relay is a small stdio↔HTTP bridge shipped **inside the plugin**. It is downloaded

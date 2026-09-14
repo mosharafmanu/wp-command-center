@@ -29,6 +29,7 @@ modes) it was read from the running plugin, not from memory.
 | [AI-INTEGRATIONS.md](AI-INTEGRATIONS.md) | Supported clients and their configuration |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Symptoms and fixes |
 | [BRAND-SYSTEM.md](BRAND-SYSTEM.md) | SiteRadian identity, color, type, spacing, components, and logo use |
+| [PUBLIC-IDENTITY.md](PUBLIC-IDENTITY.md) | Public naming policy and deliberate protocol/storage compatibility exceptions |
 | [WORDPRESS-ORG-ASSETS.md](WORDPRESS-ORG-ASSETS.md) | Directory asset inventory, screenshot strategy, and SVN placement |
 | [RELEASE.md](RELEASE.md) | Current v1.0.0 release process, package identity, gates, and lifecycle checks |
 

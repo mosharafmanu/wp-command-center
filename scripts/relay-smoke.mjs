@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * WPCC MCP Relay smoke test — the relay must BOOT and ANSWER, not merely lint.
+ * SiteRadian MCP Relay smoke test — the relay must BOOT and ANSWER, not merely lint.
  *
  * `node --check` only validates syntax; it does not catch a relay that dies on
  * boot (bad import, config path, top-level await, port bind). This harness
@@ -19,8 +19,8 @@
  *            enumerate valid actions in its message (Task 3a contract).
  *
  * Config via env:
- *   WPCC_MCP_URL, WPCC_TOKEN   required for TOOLS/CALL/AUDIT (live phases)
- *   RELAY                      path to relay .mjs (default: ./sdk/javascript/wpcc-mcp-relay.mjs)
+ *   SITERADIAN_MCP_URL, SITERADIAN_TOKEN required for TOOLS/CALL/AUDIT (live phases)
+ *   RELAY                      path to relay .mjs (default: ./sdk/javascript/siteradian-mcp-relay.mjs)
  *   EXPECTED_TOOLS             expected tools/list count (default: 42)
  *   SMOKE_SKIP_LIVE=1          run only BOOT + TIMEOUT (offline)
  */
@@ -31,10 +31,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const RELAY = process.env.RELAY || resolve(__dirname, '..', 'sdk', 'javascript', 'wpcc-mcp-relay.mjs');
+const RELAY = process.env.RELAY || resolve(__dirname, '..', 'sdk', 'javascript', 'siteradian-mcp-relay.mjs');
 const EXPECTED_TOOLS = Number(process.env.EXPECTED_TOOLS || 42);
-const MCP_URL = process.env.WPCC_MCP_URL;
-const TOKEN = process.env.WPCC_TOKEN;
+const MCP_URL = process.env.SITERADIAN_MCP_URL || process.env.WPCC_MCP_URL;
+const TOKEN = process.env.SITERADIAN_TOKEN || process.env.WPCC_TOKEN;
 const SKIP_LIVE = process.env.SMOKE_SKIP_LIVE === '1';
 // AUDIT mode: 'strict' (default) → invalid-action mismatches are fatal (the
 // Task 3a contract, for post-deploy proof). 'report' → mismatches print as
@@ -91,7 +91,7 @@ async function main() {
     const hung = createServer((sock) => { /* accept, never respond */ sock.on('error', () => {}); });
     hung.listen(0, '127.0.0.1', async () => {
       const port = hung.address().port;
-      const r = spawnRelay({ WPCC_MCP_URL: `http://127.0.0.1:${port}/mcp`, WPCC_TOKEN: 'smoke', WPCC_RELAY_TIMEOUT_MS: '1200' });
+      const r = spawnRelay({ SITERADIAN_MCP_URL: `http://127.0.0.1:${port}/mcp`, SITERADIAN_TOKEN: 'smoke', SITERADIAN_RELAY_TIMEOUT_MS: '1200' });
       const t0 = Date.now();
       // MAX_ATTEMPTS=2 × 1200ms ≈ 2.4s; allow generous margin.
       const resp = await r.rpc(1, 'tools/call', { name: 'system_info', arguments: {} }, 8000);
@@ -105,14 +105,14 @@ async function main() {
   });
 
   if (SKIP_LIVE || !MCP_URL || !TOKEN) {
-    if (!SKIP_LIVE) fail('WPCC_MCP_URL / WPCC_TOKEN not set — live phases (BOOT/TOOLS/CALL/AUDIT) skipped');
+    if (!SKIP_LIVE) fail('SITERADIAN_MCP_URL / SITERADIAN_TOKEN not set — live phases (BOOT/TOOLS/CALL/AUDIT) skipped');
     else console.log('\n(SMOKE_SKIP_LIVE=1 — live phases skipped)');
     return finish();
   }
 
   // ── PHASE: BOOT + TOOLS ──────────────────────────────────────────────────
   phase('PHASE BOOT + TOOLS — initialize then tools/list must equal expected count');
-  const live = spawnRelay({ WPCC_MCP_URL: MCP_URL, WPCC_TOKEN: TOKEN });
+  const live = spawnRelay({ SITERADIAN_MCP_URL: MCP_URL, SITERADIAN_TOKEN: TOKEN });
   const initR = await live.rpc(0, 'initialize', { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'smoke', version: '0' } }, 20000);
   if (initR.__timeout || !initR.result) { fail(`initialize did not return (relay boot failed). stderr: ${live.stderr().slice(-300)}`); live.close(); return finish(); }
   pass(`initialize ok — server ${initR.result.serverInfo?.name} v${initR.result.serverInfo?.version}`);

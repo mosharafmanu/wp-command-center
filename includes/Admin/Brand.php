@@ -121,10 +121,9 @@ final class Brand {
 	 */
 	public static function menu_icon(): string {
 		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" aria-label="SiteRadian">'
-			. '<path d="M10 2a8 8 0 1 1-8 8" fill="none" stroke="#a7aaad" stroke-width="2.4" stroke-linecap="round"/>'
-			. '<path d="m10 10 5.5-5.5" fill="none" stroke="#a7aaad" stroke-width="2" stroke-linecap="round"/>'
-			. '<circle cx="10" cy="10" r="2" fill="#a7aaad"/>'
-			. '<circle cx="15.6" cy="4.4" r="1.5" fill="#a7aaad"/>'
+			. '<path d="M4 17V3h6.2c3.9 0 6.2 2.1 6.2 5.2s-2.3 5.2-6.2 5.2H4m6.3 0L16.5 17" fill="none" stroke="#a7aaad" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'
+			. '<path d="M8.8 9.1l4.9-3.3" fill="none" stroke="#a7aaad" stroke-width="1.6" stroke-linecap="round"/>'
+			. '<path d="m8.8 8 1.1 1.1-1.1 1.1-1.1-1.1z" fill="#a7aaad"/>'
 			. '</svg>';
 
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );

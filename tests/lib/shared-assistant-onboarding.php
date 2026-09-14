@@ -31,20 +31,18 @@ $has_class = static function ( DOMXPath $xpath, DOMNode $context, string $class 
 };
 
 $expected_payload_hashes = [
-	'chatgpt'      => '1e854d9aebdecb51dad1745a5ca5cf9955237f2eb87d27d33daf729458de5461',
-	'codex'        => '1e854d9aebdecb51dad1745a5ca5cf9955237f2eb87d27d33daf729458de5461',
-	'claude'       => '0939dd42306a22c51615b9c7cb862ada31c23f0e5aa781c222cf5547b0e3fe5c',
-	'claude_code'  => 'f6a0a7e09d91dbe974a9893a652f77de76e811d2929bd6326a0f92489763a273',
-	'antigravity'  => 'ab52ef44ad5c733b937fb09d89d18e6718e733ebad374b42724c0d1daabccc98',
-	'gemini'       => '97c715dea6157c6398791381bac39a948378c16790930efe7f2639f0d20d0117',
-	'cursor'       => '854963c5bebd6f8a646117dfa51c0545ba8c882779fd7f000ec719688997746d',
-	'continue'     => '6d09c6c7a3d9dae4a60516a6824c09f9a82dc3c22305d17dfadbfd2cc44eab22',
-	// Intentional public-brand update: only the secure prompt's visible label
-	// changed from the pre-launch product name to SiteRadian.
-	'vscode'       => '6dd1134afb525f94dda818bef84c08b1f411a63546812124275453ca859dc6c8',
-	'opencode'     => '88d6d8dd915ee667ba0eea8c0a938d57b342a530215c4c880834febfdd531bad',
-	'command_code' => 'd0f1bf76b40a3b7bbb117b471cdaa0023b94ab996ddc9c25cf0e958f023fdea1',
-	'muse_code'    => '708f238ad69ccae297856dbb2e957a8f049b6badaa4a35138be0b741686f5d1b',
+	'chatgpt'      => 'f9b266ebe1772c34b56bcb818a55a20b5aba71c00922f4850f5fb8840c192a98',
+	'codex'        => 'f9b266ebe1772c34b56bcb818a55a20b5aba71c00922f4850f5fb8840c192a98',
+	'claude'       => '74395699bec3427ea92da993f5b6ac9d5a15cfb794aeb55810103f2ed2777f40',
+	'claude_code'  => '78f11906850ef94d4b9e61aefe299c988713589217961482b24fc9815d9f0a6c',
+	'antigravity'  => '8eba910bb3895a0ea7f970c6339a2cc45711663d71bde2e1c8e534e0594aa1cd',
+	'gemini'       => 'a0a3b92f0e079d3dec5a389a2e97e49ffb9eb5dbb9b1ae69e8f32e3b4b2f1abc',
+	'cursor'       => '6a74153956c8b935076cb4fe8429a01b12dbb71cb5c2c0e8291fb583876fee06',
+	'continue'     => '9e11a79c5f9695b5db12200cf51fc1956f3f5c4e25d220734e0face3415ef916',
+	'vscode'       => '1114ed0fcb9b950e80b0fa17eb2cdfe805006e94be926c908014fe69a0832450',
+	'opencode'     => 'a4b9718d98e968f4a80f25b81a0465f35c269d474ea3758e8e7d421532ad1acd',
+	'command_code' => '0fc877e70c8db265e8aff01845fded43ee7baf10734816eff388d82ed1a42949',
+	'muse_code'    => 'da6b12562db3f6fbb55009cd9bf8360400d5bb4dca694372367f917658ea6bac',
 ];
 
 $expected_badges = [
@@ -62,7 +60,7 @@ $expected_badges = [
 	'muse_code'    => 'Connection tested',
 ];
 
-$fixture_token = 'wpcc_TEST_ONLY_M21';
+$fixture_token = 'siteradian_TEST_ONLY_M21';
 foreach ( Registry::get_clients() as $client_id => $client ) {
 	$parts = [
 		Registry::render_config( Registry::generate_config( $client_id ), $fixture_token ),

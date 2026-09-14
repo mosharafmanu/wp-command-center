@@ -53,15 +53,15 @@ await page.goto(`${base}/wp-login.php`, { waitUntil: 'networkidle' });
 await page.locator('#user_login').fill(user);
 await page.locator('#user_pass').fill(password);
 await Promise.all([
-	page.waitForURL(url => url.pathname.startsWith('/wp-admin/')),
+	page.waitForURL(url => url.href.startsWith(base) && url.pathname.includes('/wp-admin/')),
 	page.locator('#wp-submit').click(),
 ]);
 
 const screens = [
 	['1', 'Home', '/wp-admin/admin.php?page=wp-command-center', '#wpcc-home-brandline'],
 	['2', 'Connections', '/wp-admin/admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants', '#wpcc-choose-app'],
-	['4', 'Approvals', '/wp-admin/admin.php?page=wpcc-activity', '.wpcc-apr-clear'],
-	['5', 'Changes', '/wp-admin/admin.php?page=wpcc-history', '.wpcc-empty-state'],
+	['4', 'Approvals', '/wp-admin/admin.php?page=wpcc-activity', '.wpcc-app'],
+	['5', 'Changes', '/wp-admin/admin.php?page=wpcc-history', '.wpcc-app'],
 	['6', 'Protection', '/wp-admin/admin.php?page=wpcc-settings&wpcc_tab=security', '.wpcc-app'],
 ];
 
@@ -79,9 +79,24 @@ const waitForSettledProduct = async selector => {
 	}
 };
 
+const assertAdminMark = async () => {
+	const mark = page.locator('#toplevel_page_wp-command-center .wp-menu-image.svg').first();
+	await mark.waitFor({ state: 'attached', timeout: 10000 });
+	const details = await mark.evaluate(element => ({
+		background: getComputedStyle(element).backgroundImage,
+		width: element.getBoundingClientRect().width,
+		height: element.getBoundingClientRect().height,
+	}));
+	const menuIsVisible = (await page.viewportSize()).width >= 783;
+	if (!details.background.includes('data:image/svg+xml') || (menuIsVisible && (details.width < 16 || details.height < 16))) {
+		throw new Error(`Admin menu mark is not a usable inline SVG: ${JSON.stringify(details)}`);
+	}
+};
+
 for (const [number, name, url, selector] of screens) {
 	await page.goto(`${base}${url}`, { waitUntil: 'networkidle' });
 	await waitForSettledProduct(selector);
+	await assertAdminMark();
 	await page.screenshot({ path: path.join(out, `screenshot-${number}.png`) });
 	console.log(`PASS screenshot-${number}: ${name}`);
 }
@@ -103,17 +118,24 @@ console.log('PASS browser: Built-in AI');
 const widths = [1440, 1180, 900, 782, 480];
 for (const width of widths) {
 	await page.setViewportSize({ width, height: 900 });
-	await page.goto(`${base}/wp-admin/admin.php?page=wp-command-center`, { waitUntil: 'networkidle' });
-	await waitForSettledProduct('#wpcc-home-brandline');
-	const layout = await page.evaluate(() => ({
-		viewport: document.documentElement.clientWidth,
-		scroll: document.documentElement.scrollWidth,
-		heroVisible: Boolean(document.querySelector('#wpcc-home-brandline')),
-	}));
-	if (!layout.heroVisible || layout.scroll > layout.viewport + 1) {
-		throw new Error(`Dashboard overflow at ${width}px: ${JSON.stringify(layout)}`);
+	for (const [surface, url, selector] of [
+		['Home', '/wp-admin/admin.php?page=wp-command-center', '#wpcc-home-brandline'],
+		['Connections', '/wp-admin/admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants', '#wpcc-choose-app'],
+	]) {
+		await page.goto(`${base}${url}`, { waitUntil: 'networkidle' });
+		await waitForSettledProduct(selector);
+		await assertAdminMark();
+		const layout = await page.evaluate(expected => ({
+			viewport: document.documentElement.clientWidth,
+			scroll: document.documentElement.scrollWidth,
+			surfaceVisible: Boolean(document.querySelector(expected)),
+			clippedCode: Array.from(document.querySelectorAll('pre, code')).some(node => node.scrollWidth > node.clientWidth + 1 && getComputedStyle(node).overflowX === 'visible'),
+		}), selector);
+		if (!layout.surfaceVisible || layout.scroll > layout.viewport + 1 || layout.clippedCode) {
+			throw new Error(`${surface} overflow at ${width}px: ${JSON.stringify(layout)}`);
+		}
+		console.log(`PASS responsive: ${surface} ${width}px`);
 	}
-	console.log(`PASS responsive: ${width}px`);
 }
 
 if (browserErrors.length) {

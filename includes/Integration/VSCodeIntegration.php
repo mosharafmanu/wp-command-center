@@ -77,7 +77,7 @@ final class VSCodeIntegration extends BaseClientIntegration {
 	private static function config_for_credential( string $credential_id = '' ): array {
 		$ep = self::http_endpoint();
 		$seed = '' !== $credential_id ? $credential_id : $ep['url'];
-		$input_id = 'wpcc-token-' . substr( hash( 'sha256', $ep['url'] . '|' . $seed ), 0, 12 );
+		$input_id = 'siteradian-token-' . substr( hash( 'sha256', $ep['url'] . '|' . $seed ), 0, 12 );
 		$site_name = wp_specialchars_decode( (string) get_bloginfo( 'name' ), ENT_QUOTES );
 
 		return [
@@ -114,7 +114,7 @@ final class VSCodeIntegration extends BaseClientIntegration {
 	public static function post_setup_notes(): array {
 		return [
 			__( 'VS Code asks for your access token the first time it uses this connection and stores it in its own secure storage — it is not saved in the file. That means this file is safe to commit to a repository, and each person who uses it supplies their own token.', 'siteradian' ),
-			__( 'If VS Code opens an OAuth or client-ID screen, cancel it. SiteRadian does not use OAuth here. It means the saved SiteRadian token was missing or invalid: choose Edit Stored Input beside the token reference, paste a current token from this site, and restart wp-command-center.', 'siteradian' ),
+			__( 'If VS Code opens an OAuth or client-ID screen, cancel it. SiteRadian does not use OAuth here. It means the saved SiteRadian token was missing or invalid: choose Edit Stored Input beside the token reference, paste a current token from this site, and restart siteradian.', 'siteradian' ),
 			__( 'The key must be “servers”. Every other assistant uses “mcpServers”, and VS Code simply ignores a file with the wrong key instead of reporting an error — so a config that looks right can do nothing at all.', 'siteradian' ),
 		];
 	}

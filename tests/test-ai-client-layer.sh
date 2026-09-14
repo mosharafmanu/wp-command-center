@@ -105,7 +105,7 @@ assert_true "ai-client config: mcpServers in config" "$(echo "$CLAUDE_CFG" | jq 
 # The MCP endpoint travels in env.WPCC_MCP_URL, not as the last launcher argument —
 # the generated config runs the relay this site ships (bash -c "curl …; node …")
 # rather than an npx package.
-assert_contains "ai-client config: MCP URL" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "wp-command-center/v1/mcp"
+assert_contains "ai-client config: MCP URL" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["siteradian"].env.SITERADIAN_MCP_URL')" "wp-command-center/v1/mcp"
 
 echo "== 8. Unknown client returns 404 =="
 UNK=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/nonexistent/config")
@@ -124,7 +124,7 @@ assert_eq "codex: config client=codex" "codex" "$(echo "$CODEX_BODY" | jq -r '.c
 # that the endpoint returns a config Codex can actually use.
 assert_eq "codex: config is TOML" "toml" "$(echo "$CODEX_BODY" | jq -r '.config.__format // "json"')"
 assert_contains "codex: config keys the TOML mcp_servers table" \
-	"$(echo "$CODEX_BODY" | jq -r '.config.__raw // ""')" "[mcp_servers.wp-command-center]"
+	"$(echo "$CODEX_BODY" | jq -r '.config.__raw // ""')" "[mcp_servers.siteradian]"
 assert_contains "codex: config carries the MCP endpoint" \
 	"$(echo "$CODEX_BODY" | jq -r '.config.__raw // ""')" "/mcp"
 
@@ -203,9 +203,9 @@ assert_true "codex/gemini/cursor/continue compatible" "$(echo "$CLIENTS" | jq -r
 assert_true "codex/gemini/cursor/continue mcp_support" "$(echo "$CLIENTS" | jq -r '[.clients.codex.mcp_support, .clients.gemini.mcp_support, .clients.cursor.mcp_support, .clients.continue.mcp_support] | all')"
 
 echo "== 22. Config env completeness =="
-assert_contains "config: WPCC_TOKEN placeholder" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_TOKEN')" "WPCC_TOKEN"
-assert_contains "config: WPCC_SITE_URL present" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_SITE_URL')" "://"
-assert_contains "config: WPCC_MCP_URL present" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "/mcp"
+assert_contains "config: SITERADIAN_TOKEN placeholder" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["siteradian"].env.SITERADIAN_TOKEN')" "SITERADIAN_TOKEN"
+assert_contains "config: SITERADIAN_SITE_URL present" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["siteradian"].env.SITERADIAN_SITE_URL')" "://"
+assert_contains "config: SITERADIAN_MCP_URL present" "$(echo "$CLAUDE_CFG" | jq -r '.config.mcpServers["siteradian"].env.SITERADIAN_MCP_URL')" "/mcp"
 
 echo "== 23. Claude discovery still works through AI client layer =="
 assert_eq "claude: config client name Claude Desktop" "Claude Desktop" "$(echo "$CLAUDE_CFG" | jq -r '.name')"

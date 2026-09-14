@@ -11,8 +11,8 @@ reviewer question, stated plainly with where to look.
 Desktop, Cursor, Codex and similar tools. It contains:
 
 ```
-bash -c "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" \
-  'https://example.com/wp-content/plugins/siteradian/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""
+bash -c "RELAY='/tmp/siteradian-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" \
+  'https://example.com/wp-content/plugins/siteradian/sdk/javascript/siteradian-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""
 ```
 
 **What it is.** A stdio↔HTTP bridge that runs on the **site owner's own computer**, under
@@ -20,12 +20,12 @@ their own account, downloaded from **their own domain**. It never runs on the we
 It exists because MCP clients speak stdio while WordPress speaks HTTP.
 
 **Why it is not a remote-code-execution vector for the site.** The file is served from the
-plugin's own directory (`sdk/javascript/wpcc-mcp-relay.mjs`, shipped in the package, 5.6 KB,
+plugin's own directory (`sdk/javascript/siteradian-mcp-relay.mjs`, shipped in the package,
 no build step, human-readable). The server does not fetch or execute anything. Removing the
 configuration removes the connector.
 
 **Where to look.** `includes/Integration/BaseClientIntegration.php::generate_mcp_config()`
-and the shipped `sdk/javascript/wpcc-mcp-relay.mjs`. The UI states this in plain language
+and the shipped `sdk/javascript/siteradian-mcp-relay.mjs`. The UI states this in plain language
 next to the configuration block, and `readme.txt` discloses it.
 
 **It is also not the only path, and not the default for most recommended clients.** Five of

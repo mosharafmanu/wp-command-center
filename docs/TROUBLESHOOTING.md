@@ -2,19 +2,19 @@
 
 ---
 
-## Codex: `Environment variable WPCC_TOKEN is not set`
+## Codex: `Environment variable SITERADIAN_TOKEN is not set`
 
 The MCP registration persists in `~/.codex/config.toml`. The token value does not: an
-`export WPCC_TOKEN=...` command applies only to that terminal session and programs
+`export SITERADIAN_TOKEN=...` command applies only to that terminal session and programs
 started from it.
 
 Use either resolution:
 
 1. Return to the terminal where you set the token and start Codex there; or
-2. In a new terminal, set a valid `WPCC_TOKEN` again before starting Codex.
+2. In a new terminal, set a valid `SITERADIAN_TOKEN` again before starting Codex.
 
 You do not need to recreate the MCP registration if `codex mcp list` already shows
-`wp-command-center`. During initial setup, keep the terminal open and run all three
+`siteradian`. During initial setup, keep the terminal open and run all three
 recommended steps in that same terminal window.
 
 ---
@@ -66,7 +66,7 @@ Work through these in order:
 1. **Is Node installed** on the machine running the client? `node --version`.
 2. **Is the relay reachable?**
    ```bash
-   curl -sI https://example.com/wp-content/plugins/siteradian/sdk/javascript/wpcc-mcp-relay.mjs
+   curl -sI https://example.com/wp-content/plugins/siteradian/sdk/javascript/siteradian-mcp-relay.mjs
    ```
    Expect `200`. A `404` means the plugin files are not where the config expects.
 3. **Does the endpoint answer?**

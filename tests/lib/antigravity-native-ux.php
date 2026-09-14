@@ -18,7 +18,7 @@ try{
  agy_check(str_replace(R::TOKEN_PLACEHOLDER,$wpcc_new_token,$xp->query('//*[@id="wpcc-setup-command"]')->item(0)->textContent)===$cmd,'guided setup renders executable native command');
  agy_check($xp->query('//*[@id="wpcc-token-next"]')->item(0)->getAttribute('href')==='#wpcc-guided-setup','token-created CTA leads to native path');
  $config=json_decode(R::render_config(R::generate_config('antigravity'),$wpcc_new_token),true);
- $server=$config['mcpServers']['wp-command-center']??[];
+ $server=$config['mcpServers']['siteradian']??[];
  agy_check(isset($server['serverUrl'])&&!isset($server['url'])&&!isset($server['command']),'JSON fallback preserves native serverUrl HTTP contract');
  agy_check(($server['headers']['Authorization']??'')==='Bearer '.$wpcc_new_token,'fallback header matches native credential');
 	 foreach(['umask 077','chmod 600','shared history, screenshots, chats and logs','Do not commit or share','Revoke the token','Exit any running agy','/mcp','registration only','endpoint, not whether agy connected','alongside anything else'] as $needle)agy_check(str_contains($text,$needle),'guided safety and verification: '.$needle);

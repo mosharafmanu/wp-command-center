@@ -3,8 +3,10 @@
 > **SiteRadian v1.0.0 release candidate — 2026-09-13:** The owner-approved public
 > identity is SiteRadian, slug/folder/text domain `siteradian`, main file
 > `siteradian.php`, and initial public version 1.0.0. The certified internal PHP/DB
-> prefix `WPCC`/`wpcc_*`, MCP server key `wp-command-center`, and REST namespace
-> `wp-command-center/v1` remain compatibility contracts. The category descriptor is
+> prefix `WPCC`/`wpcc_*` and REST namespace `wp-command-center/v1` remain compatibility
+> contracts. New generated client configuration uses the local alias `siteradian`,
+> environment variable `SITERADIAN_TOKEN`, and `siteradian-mcp-relay.mjs`; existing
+> aliases and the legacy relay continue to work. The category descriptor is
 > **The AI Command Center for WordPress**, and the primary promise is **Give AI a safer
 > way to work on your site.** The release package is `siteradian-1.0.0.zip`. The earlier
 > `siteradian-v1.0.0` preparation tag and pre-public tags `v1.0.0`–`v1.0.2` are
@@ -12,7 +14,7 @@
 >
 > **Codex same-terminal remediation — 2026-09-13:** Recommended setup now states
 > “Important: Keep this terminal open,” requires Steps 1–3 in the same terminal, and
-> names the exact `Environment variable WPCC_TOKEN is not set` recovery without asking
+> names the exact `Environment variable SITERADIAN_TOKEN is not set` recovery without asking
 > users to recreate a persistent MCP registration. Windows Codex uses the current
 > PowerShell session instead of `setx`, so the same-terminal contract is truthful.
 >

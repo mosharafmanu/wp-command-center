@@ -33,7 +33,7 @@ $wpcc_have_tok = count( $wpcc_active ) > 0;
 $wpcc_access_url = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=tokens' );
 $wpcc_clients_url = admin_url( 'admin.php?page=wpcc-settings&wpcc_tab=connections&cpane=assistants' );
 
-$wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \$WPCC_TOKEN\"";
+$wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \$SITERADIAN_TOKEN\"";
 ?>
 <div class="wpcc-apiint" style="max-width:880px;">
 	<h1><?php esc_html_e( 'API & Integrations', 'siteradian' ); ?></h1>
@@ -81,7 +81,7 @@ $wpcc_example = "curl {$wpcc_base}/operations \\\n  -H \"Authorization: Bearer \
 
 	<h2 style="margin-top:24px;"><?php esc_html_e( 'Try a read-only call', 'siteradian' ); ?></h2>
 	<p class="description" style="max-width:680px;">
-		<?php esc_html_e( 'This lists the operations the API exposes — a safe, read-only request that changes nothing. Set WPCC_TOKEN to an active token first.', 'siteradian' ); ?>
+		<?php esc_html_e( 'This lists the operations the API exposes — a safe, read-only request that changes nothing. Set SITERADIAN_TOKEN to an active token first.', 'siteradian' ); ?>
 	</p>
 	<pre style="background:#1d2327;color:#c3c4c7;padding:16px;border-radius:4px;font-size:13px;line-height:1.6;overflow-x:auto;white-space:pre-wrap;word-break:break-all;"><code><?php echo esc_html( $wpcc_example ); ?></code></pre>
 

@@ -6,7 +6,7 @@
  *
  * @example
  * ```php
- * $client = new \WPCommandCenter\SDK\Client('https://example.com/wp-json/wp-command-center/v1', 'wpcc_abc123...');
+ * $client = new \WPCommandCenter\SDK\Client('https://example.com/wp-json/wp-command-center/v1', 'siteradian_abc123...');
  *
  * // Health check
  * $health = $client->health();

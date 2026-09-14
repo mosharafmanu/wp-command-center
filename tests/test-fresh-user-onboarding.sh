@@ -18,12 +18,12 @@ echo '== M22 Continue first-MCP states =='
 CONT_FULL="$(wpe '$r="WPCommandCenter\\Integration\\AIClientRegistry"; echo $r::render_config($r::generate_config("continue"), "wpcc_SYNTHETIC");')"
 CONT_ENTRY="$(wpe 'echo WPCommandCenter\Integration\AIClientRegistry::primary_config_for("continue", "wpcc_SYNTHETIC");')"
 assert_contains 'complete block supplies top-level key' "$CONT_FULL" 'mcpServers:'
-assert_contains 'complete block supplies indented list item' "$CONT_FULL" '  - name: wp-command-center'
+assert_contains 'complete block supplies indented list item' "$CONT_FULL" '  - name: siteradian'
 assert_not_contains 'entry-only copy has no second root key' "$CONT_ENTRY" 'mcpServers:'
-assert_contains 'entry-only copy retains required indentation' "$CONT_ENTRY" '  - name: wp-command-center'
-CONT_PARSE="$(printf '%s' "$CONT_FULL" | ruby -ryaml -e 'd=YAML.load(STDIN.read); print(d["mcpServers"][0]["name"]=="wp-command-center" ? "ok" : "bad")' 2>/dev/null)"
+assert_contains 'entry-only copy retains required indentation' "$CONT_ENTRY" '  - name: siteradian'
+CONT_PARSE="$(printf '%s' "$CONT_FULL" | ruby -ryaml -e 'd=YAML.load(STDIN.read); print(d["mcpServers"][0]["name"]=="siteradian" ? "ok" : "bad")' 2>/dev/null)"
 assert_eq 'complete YAML parses' ok "$CONT_PARSE"
-ENTRY_PARSE="$(printf 'mcpServers:\n%s' "$CONT_ENTRY" | ruby -ryaml -e 'd=YAML.load(STDIN.read); print(d["mcpServers"][0]["name"]=="wp-command-center" ? "ok" : "bad")' 2>/dev/null)"
+ENTRY_PARSE="$(printf 'mcpServers:\n%s' "$CONT_ENTRY" | ruby -ryaml -e 'd=YAML.load(STDIN.read); print(d["mcpServers"][0]["name"]=="siteradian" ? "ok" : "bad")' 2>/dev/null)"
 assert_eq 'entry YAML parses beneath existing key' ok "$ENTRY_PARSE"
 
 echo '== M23 Muse first-file states =='
@@ -35,7 +35,7 @@ assert_eq 'exact Muse path shown' '~/.config/muse/settings.json' "$MUSE_PATH"
 assert_contains 'prepare helper creates parent directory' "$MUSE_PREP" 'mkdir -p'
 assert_contains 'prepare helper checks before writing' "$MUSE_PREP" '[ -f'
 assert_contains 'prepare helper writes only on missing file' "$MUSE_PREP" '|| printf'
-MUSE_JSON="$(printf '%s' "$MUSE_FULL" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("ok" if d.get("schema_version")==1 and "wp-command-center" in d["mcp_servers"] else "bad")' 2>/dev/null)"
+MUSE_JSON="$(printf '%s' "$MUSE_FULL" | python3 -c 'import json,sys; d=json.load(sys.stdin); print("ok" if d.get("schema_version")==1 and "siteradian" in d["mcp_servers"] else "bad")' 2>/dev/null)"
 assert_eq 'complete Muse JSON is valid' ok "$MUSE_JSON"
 MUSE_MERGE="$(python3 - "$MUSE_ENTRY" <<'PY'
 import json,sys
@@ -43,7 +43,7 @@ entry=json.loads('{'+sys.argv[1]+'}')
 existing={'schema_version':1,'mcp_servers':{'other':{'transport':'stdio'}},'theme':'dark'}
 existing['mcp_servers'].update(entry)
 roundtrip=json.loads(json.dumps(existing))
-print('ok' if roundtrip['theme']=='dark' and 'other' in roundtrip['mcp_servers'] and 'wp-command-center' in roundtrip['mcp_servers'] else 'bad')
+print('ok' if roundtrip['theme']=='dark' and 'other' in roundtrip['mcp_servers'] and 'siteradian' in roundtrip['mcp_servers'] else 'bad')
 PY
 )"
 assert_eq 'entry-only Muse merge preserves settings' ok "$MUSE_MERGE"

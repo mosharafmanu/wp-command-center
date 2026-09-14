@@ -70,12 +70,12 @@ echo "== 6. AI client defaults =="
 # roster, and assert the compact default only where an env block exists.
 for client in $(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients" | jq -r '.clients | keys[]'); do
 	CFG=$(curl -s -H "Authorization: Bearer $WPCC_TOKEN" "$WPCC_BASE/ai-clients/$client/config")
-	MODE=$(echo "$CFG" | jq -r '.config.mcpServers["wp-command-center"].env.WPCC_CONTEXT_MODE // "n/a"')
+	MODE=$(echo "$CFG" | jq -r '.config.mcpServers["siteradian"].env.SITERADIAN_CONTEXT_MODE // "n/a"')
 	if [ "$MODE" = "n/a" ]; then
 		# Direct HTTP: prove it really is the relay-free shape rather than a
 		# relay config that lost its env block.
 		eq "client: $client is a relay-free config" "true" \
-			"$(echo "$CFG" | jq -r 'if (.config.mcpServers["wp-command-center"].command // null) == null then "true" else "false" end')"
+			"$(echo "$CFG" | jq -r 'if (.config.mcpServers["siteradian"].command // null) == null then "true" else "false" end')"
 	else
 		eq "client: $client defaults compact" "compact" "$MODE"
 	fi

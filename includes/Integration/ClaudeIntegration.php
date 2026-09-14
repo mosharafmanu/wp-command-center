@@ -138,15 +138,16 @@ final class ClaudeIntegration {
 	/**
 	 * Generate a Claude Desktop MCP configuration block dynamically.
 	 *
-	 * Downloads the latest WPCC MCP relay script on every startup and runs it.
-	 * The relay bridges Claude Desktop's stdio transport to the WPCC HTTP MCP endpoint.
+	 * Downloads the SiteRadian MCP relay script on every startup and runs it.
+	 * The relay bridges Claude Desktop's stdio transport to the SiteRadian HTTP MCP endpoint.
 	 * Never hardcodes environment-specific values.
 	 */
 	public static function generate_mcp_config(): array {
 		$mcp_url    = rest_url( McpServerRuntime::NAMESPACE . '/mcp' );
 		$site_url   = get_site_url();
-		$relay_url  = WPCC_PLUGIN_URL . 'sdk/javascript/wpcc-mcp-relay.mjs';
-		$relay_path = '/tmp/wpcc-mcp-relay.mjs';
+		$relay_url  = WPCC_PLUGIN_URL . 'sdk/javascript/siteradian-mcp-relay.mjs';
+		$relay_path = '/tmp/siteradian-mcp-relay.mjs';
+		$server_key = BaseClientIntegration::server_key();
 
 		$bootstrap = sprintf(
 			'RELAY=%s; curl -fsSL -o "$RELAY" %s; node "$RELAY"',
@@ -156,14 +157,14 @@ final class ClaudeIntegration {
 
 		return [
 			'mcpServers' => [
-				'wp-command-center' => [
+				$server_key => [
 					'command' => 'bash',
 					'args'    => [ '-c', $bootstrap ],
 					'env'     => [
-						'WPCC_MCP_URL'      => $mcp_url,
-						'WPCC_SITE_URL'     => $site_url,
-						'WPCC_TOKEN'        => '${WPCC_TOKEN}',
-						'WPCC_CONTEXT_MODE' => 'compact',
+						'SITERADIAN_MCP_URL'      => $mcp_url,
+						'SITERADIAN_SITE_URL'     => $site_url,
+						'SITERADIAN_TOKEN'        => AIClientRegistry::TOKEN_PLACEHOLDER,
+						'SITERADIAN_CONTEXT_MODE' => 'compact',
 					],
 				],
 			],
@@ -179,9 +180,11 @@ final class ClaudeIntegration {
 	 */
 	public static function primary_config( string $token = '' ): string {
 		$config = self::generate_mcp_config();
-		$entry  = $config['mcpServers']['wp-command-center'] ?? [];
+		$server_key = BaseClientIntegration::server_key();
+		$entry  = $config['mcpServers'][ $server_key ] ?? [];
 		$json   = sprintf(
-			'"wp-command-center": %s',
+			'"%s": %s',
+			$server_key,
 			(string) wp_json_encode( $entry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES )
 		);
 

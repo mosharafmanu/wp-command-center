@@ -13,7 +13,7 @@ stdio-only clients can reach it.
 
 ```bash
 curl -s -X POST https://example.com/wp-json/wp-command-center/v1/mcp \
-  -H "Authorization: Bearer $WPCC_TOKEN" -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $SITERADIAN_TOKEN" -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize",
        "params":{"protocolVersion":"2024-11-05","capabilities":{},
                  "clientInfo":{"name":"my-client","version":"1"}}}'
@@ -113,6 +113,6 @@ Drifted fields are **skipped, never clobbered**.
 
 ## The relay
 
-`sdk/javascript/wpcc-mcp-relay.mjs`, shipped in the plugin and served from your own site.
+`sdk/javascript/siteradian-mcp-relay.mjs`, shipped in the plugin and served from your own site.
 The generated client config downloads it and runs it with Node, passing the endpoint and
 token through the environment. Nothing is fetched from npm.

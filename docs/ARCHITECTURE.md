@@ -4,7 +4,7 @@
   AI client (Claude Desktop, Cursor, …)
         │  stdio (JSON-RPC)
         ▼
-  wpcc-mcp-relay.mjs                     ← shipped in the plugin, run by the client
+  siteradian-mcp-relay.mjs                ← shipped in the plugin, run by the client
         │  HTTPS + bearer token
         ▼
   POST /wp-json/wp-command-center/v1/mcp ← McpServerRuntime
@@ -26,7 +26,7 @@
 
 ## Components
 
-### The relay (`sdk/javascript/wpcc-mcp-relay.mjs`)
+### The relay (`sdk/javascript/siteradian-mcp-relay.mjs`)
 
 MCP clients speak JSON-RPC over stdio; WordPress speaks HTTP. The relay bridges the two.
 It is **shipped inside the plugin** and served from your own site, so a customer needs

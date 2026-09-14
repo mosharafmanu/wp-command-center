@@ -125,15 +125,28 @@ for f in wpcc-logo.svg wpcc-logo-dark.svg; do
   [ "$WORD" -ge 1 ] && pass "$f still carries the wordmark" || fail "$f lost the wordmark"
 done
 
-# The approved symbol is the measured-radius geometry: an open control boundary,
-# a bounded inner arc, a radius path, and two command nodes. Lockups and marks
-# must share that exact core so the identity does not drift between surfaces.
-RADIUS_PATH='m16 16 8.7-8.7'
+# The approved symbol is an engineered R: a bounded radial bowl, one command
+# origin, a measured radius, and an execution leg. Its open silhouette stays
+# legible at menu size without reading as refresh, speedometer, or generic radar.
+RADIUS_PATH='M13.8 14.1l7.9-5.3'
+BOUNDARY_PATH='M6 28V4h10.2'
 for f in wpcc-mark.svg wpcc-logo.svg wpcc-mark-dark.svg wpcc-logo-dark.svg; do
   HAS="$( grep -ciF "$RADIUS_PATH" "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
-  [ "$HAS" -ge 1 ] && pass "$f uses the approved measured-radius geometry" \
-    || fail "$f no longer uses the approved measured-radius geometry"
+  [ "$HAS" -ge 1 ] && pass "$f uses the approved measured radius" \
+    || fail "$f no longer uses the approved measured radius"
+  BOUND="$( grep -ciF "$BOUNDARY_PATH" "$BRAND_DIR/$f" 2>/dev/null | tr -d ' ' )"
+  [ "$BOUND" -ge 1 ] && pass "$f uses the approved bounded-R silhouette" \
+    || fail "$f no longer uses the approved bounded-R silhouette"
 done
+
+assert_eq "mark contains one command-origin diamond" "1" \
+  "$( grep -co 'm13.8 12.5 1.6 1.6-1.6 1.6-1.6-1.6z' "$BRAND_DIR/wpcc-mark.svg" | tr -d ' ' )"
+assert_eq "mark has no circular-arrow arc command" "0" \
+  "$( rg -c '<circle|A12\.5|a12\.5' "$BRAND_DIR/wpcc-mark.svg" || echo 0 )"
+assert_eq "16px menu asset uses the bounded-R silhouette" "yes" \
+  "$( rg -q -F 'M3.3 13.8V2.2h5' "$BRAND_DIR/wpcc-admin-16.svg" && echo yes || echo no )"
+assert_eq "20px menu asset uses the bounded-R silhouette" "yes" \
+  "$( rg -q -F 'M4 17V3h6.2' "$BRAND_DIR/wpcc-admin-20.svg" && echo yes || echo no )"
 
 assert_eq "light mark uses the SiteRadian indigo" "1" "$( grep -ci '#4055D5' "$BRAND_DIR/wpcc-mark.svg" | tr -d ' ' )"
 assert_eq "dark mark uses the accessible signal indigo" "1" "$( grep -ci '#8B9BFF' "$BRAND_DIR/wpcc-mark-dark.svg" | tr -d ' ' )"
@@ -190,8 +203,8 @@ check_png_size banner-772x250.png 772x250
 check_png_size banner-1544x500.png 1544x500
 for n in 1 2 3 4 5 6; do check_png_size "screenshot-$n.png" 1440x1000; done
 
-assert_eq "directory SVG uses the measured-radius mark" "yes" \
-  "$( rg -q -F 'M128 128l53-53' "$ORG_DIR/icon.svg" && echo yes || echo no )"
+assert_eq "directory SVG uses the bounded-R mark" "yes" \
+  "$( rg -q -F 'M6 28V4h10.2' "$ORG_DIR/icon.svg" && echo yes || echo no )"
 assert_eq "readme has six screenshot captions" "6" \
   "$( sed -n '/^== Screenshots ==/,/^== /p' readme.txt | rg -c '^[1-6]\.' )"
 assert_eq "WordPress.org assets stay outside the runtime build allowlist" "0" \

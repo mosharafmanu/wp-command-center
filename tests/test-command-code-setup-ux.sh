@@ -28,9 +28,9 @@ EXPECTED_CMD+="  --transport http \\"
 EXPECTED_CMD+=$'\n'
 EXPECTED_CMD+="  --scope user \\"
 EXPECTED_CMD+=$'\n'
-EXPECTED_CMD+="  --header 'Authorization: Bearer \${WPCC_TOKEN}' \\"
+EXPECTED_CMD+="  --header 'Authorization: Bearer \${SITERADIAN_TOKEN}' \\"
 EXPECTED_CMD+=$'\n'
-EXPECTED_CMD+="  'wp-command-center' '$MCP_URL'"
+EXPECTED_CMD+="  'siteradian' '$MCP_URL'"
 assert_eq "native setup remains primary and byte-for-byte correct" "$EXPECTED_CMD" "$CC_CMD"
 assert_eq "direct HTTP transport unchanged" "http" "$(reg "transport_for('command_code')")"
 assert_eq "inline credential contract unchanged" "inline" "$(reg "credential_mode_for('command_code')")"
@@ -40,7 +40,7 @@ assert_not_contains "header does not use KEY=VALUE form" "$CC_CMD" "Authorizatio
 SYNTHETIC_TOKEN="SYNTHETIC_COMMAND_CODE_ONE_TIME_TOKEN"
 READY_CMD="$(reg "setup_command_for('command_code', '$SYNTHETIC_TOKEN')")"
 assert_contains "one-time token produces complete command" "$READY_CMD" "$SYNTHETIC_TOKEN"
-assert_not_contains "complete command has no placeholder" "$READY_CMD" '${WPCC_TOKEN}'
+assert_not_contains "complete command has no placeholder" "$READY_CMD" '${SITERADIAN_TOKEN}'
 
 echo "== Verified manual file contract =="
 CC_CFG="$(wpe '$r="WPCommandCenter\\Integration\\AIClientRegistry"; echo $r::render_config($r::generate_config("command_code"));')"
@@ -52,27 +52,27 @@ assert_contains "manual root is mcpServers" "$CC_CFG" '"mcpServers"'
 assert_contains "manual entry uses transport" "$CC_CFG" '"transport": "http"'
 assert_contains "manual entry is enabled" "$CC_CFG" '"enabled": true'
 assert_contains "manual entry carries URL" "$CC_CFG" '"url"'
-assert_contains "manual entry carries Authorization" "$CC_CFG" '"Authorization": "Bearer ${WPCC_TOKEN}"'
+assert_contains "manual entry carries Authorization" "$CC_CFG" '"Authorization": "Bearer ${SITERADIAN_TOKEN}"'
 assert_not_contains "obsolete type key removed" "$CC_CFG" '"type": "http"'
-assert_contains "entry fragment is keyed" "$CC_ENTRY" '"wp-command-center":'
+assert_contains "entry fragment is keyed" "$CC_ENTRY" '"siteradian":'
 assert_not_contains "entry fragment does not replace mcpServers" "$CC_ENTRY" '"mcpServers"'
 
 MERGE_RESULT="$(python3 - "$CC_ENTRY" <<'PY'
 import json
 import sys
 
-entry = json.loads("{" + sys.argv[1] + "}")["wp-command-center"]
+entry = json.loads("{" + sys.argv[1] + "}")["siteradian"]
 before = {
     "mcpServers": {"another-server": {"transport": "http", "url": "http://example.invalid/mcp"}},
     "security": {"trust": "existing"},
     "ui": {"theme": "existing"},
 }
 after = json.loads(json.dumps(before))
-after["mcpServers"]["wp-command-center"] = entry
+after["mcpServers"]["siteradian"] = entry
 round_trip = json.loads(json.dumps(after))
 checks = {
     "valid_json": isinstance(round_trip, dict),
-    "wpcc_added": round_trip["mcpServers"]["wp-command-center"]["transport"] == "http",
+    "siteradian_added": round_trip["mcpServers"]["siteradian"]["transport"] == "http",
     "existing_mcp_preserved": round_trip["mcpServers"]["another-server"] == before["mcpServers"]["another-server"],
     "security_preserved": round_trip["security"] == before["security"],
     "ui_preserved": round_trip["ui"] == before["ui"],
@@ -80,7 +80,7 @@ checks = {
 print("|".join(name for name, ok in checks.items() if ok))
 PY
 )"
-for CHECK in valid_json wpcc_added existing_mcp_preserved security_preserved ui_preserved; do
+for CHECK in valid_json siteradian_added existing_mcp_preserved security_preserved ui_preserved; do
 	assert_contains "manual merge: $CHECK" "$MERGE_RESULT" "$CHECK"
 done
 
@@ -111,7 +111,8 @@ assert_contains "manual setup names native path as recommended" "$VIEW_TEXT" "na
 assert_contains "manual setup names verified file" "$VIEW_TEXT" "Empty-file example for ~/.commandcode/mcp.json"
 assert_contains "manual setup forbids replacement" "$VIEW_TEXT" "If this file already exists, do not replace it"
 assert_contains "manual setup preserves other servers" "$VIEW_TEXT" "Add just this entry inside the “mcpServers” braces you already have"
-assert_contains "manual disconnect removes only WPCC" "$VIEW_TEXT" "remove only the “wp-command-center” entry"
+assert_contains "manual disconnect uses the selected SiteRadian alias" "$VIEW_TEXT" 'remove only the “%s” entry'
+assert_contains "manual disconnect inserts the selected alias" "$VIEW_TEXT" '$wpcc_sel_server_key'
 assert_not_contains "old unknown-file guidance removed from Command Code metadata" "$(wpe '$c=WPCommandCenter\Integration\AIClientRegistry::get_client("command_code"); echo implode(" ",$c["config_paths"]);')" "no file to edit"
 assert_contains "browser test disclaims client loading" "$VIEW_TEXT" "This does not test whether your assistant loaded the server"
 assert_contains "browser result remains scoped to SiteRadian authentication" "$VIEW_TEXT" "SiteRadian can authenticate this token. Server checks passed; verify the connection inside your client."
@@ -130,7 +131,7 @@ $wait=$xp->query("//*[@data-wpcc-token-needed and not(@hidden)]")->item(0);
 if(!$pre){echo "NO_USABLE_TOKEN_PANEL";}else{
  echo implode("|",[
   $preview&&$preview->hasAttribute("hidden")?"preview_hidden":"preview_visible",
-  str_contains($pre->textContent,"\${WPCC_TOKEN}")?"command_placeholder":"command_not_placeholder",
+  str_contains($pre->textContent,"\${SITERADIAN_TOKEN}")?"command_placeholder":"command_not_placeholder",
   $copy&&$copy->hasAttribute("disabled")?"copy_disabled":"copy_ready",
   $wait&&!$wait->hasAttribute("hidden")?"waiting_visible":"waiting_hidden",
   !str_contains($html,"id=\"wpcc-new-token\"")?"no_token_reveal":"token_revealed"

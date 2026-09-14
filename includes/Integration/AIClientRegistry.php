@@ -59,10 +59,10 @@ final class AIClientRegistry {
 	 * must be printed verbatim rather than json_encode()d into a quoted string. Not every
 	 * client uses the same root key — VS Code uses `servers` where the rest use
 	 * `mcpServers`. And the token used to be injected by reaching into a fixed path
-	 * (`['mcpServers']['wp-command-center']['env']['WPCC_TOKEN']`), which silently did
+	 * (`['mcpServers']['siteradian']['env']['SITERADIAN_TOKEN']`), which silently did
 	 * nothing for any client that did not happen to have that exact shape.
 	 *
-	 * Every generator emits the same `${WPCC_TOKEN}` placeholder, so substitution happens
+	 * Every generator emits the same `${SITERADIAN_TOKEN}` placeholder, so substitution happens
 	 * once on the rendered text and works for all shapes — JSON, TOML or shell — without
 	 * this function needing to know any client's structure.
 	 *
@@ -89,12 +89,12 @@ final class AIClientRegistry {
 	 * Every generator emits this, `render_config()` substitutes this, the setup screen
 	 * tells the user to look for this, and the browser-side token-fill box searches for
 	 * this. It is a constant because those four had already disagreed: the generators
-	 * moved to `${WPCC_TOKEN}` while the screen still named `wpcc_YOUR_TOKEN_HERE`, so
+	 * moved to `${SITERADIAN_TOKEN}` while the screen still named a different placeholder, so
 	 * the instruction pointed at a string that was not in the box AND the token-fill
 	 * field silently did nothing — it replaced a placeholder the configuration no
 	 * longer contained, leaving "Copy configuration" to copy an unusable config.
 	 */
-	public const TOKEN_PLACEHOLDER = '${WPCC_TOKEN}';
+	public const TOKEN_PLACEHOLDER = '${SITERADIAN_TOKEN}';
 
 	/**
 	 * Which transport a client uses: 'http' (direct, no local process) or 'stdio' (relay).
@@ -145,7 +145,12 @@ final class AIClientRegistry {
 
 	/** The environment variable an env_var client reads. */
 	public static function credential_env_var_for( string $client_id ): string {
-		return (string) self::ask_integration( $client_id, 'credential_env_var', [], 'WPCC_TOKEN' );
+		return (string) self::ask_integration( $client_id, 'credential_env_var', [], 'SITERADIAN_TOKEN' );
+	}
+
+	/** The SiteRadian-native local alias emitted in a client's new configuration. */
+	public static function server_key_for( string $client_id ): string {
+		return (string) self::ask_integration( $client_id, 'server_key', [], 'siteradian' );
 	}
 
 	/**
@@ -180,7 +185,7 @@ final class AIClientRegistry {
 	 * Classify the credential contract that controls whether setup can be copied now.
 	 *
 	 * raw_token     — payload is incomplete until the browser has the current token.
-	 * env_var_name  — payload names WPCC_TOKEN; the secret is supplied separately.
+	 * env_var_name  — payload names SITERADIAN_TOKEN; the secret is supplied separately.
 	 * client_prompt — payload is complete and the client securely asks for the secret.
 	 */
 	public static function setup_credential_class_for( string $client_id ): string {
@@ -273,7 +278,7 @@ final class AIClientRegistry {
 
 		$class     = self::get_client( $client_id )['config_generator'][0] ?? '';
 		$root_key  = is_string( $class ) && is_callable( [ $class, 'root_key' ] ) ? (string) call_user_func( [ $class, 'root_key' ] ) : 'mcpServers';
-		$server_key = is_string( $class ) && is_callable( [ $class, 'server_key' ] ) ? (string) call_user_func( [ $class, 'server_key' ] ) : 'wp-command-center';
+		$server_key = is_string( $class ) && is_callable( [ $class, 'server_key' ] ) ? (string) call_user_func( [ $class, 'server_key' ] ) : 'siteradian';
 
 		$entry = $config[ $root_key ][ $server_key ] ?? null;
 		if ( ! is_array( $entry ) ) {
@@ -281,7 +286,7 @@ final class AIClientRegistry {
 		}
 
 		/*
-		 * Rendered as a KEYED fragment — `"wp-command-center": { ... }` — not as a bare
+		 * Rendered as a KEYED fragment — `"siteradian": { ... }` — not as a bare
 		 * object. The key is half the instruction: it says where the braces go and what
 		 * the server will be called. A bare `{ ... }` would leave the reader to invent
 		 * both, which is the ambiguity this method exists to remove.

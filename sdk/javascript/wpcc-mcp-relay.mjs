@@ -2,13 +2,13 @@
 /**
  * SiteRadian — MCP stdio↔HTTP Relay
  *
- * Bridges Claude Desktop and other stdio-based MCP clients to the WPCC
+ * Bridges Claude Desktop and other stdio-based MCP clients to the SiteRadian
  * HTTP MCP endpoint.
  *
  * Environment variables (set by client config):
- *   WPCC_MCP_URL     — Full URL of the WPCC MCP endpoint
- *   WPCC_TOKEN       — Bearer token for authentication
- *   WPCC_RELAY_VERSION — Relay version (for startup logging)
+ *   SITERADIAN_MCP_URL — Full URL of the SiteRadian MCP endpoint
+ *   SITERADIAN_TOKEN   — Bearer token for authentication
+ * Legacy WPCC_* names remain accepted for existing generated configurations.
  *
  * JSON-RPC 2.0 §4.1: Notifications (messages without an "id") MUST NOT
  * receive a response. This relay silently drops notifications and only
@@ -19,18 +19,18 @@ import { createInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
 
 const RELAY_VERSION = '2.1.0';
-const MCP_URL       = process.env.WPCC_MCP_URL;
-const TOKEN         = process.env.WPCC_TOKEN;
+const MCP_URL       = process.env.SITERADIAN_MCP_URL || process.env.WPCC_MCP_URL;
+const TOKEN         = process.env.SITERADIAN_TOKEN || process.env.WPCC_TOKEN;
 // Abort a request that hangs longer than this (default 120s) so the relay never
 // blocks forever. Generous by default to avoid aborting legitimately long writes.
-const TIMEOUT_MS    = Number(process.env.WPCC_RELAY_TIMEOUT_MS) || 120000;
+const TIMEOUT_MS    = Number(process.env.SITERADIAN_RELAY_TIMEOUT_MS || process.env.WPCC_RELAY_TIMEOUT_MS) || 120000;
 // Initial attempt + one retry. Safe because every write (tools/call) carries an
 // idempotency key, so a retry that actually reached the server is deduplicated
 // server-side instead of executing twice.
 const MAX_ATTEMPTS  = 2;
 
 if (!MCP_URL || !TOKEN) {
-	process.stderr.write('SiteRadian MCP Relay: WPCC_MCP_URL and WPCC_TOKEN must be set\n');
+	process.stderr.write('SiteRadian MCP Relay: SITERADIAN_MCP_URL and SITERADIAN_TOKEN must be set\n');
 	process.exit(1);
 }
 
@@ -67,7 +67,7 @@ async function forward(request) {
 		} catch (err) {
 			clearTimeout(timer);
 			const aborted = err.name === 'AbortError';
-			process.stderr.write(`WPCC relay: fetch ${aborted ? 'timed out' : 'failed'} (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message}\n`);
+			process.stderr.write(`SiteRadian relay: fetch ${aborted ? 'timed out' : 'failed'} (attempt ${attempt}/${MAX_ATTEMPTS}): ${err.message}\n`);
 			if (attempt < MAX_ATTEMPTS) {
 				continue;
 			}
@@ -86,7 +86,7 @@ async function forward(request) {
 	}
 
 	if (!response.ok) {
-		process.stderr.write(`WPCC relay: HTTP ${response.status} for ${request.method || 'unknown'}\n`);
+		process.stderr.write(`SiteRadian relay: HTTP ${response.status} for ${request.method || 'unknown'}\n`);
 		if (request.id != null) {
 			return { jsonrpc: '2.0', id: request.id, error: { code: -32603, message: `Upstream HTTP ${response.status}` } };
 		}
@@ -102,7 +102,7 @@ async function forward(request) {
 	try {
 		parsed = JSON.parse(text);
 	} catch {
-		process.stderr.write(`WPCC relay: invalid JSON response for ${request.method || 'unknown'}\n`);
+		process.stderr.write(`SiteRadian relay: invalid JSON response for ${request.method || 'unknown'}\n`);
 		if (request.id != null) {
 			return { jsonrpc: '2.0', id: request.id, error: { code: -32603, message: 'Invalid upstream response' } };
 		}
@@ -111,7 +111,7 @@ async function forward(request) {
 
 	// Guard: only JSON-RPC response objects with an "id" are written to stdout.
 	if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || parsed.id == null) {
-		process.stderr.write(`WPCC relay: non-RPC response for ${request.method || 'unknown'}, dropped\n`);
+		process.stderr.write(`SiteRadian relay: non-RPC response for ${request.method || 'unknown'}, dropped\n`);
 		return null;
 	}
 
@@ -144,7 +144,7 @@ rl.on('line', async (line) => {
 		// Log the key so a call that later times out can be reconciled via
 		// change_history operation_status (did it commit?) instead of guessing.
 		const tool = request.params && request.params.name ? request.params.name : 'unknown';
-		process.stderr.write(`WPCC relay: tools/call ${tool} idempotency_key=${request.params.idempotency_key}\n`);
+		process.stderr.write(`SiteRadian relay: tools/call ${tool} idempotency_key=${request.params.idempotency_key}\n`);
 	}
 
 	const response = await forward(request);

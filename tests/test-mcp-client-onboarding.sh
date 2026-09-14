@@ -6,7 +6,7 @@
 # indistinguishable, from the admin screen, from one that cannot work. Every check here
 # corresponds to a failure observed against a real client, not to a style preference:
 #
-#   Finding #1  Codex/ChatGPT Desktop were handed `bearer_token = "${WPCC_TOKEN}"`.
+#   Finding #1  Codex/ChatGPT Desktop were handed an interpolated token placeholder.
 #               TOML has no interpolation, so the literal characters were sent as the
 #               credential and a healthy server answered 401. The correct key is
 #               `bearer_token_env_var`, which is also the only form `codex mcp add`
@@ -51,20 +51,20 @@ echo ""
 echo "== 1. Codex CLI — credential shape (Finding #1) =="
 
 CODEX_CFG="$(cfg codex)"
-assert_contains "codex: TOML table header"        "$CODEX_CFG" "[mcp_servers.wp-command-center]"
-assert_contains "codex: names the env var"        "$CODEX_CFG" 'bearer_token_env_var = "WPCC_TOKEN"'
+assert_contains "codex: TOML table header"        "$CODEX_CFG" "[mcp_servers.siteradian]"
+assert_contains "codex: names the env var"        "$CODEX_CFG" 'bearer_token_env_var = "SITERADIAN_TOKEN"'
 assert_contains "codex: persistent fallback is server-specific and annotation-aware" "$CODEX_CFG" 'default_tools_approval_mode = "writes"'
 
 # The two regressions this finding was actually about.
-assert_not_contains "codex: no interpolated bearer_token" "$CODEX_CFG" 'bearer_token = "${WPCC_TOKEN}"'
-assert_not_contains "codex: no token placeholder at all"  "$CODEX_CFG" '${WPCC_TOKEN}'
+assert_not_contains "codex: no interpolated bearer_token" "$CODEX_CFG" 'bearer_token = "${SITERADIAN_TOKEN}"'
+assert_not_contains "codex: no token placeholder at all"  "$CODEX_CFG" '${SITERADIAN_TOKEN}'
 
 # `mcpServers` is the JSON clients' key. Codex reads TOML and would ignore it entirely.
 assert_not_contains "codex: not emitting JSON shape"      "$CODEX_CFG" 'mcpServers'
 
 assert_eq "codex: transport is direct HTTP"       "http"    "$(reg "transport_for('codex')")"
 assert_eq "codex: credential mode is env_var"     "env_var" "$(reg "credential_mode_for('codex')")"
-assert_eq "codex: env var name"                   "WPCC_TOKEN" "$(reg "credential_env_var_for('codex')")"
+assert_eq "codex: env var name"                   "SITERADIAN_TOKEN" "$(reg "credential_env_var_for('codex')")"
 
 echo ""
 echo "== 2. Codex CLI — native one-command setup =="
@@ -91,16 +91,16 @@ CRED_WIN="$(wpe "\$c=WPCommandCenter\\Integration\\AIClientRegistry::credential_
 
 # Codex inherits shell exports; Desktop uses the GUI session environment.
 # Shared config must not collapse these independently correct bootstrap commands.
-assert_contains "Codex macOS: uses shell export" "$CRED_MAC" "export WPCC_TOKEN="
+assert_contains "Codex macOS: uses shell export" "$CRED_MAC" "export SITERADIAN_TOKEN="
 assert_not_contains "Codex macOS: no launchctl" "$CRED_MAC" "launchctl"
 DESKTOP_MAC="$(wpe "\$c=WPCommandCenter\\Integration\\AIClientRegistry::credential_commands_for('chatgpt'); echo \$c['macos'];")"
-assert_contains "Desktop macOS: launchctl remains" "$DESKTOP_MAC" "launchctl setenv WPCC_TOKEN"
-assert_contains "linux: uses export"              "$CRED_LIN" "export WPCC_TOKEN="
-assert_contains "windows: sets current PowerShell session" "$CRED_WIN" '$env:WPCC_TOKEN ='
-assert_not_contains "windows: does not defer token to a future shell" "$CRED_WIN" "setx WPCC_TOKEN"
+assert_contains "Desktop macOS: launchctl remains" "$DESKTOP_MAC" "launchctl setenv SITERADIAN_TOKEN"
+assert_contains "linux: uses export"              "$CRED_LIN" "export SITERADIAN_TOKEN="
+assert_contains "windows: sets current PowerShell session" "$CRED_WIN" '$env:SITERADIAN_TOKEN ='
+assert_not_contains "windows: does not defer token to a future shell" "$CRED_WIN" "setx SITERADIAN_TOKEN"
 
 # Unfilled, these carry the shared placeholder so the browser-side fill completes them.
-assert_contains "macOS: carries the fillable placeholder" "$CRED_MAC" '${WPCC_TOKEN}'
+assert_contains "macOS: carries the fillable placeholder" "$CRED_MAC" '${SITERADIAN_TOKEN}'
 
 echo ""
 echo "== 4. Codex in ChatGPT Desktop shares the Codex configuration =="
@@ -177,7 +177,7 @@ assert_contains "gemini: http transport flag"        "$GEMINI_CMD" "--transport 
 # --scope user, or the server lands in whatever folder the user happened to be in.
 assert_contains "gemini: user scope, not project"    "$GEMINI_CMD" "--scope user"
 assert_contains "gemini: sends the bearer header"    "$GEMINI_CMD" "Authorization: Bearer"
-assert_contains "gemini: token stays a fill-time placeholder" "$GEMINI_CMD" '${WPCC_TOKEN}'
+assert_contains "gemini: token stays a fill-time placeholder" "$GEMINI_CMD" '${SITERADIAN_TOKEN}'
 assert_eq "gemini: exact user settings path" "~/.gemini/settings.json" "$(wpe "\$c=WPCommandCenter\\Integration\\AIClientRegistry::get_client('gemini'); echo \$c['config_paths']['macos'];")"
 assert_eq "gemini: credential model stays inline" "inline" "$(reg "credential_mode_for('gemini')")"
 
@@ -221,13 +221,13 @@ CURSOR_CFG="$(cfg cursor)"
 assert_contains     "cursor: remote url form"        "$CURSOR_CFG" '"url"'
 assert_contains     "cursor: bearer header"          "$CURSOR_CFG" 'Authorization'
 # No relay means no downloaded script and no node invocation in the config.
-assert_not_contains "cursor: no relay bootstrap"     "$CURSOR_CFG" 'wpcc-mcp-relay'
+assert_not_contains "cursor: no relay bootstrap"     "$CURSOR_CFG" 'mcp-relay'
 assert_not_contains "cursor: no node requirement"    "$CURSOR_CFG" 'node '
 
 # The entry-only fragment is what makes merging unambiguous: it IS the thing that goes
 # inside mcpServers, so there is nothing left for the reader to work out.
 ENTRY="$(wpe "echo WPCommandCenter\\Integration\\AIClientRegistry::render_entry_config('cursor');")"
-assert_contains     "cursor: entry fragment is keyed"      "$ENTRY" '"wp-command-center":'
+assert_contains     "cursor: entry fragment is keyed"      "$ENTRY" '"siteradian":'
 assert_not_contains "cursor: entry fragment has no wrapper" "$ENTRY" 'mcpServers'
 
 # Merging the fragment into a file that already holds another server must produce valid
@@ -243,7 +243,7 @@ try:
 except Exception:
     print("invalid"); raise SystemExit
 ok = ("wordpress-mcp" in d["mcpServers"]
-      and "wp-command-center" in d["mcpServers"]
+      and "siteradian" in d["mcpServers"]
       and d["mcpServers"]["wordpress-mcp"] == {"command": "npx"})
 print("ok" if ok else "lost")
 PY
@@ -254,23 +254,23 @@ assert_eq "cursor: entry merges cleanly, keeping the existing server" "ok" "$MER
 # settings.json may also contain IDE, security, UI and account preferences. Apply the
 # displayed entry-only semantics to that realistic starting file and parse the result.
 GEMINI_ENTRY="$(wpe "echo WPCommandCenter\\Integration\\AIClientRegistry::render_entry_config('gemini');")"
-assert_contains     "gemini: merge fragment is keyed" "$GEMINI_ENTRY" '"wp-command-center":'
+assert_contains     "gemini: merge fragment is keyed" "$GEMINI_ENTRY" '"siteradian":'
 assert_not_contains "gemini: merge fragment has no wrapper" "$GEMINI_ENTRY" '"mcpServers"'
 GEMINI_MERGE_OK="$(python3 - "$GEMINI_ENTRY" <<'PY'
 import json, sys
 
-entry = json.loads("{" + sys.argv[1] + "}")["wp-command-center"]
+entry = json.loads("{" + sys.argv[1] + "}")["siteradian"]
 settings = {
     "mcpServers": {"another-server": {"command": "example"}},
     "security": {"folderTrust": True},
     "ui": {"theme": "system"},
     "ide": {"enabled": True},
 }
-settings["mcpServers"]["wp-command-center"] = entry
+settings["mcpServers"]["siteradian"] = entry
 round_trip = json.loads(json.dumps(settings))
 ok = (
     round_trip["mcpServers"]["another-server"] == {"command": "example"}
-    and round_trip["mcpServers"]["wp-command-center"]["type"] == "http"
+    and round_trip["mcpServers"]["siteradian"]["type"] == "http"
     and round_trip["security"] == {"folderTrust": True}
     and round_trip["ui"] == {"theme": "system"}
     and round_trip["ide"] == {"enabled": True}
@@ -287,7 +287,8 @@ assert_eq "claude_code: no entry fragment for shell" "" "$(wpe "echo WPCommandCe
 assert_contains "view: offers an entry-only copy"      "$(cat "$VIEW")" "Copy this entry only"
 assert_contains "view: states the do-not-replace case" "$(cat "$VIEW")" "do not replace it"
 assert_contains "view: Gemini forbids replacing settings.json" "$(cat "$VIEW")" "Do not replace the whole settings.json file"
-assert_contains "view: Gemini says to add only its entry" "$(cat "$VIEW")" "Add only the “wp-command-center” entry"
+assert_contains "view: Gemini says to add only its entry" "$(cat "$VIEW")" "Add only the “%s” entry"
+assert_contains "view: Gemini inserts the selected SiteRadian alias" "$(cat "$VIEW")" '$wpcc_sel_server_key'
 assert_contains "view: Gemini preserves other MCP servers" "$(cat "$VIEW")" "Keep every other server"
 assert_contains "view: Gemini preserves unrelated top-level settings" "$(cat "$VIEW")" "every unrelated top-level setting"
 assert_contains "view: Gemini covers a missing mcpServers object" "$(cat "$VIEW")" "If “mcpServers” does not exist"
@@ -314,14 +315,14 @@ assert_not_contains "continue: no longer names mcp.json" "$(wpe "\$c=WPCommandCe
 # the registry keys servers by name inside an object; a faithful JSON->YAML translation
 # would still have produced the wrong structure here.
 assert_eq       "continue: format is yaml" "yaml" "$(wpe "\$r='WPCommandCenter\\Integration\\AIClientRegistry'; echo \$r::config_format(\$r::generate_config('continue'));")"
-assert_contains "continue: list item with name:" "$CONT_CFG" "- name: wp-command-center"
+assert_contains "continue: list item with name:" "$CONT_CFG" "- name: siteradian"
 assert_not_contains "continue: not the JSON object shape" "$CONT_CFG" '"mcpServers"'
 
 # Parse it for real rather than pattern-matching a string that only looks like YAML.
 YAML_OK="$(printf '%s' "$CONT_CFG" > /tmp/wpcc-cont-test.yaml && ruby -ryaml -e '
 d = YAML.load_file("/tmp/wpcc-cont-test.yaml")
 s = d["mcpServers"][0] rescue nil
-ok = d["mcpServers"].is_a?(Array) && s && s["name"] == "wp-command-center" &&
+ok = d["mcpServers"].is_a?(Array) && s && s["name"] == "siteradian" &&
      s["command"] == "bash" && s["args"].is_a?(Array) && s["env"].is_a?(Hash)
 print(ok ? "ok" : "bad")' 2>/dev/null)"
 assert_eq "continue: generated YAML parses to the right structure" "ok" "$YAML_OK"
@@ -332,7 +333,7 @@ existing = "name: Local Config\nversion: 1.0.0\nmodels:\n  - name: C\n    provid
 merged = existing + File.read("/tmp/wpcc-cont-test.yaml")
 d = YAML.load(merged)
 ok = d["name"] == "Local Config" && d["models"].length == 1 &&
-     d["mcpServers"][0]["name"] == "wp-command-center"
+     d["mcpServers"][0]["name"] == "siteradian"
 print(ok ? "ok" : "bad")' 2>/dev/null)"
 assert_eq "continue: merges into an existing Main Config" "ok" "$MERGE_OK"
 
@@ -395,7 +396,7 @@ MUSE_JSON_OK="$(printf '%s' "$MUSE_CFG" | python3 -c "
 import json,sys
 try:
     d=json.load(sys.stdin)
-    print('ok' if d.get('schema_version')==1 and 'wp-command-center' in d['mcp_servers'] else 'bad')
+    print('ok' if d.get('schema_version')==1 and 'siteradian' in d['mcp_servers'] else 'bad')
 except Exception:
     print('invalid')")"
 assert_eq "muse: whole-file config is valid JSON" "ok" "$MUSE_JSON_OK"
@@ -408,7 +409,7 @@ OC_CMD="$(reg "setup_command_for('opencode')")"
 
 # Was advertised as relay + Node.js + connector script. OpenCode has native remote MCP.
 assert_eq           "opencode: direct HTTP, not relay" "http" "$(reg "transport_for('opencode')")"
-assert_not_contains "opencode: no relay bootstrap"     "$OC_CFG" "wpcc-mcp-relay"
+assert_not_contains "opencode: no relay bootstrap"     "$OC_CFG" "mcp-relay"
 assert_not_contains "opencode: no node requirement"    "$OC_CFG" '"command"'
 
 # OpenCode's block is `mcp` with a `type: remote` server — not `mcpServers`.
@@ -506,12 +507,12 @@ assert_not_contains "vscode: not mcpServers"       "$VSC_CFG" '"mcpServers"'
 
 # The token is prompted for, never written into a file that is routinely committed.
 assert_eq       "vscode: credential mode is prompt" "prompt" "$(reg "credential_mode_for('vscode')")"
-assert_contains "vscode: references a site-scoped input" "$VSC_CFG" '${input:wpcc-token-'
+assert_contains "vscode: references a site-scoped input" "$VSC_CFG" '${input:siteradian-token-'
 assert_contains "vscode: declares the input"        "$VSC_CFG" '"promptString"'
 assert_contains "vscode: masks the input"           "$VSC_CFG" '"password": true'
 assert_not_contains "vscode: does not claim OAuth"  "$VSC_CFG" '"oauth"'
 # The whole point: no token, and no token-shaped placeholder, in the file.
-assert_not_contains "vscode: no token placeholder"  "$VSC_CFG" '${WPCC_TOKEN}'
+assert_not_contains "vscode: no token placeholder"  "$VSC_CFG" '${SITERADIAN_TOKEN}'
 assert_not_contains "vscode: no literal token"      "$VSC_CFG" 'wpcc_'
 
 # VS Code memoizes promptString values in secure storage. A new WPCC token record must
@@ -523,7 +524,7 @@ VSC_B="$(wpe 'echo WPCommandCenter\Integration\AIClientRegistry::primary_config_
 VSC_A_ID="$(printf '%s' "$VSC_A" | jq -r '.inputs[0].id')"
 VSC_B_ID="$(printf '%s' "$VSC_B" | jq -r '.inputs[0].id')"
 assert_eq "vscode: credential records use different secure-input slots" "true" "$([ "$VSC_A_ID" != "$VSC_B_ID" ] && echo true || echo false)"
-assert_eq "vscode: Authorization references its declared input" "Bearer \${input:$VSC_A_ID}" "$(printf '%s' "$VSC_A" | jq -r '.servers["wp-command-center"].headers.Authorization')"
+assert_eq "vscode: Authorization references its declared input" "Bearer \${input:$VSC_A_ID}" "$(printf '%s' "$VSC_A" | jq -r '.servers["siteradian"].headers.Authorization')"
 assert_not_contains "vscode: credential id does not expose token record id" "$VSC_A_ID" "record-a"
 assert_not_contains "vscode: generated config never embeds synthetic token" "$VSC_A" "wpcc_SYNTHETIC_A"
 
@@ -565,7 +566,7 @@ assert_eq "windsurf: integration class gone" "0" "$(ls "$PLUGIN_DIR/includes/Int
 
 # The shared relay MUST survive: Claude Desktop and Continue still depend on it. Removing
 # a client must not remove infrastructure other clients use.
-assert_contains "relay still available to clients that use it" "$(cfg claude)" "wpcc-mcp-relay"
+assert_contains "SiteRadian relay available to clients that use it" "$(cfg claude)" "siteradian-mcp-relay"
 assert_eq       "claude desktop still on the relay" "stdio" "$(reg "transport_for('claude')")"
 
 # Customer-facing copy must not still advertise it.
@@ -578,7 +579,7 @@ CC_CFG="$(cfg command_code)"
 CC_CMD="$(reg "setup_command_for('command_code')")"
 
 assert_eq           "command_code: direct HTTP, not relay" "http" "$(reg "transport_for('command_code')")"
-assert_not_contains "command_code: no relay bootstrap"     "$CC_CFG" "wpcc-mcp-relay"
+assert_not_contains "command_code: no relay bootstrap"     "$CC_CFG" "mcp-relay"
 assert_not_contains "command_code: no node/bash launcher"  "$CC_CFG" '"command"'
 # The relay's environment block existed only to feed the connector.
 assert_not_contains "command_code: no relay env vars"      "$CC_CFG" "WPCC_CONTEXT_MODE"

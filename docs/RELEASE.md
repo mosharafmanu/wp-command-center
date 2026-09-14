@@ -39,8 +39,7 @@ product's brand. Plugin Check must report no restricted-name error.
 
 **Never change with the slug** — these are contracts, not branding:
 
-- REST namespace `wp-command-center/v1` — changing it breaks every client config in use.
-- MCP server key `wp-command-center` — a certified legacy protocol identifier used in client configurations.
+- REST namespace `wp-command-center/v1` remains the certified protocol identifier. New client-local MCP aliases are `siteradian`; existing aliases are not rewritten and continue to work.
 - Admin menu slug `HOME_SLUG` — an existing admin URL.
 - PHP namespaces `WPCommandCenter\` and DB prefix `wpcc_` — internal; renaming them would
   force a data migration for no gain.
@@ -67,7 +66,7 @@ bash scripts/build-release.sh
 ```
 
 The build is an **allowlist**, not a blocklist — anything not explicitly included stays
-out. It asserts `sdk/javascript/wpcc-mcp-relay.mjs` is present and **exits 1** if it is
+out. It asserts the new `sdk/javascript/siteradian-mcp-relay.mjs` and compatibility copy `sdk/javascript/wpcc-mcp-relay.mjs` are present and **exits 1** if either is
 not; without the relay every generated client configuration would point at a 404.
 
 Output: `build/siteradian-<version>.zip`.

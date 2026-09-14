@@ -84,13 +84,13 @@ Connector clients (Claude Desktop, Continue):
 ```json
 {
   "mcpServers": {
-    "wp-command-center": {
+    "siteradian": {
       "command": "bash",
-      "args": ["-c", "RELAY='/tmp/wpcc-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/siteradian/sdk/javascript/wpcc-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""],
+      "args": ["-c", "RELAY='/tmp/siteradian-mcp-relay.mjs'; curl -fsSL -o \"$RELAY\" 'https://example.com/wp-content/plugins/siteradian/sdk/javascript/siteradian-mcp-relay.mjs?v=1.0.0'; node \"$RELAY\""],
       "env": {
-        "WPCC_MCP_URL": "https://example.com/wp-json/wp-command-center/v1/mcp",
+        "SITERADIAN_MCP_URL": "https://example.com/wp-json/wp-command-center/v1/mcp",
         "WPCC_SITE_URL": "https://example.com",
-        "WPCC_TOKEN": "${WPCC_TOKEN}",
+        "SITERADIAN_TOKEN": "${SITERADIAN_TOKEN}",
         "WPCC_CONTEXT_MODE": "compact"
       }
     }
@@ -106,7 +106,7 @@ silently ignored rather than rejected:
 ```json
 {
   "servers": {
-    "wp-command-center": {
+    "siteradian": {
       "type": "http",
       "url": "https://example.com/wp-json/wp-command-center/v1/mcp",
       "headers": { "Authorization": "Bearer ${input:wpcc-token-EXAMPLE}" }
@@ -129,20 +129,20 @@ Direct HTTP, Codex CLI and Codex in ChatGPT Desktop — TOML, and the key is `mc
 underscore:
 
 ```toml
-[mcp_servers.wp-command-center]
+[mcp_servers.siteradian]
 url = "https://example.com/wp-json/wp-command-center/v1/mcp"
-bearer_token_env_var = "WPCC_TOKEN"
+bearer_token_env_var = "SITERADIAN_TOKEN"
 default_tools_approval_mode = "writes"
 ```
 
-For Codex CLI on macOS/Linux, run `export WPCC_TOKEN='YOUR_TOKEN'`, then the displayed
+For Codex CLI on macOS/Linux, run `export SITERADIAN_TOKEN='YOUR_TOKEN'`, then the displayed
 `codex mcp add` command, then `codex --ask-for-approval on-request` in the **same terminal**. A new terminal needs
 the export again. Do not save the token in shell profiles by default. The optional
-`printenv WPCC_TOKEN >/dev/null && echo "WPCC_TOKEN is ready" || echo "WPCC_TOKEN is missing"`
+`printenv SITERADIAN_TOKEN >/dev/null && echo "SITERADIAN_TOKEN is ready" || echo "SITERADIAN_TOKEN is missing"`
 check reports presence without printing the secret. The config keeps the variable name;
 never paste the token into `bearer_token_env_var`.
 
-Codex in ChatGPT Desktop on macOS uses `launchctl setenv WPCC_TOKEN 'YOUR_TOKEN'` instead:
+Codex in ChatGPT Desktop on macOS uses `launchctl setenv SITERADIAN_TOKEN 'YOUR_TOKEN'` instead:
 Dock/Finder-launched apps do not reliably inherit shell-local exports. Fully quit and
 reopen Desktop afterward, then switch the product selector from ChatGPT to Codex. Normal
 ChatGPT chats do not use this local connection. Shared TOML does not mean shared credential bootstrap.
@@ -150,14 +150,14 @@ ChatGPT chats do not use this local connection. Shared TOML does not mean shared
 Direct HTTP, Claude Code — a command, not a file. The URL is positional:
 
 ```bash
-claude mcp add --transport http wp-command-center https://example.com/wp-json/wp-command-center/v1/mcp \
-  --header "Authorization: Bearer ${WPCC_TOKEN}"
+claude mcp add --transport http siteradian https://example.com/wp-json/wp-command-center/v1/mcp \
+  --header "Authorization: Bearer ${SITERADIAN_TOKEN}"
 ```
 
 - **The connector comes from your site**, not npm. It ships inside the plugin.
-- **`${WPCC_TOKEN}` is a placeholder for inline-header clients.** Their setup field
+- **`${SITERADIAN_TOKEN}` is a placeholder for inline-header clients.** Their setup field
   substitutes it in the browser. Codex CLI and Codex in ChatGPT Desktop instead keep the variable
-  name `WPCC_TOKEN` in their config; only their credential bootstrap command gets the token.
+  name `SITERADIAN_TOKEN` in their config; only their credential bootstrap command gets the token.
 - **`WPCC_CONTEXT_MODE`** is `compact` (the default) or `full`. It affects only how verbose
   tool *descriptions* are, never the data returned. In `compact` a tool's description is
   its title; the action enum, parameter names and parameter descriptions are exposed in
@@ -221,7 +221,7 @@ fresh setup terminal) and never commit/share the configuration or save the token
 in shell profiles. On Windows, restrict the file to your user account. Revoke the
 token in SiteRadian when it is no longer required.
 
-JSON remains the **manual/advanced** fallback: add only `wp-command-center` inside
+JSON remains the **manual/advanced** fallback: add only `siteradian` inside
 existing `mcpServers`, with `serverUrl` and `headers.Authorization`; never replace
 an existing file wholesale. The placeholder is replaced by SiteRadian's browser UI,
 not by an assumed `agy` credential environment abstraction.

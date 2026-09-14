@@ -16,7 +16,7 @@
  *      LIST, and the server's name is a `name:` field on each item:
  *
  *          mcpServers:
- *            - name: wp-command-center
+ *            - name: siteradian
  *              command: bash
  *
  *      A config translated faithfully from SiteRadian's JSON into YAML would still have been
@@ -72,8 +72,8 @@ final class ContinueIntegration extends BaseClientIntegration {
 	public static function generate_mcp_config(): array {
 		$mcp_url    = rest_url( McpServerRuntime::NAMESPACE . '/mcp' );
 		$site_url   = get_site_url();
-		$relay_url  = WPCC_PLUGIN_URL . 'sdk/javascript/wpcc-mcp-relay.mjs';
-		$relay_path = '/tmp/wpcc-mcp-relay.mjs';
+		$relay_url  = WPCC_PLUGIN_URL . 'sdk/javascript/siteradian-mcp-relay.mjs';
+		$relay_path = '/tmp/siteradian-mcp-relay.mjs';
 
 		$bootstrap = sprintf(
 			'RELAY=%s; curl -fsSL -o "$RELAY" %s; node "$RELAY"',
@@ -91,10 +91,10 @@ final class ContinueIntegration extends BaseClientIntegration {
 		$raw .= "      - -c\n";
 		$raw .= '      - "' . $bootstrap_yaml . "\"\n";
 		$raw .= "    env:\n";
-		$raw .= '      WPCC_MCP_URL: ' . $mcp_url . "\n";
-		$raw .= '      WPCC_SITE_URL: ' . $site_url . "\n";
-		$raw .= '      WPCC_TOKEN: ' . AIClientRegistry::TOKEN_PLACEHOLDER . "\n";
-		$raw .= "      WPCC_CONTEXT_MODE: compact\n";
+		$raw .= '      SITERADIAN_MCP_URL: ' . $mcp_url . "\n";
+		$raw .= '      SITERADIAN_SITE_URL: ' . $site_url . "\n";
+		$raw .= '      SITERADIAN_TOKEN: ' . AIClientRegistry::TOKEN_PLACEHOLDER . "\n";
+		$raw .= "      SITERADIAN_CONTEXT_MODE: compact\n";
 
 		return [
 			'__format' => 'yaml',

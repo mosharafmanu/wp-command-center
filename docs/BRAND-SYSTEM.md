@@ -4,7 +4,7 @@ SiteRadian is the master brand. “The AI Command Center for WordPress” is its
 
 ## Logo concept
 
-The mark combines an open control boundary, a bounded inner arc, a measured radius, and two command points. It represents controlled reach and precise scope without using a shield, lock, brain, robot, gear, sparkle, or WordPress mark.
+The mark is an engineered **R** built from a bounded radial bowl, a single command-origin diamond, a precise outward radius, and an execution leg. Its asymmetric silhouette expresses controlled reach and scope while remaining unmistakable at 16–20px. It deliberately avoids the near-circle and arrow cues that make radial marks resemble refresh, speedometer, power, or generic radar icons. It uses no shield, lock, brain, robot, gear, sparkle, or WordPress mark.
 
 Runtime artwork lives in `assets/brand/`:
 

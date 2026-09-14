@@ -65,9 +65,10 @@ copy "languages"
 # Copied leniently so a missing source file is reported by the explicit
 # verification below, with a message that says what to do about it, rather than
 # aborting here on a bare "cp: No such file or directory".
-if [[ -f "$ROOT/sdk/javascript/wpcc-mcp-relay.mjs" ]]; then
+if [[ -f "$ROOT/sdk/javascript/wpcc-mcp-relay.mjs" && -f "$ROOT/sdk/javascript/siteradian-mcp-relay.mjs" ]]; then
   mkdir -p "$DEST/sdk/javascript"
   cp "$ROOT/sdk/javascript/wpcc-mcp-relay.mjs" "$DEST/sdk/javascript/"
+  cp "$ROOT/sdk/javascript/siteradian-mcp-relay.mjs" "$DEST/sdk/javascript/"
 fi
 
 # ── Scrub anything that rode along inside a copied directory ────────────────
@@ -104,7 +105,7 @@ fi
 # Every runtime file the generated client configuration fetches must be in the
 # package. Shipping a config that points at a file we did not ship is a silent,
 # total connection failure for every user, so it fails the build.
-for required in "sdk/javascript/wpcc-mcp-relay.mjs"; do
+for required in "sdk/javascript/siteradian-mcp-relay.mjs" "sdk/javascript/wpcc-mcp-relay.mjs"; do
   if [[ ! -f "$DEST/$required" ]]; then
     echo "ERROR: required runtime file missing from package: $required" >&2
     fail=1

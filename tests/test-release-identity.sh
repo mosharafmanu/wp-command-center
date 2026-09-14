@@ -29,13 +29,14 @@ assert_eq "database schema version remains compatible" "2.6.0" "$(sed -n "s/.*DB
 assert_eq "build slug is the public slug" "siteradian" "$(sed -n 's/^SLUG="\([^"]*\)"/\1/p' scripts/build-release.sh)"
 assert_eq "Composer package identity" "mosharafmanu/siteradian" "$(php -r '$j=json_decode(file_get_contents("composer.json"),true); echo $j["name"] ?? "";')"
 
-SHIPPING=(siteradian.php uninstall.php readme.txt includes assets sdk/javascript/wpcc-mcp-relay.mjs)
+SHIPPING=(siteradian.php uninstall.php readme.txt includes assets sdk/javascript/siteradian-mcp-relay.mjs sdk/javascript/wpcc-mcp-relay.mjs)
 assert_eq "old display name absent from shipping source" "0" "$(rg -i -F -l 'WP Command Center' "${SHIPPING[@]}" 2>/dev/null | wc -l | tr -d ' ')"
 assert_eq "pre-public display name absent from shipping source" "0" "$(rg -F -l 'Action Steward' "${SHIPPING[@]}" 2>/dev/null | wc -l | tr -d ' ')"
 assert_eq "old text domain absent from shipping source" "0" "$(rg -F -l "'ai-command-center'" siteradian.php uninstall.php includes 2>/dev/null | wc -l | tr -d ' ')"
 assert_eq "pre-public text domain absent from shipping source" "0" "$(rg -F -l "'action-steward'" siteradian.php uninstall.php includes 2>/dev/null | wc -l | tr -d ' ')"
 assert_eq "new text domain is used" "yes" "$(rg -q -F "'siteradian'" includes && echo yes || echo no)"
-assert_eq "MCP server key remains compatible" "yes" "$(rg -q "return 'wp-command-center';" includes/Integration/BaseClientIntegration.php && echo yes || echo no)"
+assert_eq "new MCP server key is SiteRadian-native" "yes" "$(rg -q "return 'siteradian';" includes/Integration/BaseClientIntegration.php && echo yes || echo no)"
+assert_eq "legacy relay remains available for existing generated configs" "yes" "$([[ -f sdk/javascript/wpcc-mcp-relay.mjs ]] && echo yes || echo no)"
 assert_eq "REST namespace remains compatible" "yes" "$(rg -q "NAMESPACE = 'wp-command-center/v1'" includes/Mcp/McpServerRuntime.php includes/AiAgent/RestApi.php && echo yes || echo no)"
 assert_eq "internal WPCC prefix remains available" "yes" "$(rg -q "define\( 'WPCC_VERSION'" siteradian.php && echo yes || echo no)"
 assert_eq "SiteRadian AI is absent from current shipping identity" "0" "$(rg -F -l 'SiteRadian AI' "${SHIPPING[@]}" 2>/dev/null | wc -l | tr -d ' ')"

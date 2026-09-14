@@ -6,7 +6,7 @@
  *
  * This class inherited BaseClientIntegration's relay generator, so Command Code was
  * advertised as "Connector script / Node.js required" and handed a configuration that
- * downloads wpcc-mcp-relay.mjs and runs it under bash. Current Command Code needs none of
+ * downloads an MCP relay and runs it under bash. Current Command Code needs none of
  * it: it has native MCP with stdio AND http transports and native custom headers.
  *
  * VERIFIED AGAINST THE INSTALLED CLIENT, by running it:

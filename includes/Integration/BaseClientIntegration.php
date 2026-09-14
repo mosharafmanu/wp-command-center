@@ -5,7 +5,7 @@
  * No per-client execution logic.
  *
  * Generates a working config that bridges the client's stdio MCP transport
- * to SiteRadian's HTTP MCP endpoint via the built-in wpcc-mcp-relay.mjs script.
+ * to SiteRadian's HTTP MCP endpoint via the built-in siteradian-mcp-relay.mjs script.
  */
 
 namespace WPCommandCenter\Integration;
@@ -23,14 +23,14 @@ abstract class BaseClientIntegration {
 	 * Generate an MCP configuration block that works with any stdio-based
 	 * MCP client (Claude Desktop, Cursor, Continue, etc.).
 	 *
-	 * Downloads the latest WPCC MCP relay script on every startup and runs it.
-	 * The relay bridges stdio ↔ HTTP so clients can reach the WPCC MCP endpoint.
+	 * Downloads the SiteRadian MCP relay script on every startup and runs it.
+	 * The relay bridges stdio ↔ HTTP so clients can reach the SiteRadian MCP endpoint.
 	 */
 	public static function generate_mcp_config(): array {
 		$mcp_url    = rest_url( McpServerRuntime::NAMESPACE . '/mcp' );
 		$site_url   = get_site_url();
-		$relay_url  = WPCC_PLUGIN_URL . 'sdk/javascript/wpcc-mcp-relay.mjs';
-		$relay_path = '/tmp/wpcc-mcp-relay.mjs';
+		$relay_url  = WPCC_PLUGIN_URL . 'sdk/javascript/siteradian-mcp-relay.mjs';
+		$relay_path = '/tmp/siteradian-mcp-relay.mjs';
 
 		$bootstrap = sprintf(
 			'RELAY=%s; curl -fsSL -o "$RELAY" %s; node "$RELAY"',
@@ -40,14 +40,14 @@ abstract class BaseClientIntegration {
 
 		return [
 			'mcpServers' => [
-				'wp-command-center' => [
+				self::server_key() => [
 					'command' => 'bash',
 					'args'    => [ '-c', $bootstrap ],
 					'env'     => [
-						'WPCC_MCP_URL'      => $mcp_url,
-						'WPCC_SITE_URL'     => $site_url,
-						'WPCC_TOKEN'        => '${WPCC_TOKEN}',
-						'WPCC_CONTEXT_MODE' => 'compact',
+						'SITERADIAN_MCP_URL'      => $mcp_url,
+						'SITERADIAN_SITE_URL'     => $site_url,
+						'SITERADIAN_TOKEN'        => AIClientRegistry::TOKEN_PLACEHOLDER,
+						'SITERADIAN_CONTEXT_MODE' => 'compact',
 					],
 				],
 			],
@@ -57,7 +57,7 @@ abstract class BaseClientIntegration {
 	/**
 	 * Direct-HTTP MCP configuration — no relay, no Node.js, no local process.
 	 *
-	 * The WPCC MCP endpoint is a plain JSON-RPC-over-HTTP MCP server: POST a JSON-RPC
+	 * The SiteRadian MCP endpoint is a plain JSON-RPC-over-HTTP MCP server: POST a JSON-RPC
 	 * envelope with a Bearer token and it answers. That was verified with nothing but
 	 * curl — `initialize` returned protocol 2024-11-05 and `tools/list` returned all 42
 	 * tools with no relay in the picture at all.
@@ -75,7 +75,7 @@ abstract class BaseClientIntegration {
 	protected static function http_endpoint(): array {
 		return [
 			'url'     => rest_url( McpServerRuntime::NAMESPACE . '/mcp' ),
-			'headers' => [ 'Authorization' => 'Bearer ${WPCC_TOKEN}' ],
+			'headers' => [ 'Authorization' => 'Bearer ' . AIClientRegistry::TOKEN_PLACEHOLDER ],
 		];
 	}
 
@@ -100,7 +100,7 @@ abstract class BaseClientIntegration {
 
 	/** The server key the client will show the user. */
 	public static function server_key(): string {
-		return 'wp-command-center';
+		return 'siteradian';
 	}
 
 	/**
@@ -118,7 +118,7 @@ abstract class BaseClientIntegration {
 	 * Real-world origin: Codex and ChatGPT Desktop expose a field labelled
 	 * "Bearer token env var". During live testing a valid token pasted into that field
 	 * produced a 401 from a completely healthy server, because the client dutifully
-	 * looked for an environment variable named `wpcc_jkSf...`. The credential mode is
+	 * looked for an environment variable named `siteradian_jkSf...`. The credential mode is
 	 * what lets the screen explain that difference instead of leaving the user to
 	 * discover it from a failed connection.
 	 */
@@ -131,7 +131,7 @@ abstract class BaseClientIntegration {
 	 * Deliberately the same name as the placeholder token so the two never diverge.
 	 */
 	public static function credential_env_var(): string {
-		return 'WPCC_TOKEN';
+		return 'SITERADIAN_TOKEN';
 	}
 
 	/**

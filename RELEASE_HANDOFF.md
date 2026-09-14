@@ -15,9 +15,13 @@
 > `main`.
 >
 > **Codex same-terminal release closure:** the primary flow visibly requires Steps 1–3
-> in one terminal and explains that MCP registration persists while `WPCC_TOKEN` does
+> in one terminal and explains that MCP registration persists while `SITERADIAN_TOKEN` does
 > not survive a closed terminal session. The exact missing-variable recovery is included;
 > no unnecessary MCP re-registration or unsafe shell-profile persistence is advised.
+> New generated configuration uses the client-local alias `siteradian`, the
+> `SITERADIAN_TOKEN` environment variable, and `siteradian-mcp-relay.mjs`. Existing
+> local aliases and the legacy relay/env inputs remain functional; the certified REST
+> namespace `wp-command-center/v1` is unchanged.
 >
 > **Final fresh-user onboarding closeout M22/M23/M25 retained:** The current matrix
 > includes the completed Copilot Agent actual-client verification. Older handoff entries

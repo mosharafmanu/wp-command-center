@@ -54,19 +54,19 @@ assert(previews.every(preview => preview.hidden));
 assert(payloads.every(payload => payload.hidden));
 assert(messages.every(message => !message.hidden));
 
-const saved = 'wpcc_SYNTHETIC_BROWSER_ONLY_TOKEN';
+const saved = 'siteradian_SYNTHETIC_BROWSER_ONLY_TOKEN';
 input.value = saved;
 inputHandler();
 assert(controls.every(control => !control.disabled && control.attrs['aria-disabled'] === 'false'));
 assert(previews.every(preview => !preview.hidden));
 assert(payloads.every(payload => !payload.hidden));
 assert(messages.every(message => message.hidden));
-assert(slots.every(slot => !slot.textContent.includes('${WPCC_TOKEN}')));
+assert(slots.every(slot => !slot.textContent.includes('${SITERADIAN_TOKEN}')));
 assert(slots.some(slot => slot.textContent.includes(saved)));
 
 input.value = '';
 inputHandler();
 assert(controls.every(control => control.disabled));
-assert(slots.every(slot => slot.textContent.includes('${WPCC_TOKEN}') || !slot.textContent.includes('Authorization')));
+assert(slots.every(slot => slot.textContent.includes('${SITERADIAN_TOKEN}') || !slot.textContent.includes('Authorization')));
 
 console.log('12 passed, 0 failed');

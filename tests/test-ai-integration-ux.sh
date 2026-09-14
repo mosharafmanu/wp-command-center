@@ -27,11 +27,11 @@ assert_true "config: has mcpServers" "$(echo "$CONFIG" | jq -r 'if .mcpServers t
 # The MCP endpoint travels in env.WPCC_MCP_URL, not as the last launcher argument —
 # the generated config runs the relay this site ships (bash -c "curl …; node …")
 # rather than an npx package.
-assert_contains "config: command is a shell launcher" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].command')" "bash"
-assert_contains "config: dynamic MCP URL" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "wp-command-center/v1/mcp"
-assert_true "config: env object" "$(echo "$CONFIG" | jq -r 'if (.mcpServers["wp-command-center"].env | type) == "object" then "true" else "false" end')"
-assert_contains "config: WPCC_TOKEN placeholder" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_TOKEN')" "WPCC_TOKEN"
-assert_contains "config: site_url dynamic" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_SITE_URL')" "http"
+assert_contains "config: command is a shell launcher" "$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].command')" "bash"
+assert_contains "config: dynamic MCP URL" "$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].env.SITERADIAN_MCP_URL')" "wp-command-center/v1/mcp"
+assert_true "config: env object" "$(echo "$CONFIG" | jq -r 'if (.mcpServers["siteradian"].env | type) == "object" then "true" else "false" end')"
+assert_contains "config: SITERADIAN_TOKEN placeholder" "$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].env.SITERADIAN_TOKEN')" "SITERADIAN_TOKEN"
+assert_contains "config: site_url dynamic" "$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].env.SITERADIAN_SITE_URL')" "http"
 
 echo "== 3. Claude discovery metadata =="
 DISC=$(api "$WPCC_BASE/claude/discovery")
@@ -105,7 +105,7 @@ assert_true "routes: claude/config" "$(echo "$MANIFEST" | jq -r 'any(.endpoints[
 assert_true "routes: claude/tools" "$(echo "$MANIFEST" | jq -r 'any(.endpoints[]; .path == "/claude/tools")')"
 
 echo "== 13. Config is dynamically generated (no hardcoding) =="
-MCP_URL=$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')
+MCP_URL=$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].env.SITERADIAN_MCP_URL')
 MANIFEST_MCP=$(echo "$MANIFEST" | jq -r '.mcp_server.endpoint')
 assert_contains "config: MCP URL in args is actual site URL" "$MCP_URL" "wp-command-center/v1/mcp"
 assert_contains "config: matches manifest mcp endpoint" "$MANIFEST_MCP" "wp-command-center/v1/mcp"
@@ -135,9 +135,9 @@ assert_contains "capabilities: plugin_manage mapped" "$(echo "$DISC" | jq -r '.c
 assert_contains "capabilities: database_inspect mapped" "$(echo "$DISC" | jq -r '.capabilities.operation_map | keys | join(",")')" "database_inspect"
 
 echo "== 18. Config env completeness =="
-assert_contains "config: WPCC_MCP_URL set" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_MCP_URL')" "/wp-command-center/v1/mcp"
-assert_contains "config: WPCC_SITE_URL set" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_SITE_URL')" "://"
-assert_contains "config: WPCC_TOKEN placeholder present" "$(echo "$CONFIG" | jq -r '.mcpServers["wp-command-center"].env.WPCC_TOKEN')" "WPCC_TOKEN"
+assert_contains "config: SITERADIAN_MCP_URL set" "$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].env.SITERADIAN_MCP_URL')" "/wp-command-center/v1/mcp"
+assert_contains "config: SITERADIAN_SITE_URL set" "$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].env.SITERADIAN_SITE_URL')" "://"
+assert_contains "config: SITERADIAN_TOKEN placeholder present" "$(echo "$CONFIG" | jq -r '.mcpServers["siteradian"].env.SITERADIAN_TOKEN')" "SITERADIAN_TOKEN"
 
 echo
 echo "== Assistant state badges — presentation must not out-claim the registry =="

@@ -7,7 +7,7 @@
  * ```js
  * import { WPCCClient } from './client.js';
  *
- * const client = new WPCCClient('https://example.com/wp-json/wp-command-center/v1', 'wpcc_abc123...');
+ * const client = new WPCCClient('https://example.com/wp-json/wp-command-center/v1', 'siteradian_abc123...');
  *
  * // Health check
  * const health = await client.health();

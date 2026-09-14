@@ -91,7 +91,7 @@ Your protection setting, AI connection settings, and rollback records are stored
 
 = Files in your uploads folder =
 
-Access tokens, the audit log, and undo snapshots are stored under `wp-content/uploads` in directories named `wpcc-tokens`, `wpcc-audit`, `wpcc-snapshots`, `wpcc-media-snapshots`, `wpcc-patches` and `wpcc-plugin-backups`, each followed by a random value generated for your site alone. That random name is what keeps them out of reach: because no one outside your site can name the path, the files cannot be fetched over the web on any server — not only on servers that honour `.htaccess`. Deny rules for Apache and IIS and index files against directory listing are written as well, as a second layer.
+Access tokens, the audit log, and undo snapshots are stored under `wp-content/uploads` in protected directories, each followed by a random value generated for your site alone. That random name is what keeps them out of reach: because no one outside your site can name the path, the files cannot be fetched over the web on any server — not only on servers that honour `.htaccess`. Deny rules for Apache and IIS and index files against directory listing are written as well, as a second layer.
 
 = Access tokens =
 
